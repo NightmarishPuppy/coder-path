@@ -1,21 +1,30 @@
 // Сервис-воркер — маленький помощник, который браузер держит в фоне.
-// Он перехватывает запросы игры и складывает ответы в кэш,
-// поэтому игра открывается и без интернета.
+// Он хранит файлы игры в кэше, поэтому игра открывается и без интернета.
+//
+// Обновления: игра всегда берётся из кэша своей версии. Новую версию браузер
+// скачивает в отдельный кэш, но включает её только когда игрок нажмёт «Обновить»
+// (страница присылает сообщение "activate"). Старый кэш после этого удаляется.
 
-// Меняй номер версии при каждом обновлении игры — тогда старый кэш удалится.
-const VERSION = "coder-path-v2";
-const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+// Меняй номер версии при каждом обновлении игры (и в version.json, и APP_VERSION в index.html)
+const VERSION = "coder-path-v3";
+const FILES = ["./", "index.html", "manifest.webmanifest", "version.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
-// 1. Установка: сразу кладём в кэш все файлы игры
+// 1. Установка: скачиваем все файлы новой версии мимо HTTP-кэша браузера
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: "reload" })))));
+  // Здесь нет skipWaiting: новая версия ждёт, пока игрок подтвердит обновление
+});
+
+// Игрок нажал «Обновить» — включаемся
+self.addEventListener("message", (e) => {
+  if (e.data === "activate") self.skipWaiting();
 });
 
 // 2. Включение: удаляем кэши старых версий
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith("coder-path-") && k !== VERSION).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -38,17 +47,13 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Файлы игры: сначала пробуем интернет (чтобы обновления приходили сразу),
-  // нет сети или долго (3 с) — отдаём из кэша
-  if (url.origin === location.origin) {
-    e.respondWith(
-      caches.open(VERSION).then(async (c) => {
-        const cached = await c.match(req, { ignoreSearch: true });
-        const net = fetch(req).then((r) => { if (r.ok) c.put(req, r.clone()); return r; });
-        if (!cached) return net;
-        const slow = new Promise((res) => setTimeout(() => res(cached), 3000));
-        return Promise.race([net.catch(() => cached), slow]);
-      })
-    );
-  }
+  if (url.origin !== location.origin) return; // Firebase и прочее — напрямую
+
+  // Сведения о новой версии — всегда из интернета (так игра узнаёт об обновлении)
+  if (url.pathname.endsWith("/version.json") && url.searchParams.has("check")) return;
+
+  // Файлы игры: из кэша своей версии; чего нет — из интернета
+  e.respondWith(
+    caches.open(VERSION).then(async (c) => (await c.match(req, { ignoreSearch: true })) || fetch(req))
+  );
 });

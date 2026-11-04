@@ -839,6 +839,45 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 .pick-actions { display: flex; gap: 8px; }
 .pick-actions .btn { flex: 1; }
 .pick-msg { min-height: 1.4em; text-align: center; color: var(--torch) !important; font-weight: 600; }
+
+/* --- Приложение: установка и обновления --- */
+.updbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 8px; padding: 8px 8px 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ok);
+  background: var(--panel);
+  font-size: 14px;
+}
+.updbar[hidden] { display: none; }
+.updbar span { flex: 1; min-width: 160px; }
+.updbar .btn { font-size: 15px; padding: 7px 14px; }
+.apppanel {
+  max-width: 480px; margin-inline: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--wall-edge); border-radius: 8px;
+  background: var(--panel);
+  font-size: 14px; color: var(--muted);
+}
+.apppanel[hidden] { display: none; }
+.apppanel > b { color: var(--fg); }
+.app-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.app-row .btn { font-family: var(--font-body); font-size: 14px; font-weight: 600; padding: 8px 12px; background: var(--bg); }
+.app-row .btn[hidden], .app-installed[hidden] { display: none; }
+.app-installed { color: var(--ok); font-weight: 600; padding: 8px 4px; }
+.app-status { margin: 0; min-height: 1.3em; }
+.app-update { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--wall-edge); }
+.app-update[hidden] { display: none; }
+.app-update p { margin: 0; color: var(--fg); }
+.app-update ul { margin: 0; padding-left: 20px; }
+.app-update .btn { align-self: flex-start; }
+.inst-dev { color: var(--fg) !important; font-weight: 600; }
+.inst-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; color: var(--fg); font-size: 15px; }
+.inst-steps b { color: var(--torch); }
+.inst-other summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+.inst-other div { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.inst-other div b { color: var(--fg); }
 </style>
 
 <!-- Заставка: браузер включает звук только после касания, поэтому игра начинается с кнопки.
@@ -872,6 +911,10 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
       <span class="sync-state" id="sync-state"></span>
     </button>
     <p class="map-note" id="cloud-note" hidden>Прогресс сохраняется в твоём аккаунте Claude</p>
+    <div class="updbar" id="upd-bar" hidden>
+      <span id="upd-bar-text"></span>
+      <button class="btn next upd-go">Обновить</button>
+    </div>
     <p class="map-note dev" id="dev-note" hidden>Режим проверки: все уровни открыты. Пять раз нажми на название Coder Path, чтобы выключить.</p>
   </header>
   <div class="mapwrap">
@@ -882,7 +925,39 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
     <b>Уже умеешь программировать?</b>
     Пройди два первых уровня, чтобы понять управление, а потом сразу иди на <span class="ch-mark">◆ Испытание</span> главы. Оно открывает следующую главу, и все уровни можно не проходить.
   </div>
+  <section class="apppanel" id="app-panel" hidden>
+    <b>Приложение</b>
+    <div class="app-row">
+      <button class="btn reset" id="app-install">⬇ Установить игру</button>
+      <span class="app-installed" id="app-installed" hidden>✓ Игра установлена</span>
+      <button class="btn reset" id="app-check">⟳ Проверить обновления</button>
+      <button class="btn reset" id="app-sync">☁ Синхронизировать</button>
+    </div>
+    <p class="app-status" id="app-status" role="status"></p>
+    <div class="app-update" id="app-update" hidden>
+      <p id="app-update-text"></p>
+      <ul id="app-update-notes"></ul>
+      <button class="btn next upd-go">Обновить сейчас</button>
+    </div>
+  </section>
   <p class="credits">Графика: <a href="https://pixelfrog-assets.itch.io/tiny-swords" target="_blank" rel="noopener">Tiny Swords</a> — Pixel Frog</p>
+</div>
+
+<!-- Окно «Как установить»: инструкция для этого устройства и браузера -->
+<div class="sheet" id="inst-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="inst-h">
+  <div class="sheet-box">
+    <button class="sheet-x" id="inst-close" aria-label="Закрыть">✕</button>
+    <div>
+      <h2 id="inst-h">Как установить игру</h2>
+      <p class="inst-dev" id="inst-dev"></p>
+      <ol class="inst-steps" id="inst-steps"></ol>
+      <p id="inst-note"></p>
+      <details class="inst-other">
+        <summary>Другое устройство или браузер</summary>
+        <div id="inst-other"></div>
+      </details>
+    </div>
+  </div>
 </div>
 
 <!-- Окно «Код игрока»: показать свой код или ввести код с другого устройства (всё кнопками) -->
@@ -894,6 +969,8 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
       <div class="code-big" id="sync-big"></div>
       <p>Хочешь играть на другом телефоне или планшете? Открой там игру и введи этот код. Звёзды и код уровней появятся и там, а дальше всё сохраняется само.</p>
       <p>Сфотографируй код или запиши его, чтобы не забыть.</p>
+      <button class="btn run" id="sync-now">☁ Синхронизировать сейчас</button>
+      <p class="pick-msg" id="sync-msg" role="status"></p>
       <button class="btn reset" id="sync-enter">Ввести код с другого устройства</button>
     </div>
     <div id="sync-pick" hidden>
@@ -4579,9 +4656,220 @@ $("start-game").addEventListener("click", () => {
 
 
 <script>
-// Включаем работу без интернета (сервис-воркер из файла sw.js)
-if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+// ===== Приложение: установка, обновления, синхронизация =====
+// Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
+const APP_VERSION = 3;
+const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
+const appStatus = (t) => ($("app-status").textContent = t);
+
+// --- Установка ---
+// Chrome, Edge, Яндекс и Samsung на Android и компьютере умеют показать своё окно
+// «Установить» (событие beforeinstallprompt). Safari на iPhone/iPad так не умеет —
+// там только вручную через «Поделиться», поэтому показываем пошаговую инструкцию.
+let installEvt = null;
+const isInstalled = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; });
+addEventListener("appinstalled", () => { installEvt = null; drawInstall(); appStatus("Готово! Игра появилась среди твоих приложений"); });
+
+function detectDevice() {
+  const ua = navigator.userAgent;
+  const iPad = /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const ios = /iPhone|iPod/.test(ua) || iPad;
+  const android = /Android/.test(ua);
+  const browser =
+    /YaBrowser|YaApp/.test(ua) ? "yandex" : /SamsungBrowser/.test(ua) ? "samsung" : /EdgA?\/|EdgiOS/.test(ua) ? "edge" :
+    /Firefox|FxiOS/.test(ua) ? "firefox" : /OPR\/|OPiOS|OPT\//.test(ua) ? "opera" : /CriOS|Chrome/.test(ua) ? "chrome" :
+    /Safari/.test(ua) ? "safari" : "other";
+  // Браузер внутри другого приложения (Telegram, VK, Instagram): установить оттуда нельзя
+  const inapp = /Telegram|Instagram|FBAN|FBAV|VKClient|Line\//.test(ua) || (ios && !/Safari/.test(ua));
+  return { ios, iPad, android, desktop: !ios && !android, browser, inapp };
+}
+const BR_NAME = { chrome: "Chrome", safari: "Safari", edge: "Edge", firefox: "Firefox", yandex: "Яндекс Браузер", samsung: "Samsung Internet", opera: "Opera", other: "браузер" };
+
+// Шаги для этого устройства: { dev: что за устройство, steps: [...], note }
+function installGuide(d) {
+  const where = d.ios ? (d.iPad ? "iPad" : "iPhone") : d.android ? "Android" : "компьютер";
+  const dev = `${where}, ${BR_NAME[d.browser]}`;
+  const sep = "На iPhone и iPad установленная игра хранит прогресс отдельно от браузера. Чтобы звёзды переехали, открой там «Код игрока» и введи свой код.";
+  if (d.inapp) return { dev: `${where}, браузер внутри приложения`, steps: [
+    "Ты открыл игру внутри другого приложения (например, Telegram или ВКонтакте). Отсюда установить нельзя.",
+    `Нажми меню <b>•••</b> или <b>⋮</b> и выбери <b>«Открыть в ${d.ios ? "Safari" : "браузере"}»</b>.`,
+    "Там снова нажми «Установить игру» — появится инструкция.",
+  ] };
+  if (d.ios) {
+    const share = d.browser === "safari"
+      ? `Нажми кнопку <b>«Поделиться»</b> <b>⬆</b> — ${d.iPad ? "справа вверху, рядом с адресом" : "внизу экрана"}. Если её не видно, сначала нажми <b>•••</b> рядом с адресом.`
+      : `Нажми <b>«Поделиться»</b> <b>⬆</b> — в ${BR_NAME[d.browser]} она в адресной строке или в меню <b>•••</b>.`;
+    return { dev, steps: [share, "Пролистай список вниз и выбери <b>«На экран „Домой“»</b>.", "Нажми <b>«Добавить»</b>. На экране появится иконка с рыцарем."],
+      note: (d.browser === "safari" ? "" : "Если такого пункта нет — открой игру в Safari и установи оттуда. ") + sep };
+  }
+  if (d.android) {
+    const menu = {
+      samsung: ["Нажми меню <b>≡</b> внизу экрана.", "Выбери <b>«Добавить страницу на»</b> → <b>«Главный экран»</b>."],
+      firefox: ["Нажми меню <b>⋮</b>.", "Выбери <b>«Установить»</b> или <b>«Добавить на главный экран»</b>."],
+      yandex: ["Нажми меню <b>⋮</b> (или <b>≡</b>) рядом с адресом.", "Выбери <b>«Добавить ярлык»</b> или <b>«Установить»</b>."],
+      edge: ["Нажми меню <b>≡</b> внизу экрана.", "Выбери <b>«Добавить на телефон»</b>."],
+    }[d.browser] || ["Нажми меню <b>⋮</b> справа вверху.", "Выбери <b>«Установить приложение»</b> или <b>«Добавить на главный экран»</b>."];
+    return { dev, steps: [...menu, "Подтверди — иконка с рыцарем появится на главном экране."] };
+  }
+  if (d.browser === "safari") return { dev: "Mac, Safari", steps: ["В меню сверху выбери <b>«Файл»</b> → <b>«Добавить в Dock»</b>.", "Нажми <b>«Добавить»</b>. Игра появится в Dock и в Launchpad."] };
+  if (d.browser === "firefox") return { dev, steps: [
+    "Firefox на компьютере пока не умеет устанавливать игры как приложения.",
+    "Открой эту же страницу в <b>Chrome</b>, <b>Edge</b> или <b>Яндекс Браузере</b> и нажми «Установить игру» там.",
+    "Или просто играй во вкладке — всё работает и так.",
+  ] };
+  const edge = d.browser === "edge";
+  return { dev, steps: [
+    "Справа в адресной строке нажми значок установки <b>⊕</b> (компьютер со стрелкой).",
+    edge ? "Если значка нет: меню <b>…</b> → <b>«Приложения»</b> → <b>«Установить этот сайт как приложение»</b>."
+         : "Если значка нет: меню <b>⋮</b> → <b>«Установить Coder Path»</b> (или <b>«Сохранить и поделиться»</b> → <b>«Установить страницу как приложение»</b>).",
+    "Подтверди <b>«Установить»</b>. Игра откроется в своём окне и появится в меню «Пуск».",
+  ] };
+}
+const OTHER_GUIDES = [
+  ["iPhone и iPad (Safari)", "«Поделиться» ⬆ → «На экран „Домой“» → «Добавить»."],
+  ["Android (Chrome, Яндекс)", "Меню ⋮ → «Установить приложение» или «Добавить на главный экран»."],
+  ["Android (Samsung Internet)", "Меню ≡ → «Добавить страницу на» → «Главный экран»."],
+  ["Компьютер (Chrome, Edge, Яндекс)", "Значок ⊕ справа в адресной строке → «Установить»."],
+  ["Mac (Safari)", "«Файл» → «Добавить в Dock»."],
+];
+function openInstallGuide() {
+  const g = installGuide(detectDevice());
+  $("inst-dev").textContent = "Твоё устройство: " + g.dev;
+  $("inst-steps").innerHTML = g.steps.map((s) => `<li>${s}</li>`).join("");
+  $("inst-note").textContent = g.note || "Установленная игра открывается с иконки, как обычное приложение, и работает без интернета.";
+  $("inst-other").innerHTML = OTHER_GUIDES.map(([h, t]) => `<span><b>${h}:</b> ${t}</span>`).join("");
+  $("inst-sheet").hidden = false;
+  $("inst-close").focus();
+}
+function drawInstall() {
+  const done = isInstalled();
+  $("app-install").hidden = done;
+  $("app-installed").hidden = !done;
+}
+$("app-install").addEventListener("click", async () => {
+  sfx("tap");
+  if (installEvt) {                 // браузер сам покажет окно «Установить»
+    installEvt.prompt();
+    const { outcome } = await installEvt.userChoice;
+    installEvt = null;
+    if (outcome === "accepted") return appStatus("Устанавливаю…");
+  }
+  openInstallGuide();
+});
+$("inst-close").addEventListener("click", () => { sfx("tap"); $("inst-sheet").hidden = true; });
+$("inst-sheet").addEventListener("click", (e) => { if (e.target.id === "inst-sheet") e.currentTarget.hidden = true; });
+addEventListener("keydown", (e) => { if (e.key === "Escape") $("inst-sheet").hidden = true; });
+
+// --- Обновления ---
+// На сайте лежит version.json: номер версии, что нового, размер и отпечаток каждого файла.
+// Сравниваем со своим (он лежит в кэше этой версии) — так узнаём, что и сколько скачивать.
+let swReg = null, updating = false;
+const fmtSize = (b) => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} КБ` : `${(b / 1048576).toFixed(1).replace(".", ",")} МБ`;
+async function getReg() { if (!swReg && swOk) swReg = await navigator.serviceWorker.getRegistration(); return swReg; }
+async function installedInfo() {
+  try {
+    const r = await (await caches.open(`coder-path-v${APP_VERSION}`)).match("version.json", { ignoreSearch: true });
+    return r ? await r.json() : null;
+  } catch (e) { return null; }
+}
+function showUpdate(info, size, ready) {
+  const s = fmtSize(size);
+  $("app-update-text").textContent = `Вышла новая версия (${info.version}). ${ready ? `Уже загружена, ${s}.` : `Загрузка: ${s}.`}`;
+  $("app-update-notes").innerHTML = (info.notes || []).map((n) => `<li>${n}</li>`).join("");
+  $("app-update").hidden = false;
+  $("upd-bar-text").textContent = `Есть обновление игры · ${s}`;
+  $("upd-bar").hidden = false;
+}
+function hideUpdate() { $("app-update").hidden = true; $("upd-bar").hidden = true; }
+
+async function checkUpdate(manual) {
+  if (!swOk) return manual && appStatus("Этот браузер не умеет обновлять игру сам — просто обнови страницу");
+  if (manual) appStatus("Проверяю…");
+  let info;
+  try {
+    const r = await fetch(`version.json?check=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    info = await r.json();
+  } catch (e) { return manual && appStatus("Нет связи с интернетом. Проверь чуть позже"); }
+  const reg = await getReg();
+  if (!(info.version > APP_VERSION)) {
+    hideUpdate();
+    // Страница уже новая, а помощник в фоне ещё старый — тихо включаем новый
+    if (reg?.waiting) reg.waiting.postMessage("activate");
+    return manual && appStatus(`У тебя последняя версия игры (${APP_VERSION})`);
+  }
+  const old = await installedInfo();
+  let size = 0;
+  for (const [f, m] of Object.entries(info.files || {})) if (old?.files?.[f]?.hash !== m.hash) size += m.size;
+  showUpdate(info, size, !!reg?.waiting);
+  if (manual) appStatus("");
+}
+// Ждём, пока браузер скачает новую версию целиком
+function waitInstalled(reg, ms) {
+  return new Promise((done) => {
+    const t = setTimeout(() => done(null), ms);
+    const watch = (sw) => sw && sw.addEventListener("statechange", () => {
+      if (sw.state === "installed") { clearTimeout(t); done(sw); }
+      if (sw.state === "redundant") { clearTimeout(t); done(null); }
+    });
+    if (reg.installing) watch(reg.installing);
+    else reg.addEventListener("updatefound", () => watch(reg.installing), { once: true });
+  });
+}
+async function applyUpdate() {
+  const btns = document.querySelectorAll(".upd-go");
+  btns.forEach((b) => (b.disabled = true));
+  appStatus("Загружаю обновление…");
+  $("upd-bar-text").textContent = "Загружаю обновление…";
+  const reg = await getReg();
+  if (!reg) return location.reload();
+  updating = true;
+  let w = reg.waiting;
+  if (!w) { const p = waitInstalled(reg, 90000); reg.update().catch(() => {}); w = await p; }
+  if (!w) {
+    updating = false;
+    btns.forEach((b) => (b.disabled = false));
+    appStatus("Не получилось загрузить. Проверь интернет и попробуй ещё раз");
+    $("upd-bar-text").textContent = "Не получилось загрузить обновление";
+    return;
+  }
+  appStatus("Устанавливаю…");
+  w.postMessage("activate"); // новая версия включится, и страница перезагрузится
+}
+document.querySelectorAll(".upd-go").forEach((b) => b.addEventListener("click", () => { sfx("tap"); applyUpdate(); }));
+$("app-check").addEventListener("click", () => { sfx("tap"); checkUpdate(true); });
+
+// --- Синхронизация вручную ---
+async function syncByHand(msg) {
+  if (!syncOn) return msg("Синхронизация здесь не нужна: прогресс хранится в аккаунте Claude");
+  msg("Синхронизирую…");
+  await syncNow();
+  while (syncBusy) await new Promise((r) => setTimeout(r, 200));
+  msg(syncState === "ok" ? `Готово! Прогресс сохранён под кодом ${codeLabel(player)}` : "Нет связи с интернетом. Сохраню сам, когда она появится");
+}
+$("app-sync").addEventListener("click", () => { sfx("tap"); syncByHand(appStatus); });
+$("sync-now").addEventListener("click", () => { sfx("tap"); syncByHand((t) => ($("sync-msg").textContent = t)); });
+
+// --- Запуск ---
+if (!window.claude?.use) {
+  $("app-panel").hidden = false;
+  $("app-check").hidden = !swOk;
+  $("app-sync").hidden = !syncOn;
+  drawInstall();
+  matchMedia("(display-mode: standalone)").addEventListener?.("change", drawInstall);
+}
+if (swOk) {
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (updating) location.reload(); });
+  addEventListener("load", async () => {
+    try { swReg = await navigator.serviceWorker.register("sw.js"); } catch (e) {}
+    setTimeout(() => checkUpdate(false), 3000); // тихая проверка после запуска
+  });
+  // Вернулись в игру спустя время — снова тихо проверяем
+  let lastCheck = Date.now();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now() - lastCheck > 30 * 60000) { lastCheck = Date.now(); checkUpdate(false); }
+  });
 }
 </script>
 </body></html>
