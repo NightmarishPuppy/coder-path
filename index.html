@@ -2766,7 +2766,7 @@ function startMapScene(canvas) {
   let last = 0;
   const loop = (t) => {
     requestAnimationFrame(loop);
-    if (t - last < 80 || document.hidden || document.getElementById("mapview").hidden) return; // ~12 кадров/с, только когда карту видно
+    if (t - last < (LIGHT ? 140 : 80) || document.hidden || document.getElementById("mapview").hidden) return; // ~12 кадров/с, только когда карту видно
     last = t;
     frame(t);
   };
@@ -4284,15 +4284,24 @@ $("win-map").addEventListener("click", () => showView("map"));
 // Осциллятор — это "генератор ноты": задаём частоту и форму волны,
 // а громкостью (gain) рисуем, как нота начинается и затухает.
 let actx = null, master = null, musicBus = null, sfxBus = null;
+// «Лёгкий режим» для Android и слабых устройств: там сложный объёмный звук и длинное эхо
+// не успевают считаться вовремя, и музыка хрипит. Звук проще, но чистый.
+const LIGHT = /Android/i.test(navigator.userAgent) ||
+  (!/iPhone|iPad|Macintosh/.test(navigator.userAgent) && ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3));
 
 function audio() {
   if (!actx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
-    actx = new AC();
+    // balanced — звуку дают чуть больше запаса времени, меньше риск щелчков
+    try { actx = new AC(LIGHT ? { latencyHint: "balanced" } : undefined); } catch (e) { actx = new AC(); }
     master = actx.createGain();
     master.gain.value = 0.9;
-    master.connect(actx.destination);
+    // ограничитель: когда звуки складываются, громкость не переваливает за предел и не "рвётся"
+    const limiter = actx.createDynamicsCompressor();
+    limiter.threshold.value = -8; limiter.knee.value = 6; limiter.ratio.value = 12;
+    limiter.attack.value = 0.003; limiter.release.value = 0.25;
+    master.connect(limiter).connect(actx.destination);
     // музыка идёт через мягкий фильтр, чтобы не "пищала"
     const soft = actx.createBiquadFilter();
     soft.type = "lowpass";
@@ -4433,6 +4442,7 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 // Реверберация: "отпечаток" помещения из затухающего шума, разный в левом и правом
 // канале — от этого звук становится широким и объёмным.
 function makeReverb(seconds) {
+  if (LIGHT) seconds = Math.min(seconds, 1.1); // короткое эхо считать в разы легче
   const len = Math.floor(actx.sampleRate * seconds);
   const ir = actx.createBuffer(2, len, actx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
@@ -4450,7 +4460,7 @@ function placeAt(node, t0, { x = 0, z = -2, y = 0, toX, toZ, move = 0 }) {
   let p;
   try {
     p = actx.createPanner();
-    p.panningModel = "HRTF";
+    p.panningModel = LIGHT ? "equalpower" : "HRTF"; // на слабых — простое лево-право
     p.distanceModel = "inverse";
     p.refDistance = 1.5;
     p.rolloffFactor = 0.5;
@@ -5112,7 +5122,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
