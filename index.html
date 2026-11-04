@@ -2857,7 +2857,7 @@ function startMapScene(canvas) {
   let last = 0;
   const loop = (t) => {
     requestAnimationFrame(loop);
-    if (t - last < (LIGHT ? 140 : 80) || document.hidden || document.getElementById("mapview").hidden) return; // ~12 кадров/с, только когда карту видно
+    if (t - last < (LIGHT ? 250 : 80) || document.hidden || document.getElementById("mapview").hidden) return; // ~12 кадров/с, только когда карту видно
     last = t;
     frame(t);
   };
@@ -4385,7 +4385,8 @@ function audio() {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     // balanced — звуку дают чуть больше запаса времени, меньше риск щелчков
-    try { actx = new AC(LIGHT ? { latencyHint: "balanced" } : undefined); } catch (e) { actx = new AC(); }
+    // playback — самый большой запас времени: звук чуть позже нажатия, зато без треска
+    try { actx = new AC(LIGHT ? { latencyHint: "playback" } : undefined); } catch (e) { actx = new AC(); }
     master = actx.createGain();
     master.gain.value = 0.9;
     // ограничитель: когда звуки складываются, громкость не переваливает за предел и не "рвётся"
@@ -4545,10 +4546,42 @@ function makeReverb(seconds) {
   return conv;
 }
 
+// Дешёвое эхо для слабых устройств: две линии задержки с затуханием вместо свёртки.
+// Свёртка (ConvolverNode) с длинным "отпечатком" зала — самое тяжёлое в звуке игры.
+function cheapEcho(seconds) {
+  const inp = actx.createGain(), out = actx.createGain();
+  [[0.11, -0.6], [0.19, 0.6]].forEach(([t, pan]) => {
+    const d = actx.createDelay(1), fb = actx.createGain(), lp = actx.createBiquadFilter();
+    d.delayTime.value = t * Math.min(2, 0.6 + seconds / 3);
+    lp.type = "lowpass"; lp.frequency.value = 2200;
+    fb.gain.value = Math.min(0.55, 0.25 + seconds / 12); // длиннее зал — дольше повторы
+    inp.connect(d); d.connect(lp).connect(fb).connect(d);
+    const p = actx.createStereoPanner ? actx.createStereoPanner() : actx.createGain();
+    if (p.pan) p.pan.value = pan;
+    lp.connect(p).connect(out);
+  });
+  inp._out = out;
+  inp.connect = function (node) { return out.connect(node); }; // снаружи выглядит как один узел
+  return inp;
+}
+
 // Ставим звук в точку вокруг игрока. x: лево(−)/право(+), z: впереди(−)/сзади(+).
 // toX/toZ — куда звук плавно переместится за время move (например, пролетающая чайка).
 function placeAt(node, t0, { x = 0, z = -2, y = 0, toX, toZ, move = 0 }) {
   let p;
+  if (LIGHT && actx.createStereoPanner) {
+    // на слабых устройствах — простое лево-право и тише вдали, без трёхмерного расчёта
+    p = actx.createStereoPanner();
+    const pan = (v) => Math.max(-1, Math.min(1, v / 4));
+    p.pan.setValueAtTime(pan(x), t0);
+    if (move) p.pan.linearRampToValueAtTime(pan(toX ?? x), t0 + move);
+    const g = actx.createGain();
+    g.gain.value = 1.5 / Math.max(1.5, Math.hypot(x, y, z) * 0.6 + 1);
+    node.connect(g).connect(p);
+    p.connect(musicOut);
+    if (reverbIn) p.connect(reverbIn);
+    return p;
+  }
   try {
     p = actx.createPanner();
     p.panningModel = LIGHT ? "equalpower" : "HRTF"; // на слабых — простое лево-право
@@ -4747,11 +4780,11 @@ function startMusic() {
   musicOut.gain.linearRampToValueAtTime(1, actx.currentTime + 2.5);
   musicOut.connect(musicBus);
   // общий "зал": всё, что звучит, частично уходит в реверберацию
-  const conv = makeReverb(mood.reverb);
   const wet = actx.createGain();
   wet.gain.value = mood.wet;
   reverbIn = actx.createGain();
-  reverbIn.connect(conv).connect(wet).connect(musicOut);
+  if (LIGHT) reverbIn.connect(cheapEcho(mood.reverb)).connect(wet).connect(musicOut);
+  else reverbIn.connect(makeReverb(mood.reverb)).connect(wet).connect(musicOut);
   // места, где "живут" постоянные источники звука в этой главе
   spots = {
     chimes: { x: pick([-2.5, 2.5]), z: rand(-1, 1), y: 1 },
@@ -5213,7 +5246,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 9;
+const APP_VERSION = 10;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
