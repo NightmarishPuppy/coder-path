@@ -894,6 +894,9 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 .app-row .btn { font-family: var(--font-body); font-size: 14px; font-weight: 600; padding: 8px 12px; background: var(--bg); }
 .app-row .btn[hidden], .app-installed[hidden] { display: none; }
 .app-installed { color: var(--ok); font-weight: 600; padding: 8px 4px; }
+.app-audio label { color: var(--fg); font-weight: 600; }
+.app-audio select { font: inherit; font-size: 14px; font-weight: 600; color: var(--fg); background: var(--bg); border: 1px solid var(--wall-edge); border-radius: 4px; padding: 7px 8px; }
+#app-audio-note { font-size: 13px; }
 .app-status { margin: 0; min-height: 1.3em; }
 .app-update { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--wall-edge); }
 .app-update[hidden] { display: none; }
@@ -964,6 +967,15 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
       <button class="btn reset" id="app-check">⟳ Проверить обновления</button>
       <button class="btn reset" id="app-sync">☁ Синхронизировать</button>
       <button class="btn reset" id="app-move">📲 Перенести прогресс</button>
+    </div>
+    <div class="app-row app-audio">
+      <label for="app-audio">🔊 Звук:</label>
+      <select id="app-audio">
+        <option value="auto">Авто</option>
+        <option value="full">Полный (объёмный)</option>
+        <option value="light">Лёгкий</option>
+      </select>
+      <span id="app-audio-note"></span>
     </div>
     <p class="app-status" id="app-status" role="status"></p>
     <div class="app-update" id="app-update" hidden>
@@ -4375,10 +4387,68 @@ $("win-map").addEventListener("click", () => showView("map"));
 // Осциллятор — это "генератор ноты": задаём частоту и форму волны,
 // а громкостью (gain) рисуем, как нота начинается и затухает.
 let actx = null, master = null, musicBus = null, sfxBus = null;
-// «Лёгкий режим» для Android и слабых устройств: там сложный объёмный звук и длинное эхо
-// не успевают считаться вовремя, и музыка хрипит. Звук проще, но чистый.
-const LIGHT = /Android/i.test(navigator.userAgent) ||
+// «Лёгкий режим» звука: на слабых устройствах объёмный звук и длинное эхо не успевают
+// считаться вовремя, и музыка хрипит. Звук проще, но чистый.
+// Режим: save.audioMode — "auto" (по замеру), "full" или "light" (выбрал игрок).
+// Пока замера нет — догадка: Android и слабые не-Apple устройства → лёгкий.
+const LIGHT_GUESS = /Android/i.test(navigator.userAgent) ||
   (!/iPhone|iPad|Macintosh/.test(navigator.userAgent) && ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3));
+// Замер: во сколько раз медленнее реального времени устройство считает тяжёлый звук.
+// Если 1 секунда полного звука считается дольше BENCH_LIMIT секунды — нужен лёгкий режим
+// (в реальном времени у звука ещё и меньше запаса, поэтому порог с большим запасом).
+const BENCH_KEY = "coder-path-audio-bench", BENCH_LIMIT = 0.45;
+let bench = null;
+try { const b = JSON.parse(localStorage.getItem(BENCH_KEY) || "null"); if (b && Date.now() - b.at < 30 * 864e5) bench = b.ratio; } catch (e) {}
+let LIGHT = LIGHT_GUESS;
+function decideLight() {
+  const m = save.audioMode || "auto";
+  return m === "light" ? true : m === "full" ? false : bench !== null ? bench > BENCH_LIMIT : LIGHT_GUESS;
+}
+// Тихо (без звука в динамиках) просчитать 2 секунды "полной" атмосферы и засечь время
+async function benchAudio() {
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!OAC) return null;
+  const sr = 44100, dur = 2;
+  const oc = new OAC(2, sr * dur, sr);
+  const len = sr * 3, ir = oc.createBuffer(2, len, sr);       // эхо как в пещере
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+  const conv = oc.createConvolver(); conv.buffer = ir; conv.connect(oc.destination);
+  for (let k = 0; k < 8; k++) {                                 // 8 звуков сразу, каждый в своей точке
+    const o = oc.createOscillator(), g = oc.createGain(), p = oc.createPanner();
+    o.type = "triangle"; o.frequency.value = 200 + k * 90; g.gain.value = 0.05;
+    p.panningModel = "HRTF";
+    if (p.positionX) { p.positionX.setValueAtTime(-3 + k, 0); p.positionX.linearRampToValueAtTime(3 - k, dur); p.positionZ.value = -2; }
+    o.connect(g).connect(p); p.connect(oc.destination); p.connect(conv);
+    o.start(0);
+  }
+  const t0 = performance.now();
+  await oc.startRendering();
+  return (performance.now() - t0) / 1000 / dur;
+}
+async function runBench(force) {
+  if (bench !== null && !force) return;
+  try {
+    const r = await benchAudio();
+    if (r === null) return;
+    bench = Math.round(r * 1000) / 1000;
+    try { localStorage.setItem(BENCH_KEY, JSON.stringify({ ratio: bench, at: Date.now() })); } catch (e) {}
+    applyAudioMode();
+  } catch (e) {}
+}
+// Применить режим: пересобрать фон (эхо и панорама), обновить подпись в панели
+function applyAudioMode() {
+  const was = LIGHT;
+  LIGHT = decideLight();
+  const sel = document.getElementById("app-audio"), note = document.getElementById("app-audio-note");
+  if (sel) sel.value = save.audioMode || "auto";
+  if (note) {
+    const auto = (save.audioMode || "auto") === "auto";
+    note.textContent = auto
+      ? (bench === null ? `сейчас ${LIGHT ? "лёгкий" : "полный"} (замер ещё идёт)` : `выбран ${LIGHT ? "лёгкий" : "полный"} · замер ${bench}`)
+      : "";
+  }
+  if (was !== LIGHT && typeof musicTimer !== "undefined" && musicTimer) { stopMusic(); startMusic(); }
+}
 
 function audio() {
   if (!actx) {
@@ -4809,6 +4879,17 @@ function stopMusic() {
   musicOut = null;
   reverbIn = null;
 }
+
+// Выбор режима звука в панели «Приложение»
+document.getElementById("app-audio").addEventListener("change", (e) => {
+  save.audioMode = e.target.value;
+  writeSave();
+  applyAudioMode();
+  if (save.audioMode === "auto") runBench(true);   // вернули «Авто» — замерим заново
+  sfx("tap");
+});
+applyAudioMode();
+setTimeout(() => runBench(false), 1200);           // замер после загрузки, чтобы не мешать заставке
 
 // Кнопки музыки и звуков есть и на карте, и на уровне — держим их в одном состоянии
 function drawSoundButtons() {
@@ -5246,7 +5327,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 10;
+const APP_VERSION = 11;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
