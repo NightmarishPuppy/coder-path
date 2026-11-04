@@ -3,7 +3,7 @@
 // поэтому игра открывается и без интернета.
 
 // Меняй номер версии при каждом обновлении игры — тогда старый кэш удалится.
-const VERSION = "coder-path-v1";
+const VERSION = "coder-path-v2";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 // 1. Установка: сразу кладём в кэш все файлы игры

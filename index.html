@@ -759,6 +759,86 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 .snd[aria-pressed="false"] .ico { stroke: var(--muted); }
 .snd[aria-pressed="false"] .ico-fill { fill: var(--muted); }
 .snd[aria-pressed="false"] .slash { display: inline; stroke: var(--muted); }
+
+/* --- Код игрока: синхронизация между устройствами --- */
+.synccard {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 6px;
+  padding: 6px 12px 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--wall-edge);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 13px;
+  cursor: pointer;
+}
+.synccard b { font-weight: 600; letter-spacing: 0.04em; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.sync-dot.ok { background: var(--ok); }
+.sync-dot.busy { background: var(--torch); }
+.sync-state { color: var(--muted); font-size: 12px; }
+.sheet {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: #000b;
+  overflow-y: auto;
+}
+.sheet[hidden] { display: none; }
+@media (min-width: 600px) { .sheet { align-items: center; } }
+.sheet-box {
+  position: relative;
+  width: 100%; max-width: 440px;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 20px 16px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--wall-edge);
+  background: var(--bg);
+}
+.sheet-box > div { display: flex; flex-direction: column; gap: 12px; }
+.sheet-box > div[hidden] { display: none; }
+.sheet h2 { margin: 0; padding-right: 40px; font-family: var(--font-display); font-size: 22px; }
+.sheet p { margin: 0; color: var(--muted); font-size: 14px; }
+.sheet-x {
+  position: absolute; top: 12px; right: 12px;
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--wall-edge); background: var(--panel); color: var(--fg);
+  font-size: 16px; cursor: pointer;
+}
+.code-big { display: flex; justify-content: center; gap: 8px; }
+.code-part {
+  flex: 1; max-width: 124px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--wall-edge);
+  background: var(--panel);
+}
+.code-part .em { font-size: 32px; line-height: 1.15; }
+.code-part .w { font-family: var(--font-display); font-size: 17px; font-weight: 700; letter-spacing: 0.05em; color: var(--fg); }
+.code-part.empty { border-style: dashed; }
+.code-part.empty .w { color: var(--muted); }
+.code-part.now { border-color: var(--torch); }
+.pick-ask { color: var(--fg) !important; font-weight: 600; text-align: center; }
+.pick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pick-grid.num { grid-template-columns: repeat(3, 1fr); width: 100%; max-width: 280px; margin-inline: auto; }
+.pick {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 2px;
+  border-radius: 8px;
+  border: 1px solid var(--wall-edge);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 12px;
+  cursor: pointer;
+}
+.pick .em { font-size: 26px; line-height: 1.15; }
+.pick.digit { padding: 12px 0; font-size: 24px; font-weight: 600; }
+.pick:active { border-color: var(--torch); }
+.pick-actions { display: flex; gap: 8px; }
+.pick-actions .btn { flex: 1; }
+.pick-msg { min-height: 1.4em; text-align: center; color: var(--torch) !important; font-weight: 600; }
 </style>
 
 <!-- Заставка: браузер включает звук только после касания, поэтому игра начинается с кнопки.
@@ -786,6 +866,11 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
     </div>
     <h1 id="map-title">Coder Path</h1>
     <p class="map-progress" id="map-progress"></p>
+    <button class="synccard" id="sync-open" hidden>
+      <span class="sync-dot" id="sync-dot"></span>
+      <span>Код игрока: <b id="sync-code"></b></span>
+      <span class="sync-state" id="sync-state"></span>
+    </button>
     <p class="map-note" id="cloud-note" hidden>Прогресс сохраняется в твоём аккаунте Claude</p>
     <p class="map-note dev" id="dev-note" hidden>Режим проверки: все уровни открыты. Пять раз нажми на название Coder Path, чтобы выключить.</p>
   </header>
@@ -798,6 +883,32 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
     Пройди два первых уровня, чтобы понять управление, а потом сразу иди на <span class="ch-mark">◆ Испытание</span> главы. Оно открывает следующую главу, и все уровни можно не проходить.
   </div>
   <p class="credits">Графика: <a href="https://pixelfrog-assets.itch.io/tiny-swords" target="_blank" rel="noopener">Tiny Swords</a> — Pixel Frog</p>
+</div>
+
+<!-- Окно «Код игрока»: показать свой код или ввести код с другого устройства (всё кнопками) -->
+<div class="sheet" id="sync-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sync-h">
+  <div class="sheet-box">
+    <button class="sheet-x" id="sync-close" aria-label="Закрыть">✕</button>
+    <div id="sync-show">
+      <h2 id="sync-h">Твой код игрока</h2>
+      <div class="code-big" id="sync-big"></div>
+      <p>Хочешь играть на другом телефоне или планшете? Открой там игру и введи этот код. Звёзды и код уровней появятся и там, а дальше всё сохраняется само.</p>
+      <p>Сфотографируй код или запиши его, чтобы не забыть.</p>
+      <button class="btn reset" id="sync-enter">Ввести код с другого устройства</button>
+    </div>
+    <div id="sync-pick" hidden>
+      <h2>Введи код</h2>
+      <div class="code-big" id="pick-slots"></div>
+      <p class="pick-ask" id="pick-ask"></p>
+      <div class="pick-grid" id="pick-grid"></div>
+      <p class="pick-msg" id="pick-msg" role="status"></p>
+      <div class="pick-actions">
+        <button class="btn reset" id="pick-back">← Назад</button>
+        <button class="btn run" id="pick-done" hidden>Готово</button>
+      </div>
+      <p>Звёзды с этого устройства не пропадут: из двух сохранений берём лучшее.</p>
+    </div>
+  </div>
 </div>
 
 <div class="wrap" id="levelview" hidden>
@@ -1413,6 +1524,7 @@ try {
 function writeSave() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   scheduleCloudSave();
+  scheduleSync();
 }
 
 // ===== Сохранение в аккаунте Claude =====
@@ -1436,12 +1548,26 @@ async function cloudSave() {
   if (cloudDirty) { cloudDirty = false; cloudSave(); }
 }
 
-// Соединяем два сохранения: звёзды берём лучшие, код — тот, что есть
+// Соединяем два сохранения: звёзды берём лучшие, код уровня — тот, что правили позже
+// (время правки лежит в codeAt). Код уровня, открытого прямо сейчас, не трогаем,
+// чтобы текст не поменялся у игрока под пальцами. Возвращает true, если что-то изменилось.
 function mergeSave(remote) {
-  for (const k in remote.stars || {}) save.stars[k] = Math.max(save.stars[k] || 0, remote.stars[k] || 0);
-  for (const k in remote.code || {}) if (save.code[k] === undefined) save.code[k] = remote.code[k];
+  let changed = false;
+  save.codeAt ||= {};
+  for (const k in remote.stars || {}) {
+    const best = Math.max(save.stars[k] || 0, remote.stars[k] || 0);
+    if (best !== (save.stars[k] || 0)) { save.stars[k] = best; changed = true; }
+  }
+  const openKey = typeof L !== "undefined" && L && !document.getElementById("levelview").hidden ? codeKey() : null;
+  const theirAt = remote.codeAt || {};
+  for (const k in remote.code || {}) {
+    if (k === openKey || save.code[k] === remote.code[k]) continue;
+    const mine = save.code[k] === undefined ? -1 : save.codeAt[k] || 0;
+    if ((theirAt[k] || 0) > mine) { save.code[k] = remote.code[k]; save.codeAt[k] = theirAt[k] || 0; changed = true; }
+  }
   if (!save.currentName && remote.currentName) save.currentName = remote.currentName;
   if (!save.voice && remote.voice) save.voice = remote.voice;
+  return changed;
 }
 
 async function initCloud() {
@@ -1460,6 +1586,153 @@ async function initCloud() {
     $("cloud-note").hidden = false;
     if (!$("mapview").hidden) renderMap();
   } catch (e) { cloudDoc = null; }
+}
+
+// ===== Синхронизация между устройствами: «код игрока» =====
+// Код — два слова и число, например КОТ-ЛУНА-427. На сервере (Firebase от Google)
+// лежит одна запись на код: players/kot-luna-427. Регистрации нет, личных данных нет:
+// только звёзды и код уровней. Список всех игроков получить нельзя (так настроены
+// правила базы), поэтому чужое сохранение можно открыть, только зная его код.
+// Обращаемся к базе обычным fetch, без библиотеки Firebase.
+const FS_URL = "https://firestore.googleapis.com/v1/projects/coder-path/databases/(default)/documents/players/";
+const FS_KEY = "AIzaSyC6iY7UvPjdveoBe7kH38_yo0WaKsXoYwg"; // публичный ключ проекта, не пароль
+const PLAYER_KEY = "coder-path-player";                     // код этого устройства (в браузере)
+// [картинка, слово, то же латиницей — так код хранится в базе]
+const WORDS_A = [
+  ["🐱", "кот", "kot"], ["🐶", "пёс", "pes"], ["🦊", "лис", "lis"], ["🐺", "волк", "volk"],
+  ["🐻", "мишка", "mishka"], ["🐰", "заяц", "zayac"], ["🦔", "ёж", "ezh"], ["🦉", "сова", "sova"],
+  ["🐭", "мышь", "mysh"], ["🦁", "лев", "lev"], ["🐯", "тигр", "tigr"], ["🐘", "слон", "slon"],
+  ["🦒", "жираф", "zhiraf"], ["🦓", "зебра", "zebra"], ["🐼", "панда", "panda"], ["🐨", "коала", "koala"],
+  ["🐳", "кит", "kit"], ["🐬", "дельфин", "delfin"], ["🐟", "рыба", "ryba"], ["🦀", "краб", "krab"],
+  ["🐙", "осьминог", "osminog"], ["🐢", "черепаха", "cherepaha"], ["🐸", "лягушка", "lyagushka"], ["🐧", "пингвин", "pingvin"],
+  ["🦆", "утка", "utka"], ["🦅", "орёл", "orel"], ["🦜", "попугай", "popugay"], ["🐝", "пчела", "pchela"],
+  ["🦋", "бабочка", "babochka"], ["🐌", "улитка", "ulitka"], ["🐴", "конь", "kon"], ["🐉", "дракон", "drakon"],
+];
+const WORDS_B = [
+  ["🌙", "луна", "luna"], ["☀️", "солнце", "solnce"], ["⭐", "звезда", "zvezda"], ["☁️", "облако", "oblako"],
+  ["🌈", "радуга", "raduga"], ["⛰️", "гора", "gora"], ["🌋", "вулкан", "vulkan"], ["🏝️", "остров", "ostrov"],
+  ["🌊", "волна", "volna"], ["❄️", "снег", "sneg"], ["🔥", "огонь", "ogon"], ["⚡", "молния", "molniya"],
+  ["🌲", "ёлка", "elka"], ["🌵", "кактус", "kaktus"], ["🌸", "цветок", "cvetok"], ["🍄", "гриб", "grib"],
+  ["🍎", "яблоко", "yabloko"], ["🍒", "вишня", "vishnya"], ["🍉", "арбуз", "arbuz"], ["🥕", "морковь", "morkov"],
+  ["🧀", "сыр", "syr"], ["🎂", "торт", "tort"], ["⚽", "мяч", "myach"], ["🎈", "шарик", "sharik"],
+  ["🚀", "ракета", "raketa"], ["⛵", "парус", "parus"], ["🚂", "поезд", "poezd"], ["🏰", "замок", "zamok"],
+  ["🔑", "ключ", "klyuch"], ["👑", "корона", "korona"], ["🗡️", "меч", "mech"], ["🛡️", "щит", "shchit"],
+];
+const pickRand = (arr) => arr[Math.floor(Math.random() * arr.length)];
+// kot-luna-427 → части для показа (картинки и слова)
+function codeParts(id) {
+  const [a, b, n] = String(id || "").split("-");
+  return { a: WORDS_A.find((w) => w[2] === a), b: WORDS_B.find((w) => w[2] === b), n };
+}
+const codeLabel = (id) => { const p = codeParts(id); return p.a && p.b ? `${p.a[1]}-${p.b[1]}-${p.n}`.toUpperCase() : ""; };
+const newCode = () => `${pickRand(WORDS_A)[2]}-${pickRand(WORDS_B)[2]}-${100 + Math.floor(Math.random() * 900)}`;
+
+let player = null;
+try { player = localStorage.getItem(PLAYER_KEY); } catch (e) {}
+if (!codeParts(player).a) player = null;
+// Синхронизация выключена внутри приложения Claude: там своё хранилище (см. выше)
+const syncOn = !window.claude?.use && typeof fetch === "function";
+let syncBusy = false, syncAgain = false, syncTimer = null, syncRetry = null, syncLast = 0;
+let syncState = "idle"; // idle — ещё не было, busy — идёт, ok — сохранено, off — нет связи
+
+// Запрос к базе с ограничением по времени: долго нет ответа — считаем, что нет связи
+async function fsFetch(id, opts = {}) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 10000);
+  try { return await fetch(`${FS_URL}${id}?key=${FS_KEY}`, { ...opts, signal: ctl.signal, cache: "no-store" }); }
+  finally { clearTimeout(t); }
+}
+// Прочитать сохранение по коду: объект, null (такого кода нет) или ошибка (нет связи)
+async function fsGet(id) {
+  const r = await fsFetch(id);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error("read " + r.status);
+  const j = await r.json();
+  try { return JSON.parse(j.fields?.json?.stringValue || "{}"); } catch (e) { return {}; }
+}
+async function fsPut(id, data) {
+  const r = await fsFetch(id, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: { json: { stringValue: JSON.stringify(data) }, savedAt: { stringValue: new Date().toISOString() } } }),
+  });
+  if (!r.ok) throw new Error("write " + r.status);
+}
+// Что отправляем: только прогресс. Музыка, звуки, голос и режим проверки — у каждого устройства свои.
+const cloudPayload = () => ({ stars: save.stars, code: save.code, codeAt: save.codeAt || {}, starsByName: true });
+
+function scheduleSync(delay = 2000) {
+  if (!syncOn) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, delay); // много быстрых правок → одна запись
+}
+// Один круг синхронизации: прочитать сохранение с сервера, соединить со своим, записать обратно.
+// Так ничего не теряется, даже если на двух устройствах играли по очереди без сети.
+async function syncNow() {
+  if (!syncOn) return;
+  if (syncBusy) { syncAgain = true; return; }
+  syncBusy = true;
+  clearTimeout(syncRetry);
+  setSyncState("busy");
+  try {
+    if (!player) {
+      // Первый запуск: придумываем код и проверяем, что он не занят
+      // (нет связи — код всё равно выдаём, на сервер он попадёт позже)
+      let id = newCode(), fresh = true;
+      try { for (let k = 0; k < 4 && (await fsGet(id)) !== null; k++) id = newCode(); } catch (e) { fresh = false; }
+      player = id;
+      try { localStorage.setItem(PLAYER_KEY, player); } catch (e) {}
+      setSyncState("busy");
+      if (!fresh) throw new Error("offline");
+    } else {
+      const remote = await fsGet(player);
+      if (remote && mergeSave(remote)) {
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+        refreshAfterSync();
+      }
+    }
+    await fsPut(player, cloudPayload());
+    syncLast = Date.now();
+    setSyncState("ok");
+  } catch (e) {
+    setSyncState("off");
+    syncRetry = setTimeout(syncNow, 30000); // нет связи — тихо попробуем позже
+  }
+  syncBusy = false;
+  if (syncAgain) { syncAgain = false; syncNow(); }
+}
+// Ввести код с другого устройства. Ответ: "ok", "notfound" или "offline".
+async function usePlayerCode(id) {
+  let remote;
+  try { remote = await fsGet(id); } catch (e) { return "offline"; }
+  if (remote === null) return "notfound";
+  mergeSave(remote);
+  player = id;
+  try { localStorage.setItem(PLAYER_KEY, player); localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+  refreshAfterSync();
+  syncNow(); // записываем объединённое под новым кодом
+  return "ok";
+}
+// После загрузки с сервера: обновить карту (звёзды, открытые уровни)
+function refreshAfterSync() {
+  if (!document.getElementById("mapview").hidden && typeof renderMap === "function") renderMap();
+}
+function setSyncState(s) {
+  syncState = s;
+  const card = document.getElementById("sync-open");
+  if (!card) return;
+  card.hidden = !player;
+  document.getElementById("sync-code").textContent = codeLabel(player);
+  document.getElementById("sync-dot").className = "sync-dot " + s;
+  document.getElementById("sync-state").textContent =
+    s === "ok" ? "· сохранено" : s === "busy" ? "· сохраняю…" : s === "off" ? "· сохраню, когда будет интернет" : "";
+}
+if (syncOn) {
+  // Вернулись в игру (переключились с другого приложения) — подтягиваем свежее
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now() - syncLast > 10000) syncNow();
+  });
+  addEventListener("online", () => syncNow());
 }
 lang = save.lang === "js" ? "js" : "py";
 const codeKey = () => `${lang}:${L.name}`;
@@ -3035,6 +3308,7 @@ function onCodeChange() {
   if (running) return;
   showProblems = false;
   save.code[codeKey()] = codeEl.value;
+  (save.codeAt ||= {})[codeKey()] = Date.now(); // когда правили — для синхронизации
   writeSave();
   winBox.hidden = true;
   reset();
@@ -4051,6 +4325,104 @@ $("map-title").addEventListener("click", () => {
   renderMap();
 });
 
+// ===== Окно «Код игрока» =====
+// Показать свой код крупно, с картинками. Ввести чужой — в три шага, только кнопками:
+// первое слово (животное) → второе слово → три цифры.
+const sheetEl = $("sync-sheet");
+let entry = { a: null, b: null, n: "" };
+
+function partHtml(em, word, cls = "") {
+  return `<div class="code-part ${cls}"><span class="em">${em}</span><span class="w">${word}</span></div>`;
+}
+function showMyCode() {
+  const p = codeParts(player);
+  $("sync-big").innerHTML = p.a
+    ? partHtml(p.a[0], p.a[1].toUpperCase()) + partHtml(p.b[0], p.b[1].toUpperCase()) + partHtml("🔢", p.n)
+    : "";
+  $("sync-show").hidden = false;
+  $("sync-pick").hidden = true;
+}
+function openSheet() {
+  sheetEl.hidden = false;
+  showMyCode();
+  $("sync-close").focus();
+}
+function closeSheet() {
+  sheetEl.hidden = true;
+  $("sync-open").focus();
+}
+// Шаг ввода: 0 — первое слово, 1 — второе, 2 — цифры
+const pickStep = () => (!entry.a ? 0 : !entry.b ? 1 : 2);
+function renderPick() {
+  const step = pickStep();
+  $("pick-slots").innerHTML =
+    (entry.a ? partHtml(entry.a[0], entry.a[1].toUpperCase()) : partHtml("❔", "слово", "empty" + (step === 0 ? " now" : ""))) +
+    (entry.b ? partHtml(entry.b[0], entry.b[1].toUpperCase()) : partHtml("❔", "слово", "empty" + (step === 1 ? " now" : ""))) +
+    (entry.n.length === 3 ? partHtml("🔢", entry.n) : partHtml("🔢", (entry.n + "___").slice(0, 3), "empty" + (step === 2 ? " now" : "")));
+  $("pick-ask").textContent = ["Нажми первое слово кода", "Теперь второе слово", "И три цифры"][step];
+  const grid = $("pick-grid");
+  grid.classList.toggle("num", step === 2);
+  if (step < 2) {
+    const list = step === 0 ? WORDS_A : WORDS_B;
+    grid.innerHTML = list.map((w, i) => `<button class="pick" data-i="${i}"><span class="em">${w[0]}</span>${w[1]}</button>`).join("");
+  } else {
+    const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
+    grid.innerHTML = keys.map((d) => d ? `<button class="pick digit" data-d="${d}" ${d === "⌫" ? 'aria-label="Стереть цифру"' : ""}>${d}</button>` : "<span></span>").join("");
+  }
+  $("pick-done").hidden = entry.n.length !== 3;
+}
+$("pick-grid").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  sfx("tap");
+  $("pick-msg").textContent = "";
+  if (b.dataset.i !== undefined) {
+    const w = (pickStep() === 0 ? WORDS_A : WORDS_B)[+b.dataset.i];
+    if (pickStep() === 0) entry.a = w; else entry.b = w;
+  } else if (b.dataset.d === "⌫") entry.n = entry.n.slice(0, -1);
+  else if (entry.n.length < 3) entry.n += b.dataset.d;
+  renderPick();
+});
+$("pick-back").addEventListener("click", () => {
+  sfx("tap");
+  $("pick-msg").textContent = "";
+  if (entry.n) entry.n = entry.n.slice(0, -1);
+  else if (entry.b) entry.b = null;
+  else if (entry.a) entry.a = null;
+  else return showMyCode();
+  renderPick();
+});
+$("pick-done").addEventListener("click", async () => {
+  sfx("tap");
+  const id = `${entry.a[2]}-${entry.b[2]}-${entry.n}`;
+  const btn = $("pick-done");
+  btn.disabled = true;
+  $("pick-msg").textContent = "Ищу сохранение…";
+  const res = await usePlayerCode(id);
+  btn.disabled = false;
+  if (res === "ok") {
+    showMyCode();
+    $("map-toast").textContent = "Прогресс загружен!";
+    setTimeout(() => ($("map-toast").textContent = ""), 4000);
+    return closeSheet();
+  }
+  $("pick-msg").textContent = res === "notfound"
+    ? "Такого кода пока нет. Проверь слова и цифры"
+    : "Нет связи с интернетом. Попробуй чуть позже";
+});
+$("sync-open").addEventListener("click", () => { sfx("tap"); openSheet(); });
+$("sync-close").addEventListener("click", () => { sfx("tap"); closeSheet(); });
+$("sync-enter").addEventListener("click", () => {
+  sfx("tap");
+  entry = { a: null, b: null, n: "" };
+  $("pick-msg").textContent = "";
+  $("sync-show").hidden = true;
+  $("sync-pick").hidden = false;
+  renderPick();
+});
+sheetEl.addEventListener("click", (e) => { if (e.target === sheetEl) closeSheet(); }); // касание мимо окна
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheetEl.hidden) closeSheet(); });
+
 // ===== Живая заставка: островок из готовых анимаций Tiny Swords =====
 // Всё, что движется, — покадровые анимации самого набора (деревья, пена прибоя,
 // овцы, костёр, гоблины, рыцарь). Мы ничего не поворачиваем и не дорисовываем:
@@ -4191,6 +4563,7 @@ function startScene(canvas) {
 L = LEVELS[levelIdx];
 showView("map");
 initCloud();
+if (syncOn) { setSyncState("idle"); syncNow(); }
 const stopScene = startScene($("splash-scene"));
 
 // Заставка: касание "Играть" разрешает браузеру звук, и атмосфера начинается сразу
