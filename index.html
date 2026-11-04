@@ -626,6 +626,9 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 }
 #island { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 #map-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+/* Облака — самый верхний слой карты. pointer-events: none — нажатие проходит
+   сквозь облако на кнопку уровня под ним. */
+#map-clouds { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
 .mapwrap { position: relative; aspect-ratio: 360 / 760; }
 #island .lbl { font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-anchor: middle; dominant-baseline: central; fill: #4a2e14; }
 #island .bnum { font-family: var(--font-display); font-weight: 700; font-size: 14px; text-anchor: middle; dominant-baseline: central; fill: #fff; stroke: #1d2a3a; stroke-width: 3; paint-order: stroke; }
@@ -946,6 +949,7 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
   <div class="mapwrap">
     <canvas id="map-canvas" aria-hidden="true"></canvas>
     <svg id="island" viewBox="0 0 360 760" role="img" aria-label="Карта острова с уровнями"></svg>
+    <canvas id="map-clouds" aria-hidden="true"></canvas>
   </div>
   <p class="map-toast" id="map-toast" role="status"></p>
   <div class="howto">
@@ -2629,6 +2633,9 @@ const MAP_LABELS = [["БЕРЕГ", 304, 580], ["ЛЕС", 62, 432], ["СКАЛЫ 
 function startMapScene(canvas) {
   canvas.width = MAP_W * MT; canvas.height = MAP_H * MT;
   const ctx = canvas.getContext("2d");
+  const cloudCv = document.getElementById("map-clouds");
+  cloudCv.width = canvas.width; cloudCv.height = canvas.height;
+  const cctx = cloudCv.getContext("2d");
   const keys = new Set(["flat", "elev", "foam", "bridge", "gt_idle", "gx_idle", "sc_cloud1", "sc_cloud2", "sc_sheep", "sc_sheepg",
     ...MAP_DECO.map((d) => d[0]).filter((k) => !MAP_SHEEP[k]), "tree1", "tree2", "tree3", "tree4", "bush1"]);
   const img = {};
@@ -2758,10 +2765,13 @@ function startMapScene(canvas) {
     for (const [x, y, ph] of shore) ctx.drawImage(img.foam, ((ff + ph) % 16) * 192, 0, 192, 192, x * MT - 64, y * MT - 64, 192, 192);
     ctx.drawImage(land, 0, 0);
     for (const o of objs) drawObj(o, t);
-    const span = canvas.width + 600; // облака плывут медленно и уходят за край
-    ctx.globalAlpha = 0.85;
-    for (const c of clouds) ctx.drawImage(img[c.k], Math.round(((c.x0 * span + (t / 1000) * c.v * 4) % span) - 600), c.y);
-    ctx.globalAlpha = 1;
+    // Облака — на своём холсте поверх кнопок уровней: плывут медленно и уходят за край
+    const span = canvas.width + 600;
+    cctx.clearRect(0, 0, cloudCv.width, cloudCv.height);
+    cctx.imageSmoothingEnabled = false;
+    cctx.globalAlpha = 0.85;
+    for (const c of clouds) cctx.drawImage(img[c.k], Math.round(((c.x0 * span + (t / 1000) * c.v * 4) % span) - 600), c.y);
+    cctx.globalAlpha = 1;
   }
   let last = 0;
   const loop = (t) => {
@@ -5122,7 +5132,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 7;
+const APP_VERSION = 8;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
