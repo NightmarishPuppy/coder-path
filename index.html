@@ -798,6 +798,7 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 }
 .sheet-box > div { display: flex; flex-direction: column; gap: 12px; }
 .sheet-box > div[hidden] { display: none; }
+.sheet-box > .tabs { flex-direction: row; gap: 4px; }
 .sheet h2 { margin: 0; padding-right: 40px; font-family: var(--font-display); font-size: 22px; }
 .sheet p { margin: 0; color: var(--muted); font-size: 14px; }
 .sheet-x {
@@ -839,6 +840,26 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 .pick-actions { display: flex; gap: 8px; }
 .pick-actions .btn { flex: 1; }
 .pick-msg { min-height: 1.4em; text-align: center; color: var(--torch) !important; font-weight: 600; }
+
+.tabs { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--panel); border: 1px solid var(--wall-edge); }
+.tab { flex: 1; padding: 8px 4px; border: 0; border-radius: 7px; background: none; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--bg); color: var(--fg); box-shadow: 0 1px 0 var(--wall-edge); }
+.fgb { color: var(--fg); font-weight: 600; }
+.codein { display: flex; gap: 8px; }
+.codein input, #own-code {
+  flex: 1; min-width: 0;
+  font: inherit; font-size: 18px; font-weight: 600; letter-spacing: 0.03em;
+  padding: 10px 12px;
+  border-radius: 6px; border: 1px solid var(--wall-edge);
+  background: var(--panel); color: var(--fg);
+}
+.codein input:focus, #own-code:focus { outline: 2px solid var(--torch); outline-offset: 0; }
+.codein .btn { font-family: var(--font-body); font-size: 15px; font-weight: 600; padding: 8px 12px; }
+.linkbtn.big { font-size: 14px; align-self: center; }
+.code-big.one .code-part { max-width: none; }
+.movebtn { align-self: flex-start; margin-top: 8px; font-family: var(--font-body); font-size: 15px; font-weight: 600; padding: 9px 14px; border-color: var(--torch); }
+.movebtn[hidden] { display: none; }
+#sync-show .pick-actions .btn { font-family: var(--font-body); font-size: 16px; font-weight: 600; padding: 10px 8px; }
 
 /* --- Приложение: установка и обновления --- */
 .updbar {
@@ -910,6 +931,7 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
       <span>Код игрока: <b id="sync-code"></b></span>
       <span class="sync-state" id="sync-state"></span>
     </button>
+    <button class="btn reset movebtn" id="sync-move" hidden>📲 Уже играл на другом устройстве? Перенести прогресс</button>
     <p class="map-note" id="cloud-note" hidden>Прогресс сохраняется в твоём аккаунте Claude</p>
     <div class="updbar" id="upd-bar" hidden>
       <span id="upd-bar-text"></span>
@@ -932,6 +954,7 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
       <span class="app-installed" id="app-installed" hidden>✓ Игра установлена</span>
       <button class="btn reset" id="app-check">⟳ Проверить обновления</button>
       <button class="btn reset" id="app-sync">☁ Синхронизировать</button>
+      <button class="btn reset" id="app-move">📲 Перенести прогресс</button>
     </div>
     <p class="app-status" id="app-status" role="status"></p>
     <div class="app-update" id="app-update" hidden>
@@ -964,17 +987,41 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 <div class="sheet" id="sync-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sync-h">
   <div class="sheet-box">
     <button class="sheet-x" id="sync-close" aria-label="Закрыть">✕</button>
+    <h2 id="sync-h">Код игрока</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="show">Мой код</button>
+      <button class="tab" role="tab" data-tab="in">Перенести сюда</button>
+      <button class="tab" role="tab" data-tab="own">Свой код</button>
+    </div>
     <div id="sync-show">
-      <h2 id="sync-h">Твой код игрока</h2>
       <div class="code-big" id="sync-big"></div>
-      <p>Хочешь играть на другом телефоне или планшете? Открой там игру и введи этот код. Звёзды и код уровней появятся и там, а дальше всё сохраняется само.</p>
-      <p>Сфотографируй код или запиши его, чтобы не забыть.</p>
-      <button class="btn run" id="sync-now">☁ Синхронизировать сейчас</button>
+      <div class="pick-actions">
+        <button class="btn run" id="sync-copy">📋 Скопировать</button>
+        <button class="btn reset" id="sync-share">📤 Отправить себе</button>
+      </div>
       <p class="pick-msg" id="sync-msg" role="status"></p>
-      <button class="btn reset" id="sync-enter">Ввести код с другого устройства</button>
+      <p><b class="fgb">Как перенести прогресс на другое устройство:</b> открой там игру → «Код игрока» → «Перенести сюда» → вставь этот код. Или отправь себе ссылку (в Telegram, почту) и открой её там — прогресс подтянется сам.</p>
+      <button class="btn reset" id="sync-now">☁ Синхронизировать сейчас</button>
+    </div>
+    <div id="sync-in" hidden>
+      <p>Введи код с устройства, где уже есть звёзды. Можно вставить скопированный, большие или маленькие буквы — неважно.</p>
+      <div class="codein">
+        <input id="in-code" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="например, кот-торт-648" aria-label="Код игрока">
+        <button class="btn reset" id="in-paste">Вставить</button>
+      </div>
+      <button class="btn run" id="in-load">Загрузить прогресс</button>
+      <p class="pick-msg" id="in-msg" role="status"></p>
+      <button class="linkbtn big" id="sync-enter">Без клавиатуры: выбрать слова кнопками</button>
+      <p>Звёзды с этого устройства не пропадут: из двух сохранений берём лучшее.</p>
+    </div>
+    <div id="sync-own" hidden>
+      <p>Придумай код, который легко запомнить: от 6 букв или цифр, можно по-русски. Например, <b class="fgb">маша-ракета</b> или <b class="fgb">рыцарь77</b>. Не пиши фамилию и адрес.</p>
+      <input id="own-code" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="40" placeholder="твой код" aria-label="Свой код">
+      <button class="btn run" id="own-save">Сохранить код</button>
+      <p class="pick-msg" id="own-msg" role="status"></p>
+      <p>Прогресс с этого устройства переедет под новый код. На других устройствах потом введи новый код.</p>
     </div>
     <div id="sync-pick" hidden>
-      <h2>Введи код</h2>
       <div class="code-big" id="pick-slots"></div>
       <p class="pick-ask" id="pick-ask"></p>
       <div class="pick-grid" id="pick-grid"></div>
@@ -1701,12 +1748,31 @@ function codeParts(id) {
   const [a, b, n] = String(id || "").split("-");
   return { a: WORDS_A.find((w) => w[2] === a), b: WORDS_B.find((w) => w[2] === b), n };
 }
-const codeLabel = (id) => { const p = codeParts(id); return p.a && p.b ? `${p.a[1]}-${p.b[1]}-${p.n}`.toUpperCase() : ""; };
 const newCode = () => `${pickRand(WORDS_A)[2]}-${pickRand(WORDS_B)[2]}-${100 + Math.floor(Math.random() * 900)}`;
 
-let player = null;
-try { player = localStorage.getItem(PLAYER_KEY); } catch (e) {}
-if (!codeParts(player).a) player = null;
+// Любой набранный или вставленный текст → код для базы: «Кот Торт 648» → kot-tort-648.
+// Русские буквы переводим в латиницу, пробелы и знаки — в дефис.
+const TRANSLIT = { а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "shch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya" };
+const toCodeId = (text) => String(text || "").toLowerCase().trim()
+  .replace(/[а-яё]/g, (ch) => TRANSLIT[ch]).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+const validCode = (id) => /^[a-z0-9-]{6,40}$/.test(id || "");
+
+const LABEL_KEY = "coder-path-label"; // как показывать свой придуманный код (например, по-русски)
+let player = null, playerLabel = "";
+try { player = localStorage.getItem(PLAYER_KEY); playerLabel = localStorage.getItem(LABEL_KEY) || ""; } catch (e) {}
+if (!validCode(player)) player = null;
+// Как показать код: из слов — по-русски, свой — как его написали
+function codeLabel(id) {
+  const p = codeParts(id);
+  if (p.a && p.b && /^\d{3}$/.test(p.n)) return `${p.a[1]}-${p.b[1]}-${p.n}`.toUpperCase();
+  if (id === player && playerLabel && toCodeId(playerLabel) === id) return playerLabel.toUpperCase();
+  return String(id || "").toUpperCase();
+}
+function setPlayer(id, label = "") {
+  player = id;
+  playerLabel = label && toCodeId(label) === id ? label.trim() : "";
+  try { localStorage.setItem(PLAYER_KEY, player); localStorage.setItem(LABEL_KEY, playerLabel); } catch (e) {}
+}
 // Синхронизация выключена внутри приложения Claude: там своё хранилище (см. выше)
 const syncOn = !window.claude?.use && typeof fetch === "function";
 let syncBusy = false, syncAgain = false, syncTimer = null, syncRetry = null, syncLast = 0;
@@ -1736,7 +1802,7 @@ async function fsPut(id, data) {
   if (!r.ok) throw new Error("write " + r.status);
 }
 // Что отправляем: только прогресс. Музыка, звуки, голос и режим проверки — у каждого устройства свои.
-const cloudPayload = () => ({ stars: save.stars, code: save.code, codeAt: save.codeAt || {}, starsByName: true });
+const cloudPayload = () => ({ stars: save.stars, code: save.code, codeAt: save.codeAt || {}, starsByName: true, label: playerLabel || undefined });
 
 function scheduleSync(delay = 2000) {
   if (!syncOn) return;
@@ -1757,8 +1823,7 @@ async function syncNow() {
       // (нет связи — код всё равно выдаём, на сервер он попадёт позже)
       let id = newCode(), fresh = true;
       try { for (let k = 0; k < 4 && (await fsGet(id)) !== null; k++) id = newCode(); } catch (e) { fresh = false; }
-      player = id;
-      try { localStorage.setItem(PLAYER_KEY, player); } catch (e) {}
+      setPlayer(id);
       setSyncState("busy");
       if (!fresh) throw new Error("offline");
     } else {
@@ -1778,16 +1843,33 @@ async function syncNow() {
   syncBusy = false;
   if (syncAgain) { syncAgain = false; syncNow(); }
 }
-// Ввести код с другого устройства. Ответ: "ok", "notfound" или "offline".
-async function usePlayerCode(id) {
+// Ввести код с другого устройства (как угодно: «кот торт 648», «KOT-TORT-648»).
+// Ответ: "ok", "short" (слишком коротко), "notfound" или "offline".
+async function usePlayerCode(text) {
+  const id = toCodeId(text);
+  if (!validCode(id)) return "short";
   let remote;
   try { remote = await fsGet(id); } catch (e) { return "offline"; }
   if (remote === null) return "notfound";
   mergeSave(remote);
-  player = id;
-  try { localStorage.setItem(PLAYER_KEY, player); localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+  setPlayer(id, remote.label || "");
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   refreshAfterSync();
   syncNow(); // записываем объединённое под новым кодом
+  return "ok";
+}
+// Придумать свой код. Прогресс этого устройства переезжает под новый код.
+// Ответ: "ok", "short", "taken" (код уже чей-то) или "offline".
+async function claimCode(text) {
+  const id = toCodeId(text);
+  if (!validCode(id)) return "short";
+  if (id === player) { setPlayer(id, text); scheduleSync(0); return "ok"; }
+  try {
+    if ((await fsGet(id)) !== null) return "taken";
+    await fsPut(id, { ...cloudPayload(), label: text.trim() }); // старая запись просто остаётся в базе
+  } catch (e) { return "offline"; }
+  setPlayer(id, text);
+  setSyncState("ok");
   return "ok";
 }
 // После загрузки с сервера: обновить карту (звёзды, открытые уровни)
@@ -2503,6 +2585,7 @@ function renderMap() {
   $("island").innerHTML = out.join("");
   const total = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
   $("map-progress").innerHTML = `Звёзд собрано: <b>${total}</b> из ${LEVELS.length * 3}`;
+  $("sync-move").hidden = !syncOn || total > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
 }
 
@@ -4413,15 +4496,24 @@ function partHtml(em, word, cls = "") {
 }
 function showMyCode() {
   const p = codeParts(player);
-  $("sync-big").innerHTML = p.a
-    ? partHtml(p.a[0], p.a[1].toUpperCase()) + partHtml(p.b[0], p.b[1].toUpperCase()) + partHtml("🔢", p.n)
-    : "";
-  $("sync-show").hidden = false;
-  $("sync-pick").hidden = true;
+  const words = p.a && p.b && /^\d{3}$/.test(p.n);
+  $("sync-big").classList.toggle("one", !words);
+  $("sync-big").innerHTML = !player ? partHtml("⏳", "…")
+    : words ? partHtml(p.a[0], p.a[1].toUpperCase()) + partHtml(p.b[0], p.b[1].toUpperCase()) + partHtml("🔢", p.n)
+    : partHtml("🔑", codeLabel(player));
+  $("sync-msg").textContent = "";
 }
-function openSheet() {
+// Вкладки окна: show — мой код, in — перенести сюда, own — свой код, pick — слова кнопками
+function syncTab(t) {
+  for (const id of ["show", "in", "own", "pick"]) $("sync-" + id).hidden = id !== t;
+  document.querySelectorAll("#sync-sheet .tab").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === (t === "pick" ? "in" : t)));
+  if (t === "show") showMyCode();
+  if (t === "in") { $("in-msg").textContent = ""; }
+  if (t === "own") { $("own-msg").textContent = ""; $("own-code").value = playerLabel || ""; }
+}
+function openSheet(tab = "show") {
   sheetEl.hidden = false;
-  showMyCode();
+  syncTab(tab);
   $("sync-close").focus();
 }
 function closeSheet() {
@@ -4466,7 +4558,7 @@ $("pick-back").addEventListener("click", () => {
   if (entry.n) entry.n = entry.n.slice(0, -1);
   else if (entry.b) entry.b = null;
   else if (entry.a) entry.a = null;
-  else return showMyCode();
+  else return syncTab("in");
   renderPick();
 });
 $("pick-done").addEventListener("click", async () => {
@@ -4477,12 +4569,7 @@ $("pick-done").addEventListener("click", async () => {
   $("pick-msg").textContent = "Ищу сохранение…";
   const res = await usePlayerCode(id);
   btn.disabled = false;
-  if (res === "ok") {
-    showMyCode();
-    $("map-toast").textContent = "Прогресс загружен!";
-    setTimeout(() => ($("map-toast").textContent = ""), 4000);
-    return closeSheet();
-  }
+  if (res === "ok") return loadedOk();
   $("pick-msg").textContent = res === "notfound"
     ? "Такого кода пока нет. Проверь слова и цифры"
     : "Нет связи с интернетом. Попробуй чуть позже";
@@ -4493,10 +4580,98 @@ $("sync-enter").addEventListener("click", () => {
   sfx("tap");
   entry = { a: null, b: null, n: "" };
   $("pick-msg").textContent = "";
-  $("sync-show").hidden = true;
-  $("sync-pick").hidden = false;
+  syncTab("pick");
   renderPick();
 });
+document.querySelectorAll("#sync-sheet .tab").forEach((b) => b.addEventListener("click", () => { sfx("tap"); syncTab(b.dataset.tab); }));
+$("sync-move").addEventListener("click", () => { sfx("tap"); openSheet("in"); });
+$("app-move").addEventListener("click", () => { sfx("tap"); openSheet("in"); });
+
+// Прогресс загружен — радуемся и показываем карту со звёздами
+function loadedOk() {
+  sheetEl.hidden = true;
+  const n = Object.values(save.stars).reduce((a, b) => a + (b || 0), 0);
+  $("map-toast").textContent = `Прогресс загружен! Звёзд: ${n}`;
+  setTimeout(() => ($("map-toast").textContent = ""), 5000);
+  renderMap();
+}
+const CODE_ERR = {
+  short: "Код слишком короткий — в нём хотя бы 6 букв или цифр",
+  notfound: "Такого кода пока нет. Проверь буквы и цифры",
+  offline: "Нет связи с интернетом. Попробуй чуть позже",
+  taken: "Такой код уже занят. Добавь цифры или другое слово",
+};
+async function loadFromInput() {
+  const btn = $("in-load");
+  btn.disabled = true;
+  $("in-msg").textContent = "Ищу сохранение…";
+  const res = await usePlayerCode($("in-code").value);
+  btn.disabled = false;
+  if (res === "ok") { $("in-code").value = ""; return loadedOk(); }
+  $("in-msg").textContent = CODE_ERR[res];
+}
+$("in-load").addEventListener("click", () => { sfx("tap"); loadFromInput(); });
+$("in-code").addEventListener("keydown", (e) => { if (e.key === "Enter") loadFromInput(); });
+$("in-paste").addEventListener("click", async () => {
+  sfx("tap");
+  try {
+    const t = await navigator.clipboard.readText();
+    if (t) { $("in-code").value = t.trim().slice(0, 80); return loadFromInput(); }
+  } catch (e) {}
+  $("in-code").focus(); // браузер не дал прочитать — вставь пальцем: долгое нажатие → «Вставить»
+  $("in-msg").textContent = "Нажми на поле и подержи палец → «Вставить»";
+});
+
+// Свой код
+$("own-save").addEventListener("click", async () => {
+  sfx("tap");
+  const btn = $("own-save");
+  btn.disabled = true;
+  $("own-msg").textContent = "Проверяю…";
+  const res = await claimCode($("own-code").value);
+  btn.disabled = false;
+  if (res === "ok") { setSyncState("ok"); syncTab("show"); $("sync-msg").textContent = "Готово! Теперь это твой код"; return; }
+  $("own-msg").textContent = CODE_ERR[res];
+});
+
+// Скопировать код одним нажатием и отправить себе ссылку
+const shareUrl = () => `${location.origin}${location.pathname}?code=${encodeURIComponent(player)}`;
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch (e) {}
+  try { // запасной путь для старых браузеров
+    const ta = document.createElement("textarea");
+    ta.value = t; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.append(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove(); return ok;
+  } catch (e) { return false; }
+}
+$("sync-copy").addEventListener("click", async () => {
+  sfx("tap");
+  if (!player) return;
+  $("sync-msg").textContent = (await copyText(codeLabel(player))) ? `Скопировано: ${codeLabel(player)}` : "Не получилось скопировать — запиши код";
+});
+$("sync-share").addEventListener("click", async () => {
+  sfx("tap");
+  if (!player) return;
+  const text = `Мой код в Coder Path: ${codeLabel(player)}. Открой ссылку на другом устройстве — прогресс подтянется сам`;
+  if (navigator.share) {
+    try { await navigator.share({ title: "Coder Path", text, url: shareUrl() }); return; }
+    catch (e) { if (e.name === "AbortError") return; }
+  }
+  $("sync-msg").textContent = (await copyText(`${text}: ${shareUrl()}`)) ? "Ссылка скопирована — отправь её себе" : "Не получилось скопировать";
+});
+
+// Открыли ссылку с кодом (?code=…) — сразу подтягиваем прогресс
+async function codeFromLink() {
+  const u = new URL(location.href);
+  const c = u.searchParams.get("code");
+  if (!c || !syncOn) return;
+  u.searchParams.delete("code");
+  history.replaceState(null, "", u.pathname + u.search + u.hash);
+  if (toCodeId(c) === player) return;
+  const res = await usePlayerCode(c);
+  if (res === "ok") loadedOk();
+  else { openSheet("in"); $("in-code").value = c; $("in-msg").textContent = CODE_ERR[res]; }
+}
 sheetEl.addEventListener("click", (e) => { if (e.target === sheetEl) closeSheet(); }); // касание мимо окна
 addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheetEl.hidden) closeSheet(); });
 
@@ -4640,7 +4815,7 @@ function startScene(canvas) {
 L = LEVELS[levelIdx];
 showView("map");
 initCloud();
-if (syncOn) { setSyncState("idle"); syncNow(); }
+if (syncOn) { setSyncState("idle"); codeFromLink().finally(syncNow); }
 const stopScene = startScene($("splash-scene"));
 
 // Заставка: касание "Играть" разрешает браузеру звук, и атмосфера начинается сразу
@@ -4658,7 +4833,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 3;
+const APP_VERSION = 4;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
