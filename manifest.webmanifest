@@ -1,0 +1,16 @@
+{
+  "name": "Coder Path",
+  "short_name": "Coder Path",
+  "description": "Игра, где рыцарь идёт по острову по твоему коду",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#13151b",
+  "theme_color": "#13151b",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
