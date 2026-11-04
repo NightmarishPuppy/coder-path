@@ -2488,12 +2488,102 @@ const NODE_POS = [
   [290, 70],
 ];
 
-// Остров — сетка 18×38 клеток (одна клетка = 20 единиц карты, на картинке — 64 пикселя).
-// .  море        s  песок (весь берег и пляж)   g  трава
-// a…e — бирюзовые скалы с пещерами (1–5 ярусов), v…z — серые скалы гоблинов.
-// Скалы растут прямо из воды: у каждого столбца своя высота, спереди виден обрыв до воды.
+// Остров — сетка 36×76 клеток (одна клетка = 10 единиц карты, на холсте — 32 пикселя).
+// .  море        s  песок (пляж и береговая полоса)   g  трава
+// A…J — бирюзовые скалы с пещерами (1–10 ярусов), K…T — серые скалы гоблинов.
+// Сетку не рисуют руками: её строит скрипт из плавных очертаний острова и скал
+// (рельеф скал считается сверху и проецируется: обрыв спереди спускается до воды).
 // Рисуем как в наборе: песок → трава поверх → скалы ярус за ярусом.
 const MAP_ROWS = [
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  "....................................",
+  ".............sssssssssss............",
+  "...........sssgggggggggss...........",
+  "..........ssggggggggggggss..........",
+  "........sssggggggggggggggss.........",
+  "......sssgggggggggggggggggss........",
+  "....sssggggggggggggggggggggss.......",
+  "...ssgggggggggggggggggggggggss......",
+  "...sgggggggggggggggggggggggggs......",
+  "..ssgggggggggggggggggggggggggss.....",
+  "..sgggggggggggggggggggggggggggs.....",
+  "..sgggggggggggggggggggggggggggs.....",
+  "..sgggggggggggggggggggggggggggs.....",
+  ".ssgggggggggggggggggggggggggggs.....",
+  ".sggggggggggggggggggggggggggggss....",
+  ".sgggggggggggggggggggggggggggggss...",
+  ".sggggggggggggggggggggggggggggggss..",
+  ".ssggggggggggggggggggggggggggggggs..",
+  "..sggggggggggggggggggggggggggggggss.",
+  "..sgsssggggggggggggssggggssssggssss.",
+  "..ssssssgggsssggggssssggssssssssssss",
+  "..sssssssssssssggsssssssssssssssssss",
+  "..ssssssssssssssssssssssssssssssssss",
+  "..ssssssssssssssssssssssssssssssssss",
+  "..sssssssssssssssssssssssssssssssss.",
+  "..sssssssssssssssssssssssssssssssss.",
+  "...ssssssssssssssssssssssssssssssss.",
+  "...sssssssssssssssssssssssssssssss..",
+  "...sssssssssssssssssssssssssssssss..",
+  "...sssssssssssssssssssssssssssssss..",
+  "...ssssssssssssssssssssssssssssss...",
+  "...ssssssssssssssssssssssssssss.....",
+  "....ssssssssssssssssssssssssss......",
+  ".....ssssssssssssssssssssssss.......",
+  "......ssssssssssssssssssssss........",
+  "........s..sssssssssssssssss........",
+  "............sssssssssssssss.........",
+  "...............ssssssssssss.........",
+  "..................ssssssss..........",
+  "....................................",
+];
+// Суша — мелкая сетка: 36 клеток в ширину, плитка набора рисуется в половину размера
+// (32 px), поэтому ступеньки берега маленькие и берег читается как плавная неровная линия.
+// Скалы — крупная сетка (ROCK_ROWS, 18 клеток, плитка 64 px): высокий обрыв набора
+// хорошо смотрится только целиком. OU — пикселей холста в крупной клетке (20 единиц карты):
+// в этих клетках заданы скалы, украшения, облака и деревья.
+const MAP_W = MAP_ROWS[0].length, MAP_H = MAP_ROWS.length, MT = 32, OU = 64;
+const mapAt = (x, y) => (MAP_ROWS[y] && MAP_ROWS[y][x]) || ".";
+const mapLand = (x, y) => "gs".includes(mapAt(x, y));             // трава и песок
+
+// Скалы: a…e — бирюзовые («Скалы и пещеры», 1–5 ярусов), v…z — серые («Скалы гоблинов»).
+// Растут прямо из воды: у каждого столбца своя высота, спереди обрыв до воды.
+const ROCK_ROWS = [
   "..................",
   "..................",
   "..................",
@@ -2513,44 +2603,26 @@ const MAP_ROWS = [
   ".aaaaa.aaaa.aaaaa.",
   "..................",
   "..................",
-  ".gggggggggggggggg.",
-  "..gggggggggggggggg",
-  ".gggggggggggggggg.",
-  ".ggggggggggggggg..",
-  "gggggggggggggggg..",
-  ".gggggggggggggggg.",
-  ".gggggggggggggggg.",
-  ".gggggggggggggggg.",
-  ".gggggggggggggggg.",
-  ".sssggggggggggsss.",
-  ".sssssgggggssssss.",
-  ".ssssssssssssssss.",
-  ".ssssssssssssssss.",
-  ".ssssssssssssssss.",
-  "..sssssssssssssss.",
-  "..ssssssssssssss..",
-  "...ssssssssssss...",
-  ".....ssssssss.....",
-  "..................",
 ];
-const MAP_W = 18, MAP_H = MAP_ROWS.length, MT = 64;
-const mapAt = (x, y) => (MAP_ROWS[y] && MAP_ROWS[y][x]) || ".";
-const mapLand = (x, y) => "gs".includes(mapAt(x, y));             // трава и песок
-const tealH = (x, y) => Math.max(0, "abcde".indexOf(mapAt(x, y)) + 1);
-const grayH = (x, y) => Math.max(0, "vwxyz".indexOf(mapAt(x, y)) + 1);
+const RW = 18, RH = MAP_H / 2;
+const rockAt = (x, y) => (ROCK_ROWS[y] && ROCK_ROWS[y][x]) || ".";
+const tealH = (x, y) => Math.max(0, "abcde".indexOf(rockAt(x, y)) + 1);
+const grayH = (x, y) => Math.max(0, "vwxyz".indexOf(rockAt(x, y)) + 1);
 const rockH = (x, y) => tealH(x, y) || grayH(x, y);
-// Клетка, на которой виден обрыв (скала над ней выше, чем она сама)
-const faceAt = (x, y) => rockH(x, y - 1) > rockH(x, y) && !mapLand(x, y - 1);
-const mapSolid = (x, y) => mapLand(x, y) || rockH(x, y) > 0 || faceAt(x, y);
+// Крупная клетка, на которой виден обрыв (скала над ней выше, чем она сама)
+const faceAt = (x, y) => rockH(x, y - 1) > rockH(x, y);
+const rockSolid = (x, y) => rockH(x, y) > 0 || faceAt(x, y);
+// Твёрдое в мелкой клетке (для пены прибоя) и в крупной (для мостиков и ступенек)
+const fineSolid = (x, y) => mapLand(x, y) || rockSolid(Math.floor(x / 2), Math.floor(y / 2));
+const bigLand = (x, y) => [0, 1].some((dy) => [0, 1].some((dx) => mapLand(2 * x + dx, 2 * y + dy)));
+const mapSolid = (x, y) => rockSolid(x, y) || bigLand(x, y);
 
 // Украшения: [картинка, x, y основания в клетках, масштаб, отразить]
 const MAP_DECO = [
-  ["castle", 2.9, 35.4, 0.62],
-  ["wrock1", 0.6, 31.2, 0.9],
+  ["castle", 2.9, 33.3, 0.52],
   ["wrock3", 17.3, 25.6, 0.9],
   ["wrock2", 16.9, 35.2, 0.9],
-  ["wrock1", 9.0, 37.4, 0.9],
-  ["duck", 17.2, 27.5, 1.4],
+  ["duck", 17.6, 27.0, 1.4],
   ["wrock4", 14.6, 37.2, 0.8],
   ["wrock4", 0.5, 18.3, 0.8],
   ["sheep", 15.4, 27.6, 0.5],
@@ -2567,8 +2639,6 @@ const MAP_DECO = [
   ["tuft2", 8.1, 29.3, 0.9],
   ["tuft1", 3.8, 33.0, 0.9],
   ["mush2", 7.3, 19.8, 0.8],
-  ["bush3", 16.3, 19.6, 0.7],
-  ["tree3", 1.8, 20.4, 0.55],
   ["wrock2", 11.5, 11.4, 0.8],
   ["wrock3", 6.5, 11.7, 0.8],
   ["wrock1", 16.5, 12.0, 0.9],
@@ -2596,6 +2666,8 @@ const MAP_DECO = [
   ["wrock1", 6.4, 17.6, 0.6],
   ["wrock3", 16.9, 17.3, 0.7],
   ["wrock2", 0.4, 15.0, 0.7],
+  ["wrock2", 2.6, 36.6, 0.8],
+  ["wrock4", 15.0, 37.4, 0.8],
 ];
 // Сколько пустоты под ногами у картинок с полным кадром (овцы)
 const MAP_SHEEP = { sheep: ["sc_sheep", 6, 128, 128, 44, 140], sheepg: ["sc_sheepg", 12, 128, 128, 44, 130], goblin: ["gt_idle", 7, 166, 145, 36, 110], tnt: ["gx_idle", 6, 98, 81, 2, 120] };
@@ -2616,10 +2688,12 @@ function mapTrees() {
     }
     return MAP_LABELS.some(([, lx, ly]) => Math.abs(lx / 20 - x) < 2.4 && Math.abs(ly / 20 - y) < 1.4);
   };
-  for (let k = 0; k < 600 && out.length < 58; k++) {
-    const x = 1.2 + rnd() * 15.6, y = 19.8 + rnd() * 8.2;
-    const cx = Math.floor(x), cy = Math.floor(y - 0.3);
-    if (mapAt(cx, cy) !== "g" || !mapLand(cx - 1, cy) || !mapLand(cx + 1, cy) || mapAt(cx, cy + 1) === ".") continue;
+  for (let k = 0; k < 900 && out.length < 60; k++) {
+    const x = 0.8 + rnd() * 16.4, y = 19.6 + rnd() * 9.0;
+    const cx = Math.floor(x * 2), cy = Math.floor(y * 2 - 0.5);   // клетка мелкой сетки под деревом
+    let ok = true;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (mapAt(cx + dx, cy + dy) !== "g") ok = false;
+    if (!ok) continue;
     if (near(x, y) || out.some((t) => Math.hypot(t[1] - x, (t[2] - y) * 1.4) < 1.0)) continue;
     const kind = ["tree1", "tree2", "tree3", "tree4", "tree1", "tree3", "bush1", "tree2"][Math.floor(rnd() * 8)];
     out.push([kind, x, y, (kind.startsWith("bush") ? 0.7 : 0.55) + rnd() * 0.12, rnd() < 0.5]);
@@ -2633,6 +2707,7 @@ const MAP_LABELS = [["БЕРЕГ", 304, 580], ["ЛЕС", 62, 432], ["СКАЛЫ 
 function startMapScene(canvas) {
   canvas.width = MAP_W * MT; canvas.height = MAP_H * MT;
   const ctx = canvas.getContext("2d");
+  const S = 64;                                    // размер плитки в картинках набора
   const cloudCv = document.getElementById("map-clouds");
   cloudCv.width = canvas.width; cloudCv.height = canvas.height;
   const cctx = cloudCv.getContext("2d");
@@ -2644,8 +2719,9 @@ function startMapScene(canvas) {
   const land = newCanvas(canvas.width, canvas.height);
 
   // Плитка по соседям (как в наборе): середина, край, угол, полоска или одиночная
-  function tiles(g, im, spec, draw, nb) {
-    for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
+  // T — размер клетки на холсте (32 для суши, 64 для скал), w×h — размер сетки
+  function tiles(g, im, spec, draw, nb, T = MT, w = MAP_W, h = MAP_H) {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       if (!draw(x, y)) continue;
       const l = nb(x - 1, y), r = nb(x + 1, y), u = nb(x, y - 1), d = nb(x, y + 1);
       const col = !l ? 0 : !r ? 2 : 1, row = !u ? 0 : !d ? 2 : 1;
@@ -2654,19 +2730,19 @@ function startMapScene(canvas) {
       else if (u || d) [sx, sy] = [spec.v[0], spec.v[1] + row];
       else if (l || r) [sx, sy] = [spec.h[0] + col, spec.h[1]];
       else [sx, sy] = spec.one;
-      g.drawImage(im, sx * MT, sy * MT, MT, MT, x * MT, y * MT, MT, MT);
+      g.drawImage(im, sx * S, sy * S, S, S, x * T, y * T, T, T);
     }
   }
   // Ярус lv скалы: сначала обрыв под нижним краем, потом верх
   function plateau(g, im, h, lv) {
-    for (let y = 1; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
+    for (let y = 1; y < RH; y++) for (let x = 0; x < RW; x++) {
       if (h(x, y) >= lv || h(x, y - 1) < lv) continue;
       const l = h(x - 1, y - 1) >= lv, r = h(x + 1, y - 1) >= lv;
       const col = !l && !r ? 3 : !l ? 0 : !r ? 2 : 1;
-      g.drawImage(im, col * MT, 3 * MT, MT, MT, x * MT, y * MT, MT, MT);
+      g.drawImage(im, col * S, 3 * S, S, S, x * OU, y * OU, OU, OU);
     }
     const on = (x, y) => h(x, y) >= lv;
-    tiles(g, im, { block: [0, 0], v: [3, 0], h: [0, 4], one: [3, 4] }, on, on);
+    tiles(g, im, { block: [0, 0], v: [3, 0], h: [0, 4], one: [3, 4] }, on, on, OU, RW, RH);
   }
   // Где тропинка идёт по воде — мостик, где поднимается по обрыву — ступеньки
   function trailCells() {
@@ -2675,6 +2751,7 @@ function startMapScene(canvas) {
       const [x1, y1] = NODE_POS[i - 1].map((v) => v / 20), [x2, y2] = NODE_POS[i].map((v) => v / 20);
       const horiz = Math.abs(x2 - x1) > Math.abs(y2 - y1);
       const len = Math.hypot(x2 - x1, y2 - y1), n = Math.ceil(len * 4);
+      if (len < 0.5) continue;                       // две точки рядом — тропинки нет
       for (let k = 0; k <= n; k++) {
         const x = Math.floor(x1 + (x2 - x1) * k / n), y = Math.floor(y1 + (y2 - y1) * k / n);
         // только если тропа идёт через середину клетки, а не задевает её угол
@@ -2706,18 +2783,20 @@ function startMapScene(canvas) {
   }
   function paintLand() {
     const g = land.getContext("2d");
-    g.imageSmoothingEnabled = false;
+    // плитки уменьшены вдвое: сглаживание усредняет пиксели, и картинка остаётся чистой
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
     // песок по всей земле: неровный берег острова; трава поверх — везде, кроме пляжа
     tiles(g, img.flat, { block: [5, 0], v: [8, 0], h: [5, 3], one: [8, 3] }, mapLand, mapLand);
     const grassy = (x, y) => mapAt(x, y) === "g";
     tiles(g, img.flat, { block: [0, 0], v: [3, 0], h: [0, 3], one: [3, 3] }, grassy, grassy);
-    // скалы ярус за ярусом: бирюзовые как есть, гоблинские — серые
+    // скалы ярус за ярусом в полный размер плитки: бирюзовые как есть, гоблинские — серые
+    g.imageSmoothingEnabled = false;
     const gray = grayCopy(img.elev);
     for (let lv = 1; lv <= 5; lv++) { plateau(g, img.elev, tealH, lv); plateau(g, gray, grayH, lv); }
     const { bridge, stairs } = trailCells();
     for (const key of stairs) {
       const [x, y] = key.split(",").map(Number);
-      g.drawImage(grayH(x, y - 1) ? gray : img.elev, 3 * MT, 7 * MT, MT, MT, x * MT, y * MT, MT, MT);
+      g.drawImage(grayH(x, y - 1) ? gray : img.elev, 3 * S, 7 * S, S, S, x * OU, y * OU, OU, OU);
     }
     for (const [key, dir] of bridge) {
       const [x, y] = key.split(",").map(Number);
@@ -2725,20 +2804,20 @@ function startMapScene(canvas) {
       const [sx, sy] = dir === "h"
         ? [!has(-1, 0) || mapSolid(x - 1, y) ? 0 : !has(1, 0) || mapSolid(x + 1, y) ? 2 : 1, 0]
         : [0, mapSolid(x, y - 1) ? 1 : mapSolid(x, y + 1) ? 3 : 2];
-      g.drawImage(img.bridge, sx * MT, sy * MT, MT, MT, x * MT, y * MT, MT, MT);
+      g.drawImage(img.bridge, sx * S, sy * S, S, S, x * OU, y * OU, OU, OU);
     }
   }
   // Пена прибоя под каждой клеткой берега
   const shore = [];
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
-    if (!mapSolid(x, y)) continue;
+    if (!fineSolid(x, y)) continue;
     let wet = false;
-    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!mapSolid(x + dx, y + dy)) wet = true;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!fineSolid(x + dx, y + dy)) wet = true;
     if (wet) shore.push([x, y, (x * 7 + y * 5) % 16]);
   }
   const clouds = [
-    { k: "sc_cloud1", y: 7 * MT, v: 6, x0: 0.1 },
-    { k: "sc_cloud2", y: 30 * MT, v: 4.5, x0: 0.6 },
+    { k: "sc_cloud1", y: 7 * OU, v: 6, x0: 0.1 },
+    { k: "sc_cloud2", y: 30 * OU, v: 4.5, x0: 0.6 },
   ];
 
   function drawObj(o, t) {
@@ -2750,7 +2829,7 @@ function startMapScene(canvas) {
     const ph = Math.floor(x * 3 + y * 5);
     const f = n > 1 ? (Math.floor(t / ms) + ph) % n : 0;
     const w = fw * sc, h = fh * sc;
-    const dx = Math.round(x * MT - w / 2), dy = Math.round(y * MT - h + foot * sc);
+    const dx = Math.round(x * OU - w / 2), dy = Math.round(y * OU - h + foot * sc);
     if (flip) {
       ctx.save(); ctx.translate(dx + w, dy); ctx.scale(-1, 1);
       ctx.drawImage(im, f * fw, 0, fw, fh, 0, 0, Math.round(w), Math.round(h));
@@ -2762,7 +2841,9 @@ function startMapScene(canvas) {
     ctx.fillStyle = TS_INFO.water;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const ff = Math.floor(t / 85);
-    for (const [x, y, ph] of shore) ctx.drawImage(img.foam, ((ff + ph) % 16) * 192, 0, 192, 192, x * MT - 64, y * MT - 64, 192, 192);
+    ctx.imageSmoothingEnabled = true;          // пена тоже в половину размера
+    for (const [x, y, ph] of shore) ctx.drawImage(img.foam, ((ff + ph) % 16) * 192, 0, 192, 192, x * MT - MT, y * MT - MT, MT * 3, MT * 3);
+    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(land, 0, 0);
     for (const o of objs) drawObj(o, t);
     // Облака — на своём холсте поверх кнопок уровней: плывут медленно и уходят за край
@@ -5132,7 +5213,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
