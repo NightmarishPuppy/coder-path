@@ -4428,8 +4428,10 @@ async function benchAudio() {
 async function runBench(force) {
   if (bench !== null && !force) return;
   try {
-    const r = await benchAudio();
-    if (r === null) return;
+    // два прогона, берём лучший: случайная занятость устройства не испортит результат
+    const r1 = await benchAudio();
+    if (r1 === null) return;
+    const r = Math.min(r1, await benchAudio());
     bench = Math.round(r * 1000) / 1000;
     try { localStorage.setItem(BENCH_KEY, JSON.stringify({ ratio: bench, at: Date.now() })); } catch (e) {}
     applyAudioMode();
@@ -4889,7 +4891,7 @@ document.getElementById("app-audio").addEventListener("change", (e) => {
   sfx("tap");
 });
 applyAudioMode();
-setTimeout(() => runBench(false), 1200);           // замер после загрузки, чтобы не мешать заставке
+setTimeout(() => runBench(false), 300);            // замер сразу, пока звук ещё не играет
 
 // Кнопки музыки и звуков есть и на карте, и на уровне — держим их в одном состоянии
 function drawSoundButtons() {
