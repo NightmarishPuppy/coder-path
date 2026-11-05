@@ -204,6 +204,9 @@ html.still .ripple { animation: none; opacity: 0.5; }
 .cell.exit .ov { z-index: 2; }
 .item { z-index: 2; }
 /* на светлом песке линия маршрута получает тёмную обводку, чтобы её было видно */
+.route .gridlines line { stroke: #3b2a12; stroke-opacity: 0.28; stroke-width: 0.025; stroke-dasharray: 0.08 0.06; }
+.route .stepnum rect { fill: #fffdf5; fill-opacity: 0.9; stroke: #2a1f14; stroke-width: 0.025; }
+.route .stepnum text { font-family: var(--font-body); font-weight: 700; font-size: 0.22px; fill: #2a1f14; text-anchor: middle; dominant-baseline: central; }
 .route .seg-under { fill: none; stroke: #0007; stroke-width: 0.16; stroke-linecap: round; }
 
 /* --- Заставка --- */
@@ -577,6 +580,20 @@ textarea#code::selection { background: #f2a54155; }
 textarea#code:focus-visible { box-shadow: inset 0 0 0 2px var(--torch); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+/* «Отменить команду»: заметная, красноватая, со значком "назад" и словами — понятно без инструкции */
+.undo-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.undo-btn, .redo-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font-body); font-size: 16px; font-weight: 600;
+  padding: 10px 16px; border-radius: 6px; cursor: pointer;
+}
+.undo-btn { flex: 1; min-width: 190px; white-space: nowrap; background: #4a1f22; border: 2px solid #e5675f; color: #ffd2cc; }
+.undo-btn:hover:not(:disabled) { background: #5c2629; }
+.undo-btn:active:not(:disabled) { translate: 0 1px; }
+.undo-btn svg, .redo-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.undo-btn:disabled { opacity: 0.4; cursor: default; }
+.redo-btn { padding: 10px 12px; white-space: nowrap; background: var(--panel); border: 2px solid var(--wall-edge); color: var(--fg); }
+.redo-btn[hidden] { display: none; }
 .chip {
   font-family: var(--font-code);
   font-size: 14px;
@@ -1005,6 +1022,14 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
       </select>
       <span id="app-motion-note"></span>
     </div>
+    <div class="app-row app-audio">
+      <label for="app-steps">🔢 Цифры шагов на поле:</label>
+      <select id="app-steps">
+        <option value="auto">В первых главах</option>
+        <option value="on">Всегда</option>
+        <option value="off">Не показывать</option>
+      </select>
+    </div>
     <p class="app-status" id="app-status" role="status"></p>
     <div class="app-update" id="app-update" hidden>
       <p id="app-update-text"></p>
@@ -1164,6 +1189,16 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
         </div>
       </div>
       <div class="chips" id="chips"></div>
+      <div class="undo-row">
+        <button class="undo-btn" id="undo-cmd">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+          <span id="undo-label">Отменить команду</span>
+        </button>
+        <button class="redo-btn" id="redo-cmd" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+          Вернуть
+        </button>
+      </div>
       <div class="actions">
         <button class="btn run" id="run">Запустить</button>
         <button class="btn reset" id="reset">Сначала</button>
@@ -3359,16 +3394,29 @@ function buildChips() {
     });
   }
   [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
-  // Без выбранной строки стирает последнюю команду (строку цикла не трогает),
-  // с выбранной — стирает выбранную строку
-  add("del-line", "", "⌫ команду", () => {
-    if (selLine) {
-      editLines((lines) => {
-        lines.splice(selLine - 1, 1);
-        selLine = Math.min(selLine, lines.length) || null;
-      });
-      return;
-    }
+}
+
+// ===== «Отменить команду» и «Вернуть» =====
+// Без выбранной строки отменяет последнюю команду (строку цикла не трогает),
+// с выбранной — удаляет выбранную строку. После отмены пару секунд видна кнопка «Вернуть»:
+// нажал случайно — ничего не потерял.
+let undoPrev = null, undoTimer = null;
+const hasCommand = () => new RegExp(`\\b(${ANY_NAME})\\s*\\(`).test(codeEl.value);
+function drawUndo() {
+  const btn = $("undo-cmd");
+  if (!btn) return;
+  $("undo-label").textContent = selLine ? `Удалить строку ${selLine}` : "Отменить команду";
+  btn.disabled = running || (!selLine && !hasCommand());
+}
+$("undo-cmd").addEventListener("click", () => {
+  sfx("tap");
+  const before = codeEl.value;
+  if (selLine) {
+    editLines((lines) => {
+      lines.splice(selLine - 1, 1);
+      selLine = Math.min(selLine, lines.length) || null;
+    });
+  } else {
     const lines = codeEl.value.split("\n");
     const re = new RegExp(`\\b(${ANY_NAME})\\s*\\(`);
     for (let i = lines.length - 1; i >= 0; i--) {
@@ -3376,8 +3424,21 @@ function buildChips() {
     }
     codeEl.value = lines.join("\n");
     onCodeChange();
-  });
-}
+  }
+  if (codeEl.value === before) return;
+  undoPrev = before;
+  $("redo-cmd").hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => { $("redo-cmd").hidden = true; undoPrev = null; }, 6000);
+});
+$("redo-cmd").addEventListener("click", () => {
+  sfx("tap");
+  if (undoPrev === null) return;
+  codeEl.value = undoPrev;
+  undoPrev = null;
+  $("redo-cmd").hidden = true;
+  onCodeChange();
+});
 
 function setLastNumber(n) {
   const text = codeEl.value;
@@ -3857,9 +3918,42 @@ function svg(tag, attrs, parent) {
   return el;
 }
 
+// ===== Подсказка шагов =====
+// От клетки, где рыцарь окажется после уже написанных команд, по четырём сторонам
+// стоят цифры 1, 2, 3… до стены: сразу видно, сколько шагов до монеты, ключа или двери.
+// В первых главах поле ещё и разлиновано на клетки. Настройка save.stepHints:
+// "auto" — в первых двух главах, "on" — всегда, "off" — никогда.
+const showSteps = () => { const m = save.stepHints || "auto"; return m === "on" || (m === "auto" && L.chapter <= 1); };
+function drawStepHints(p) {
+  if (!showSteps()) return;
+  // клетки поля
+  if ((save.stepHints || "auto") === "auto" ? L.chapter === 0 : true) {
+    const g = svg("g", { class: "gridlines" }, routeEl);
+    for (let x = 1; x < W; x++) svg("line", { x1: x, y1: 0, x2: x, y2: H }, g);
+    for (let y = 1; y < H; y++) svg("line", { x1: 0, y1: y, x2: W, y2: y }, g);
+  }
+  if (p && p.reachedAt) return;                       // уже дошёл — считать нечего
+  const last = p && !p.error && p.commands.length ? p.commands[p.commands.length - 1] : null;
+  const from = last ? last.to : start;
+  const alive = new Set(enemies.map((e) => enemyKey(e.x, e.y)));
+  const back = last && last.cells?.length ? [-last.dx, -last.dy] : null;   // откуда пришёл — не считаем
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    if (back && back[0] === dx && back[1] === dy) continue;
+    for (let k = 1; k <= MAX_STEPS; k++) {
+      const x = from.x + dx * k, y = from.y + dy * k;
+      if (isWall(x, y) || alive.has(enemyKey(x, y))) break;
+      const g = svg("g", { class: "stepnum" }, routeEl);
+      svg("rect", { x: x + 0.29, y: y + 0.62, width: 0.42, height: 0.3, rx: 0.15 }, g);
+      svg("text", { x: x + 0.5, y: y + 0.775 }, g).textContent = k;
+      if (x === exitPos.x && y === exitPos.y) break;  // дальше двери не считаем
+    }
+  }
+}
+
 function drawRoute(p, activeIdx = -1) {
   routeEl.innerHTML = "";
   markEl.innerHTML = "";
+  if (activeIdx < 0 && !running) drawStepHints(p);
   if (!p || p.error) return;
   const c = (v) => v + 0.5;
   p.commands.forEach((cmd, i) => {
@@ -3995,7 +4089,9 @@ function reset() {
   drawItems(noneGot());
   drawEnemies(fullHp());
   refreshPlan();
-  setStatus("Напиши код и нажми «Запустить»");
+  setStatus(showSteps() && L.chapter === 0
+    ? "Цифры на поле — сколько шагов до клетки. Напиши код и нажми «Запустить»"
+    : "Напиши код и нажми «Запустить»");
 }
 
 // Пока игрок пишет код, мы не показываем, где он ошибся: только маршрут.
@@ -4252,6 +4348,7 @@ function setDisabled(v) {
 
 // Панель выбранной строки: показываем, какая строка выбрана и что в ней
 function drawLineBar() {
+  drawUndo();
   const bar = $("linebar");
   bar.hidden = !selLine || running;
   if (bar.hidden) return;
@@ -5050,6 +5147,14 @@ document.getElementById("app-audio").addEventListener("change", (e) => {
 });
 applyAudioMode();
 setTimeout(() => runBench(false), 300);
+// Цифры шагов на поле
+$("app-steps").value = save.stepHints || "auto";
+$("app-steps").addEventListener("change", (e) => {
+  save.stepHints = e.target.value;
+  writeSave();
+  sfx("tap");
+  if (!$("levelview").hidden && !running) drawRoute(plan);
+});
 // Выбор анимации; «Авто» следит за настройкой телефона и на лету
 document.getElementById("app-motion").addEventListener("change", (e) => {
   save.motion = e.target.value;
@@ -5495,7 +5600,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
