@@ -925,6 +925,9 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
 .app-row .btn { font-family: var(--font-body); font-size: 14px; font-weight: 600; padding: 8px 12px; background: var(--bg); }
 .app-row .btn[hidden], .app-installed[hidden] { display: none; }
 .app-installed { color: var(--ok); font-weight: 600; padding: 8px 4px; }
+.app-report { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--wall-edge); border-bottom: 1px solid var(--wall-edge); }
+.app-report b { color: var(--fg); }
+.app-report p { margin: 0; }
 .app-audio label { color: var(--fg); font-weight: 600; }
 .app-audio select { font: inherit; font-size: 14px; font-weight: 600; color: var(--fg); background: var(--bg); border: 1px solid var(--wall-edge); border-radius: 4px; padding: 7px 8px; }
 #app-audio-note { font-size: 13px; }
@@ -1021,6 +1024,16 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
         <option value="off">Выключена</option>
       </select>
       <span id="app-motion-note"></span>
+    </div>
+    <div class="app-report">
+      <b>Для тестирования</b>
+      <p>Что-то непонятно или не получается? Нажми — скопируется отчёт: что ты нажимал и где застрял. Пришли его тому, кто дал тебе игру. Личных данных там нет.</p>
+      <div class="app-row">
+        <button class="btn reset" id="rep-copy">📋 Скопировать отчёт</button>
+        <button class="btn reset" id="rep-share">📤 Отправить</button>
+        <button class="linkbtn" id="rep-clear">очистить журнал</button>
+      </div>
+      <p class="app-status" id="rep-msg" role="status"></p>
     </div>
     <div class="app-row app-audio">
       <label for="app-steps">🔢 Цифры шагов на поле:</label>
@@ -1746,6 +1759,41 @@ function applyMotion() {
   if (note) note.textContent = m === "auto" ? (STILL ? "сейчас выключена: телефон просит меньше движения" : "сейчас включена") : "";
 }
 applyMotion();
+
+// ===== Журнал игры для разработчика =====
+// Игра записывает, что делал игрок: какой уровень открыл, какие кнопки нажимал,
+// какой код запускал и чем кончилось. Только на этом устройстве, в облако не уходит.
+// В шестерёнке есть «Скопировать отчёт»: тестировщик присылает текст — по нему видно,
+// где человек застрял. Личных данных в журнале нет.
+const LOG_KEY = "coder-path-log", LOG_MAX = 600;
+let gameLog = [];
+try { gameLog = JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); } catch (e) { gameLog = []; }
+let logTimer = null, lastStatusLogged = "";
+function logEv(e, d = {}) {
+  let where = "карта";
+  try { if (L && !document.getElementById("levelview").hidden) where = L.name; } catch (e) { /* уровень ещё не объявлен */ }
+  gameLog.push({ t: Date.now(), w: where, e, ...d });
+  if (gameLog.length > LOG_MAX) gameLog.splice(0, gameLog.length - LOG_MAX);
+  clearTimeout(logTimer);
+  logTimer = setTimeout(() => { try { localStorage.setItem(LOG_KEY, JSON.stringify(gameLog)); } catch (e) {} }, 800);
+}
+const oneLine = (code) => String(code || "").split("\n").map((l) => l.replace(/\s+$/, "")).filter((l) => l.trim()).join(" | ").slice(0, 240);
+logEv("start", { ua: navigator.userAgent.slice(0, 160), scr: `${screen.width}×${screen.height}`, lang: save.lang || "py" });
+// любые нажатия на кнопки — одной строкой, по надписи на кнопке
+document.addEventListener("click", (ev) => {
+  const b = ev.target.closest?.("button, .node, [role=button]");
+  if (!b) return;
+  let label;
+  if (b.classList.contains("node")) label = "уровень «" + (LEVELS[+b.dataset.i]?.name || "?") + "»" + (b.classList.contains("locked") ? " (закрыт)" : "");
+  else label = (b.getAttribute("aria-label") || b.textContent || b.id || "").replace(/\s+/g, " ").trim().slice(0, 50);
+  if (b.dataset.line) label = "номер строки " + b.dataset.line;
+  logEv("tap", { b: label || b.id });
+}, true);
+// выбор в списках настроек
+document.addEventListener("change", (ev) => {
+  if (ev.target.tagName === "SELECT") logEv("set", { b: `${ev.target.id} = ${ev.target.value}` });
+}, true);
+
 function writeSave() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   scheduleCloudSave();
@@ -2527,6 +2575,7 @@ const PROPS = {
 function loadLevel(i) {
   levelIdx = i;
   L = LEVELS[i];
+  setTimeout(() => logEv("level", { code: oneLine(codeEl.value) }), 0);
   save.currentName = L.name;
   writeSave();
   showView("level");
@@ -3083,6 +3132,7 @@ function startMapScene(canvas) {
 }
 
 function showView(v) {
+  if (v === "map" && !$("levelview").hidden) logEv("map");
   $("mapview").hidden = v !== "map";
   $("levelview").hidden = v !== "level";
   if (v === "map") renderMap();
@@ -3176,6 +3226,7 @@ function onMapTap(e) {
   } else {
     $("map-toast").textContent = `Сначала пройди «${lv.after}»`;
   }
+  logEv("status", { text: $("map-toast").textContent, kind: "map" });
 }
 
 function starsHtml(n) {
@@ -4050,6 +4101,9 @@ function drawTape(p, activeIdx = -1, walked = 0) {
 }
 
 function setStatus(text, kind = "", pill = "") {
+  // в журнал — без шума: строка «move_right(3)» во время запуска не нужна
+  if (text !== lastStatusLogged && !/^Напиши код|^Цифры на поле/.test(text) && !/^[A-Za-z_]+\(\d*\)$/.test(text)) { lastStatusLogged = text; logEv("status", { text: text.slice(0, 200), kind }); }
+  if (/^Напиши код|^Цифры на поле/.test(text)) lastStatusLogged = "";
   statusEl.className = "status " + kind;
   statusEl.innerHTML = (pill ? `<span class="pill"></span>` : "") + `<span></span>`;
   if (pill) statusEl.firstChild.textContent = pill;
@@ -4158,6 +4212,7 @@ async function knightFalls(why) {
 // ===== 13. Запуск =====
 async function run() {
   if (running) return;
+  logEv("run", { code: oneLine(codeEl.value) });
   winBox.hidden = true;
   reset();
   const p = plan;
@@ -4312,6 +4367,7 @@ function win() {
   const stars = written <= L.par ? 3 : written <= L.good ? 2 : 1;
   save.stars[L.name] = Math.max(save.stars[L.name] || 0, stars);
   writeSave();
+  logEv("win", { stars, written });
 
   $("win-stars").innerHTML = starsHtml(stars);
   let note = `В коде ${written} ${plural(written, "команда", "команды", "команд")}.`;
@@ -4395,6 +4451,12 @@ codeEl.addEventListener("keydown", (e) => {
 });
 
 codeEl.addEventListener("input", onCodeChange);
+// набор с клавиатуры пишем в журнал не каждую букву, а когда человек остановился
+let typedTimer = null;
+codeEl.addEventListener("input", () => {
+  clearTimeout(typedTimer);
+  typedTimer = setTimeout(() => logEv("typed", { code: oneLine(codeEl.value) }), 1500);
+});
 codeEl.addEventListener("scroll", syncScroll);
 runBtn.addEventListener("click", run);
 resetBtn.addEventListener("click", () => { if (!running) { winBox.hidden = true; reset(); } });
@@ -5600,7 +5662,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 17;
+const APP_VERSION = 18;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
@@ -5790,6 +5852,72 @@ async function syncByHand(msg) {
 }
 $("app-sync").addEventListener("click", () => { sfx("tap"); syncByHand(appStatus); });
 $("sync-now").addEventListener("click", () => { sfx("tap"); syncByHand((t) => ($("sync-msg").textContent = t)); });
+
+// --- Отчёт для разработчика: текст из журнала ---
+function buildReport() {
+  const pad = (n) => String(n).padStart(2, "0");
+  const hhmmss = (t) => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+  const dur = (ms) => { const sec = Math.round(ms / 1000); return sec < 60 ? `${sec} с` : `${Math.floor(sec / 60)} мин ${sec % 60} с`; };
+  const last = [...gameLog].reverse().find((e) => e.e === "start") || {};
+  const out = [];
+  out.push("Coder Path — отчёт для разработчика");
+  out.push(`Версия игры: ${APP_VERSION} · ${new Date().toLocaleString("ru-RU")}`);
+  out.push(`Устройство: ${last.ua || navigator.userAgent.slice(0, 160)} · экран ${last.scr || ""}`);
+  out.push(`Язык кода: ${save.lang || "py"} · звук: ${save.audioMode || "auto"} · анимация: ${save.motion || "auto"} · цифры шагов: ${save.stepHints || "auto"}`);
+  out.push(`Пройдено уровней: ${Object.keys(save.stars).length} из ${LEVELS.length}`);
+  // сводка по уровням: сколько времени, запусков, чем кончилось
+  const lv = {};
+  let cur = null, since = 0;
+  const leave = (t) => { if (cur) { lv[cur].time += t - since; cur = null; } };
+  for (const ev of gameLog) {
+    if (ev.e === "level") { leave(ev.t); cur = ev.w; since = ev.t; (lv[cur] ||= { time: 0, runs: 0, win: 0, last: "" }); }
+    else if (ev.e === "map" || ev.e === "start") leave(ev.t);
+    if (!lv[ev.w]) continue;
+    if (ev.e === "run") lv[ev.w].runs++;
+    if (ev.e === "win") lv[ev.w].win = Math.max(lv[ev.w].win, ev.stars);
+    if (ev.e === "status" && ev.kind === "fail") lv[ev.w].last = ev.text;
+  }
+  if (cur && gameLog.length) leave(gameLog[gameLog.length - 1].t);
+  out.push("", "Уровни:");
+  for (const [name, v] of Object.entries(lv)) {
+    out.push(`• ${name} — ${dur(v.time)}, запусков ${v.runs}, ` + (v.win ? `пройден ${"★".repeat(v.win)}` : `не пройден` + (v.last ? `; последняя подсказка: «${v.last}»` : "")));
+  }
+  out.push("", `Журнал (${gameLog.length} событий):`);
+  for (const ev of gameLog) {
+    const w = `[${ev.w}]`;
+    const line = {
+      start: () => "— игра открыта —",
+      level: () => `уровень открыт${ev.code ? ", код: " + ev.code : ""}`,
+      map: () => "вышел на карту",
+      tap: () => `нажал «${ev.b}»`,
+      set: () => `настройка ${ev.b}`,
+      typed: () => `набрал с клавиатуры: ${ev.code || "(пусто)"}`,
+      run: () => `ЗАПУСК: ${ev.code || "(пусто)"}`,
+      status: () => `${ev.kind === "fail" ? "подсказка" : ev.kind === "ok" ? "итог" : "сообщение"}: «${ev.text}»`,
+      win: () => `ПРОЙДЕН: ${"★".repeat(ev.stars)}, команд ${ev.written}`,
+    }[ev.e];
+    out.push(`${hhmmss(ev.t)} ${w} ${line ? line() : ev.e}`);
+  }
+  return out.join("\n");
+}
+const repMsg = (t) => ($("rep-msg").textContent = t);
+$("rep-copy").addEventListener("click", async () => {
+  const ok = await copyText(buildReport());
+  repMsg(ok ? `Отчёт скопирован (${gameLog.length} событий). Вставь его в сообщение и отправь` : "Не получилось скопировать — попробуй «Отправить»");
+});
+$("rep-share").addEventListener("click", async () => {
+  const text = buildReport();
+  if (navigator.share) {
+    try { await navigator.share({ title: "Coder Path — отчёт", text }); return; }
+    catch (e) { if (e.name === "AbortError") return; }
+  }
+  repMsg((await copyText(text)) ? "Отчёт скопирован — вставь его в сообщение" : "Не получилось отправить");
+});
+$("rep-clear").addEventListener("click", () => {
+  gameLog = [];
+  try { localStorage.removeItem(LOG_KEY); } catch (e) {}
+  repMsg("Журнал очищен");
+});
 
 // --- Окно настроек (шестерёнка) ---
 document.querySelectorAll(".gear-ic").forEach((im) => (im.src = TS.ui_gear));
