@@ -167,11 +167,13 @@ h1 {
 .hero .khp { position: absolute; top: -10%; left: 0; right: 0; display: flex; justify-content: center; gap: 2px; z-index: 3; }
 .hero .khp i { width: 20%; max-width: 13px; aspect-ratio: 1; background: no-repeat center/contain; background-image: var(--heart-k); }
 .hero .khp i.off { opacity: 0.25; filter: grayscale(1); }
-@media (prefers-reduced-motion: reduce) { .hero.hurt .kwrap { animation: none; } }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .hero.hurt .kwrap { animation: none; }
 .hero .k-atk { display: none; }
 .hero.atk .k-atk { display: block; }
 .hero.atk .k-idle, .hero.atk .k-run { display: none !important; }
-@media (prefers-reduced-motion: reduce) { .enemy, .enemy.hit .ewrap, .poof { transition: none; animation: none; } }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .enemy, html.still .enemy.hit .ewrap, html.still .poof { transition: none; animation: none; }
 .route .badge.a rect { stroke: var(--sword); }
 .route.marks { z-index: 3; }
 .route .cross { stroke: #b3262b; stroke-width: 0.085; stroke-linecap: square; }
@@ -181,15 +183,19 @@ h1 {
 .foam { position: absolute; }
 .shoreline { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; animation: shore 4.5s ease-in-out infinite; }
 @keyframes shore { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
-@media (prefers-reduced-motion: reduce) { .shoreline { animation: none; opacity: 0.7; } }
-@media (update: slow) { .shoreline { animation: none; opacity: 0.7; } }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .shoreline { animation: none; opacity: 0.7; }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .shoreline { animation: none; opacity: 0.7; }
 /* рябь: пиксельный штрих-волна 9×2 из светлых точек */
 .ripple { position: absolute; display: block; image-rendering: pixelated; opacity: 0;
   background: no-repeat center/100% 100% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 2' shape-rendering='crispEdges'%3E%3Cpath d='M0 1h2v1H0zM2 0h5v1H2zM7 1h2v1H7z' fill='%23d4f1e8'/%3E%3C/svg%3E");
   animation: ripple var(--rd) ease-in-out var(--rl) infinite; }
 @keyframes ripple { 0%, 100% { opacity: 0; transform: translateX(-12%); } 35% { opacity: 0.75; } 65% { opacity: 0.6; } 85% { opacity: 0; transform: translateX(18%); } }
-@media (prefers-reduced-motion: reduce) { .ripple { animation: none; opacity: 0.5; } }
-@media (update: slow) { .ripple { animation: none; opacity: 0.5; } }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .ripple { animation: none; opacity: 0.5; }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .ripple { animation: none; opacity: 0.5; }
 .foamlayer { position: absolute; inset: 0; pointer-events: none;
   mask-size: 100% 100%; -webkit-mask-size: 100% 100%; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; }
 .cell .ov { position: absolute; inset: 0; pointer-events: none; }
@@ -220,11 +226,10 @@ h1 {
   border-radius: 14px; border: 2px solid #2d5a6a; background: #47aba9;
   image-rendering: pixelated; margin-block: 6px;
 }
-@media (update: slow) {
-  .splash { background: var(--bg); transition: none; }
-  /* экран E-Ink: всё стоит неподвижно, видно первый кадр */
-  .ov, .spr, .windfx span { animation: none !important; }
-}
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .splash { background: var(--bg); transition: none; }
+/* экран E-Ink: всё стоит неподвижно, видно первый кадр */
+html.still .ov, html.still .spr, html.still .windfx span { animation: none !important; }
 
 /* --- Ветер: деревья и кусты качаются сами (это анимация кадров из набора),
    а при порыве весь предмет ещё и наклоняется волной: с той стороны, откуда дует, — первым.
@@ -251,10 +256,9 @@ h1 {
 @keyframes leaf-l { 0% { left: 103%; opacity: 0; transform: translateY(0) rotate(0); } 12% { opacity: 0.9; } 100% { left: -3%; opacity: 0; transform: translateY(var(--dy)) rotate(-560deg); } }
 .windfx .mote { width: 3px; height: 3px; border-radius: 50%; background: #c3b6ff; opacity: 0.35; animation: mote var(--dur) ease-in-out var(--delay) infinite alternate; }
 @keyframes mote { from { transform: translate(0, 0); opacity: 0.1; } to { transform: translate(var(--dx), var(--dy)); opacity: 0.45; } }
-@media (prefers-reduced-motion: reduce) {
-  .ov, .spr, .windfx span { animation: none !important; }
-  .windfx span:not(.mote) { display: none; }
-}
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .ov, html.still .spr, html.still .windfx span { animation: none !important; }
+html.still .windfx span:not(.mote) { display: none; }
 .cell.exit.open { box-shadow: inset 0 0 0 3px var(--torch); }
 .cell.exit .lock { display: none; }
 .cell.exit.locked .lock { display: inline; }
@@ -265,7 +269,8 @@ h1 {
 .item.coin { inset: 18%; }
 .item.key svg { filter: drop-shadow(0 0 4px #f6c45366); }
 .item.taken { transform: translateY(-40%) scale(0.4); opacity: 0; }
-@media (prefers-reduced-motion: reduce) { .item { transition: none; } }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .item { transition: none; }
 .itemstag {
   align-self: flex-start;
   display: flex;
@@ -287,7 +292,8 @@ h1 {
 .itemstag .khearts img.off { opacity: 0.22; filter: grayscale(1); }
 .itemstag .khearts.hurt img { animation: kh-hurt 0.4s ease; }
 @keyframes kh-hurt { 0%,100% { transform: scale(1); } 35% { transform: scale(1.35); } }
-@media (prefers-reduced-motion: reduce) { .itemstag .khearts.hurt img { animation: none; } }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .itemstag .khearts.hurt img { animation: none; }
 
 /* Слой с маршрутом поверх клеток. Координаты: 1 единица = 1 клетка */
 .route { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
@@ -329,10 +335,9 @@ h1 {
   50% { translate: 8% 0; }
   75% { translate: -4% 0; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .hero { transition: none; }
-  .hero.bump .kwrap { animation: none; }
-}
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .hero { transition: none; }
+html.still .hero.bump .kwrap { animation: none; }
 .roundtag {
   position: absolute;
   top: 6px; right: 6px;
@@ -642,7 +647,8 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 #island .soon { font-family: var(--font-body); font-weight: 600; font-size: 12px; text-anchor: middle; }
 #island .pulse { animation: pulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes pulse { 0%, 100% { opacity: 0.9; transform: scale(1); } 50% { opacity: 0.2; transform: scale(1.35); } }
-@media (prefers-reduced-motion: reduce) { #island .pulse { animation: none; } }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still #island .pulse { animation: none; }
 .map-toast { min-height: 1.5em; margin: 0; text-align: center; color: var(--torch); font-weight: 600; }
 .howto {
   max-width: 480px;
@@ -742,7 +748,8 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 .coach-edge[data-dir="up"] svg { rotate: 180deg; }
 .coach-edge svg { width: 18px; height: 18px; fill: none; stroke: var(--torch); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; animation: nudge 1.4s ease-in-out infinite; }
 @keyframes nudge { 0%, 100% { translate: 0 -2px; } 50% { translate: 0 3px; } }
-@media (prefers-reduced-motion: reduce) { .coach-ring, .coach-hand, .coach-edge svg { animation: none; } }
+/* без движения (настройка «Анимация» или просьба системы) */
+html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { animation: none; }
 
 /* Кнопки музыки и звуков */
 .toprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
@@ -976,6 +983,15 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
         <option value="light">Лёгкий</option>
       </select>
       <span id="app-audio-note"></span>
+    </div>
+    <div class="app-row app-audio">
+      <label for="app-motion">🎞 Анимация:</label>
+      <select id="app-motion">
+        <option value="auto">Авто</option>
+        <option value="on">Включена</option>
+        <option value="off">Выключена</option>
+      </select>
+      <span id="app-motion-note"></span>
     </div>
     <p class="app-status" id="app-status" role="status"></p>
     <div class="app-update" id="app-update" hidden>
@@ -1666,6 +1682,22 @@ try {
   const raw = localStorage.getItem(SAVE_KEY);
   if (raw) save = { ...save, ...JSON.parse(raw) };
 } catch (e) { /* хранилище недоступно — играем без сохранения */ }
+
+// ===== Анимация: авто / включена / выключена =====
+// «Авто» слушается телефона: если в системе включено «убрать анимацию» (или экран E-Ink),
+// всё стоит неподвижно. «Включена» и «Выключена» — выбор игрока, он важнее системы.
+// Признак «без движения» — класс still у <html>: на него завязаны стили и живые сцены.
+const systemStill = () => matchMedia("(update: slow)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches;
+let STILL = false;
+function applyMotion() {
+  const m = save.motion || "auto";
+  STILL = m === "off" || (m === "auto" && systemStill());
+  document.documentElement.classList.toggle("still", STILL);
+  const sel = document.getElementById("app-motion"), note = document.getElementById("app-motion-note");
+  if (sel) sel.value = m;
+  if (note) note.textContent = m === "auto" ? (STILL ? "сейчас выключена: телефон просит меньше движения" : "сейчас включена") : "";
+}
+applyMotion();
 function writeSave() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   scheduleCloudSave();
@@ -2836,7 +2868,6 @@ function startMapScene(canvas) {
   const keys = new Set(["flat", "elev", "sc_tm", "foam", "bridge", "gwtower", "gt_idle", "gx_idle", "sc_cloud1", "sc_cloud2", "sc_sheep", "sc_sheepg",
     ...MAP_DECO.map((d) => d[0]).filter((k) => !MAP_SHEEP[k]), "tree1", "tree2", "tree3", "tree4", "bush1", "bush3"]);
   const img = {};
-  const still = matchMedia("(update: slow)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches;
   const objs = [...MAP_DECO, ...mapTrees()].sort((a, b) => (a[5] ?? a[2]) - (b[5] ?? b[2]));
   const land = newCanvas(canvas.width, canvas.height);
 
@@ -2991,14 +3022,14 @@ function startMapScene(canvas) {
   let last = 0;
   const loop = (t) => {
     requestAnimationFrame(loop);
-    if (t - last < (LIGHT ? 250 : 80) || document.hidden || document.getElementById("mapview").hidden) return;
+    if (STILL || t - last < (LIGHT ? 250 : 80) || document.hidden || document.getElementById("mapview").hidden) return;
     last = t;
     frame(t);
   };
   Promise.all([...keys].map((k) => tsImage(k).then((im) => (img[k] = im)))).then(() => {
     paintLand();
     frame(0);
-    if (!still) requestAnimationFrame(loop);
+    requestAnimationFrame(loop);   // при «без движения» цикл ничего не рисует, кадр стоит
   });
 }
 
@@ -5004,7 +5035,16 @@ document.getElementById("app-audio").addEventListener("change", (e) => {
   sfx("tap");
 });
 applyAudioMode();
-setTimeout(() => runBench(false), 300);            // замер сразу, пока звук ещё не играет
+setTimeout(() => runBench(false), 300);
+// Выбор анимации; «Авто» следит за настройкой телефона и на лету
+document.getElementById("app-motion").addEventListener("change", (e) => {
+  save.motion = e.target.value;
+  writeSave();
+  applyMotion();
+  sfx("tap");
+});
+applyMotion();
+matchMedia("(prefers-reduced-motion: reduce)").addEventListener?.("change", applyMotion);            // замер сразу, пока звук ещё не играет
 
 // Кнопки музыки и звуков есть и на карте, и на уровне — держим их в одном состоянии
 function drawSoundButtons() {
@@ -5323,7 +5363,6 @@ function startScene(canvas) {
   const ctx = canvas.getContext("2d");
   const keys = new Set(["sc_tm", "sc_foam", "sc_cloud1", "sc_cloud2", ...Object.values(SCENE_SPR).map((s) => s[0])]);
   const img = {};
-  const still = matchMedia("(update: slow)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches;
   const at = (x, y) => (SCENE_MAP[y] && SCENE_MAP[y][x]) || "~";
   const ground = (x, y) => at(x, y) !== "~";
   const plateau = (x, y) => at(x, y) === "p";
@@ -5407,14 +5446,14 @@ function startScene(canvas) {
   let raf = 0, last = 0;
   const loop = (t) => {
     raf = requestAnimationFrame(loop);
-    if (t - last < 33) return; // ~30 кадров в секунду хватает с запасом
+    if (STILL || t - last < 33) return; // ~30 кадров в секунду хватает с запасом
     last = t;
     frame(t);
   };
   Promise.all([...keys].map((k) => tsImage(k).then((im) => (img[k] = im)))).then(() => {
     paintLand();
-    if (still) frame(0);
-    else raf = requestAnimationFrame(loop);
+    frame(0);
+    raf = requestAnimationFrame(loop);
   });
   return () => cancelAnimationFrame(raf); // остановить, когда заставка спрятана
 }
@@ -5442,7 +5481,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 14;
+const APP_VERSION = 15;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
