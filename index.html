@@ -316,6 +316,14 @@ html.still .itemstag .khearts.hurt img { animation: none; }
 .route .roundmark rect { fill: var(--loop); stroke: #1b1530; stroke-width: 0.03; }
 .route .roundmark text { font-family: var(--font-body); font-weight: 800; font-size: 0.23px; fill: #1b1530; text-anchor: middle; dominant-baseline: central; }
 .route .roundmark.endless rect { fill: var(--bad); }
+.route .roundmark.bad rect { fill: #ffb0a8; stroke: #c0392b; stroke-width: 0.045; }
+.route .blocked .try, .route .blocked .try-under { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.route .blocked .try-under { stroke: #000a; stroke-width: 0.14; }
+.route .blocked .try { stroke: #ff7a6b; stroke-width: 0.075; stroke-dasharray: 0.09 0.07; }
+.route .blocked .x-bg { fill: #ffffffcc; stroke: #c0392b; stroke-width: 0.04; }
+.route .blocked .x-under { stroke: #5a1010; stroke-width: 0.15; stroke-linecap: round; }
+.route .blocked .x { stroke: #e0392b; stroke-width: 0.085; stroke-linecap: round; }
+.route .blocked.hit .x-bg { animation: bonk 0.5s ease-out; transform-box: fill-box; transform-origin: center; }
 .route .dot.h { fill: var(--torch); }
 .route .dot.v { fill: var(--frost); }
 .route .badge rect { fill: var(--bg); stroke-width: 0.04; }
@@ -4311,12 +4319,37 @@ function drawRoute(p, activeIdx = -1) {
     if (!roundMarks.has(k)) roundMarks.set(k, { at: p.endless.at, rounds: [] });
     roundMarks.get(k).endless = true;
   }
+  // На каком круге рыцарь упрётся (в стену, гоблина, запертую дверь) — тот круг помечаем «✕»
+  const crashCmd = p.crash ? p.commands[p.crash.cmd] : null;
+  const crashRound = crashCmd?.loop?.round;
   for (const { at, rounds, endless } of roundMarks.values()) {
-    const g = svg("g", { class: "roundmark" + (endless ? " endless" : "") }, markEl);
-    const label = (rounds.length ? "↻" + rounds.join(",") : "↻") + (endless ? " ∞" : "");
+    const bad = crashRound && rounds.includes(crashRound);
+    const g = svg("g", { class: "roundmark" + (endless ? " endless" : "") + (bad ? " bad" : "") }, markEl);
+    const label = (rounds.length ? "↻" + rounds.join(",") : "↻") + (endless ? " ∞" : "") + (bad ? " ✕" : "");
     const w = Math.max(0.56, 0.19 * label.length + 0.16);
     svg("rect", { x: at.x + 0.03, y: at.y + 0.03, width: w, height: 0.34, rx: 0.17 }, g);
     svg("text", { x: at.x + 0.03 + w / 2, y: at.y + 0.2 }, g).textContent = label;
+  }
+  // Где рыцарь упрётся: короткая стрелка «пытается шагнуть» с последней клетки
+  // и крестик на клетке, которая не пускает. Видно и до запуска, чтобы было понятно,
+  // с какой клетки и куда не получится пройти.
+  if (crashCmd) {
+    const last = crashCmd.cells.length ? crashCmd.cells[crashCmd.cells.length - 1] : crashCmd.from;
+    const at = p.crash.at, dx = at.x - last.x, dy = at.y - last.y;
+    const g = svg("g", { class: "blocked" + (showProblems ? " hit" : "") }, markEl);
+    const x1 = c(last.x) + dx * 0.18, y1 = c(last.y) + dy * 0.18, x2 = c(last.x) + dx * 0.62, y2 = c(last.y) + dy * 0.62;
+    svg("line", { class: "try-under", x1, y1, x2, y2 }, g);
+    svg("line", { class: "try", x1, y1, x2, y2 }, g);
+    const a = 0.14, w = 0.12;
+    const pts = `${x2 - dx * a - dy * w},${y2 - dy * a + dx * w} ${x2},${y2} ${x2 - dx * a + dy * w},${y2 - dy * a - dx * w}`;
+    svg("polyline", { class: "try-under", points: pts }, g);
+    svg("polyline", { class: "try", points: pts }, g);
+    const r = 0.2, X = c(at.x), Y = c(at.y);
+    svg("circle", { class: "x-bg", cx: X, cy: Y, r: 0.3 }, g);
+    for (const [ax, ay, bx, by] of [[X - r, Y - r, X + r, Y + r], [X - r, Y + r, X + r, Y - r]]) {
+      svg("line", { class: "x-under", x1: ax, y1: ay, x2: bx, y2: by }, g);
+      svg("line", { class: "x", x1: ax, y1: ay, x2: bx, y2: by }, g);
+    }
   }
   // Удары — как в стратегиях: крестик стоит ПЕРЕД гоблином, на границе клеток, откуда рыцарь бьёт,
   // а сам гоблин остаётся открытым. Рядом — номер команды. Гоблин побеждён — крестик убираем.
@@ -4350,19 +4383,6 @@ function drawRoute(p, activeIdx = -1) {
     svg("rect", { x: mx - 0.19, y: my - 0.17, width: 0.38, height: 0.34, rx: 0.17 }, g);
     svg("text", { x: mx, y: my }, g).textContent = i + 1;
   });
-  // Место удара показываем только после запуска, и мягко: жёлтая звёздочка "бум"
-  // на краю стены, а не красный крестик
-  if (p.crash && showProblems) {
-    const cmd = p.commands[p.crash.cmd];
-    const last = cmd.cells.length ? cmd.cells[cmd.cells.length - 1] : cmd.from;
-    const cx = (last.x + p.crash.at.x) / 2 + 0.5, cy = (last.y + p.crash.at.y) / 2 + 0.5;
-    const pts = [];
-    for (let k = 0; k < 10; k++) {
-      const r = k % 2 ? 0.09 : 0.22, a = (Math.PI / 5) * k - Math.PI / 2;
-      pts.push(`${(cx + r * Math.cos(a)).toFixed(3)},${(cy + r * Math.sin(a)).toFixed(3)}`);
-    }
-    svg("polygon", { class: "bonk", points: pts.join(" ") }, routeEl);
-  }
 }
 
 function drawTape(p, activeIdx = -1, walked = 0) {
@@ -4618,9 +4638,12 @@ async function run() {
             : `сначала собери все монеты (осталось ${left})`;
           setStatus(`Дверь пока заперта: ${what}`, "fail");
         } else {
-          setStatus(uiBlocks
-            ? "Ой, тут стена! Плитка подсвечена — нажми на неё, поправь число или стрелку и попробуй ещё раз"
-            : `Ой, тут стена! Строка ${cmd.line} подсвечена — поправь её и попробуй ещё раз`, "fail");
+          const rd = cmd.loop?.round;
+          setStatus(rd > 1
+            ? `Ой, стена (✕)! ${rd - 1} ${plural(rd - 1, "круг прошёл", "круга прошли", "кругов прошли")} хорошо, а на круге ${rd} рыцарь упёрся. Значит, цикл должен вести не только сюда — посмотри, какие шаги нужны дальше, и добавь их в цикл`
+            : uiBlocks
+              ? "Ой, тут стена (✕)! Плитка подсвечена — нажми на неё, поправь число или стрелку и попробуй ещё раз"
+              : `Ой, тут стена (✕)! Строка ${cmd.line} подсвечена — поправь её и попробуй ещё раз`, "fail");
         }
         return finish();
       }
@@ -6002,7 +6025,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 23;
+const APP_VERSION = 24;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
