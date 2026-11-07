@@ -571,7 +571,13 @@ html.still .varflash { animation: none; opacity: 1; }
 .lb-actions .chip { padding: 7px 12px; font-family: var(--font-body); font-size: 13px; font-weight: 600; border: 0; border-radius: 16px;
   background: #2b3140; color: #d9dde8; }
 .lb-actions .chip:hover:not(:disabled) { background: #3a4254; color: #fff; }
-.lb-actions .chip:disabled { opacity: 0.45; }
+.lb-actions .chip:disabled { opacity: 0.35; }
+.lb-actions .chip.ic { display: inline-flex; align-items: center; justify-content: center; min-width: 56px; height: 40px; padding: 0 10px; }
+.lb-actions .chip.ic svg { width: 36px; height: 26px; display: block; }
+.lb-actions .shift .chip.ic { padding: 0 10px; }
+/* значок инструмента в тексте задания — такая же серая таблетка */
+.toolref { display: inline-flex; align-items: center; vertical-align: -6px; height: 26px; padding: 0 7px; border-radius: 13px; background: #2b3140; }
+.toolref svg { width: 30px; height: 22px; display: block; }
 /* Сдвиг: две кнопки с жирными стрелками, сиреневые — как цикл, потому что сдвиг решает, в цикле ли строка */
 .shift { display: inline-flex; align-items: stretch; border-radius: 16px; overflow: hidden; background: #2b3140; }
 .shift-label { display: flex; align-items: center; padding: 0 4px 0 12px; font-size: 13px; font-weight: 600; color: #9aa3b8; }
@@ -581,9 +587,9 @@ html.still .varflash { animation: none; opacity: 1; }
   font-size: 13px; font-weight: 600; color: #d9dde8; padding: 7px 12px;
 }
 .shift[hidden], .lb-actions .chip[hidden] { display: none !important; }
-.lb-actions .shift .chip svg { width: 20px; height: 20px; fill: none; stroke: var(--loop); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
 .lb-actions .shift .chip:hover:not(:disabled) { background: var(--wall-edge); }
-.lb-actions .shift .chip:disabled svg { stroke: var(--muted); }
+
 
 /* Подсветка: под прозрачным текстом поля ввода лежит раскрашенная копия кода */
 .code-area { position: relative; min-width: 0; }
@@ -1867,7 +1873,7 @@ const LEVELS = [
     chapter: 2,
     after: "Ключ",
     bug: true,
-    goal: "Все команды правильные, но две соседние строки перепутаны местами. Запусти, посмотри, где рыцарь споткнётся, выбери эту строку и поменяй её с соседней серыми кнопками «строку выше» или «строку ниже».",
+    goal: "Все команды правильные, но две соседние строки перепутаны местами. Запусти, посмотри, где рыцарь споткнётся, выбери эту строку и поменяй её с соседней серой кнопкой [[tool:up]] или [[tool:down]].",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     par: 4, good: 5,
     map: [
@@ -2053,7 +2059,8 @@ const LEVELS = [
 function btnRefs(html) {
   return html
     .replace(/\[\[btn:(\w+)\]\]/g, (m, n) => `<span class="chipref ${DIRS[n].axis}${uiBlocks ? " big" : ""}">${uiBlocks ? DIRS[n].arrow : `${DIRS[n].arrow} ${disp(n)}`}</span>`)
-    .replace(/\[\[line:(\d+)\]\]/g, (m, n) => `<span class="lineref">${n}</span>`);
+    .replace(/\[\[line:(\d+)\]\]/g, (m, n) => `<span class="lineref">${n}</span>`)
+    .replace(/\[\[tool:(\w+)\]\]/g, (m, n) => `<span class="toolref">${TOOL_ICONS[n]}</span>`);
 }
 function langify(html) {
   const body = lang === "py"
@@ -2061,8 +2068,8 @@ function langify(html) {
     : "лежит внутри фигурных скобок <code>{ }</code>";
   html = html.replace("[[body]]", body);
   html = html.replace("[[fixhow]]", lang === "py"
-    ? "Подсказка: в Python внутри цикла только строки со сдвигом. Выбери её номер и нажми «отступ: больше»."
-    : "Подсказка: внутри цикла только то, что стоит до скобки <code>}</code>. Выбери её номер и нажми «строку выше».");
+    ? "Подсказка: в Python внутри цикла только строки со сдвигом. Выбери её номер и нажми серую кнопку [[tool:indent]]."
+    : "Подсказка: внутри цикла только то, что стоит до скобки <code>}</code>. Выбери её номер и нажми серую кнопку [[tool:up]].");
   // если/иначе: как это пишется в языке игрока
   html = html.replace("[[if]]", lang === "py" ? "<code>if obstacle_right():</code>" : "<code>if (obstacleRight()) {</code>");
   if (lang === "py") html = html.replace(new RegExp(`\\b(${ALL_COMMANDS.join("|")})\\b`, "g"), (n) => DIRS[n].py);
@@ -2873,7 +2880,7 @@ function loadLevel(i) {
   $("eyebrow").textContent = `${ch.name} · ` + (L.challenge ? "испытание" : `уровень ${numInChapter}`) + (L.bug ? " · найди ошибку" : "");
   $("title").textContent = L.name;
   // кнопки в тексте рисуем до перевода на язык игрока (метка содержит JS-имя команды)
-  $("goal").innerHTML = uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(BLOCK_GOALS[L.name]) : langify(btnRefs(L.goal));
+  $("goal").innerHTML = uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(BLOCK_GOALS[L.name]) : btnRefs(langify(btnRefs(L.goal)));
   $("goal").classList.remove("open");
   requestAnimationFrame(() => { const g = $("goal"); $("goal-more").hidden = !(uiBlocks && g.scrollHeight > g.clientHeight + 2); });
   $("par").innerHTML = `<span class="star">★★★</span> — не больше ${L.par} ${cmdWord(L.par)} в коде, <span class="star">★★</span> — не больше ${L.good}`;
@@ -4831,8 +4838,8 @@ const BLOCK_GOALS = {
   "Починка": "Плитки уже лежат, но в одной ошибка. Нажми «Запустить» и посмотри, где рыцарь остановится: эта плитка подсветится. Нажми на неё и поправь число.",
   "Лестница": "Новое: <b>цикл</b>. Всё, что лежит в рамке <b>🔁 повторять</b>, рыцарь повторяет снова и снова, пока не дойдёт до двери. Рамка уже есть — положи в неё один шаг лестницы: стрелки сами кладут плитки в рамку.",
   "Зубцы": "Посмотри на дорогу: какие шаги в ней повторяются? Нажми <b>🔁 повторять</b> — появится пустая рамка. Положи в неё эти шаги стрелками.",
-  "Беглянка": "В рамке цикла должны быть две плитки, но одна сбежала: она лежит за рамкой, и рыцарь повторяет только одну. Нажми на беглянку, а потом «в цикл».",
-  "Перепутанный путь": "Все плитки правильные, но две соседние перепутаны местами. Запусти, посмотри, где рыцарь споткнётся, нажми на эту плитку и передвинь её серыми кнопками «раньше» или «позже».",
+  "Беглянка": "В рамке цикла должны быть две плитки, но одна сбежала: она лежит за рамкой, и рыцарь повторяет только одну. Нажми на беглянку, а потом серую кнопку [[tool:inFrame]].",
+  "Перепутанный путь": "Все плитки правильные, но две соседние перепутаны местами. Запусти, посмотри, где рыцарь споткнётся, нажми на эту плитку и передвинь её серой кнопкой [[tool:earlier]] или [[tool:later]].",
   "Гоблин": "Новое: <b>гоблин</b>! Он загородил тропу. Нажми <b>⚔</b>: рыцарь ударит того, кто стоит рядом. Потом иди к двери: <b>→</b> и цифра <b>5</b>. Не мешкай: если стоять рядом и не бить, гоблин ударит сам. У рыцаря три сердечка.",
   "Крепкий гоблин": "Над этим гоблином два сердечка: ему нужно <b>два удара</b>, и после первого он успеет ударить в ответ. Плитки почти готовы. Нажми на плитку <b>⚔1</b>, потом цифру <b>2</b>: получится <b>⚔2</b>.",
   "Строй гоблинов": "Гоблины стоят через клетку. Удар и два шага повторяются: положи в рамку 🔁 плитки <b>⚔</b> и <b>→2</b>. Если рядом никого нет, рыцарь просто взмахнёт мечом.",
@@ -5701,6 +5708,37 @@ function setDisabled(v) {
 }
 
 // Панель выбранной строки: показываем, какая строка выбрана и что в ней
+// ===== Значки панели правки строки =====
+// Образ вместо слов (понятно без перевода): строки текста — серые полоски, выбранная строка —
+// оранжевая, как выбранный номер слева от кода; куда её двигать — маленький белый треугольник.
+// Это нарочно НЕ стрелка: стрелки (цветные → ↓) — только у команд рыцаря.
+const G = "#8f98ad", O = "#f0a33c", Wt = "#ffffff";
+const ln = (y, c, x0 = 13, x1 = 31, w = 2.6) => `<path d="M${x0} ${y}H${x1}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
+const tri = (dir, x, y) => `<path d="${{ up: `M${x - 4} ${y + 2.5}L${x} ${y - 3}L${x + 4} ${y + 2.5}Z`, down: `M${x - 4} ${y - 2.5}L${x} ${y + 3}L${x + 4} ${y - 2.5}Z`,
+  left: `M${x + 2.5} ${y - 4}L${x - 3} ${y}L${x + 2.5} ${y + 4}Z`, right: `M${x - 2.5} ${y - 4}L${x + 3} ${y}L${x - 2.5} ${y + 4}Z` }[dir]}" fill="${Wt}"/>`;
+const sq = (x, c) => `<rect x="${x}" y="8" width="7" height="8" rx="1.5" fill="${c}"/>`;
+const svgI = (body) => `<svg viewBox="0 0 34 24" aria-hidden="true">${body}</svg>`;
+const TOOL_ICONS = {
+  up: svgI(ln(5, G) + ln(12, G) + ln(19, O, 13, 31, 3.6) + tri("up", 5, 12)),          // строку выше
+  down: svgI(ln(5, O, 13, 31, 3.6) + ln(12, G) + ln(19, G) + tri("down", 5, 12)),      // строку ниже
+  add: svgI(ln(5, G) + `<path d="M13 12H31" stroke="${G}" stroke-width="2" stroke-dasharray="2.5 3" stroke-linecap="round"/>` + ln(19, G)
+    + `<path d="M5 8v8M1 12h8" stroke="${Wt}" stroke-width="2.4" stroke-linecap="round"/>`),               // пустая строка
+  outdent: svgI(ln(4, G, 4, 31) + ln(10, O, 15, 31, 3.4) + ln(15, G, 15, 31) + ln(20, G, 4, 31) + tri("left", 8, 12.5)),   // отступ меньше
+  indent: svgI(ln(4, G, 4, 31) + ln(10, O, 15, 31, 3.4) + ln(15, G, 15, 31) + ln(20, G, 4, 31) + tri("right", 7, 12.5)),   // отступ больше
+  earlier: svgI(sq(1, G) + sq(10, G) + tri("left", 21, 12) + sq(26, O)),              // плитку раньше
+  later: svgI(sq(1, O) + tri("right", 13, 12) + sq(17, G) + sq(26, G)),              // плитку позже
+  inFrame: svgI(`<rect x="13" y="3" width="19" height="18" rx="3" fill="none" stroke="${G}" stroke-width="2"/>` + sq(19, O) + tri("right", 9, 12)),   // в рамку
+  outFrame: svgI(`<rect x="13" y="3" width="19" height="18" rx="3" fill="none" stroke="${G}" stroke-width="2"/>` + sq(2, O) + tri("left", 19, 12)),   // из рамки
+  done: svgI(`<path d="M9 12.5l5 5 11-11" fill="none" stroke="${Wt}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`),
+};
+// кнопка-значок: картинка + подсказка для экранного диктора и при наведении
+function toolBtn(el, icon, label) {
+  el.innerHTML = TOOL_ICONS[icon];
+  el.setAttribute("aria-label", label);
+  el.title = label;
+  el.classList.add("ic");
+}
+
 function drawLineBar() {
   drawUndo();
   const bar = $("linebar");
@@ -5722,24 +5760,23 @@ function drawLineBar() {
   }
   $("lb-label").textContent = ifm ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»" : isElse ? "Рамка «иначе»: что делать, если нет"
     : uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : `Строка ${selLine}`;
-  $("lb-up").textContent = uiBlocks ? "раньше" : "строку выше";
-  // сдвиг строки в блоках — это «в цикл» и «из цикла»
-  const setTxt = (el, t) => { for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) { n.textContent = t; return; } };
-  const frameWord = L.ifs ? ["из рамки", "в рамку"] : ["из цикла", "в цикл"];
-  setTxt($("lb-out"), uiBlocks ? frameWord[0] : "меньше");
-  setTxt($("lb-in"), uiBlocks ? frameWord[1] : "больше");
-  document.querySelector(".shift-label").textContent = uiBlocks ? "цикл" : "отступ";
+  toolBtn($("lb-up"), uiBlocks ? "earlier" : "up", uiBlocks ? "Плитку раньше" : "Строку выше");
+  toolBtn($("lb-down"), uiBlocks ? "later" : "down", uiBlocks ? "Плитку позже" : "Строку ниже");
+  toolBtn($("lb-add"), "add", "Пустая строка ниже");
+  // отступ строки в блоках — это «в рамку» и «из рамки»
+  toolBtn($("lb-out"), uiBlocks ? "outFrame" : "outdent", uiBlocks ? "Из рамки" : "Отступ меньше");
+  toolBtn($("lb-in"), uiBlocks ? "inFrame" : "indent", uiBlocks ? "В рамку" : "Отступ больше");
+  toolBtn($("lb-done"), "done", "Готово");
+  document.querySelector(".shift-label").hidden = true;
   if (uiBlocks) {
     // показываем только то, что можно сделать с этой плиткой
     const inside = /^ /.test(line), hasLoop = frames.length > 0, isLoopLine = /^\s*(while|for|if|elif|else)\b/.test(line);
     $("lb-out").hidden = !inside;
     $("lb-in").hidden = inside || !hasLoop || isLoopLine;
     document.querySelector(".shift").hidden = $("lb-out").hidden && $("lb-in").hidden;
-    document.querySelector(".shift-label").hidden = true;
   } else {
-    $("lb-out").hidden = $("lb-in").hidden = document.querySelector(".shift").hidden = document.querySelector(".shift-label").hidden = false;
+    $("lb-out").hidden = $("lb-in").hidden = document.querySelector(".shift").hidden = false;
   }
-  $("lb-down").textContent = uiBlocks ? "позже" : "строку ниже";
   $("lb-text").textContent = line.trim() || "пустая";
   $("lb-up").disabled = selLine === 1;
   $("lb-down").disabled = selLine === lines.length;
@@ -7017,7 +7054,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 44;
+const APP_VERSION = 45;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
