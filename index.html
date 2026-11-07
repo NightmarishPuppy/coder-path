@@ -889,6 +889,10 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 html.still .mapclouds img.bank { animation: none; }
 .mapwrap { position: relative; aspect-ratio: 360 / 1080; }
 .mapwrap[hidden] { display: none; }
+/* актёры сценок на карте: лист кадров, кадр — сдвиг фона */
+.skactor { position: absolute; aspect-ratio: 1; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none;
+  transform: translate(-50%, var(--foot)); transition: opacity 0.3s; }
+.skactor.flip { transform: translate(-50%, var(--foot)) scaleX(-1); }
 #mapview .isle-svg .lbl { font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-anchor: middle; dominant-baseline: central; fill: #4a2e14; }
 #mapview .isle-svg .bnum { font-family: var(--font-display); font-weight: 700; font-size: 14px; text-anchor: middle; dominant-baseline: central; fill: #fff; stroke: #1d2a3a; stroke-width: 3; paint-order: stroke; }
 #mapview .isle-svg .node { cursor: pointer; }
@@ -3323,7 +3327,7 @@ ISLE_MAPS[1] = {
 // @@/isle1@@
 // @@isle2@@
 ISLE_MAPS[2] = {
-  nodes: [[170, 430], [110, 390], [190, 350], [230, 270], [150, 230]],
+  nodes: [[170, 470], [210, 450], [250, 430], [230, 390], [190, 390]],
   rows: [
     "....................................",
     "....................................",
@@ -3427,21 +3431,21 @@ ISLE_MAPS[2] = {
     "........#.........",
     "........#.........",
     "........#.........",
-    "......###.........",
-    "......#...........",
-    "......#...........",
-    "......######......",
-    "...........#......",
-    "...........#......",
-    "...........#......",
-    "...........#......",
-    "...........#......",
-    ".....#######......",
-    ".....#............",
-    ".....#............",
-    ".....####.........",
-    "........#.........",
-    "........#.........",
+    "........######....",
+    ".............#....",
+    "....##########....",
+    "....#.............",
+    "....#.............",
+    "....#########.....",
+    "............#.....",
+    "............#.....",
+    "...##########.....",
+    "...#..............",
+    "...#..............",
+    "...##########.....",
+    "............#.....",
+    "............#.....",
+    "........#####.....",
     "........#.........",
     "........#.........",
     "........=.........",
@@ -3458,16 +3462,16 @@ ISLE_MAPS[2] = {
     ["wrock2", 12.2, 28.4, 0.7],
     ["wrock4", 3.6, 28.9, 0.7],
     ["duck", 15.4, 28.2, 1.3],
-    ["house_y", 2.6, 19.4, 0.85],
-    ["house_y", 13.6, 20.2, 0.85, true],
-    ["house_c", 11.2, 23.0, 0.85],
-    ["tower_y", 14.0, 16.6, 0.75],
-    ["sheep", 3.2, 15.9, 0.45, true],
-    ["sheepg", 13.2, 22.4, 0.45],
-    ["sheep", 6.4, 22.8, 0.45],
-    ["sheepg", 2.4, 22.0, 0.45, true],
+    ["house_y", 5.0, 21.8, 0.8],
+    ["house_y", 14.2, 21.0, 0.8, true],
+    ["house_c", 2.2, 17.8, 0.8],
+    ["tower_y", 14.3, 18.0, 0.7],
+    ["sheep", 6.0, 23.5, 0.42],
+    ["sheepg", 10.6, 24.4, 0.42, true],
+    ["sheep", 6.4, 11.8, 0.42, true],
+    ["sheepg", 11.4, 11.7, 0.42],
   ],
-  labels: [["ДЕРЕВНЯ У ПРИЧАЛА", 104, 300]],
+  labels: [["ДЕРЕВНЯ У ПРИЧАЛА", 180, 288]],
   bank: [["cloud_b", 250, 1810, 1.1], ["cloud_a", 560, 1790, 1.3], ["cloud_c", 860, 1830, 1.0], ["cloud_d", 1080, 1820, 1.0]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm3",
@@ -3855,6 +3859,7 @@ function showIsle(n) {
     isleSvg(n).setAttribute("viewBox", `0 0 360 ${D.terr.length * 20}`);
     ISLE_ENG[n] = mapEngine(D);
     ISLE_ENG[n].startMapScene(w.querySelector(".map-canvas"));
+    SKITS[n]?.(w);
   }
   document.querySelector("#mapview .map-head .eyebrow").textContent = ISLE_NAMES[n];
 }
@@ -3978,6 +3983,140 @@ function onMapTap(e) {
   }
   logEv("status", { text: $("map-toast").textContent, kind: "map" });
 }
+
+// ===== Сценки на картах («движуха», как бои по краям карты в CodeCombat) =====
+// Время от времени на карте сама разыгрывается маленькая сценка из анимаций набора:
+// лучник отгоняет гоблина, гоблин-подрывник швыряет динамит в море, бочка-гоблин подглядывает.
+// Это не холст, а несколько <div> с листом кадров: кадр — сдвиг фона, перемещение — CSS-переход,
+// поэтому почти ничего не стоит телефону. Сценки идут, только пока карта острова на экране,
+// и не идут при «без движения». Поворачивать пиксельную графику нельзя — только отражение.
+// Лист: [столбцов, рядов, размер кадра в пикселях]; ряд — анимация, столбец — кадр.
+const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1, 192], barrel: [6, 6, 128],
+  archer: [8, 7, 192], arrow: [1, 2, 64], dead: [7, 2, 128] };
+const SK_ACTORS = [];
+let skLast = 0;
+function skTick(t) {
+  requestAnimationFrame(skTick);
+  if (t - skLast < 33) return;                // около 30 кадров в секунду хватает
+  skLast = t;
+  for (const a of SK_ACTORS) {
+    const an = a.anim;
+    if (!an) continue;
+    let f = Math.floor((t - an.t0) / an.ms);
+    if (f >= an.n) {
+      if (an.loop) f %= an.n;
+      else { f = an.n - 1; a.anim = null; an.res(); }
+    }
+    a.frame(f, an.row);
+  }
+}
+requestAnimationFrame(skTick);
+
+// Актёр: x, y — точка, где он стоит (ноги), в крупных клетках карты (как украшения в раскладке)
+function skActor(wrap, key, scale, foot = 0.67) {
+  const [c, r, fp] = SK[key], VH = ISLE_MAPS[+wrap.dataset.isle].terr.length * 20;
+  const el = document.createElement("div");
+  el.className = "skactor";
+  el.style.width = (fp * scale / 64 * 20 / 360 * 100) + "%";
+  el.style.backgroundImage = `url(${TS["sk_" + key]})`;
+  el.style.backgroundSize = `${c * 100}% ${r * 100}%`;
+  el.style.setProperty("--foot", -foot * 100 + "%");
+  el.style.opacity = 0;
+  wrap.insertBefore(el, wrap.querySelector(".isle-svg"));   // под кнопками уровней
+  const a = { el, anim: null, x: 0, y: 0 };
+  a.frame = (col, row) => { el.style.backgroundPosition = `${c > 1 ? col / (c - 1) * 100 : 0}% ${r > 1 ? row / (r - 1) * 100 : 0}%`; };
+  a.at = (x, y) => { a.x = x; a.y = y; el.style.left = (x * 20 / 360 * 100) + "%"; el.style.top = (y * 20 / VH * 100) + "%"; };
+  a.play = (row, n, ms, loop = true) => new Promise((res) => { a.anim = { row, n, ms, loop, t0: performance.now(), res }; a.frame(0, row); if (loop) res(); });
+  a.face = (left) => el.classList.toggle("flip", left);
+  a.show = (on) => (el.style.opacity = on ? 1 : 0);
+  a.move = (x, y, ms) => new Promise((res) => {
+    el.style.transition = `left ${ms}ms linear, top ${ms}ms linear, opacity 0.3s`;
+    a.at(x, y);
+    setTimeout(() => { el.style.transition = ""; res(); }, ms);
+  });
+  // полёт по дуге (динамит): высота дуги h клеток
+  a.arc = (x, y, h, ms) => new Promise((res) => {
+    const x0 = a.x, y0 = a.y, t0 = performance.now();
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / ms);
+      a.at(x0 + (x - x0) * k, y0 + (y - y0) * k - h * 4 * k * (1 - k));
+      k < 1 ? requestAnimationFrame(step) : res();
+    };
+    requestAnimationFrame(step);
+  });
+  a.frame(0, 0);
+  SK_ACTORS.push(a);
+  return a;
+}
+// Сценка играет, только пока её остров на экране (и анимация не выключена)
+const skOn = (wrap) => !STILL && !document.hidden && !$("mapview").hidden && !wrap.hidden;
+const skWait = async (wrap, ms) => {
+  const end = performance.now() + ms;
+  while (performance.now() < end || !skOn(wrap)) await sleep(250);
+};
+let skRnd = (a, b) => a + Math.random() * (b - a);   // let — чтобы в проверке можно было ускорить
+
+// Лучник у деревни отгоняет гоблина с факелом: стрела летит прямо (без поворота картинки)
+// Лучник стоит справа и стреляет влево; гоблин бежит слева направо по свободной полосе
+async function skitArcher(wrap, [ax, ay], [gx0, gx1]) {
+  const archer = skActor(wrap, "archer", 0.9), gob = skActor(wrap, "torch", 0.9);
+  const arrow = skActor(wrap, "arrow", 0.9, 0.55), dead = skActor(wrap, "dead", 0.9, 0.75);
+  archer.at(ax, ay); archer.face(true); archer.show(true); archer.play(0, 6, 150);
+  arrow.face(true);
+  for (;;) {
+    await skWait(wrap, skRnd(7000, 15000));
+    gob.at(gx0, ay); gob.face(false); gob.show(true); gob.play(1, 6, 95);
+    const run = gob.move(gx1, ay, 2600);
+    await sleep(1300);
+    archer.play(4, 8, 85, false);                 // стреляет (отражён — влево)
+    await sleep(430);
+    arrow.at(ax - 0.9, ay - 0.62); arrow.frame(0, 0); arrow.show(true);
+    await arrow.move(gx1 + 0.4, ay - 0.62, 380);
+    arrow.show(false);
+    await run;
+    gob.show(false);
+    dead.at(gx1, ay); dead.show(true);
+    archer.play(0, 6, 150);
+    await dead.play(0, 7, 110, false);            // облачко — и череп
+    await sleep(1600);
+    await dead.play(1, 7, 120, false);            // череп тает
+    dead.show(false);
+  }
+}
+// Гоблин-подрывник на берегу швыряет динамит в море — бабах в воде
+async function skitTnt(wrap, [tx, ty], [bx, by], left = true) {
+  const tnt = skActor(wrap, "tnt", 0.9), dyn = skActor(wrap, "dyn", 1, 0.5), boom = skActor(wrap, "boom", 0.9, 0.6);
+  tnt.at(tx, ty); tnt.face(left); tnt.show(true); tnt.play(0, 6, 130);
+  for (;;) {
+    await skWait(wrap, skRnd(9000, 18000));
+    tnt.play(2, 7, 90, false);
+    await sleep(380);
+    dyn.at(tx + (left ? -0.5 : 0.5), ty - 1.1); dyn.show(true); dyn.play(0, 6, 70);
+    await dyn.arc(bx, by, 1.6, 750);
+    dyn.show(false);
+    boom.at(bx, by); boom.show(true);
+    tnt.play(0, 6, 130);
+    await boom.play(0, 9, 75, false);
+    boom.show(false);
+  }
+}
+// Бочка-гоблин: выглядывает, осматривается и прячется
+async function skitBarrel(wrap, [x, y]) {
+  const b = skActor(wrap, "barrel", 1, 0.72);
+  b.at(x, y); b.show(true); b.frame(0, 0);
+  for (;;) {
+    await skWait(wrap, skRnd(6000, 13000));
+    await b.play(1, 6, 150, false);
+    await sleep(skRnd(900, 1800));
+    await b.play(3, 6, 150, false);
+    b.frame(0, 0);
+  }
+}
+// Какие сценки на каком острове: запускаются, когда карта острова показана впервые
+const SKITS = {
+  1: (w) => { skitBarrel(w, [15.6, 47.9]); skitTnt(w, [3.6, 12.6], [1.0, 16.2]); },
+  2: (w) => { skitArcher(w, [12.3, 17.9], [4.4, 9.4]); skitTnt(w, [3.5, 22.7], [1.2, 24.8]); skitBarrel(w, [7.2, 11.8]); },
+};
 
 // ===== Переход по мосту на другой остров =====
 // Рыцарь бежит от своего уровня к мосту и по мосту за край карты, камера едет за ним,
@@ -7166,7 +7305,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 46;
+const APP_VERSION = 47;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
