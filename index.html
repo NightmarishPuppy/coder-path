@@ -2986,7 +2986,7 @@ function loadLevel(i) {
   codeEl.value = save.code[codeKey()] ?? (lang === "js" ? save.code[L.name] : undefined) ?? L.starter[lang];
   winBox.hidden = true;
   reset();
-  requestAnimationFrame(() => requestAnimationFrame(fitBoard));
+  requestAnimationFrame(() => requestAnimationFrame(() => fitBoard(true)));
 }
 
 // ===== Карта острова =====
@@ -4099,7 +4099,7 @@ function buildBoard() {
   boardEl.style.aspectRatio = `${W} / ${H}`;
   boardEl.style.maxWidth = `min(100%, ${Math.round(W / H * 460)}px)`;
   // в режиме блоков на телефоне поле не выше 40% экрана — чтобы всё влезло без прокрутки
-  boardEl.style.setProperty("--blk-max", `calc(40dvh * ${(W / H).toFixed(3)})`);
+  boardEl.style.setProperty("--blk-max", fitSize?.key === `${levelIdx}|${uiBlocks}` ? fitSize.px + "px" : `calc(40dvh * ${(W / H).toFixed(3)})`);
   // Раскладка экрана одна для всех уровней. Высоких узких полей нет: на телефоне они
   // выглядят плохо (пустые полосы по бокам), поэтому такие уровни повёрнуты набок.
   boardEl.setAttribute("aria-label", `Игровое поле ${W} на ${H} клеток`);
@@ -5026,19 +5026,38 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 // Поле на телефоне — сколько влезает: меряем, сколько места занимают шапка, программа
 // и кнопки до «Запустить», и отдаём полю всю остальную видимую высоту экрана
 // (на телефоне видимая высота меньше экрана: браузер занимает полосу адреса и панель).
-function fitBoard() {
+// Размер поля на телефоне считается ОДИН раз при открытии уровня (и заново — только если
+// повернули экран или сменили вид Блоки/текст). Раньше поле пересчитывалось по ходу игры
+// и прыгало: раскрытое задание, окно победы, панель строки, лишняя плитка или адресная строка
+// браузера, которая прячется при прокрутке, — и поле сжималось в крошку.
+// Поэтому на время замера всё временное убираем, а результат запоминаем.
+var fitSize = null;   // { key, px, w, h } — для какого уровня и экрана посчитано
+function fitBoard(force = false) {
   const lv = $("levelview");
   if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); return; }
-  const ratio = W / H, vh = (window.visualViewport?.height || innerHeight) - 6;
+  const key = `${levelIdx}|${uiBlocks}`, sw = innerWidth, sh = window.visualViewport?.height || innerHeight;
+  const same = fitSize && fitSize.key === key && fitSize.w === sw && Math.abs(fitSize.h - sh) < 160;
+  if (same && !force) { boardEl.style.setProperty("--blk-max", fitSize.px + "px"); return; }
+  // временное — на время замера прочь (браузер не успевает это нарисовать)
+  const goal = $("goal"), wasOpen = goal.classList.contains("open");
+  const hide = [winBox, $("linebar")].filter((el) => !el.hidden);
+  goal.classList.remove("open");
+  hide.forEach((el) => (el.hidden = true));
+  const ratio = W / H, vh = sh - 6;
   const bh = boardEl.getBoundingClientRect().height;
   const runBottom = $("run").getBoundingClientRect().bottom + scrollY;
   const rest = runBottom - bh + 4;
   const w = (vh - rest) * ratio;
   const full = boardEl.parentElement.getBoundingClientRect().width;
-  boardEl.style.setProperty("--blk-max", Math.max(full * 0.55, Math.min(full, Math.floor(w))) + "px");
+  if (wasOpen) goal.classList.add("open");
+  hide.forEach((el) => (el.hidden = false));
+  const px = Math.max(full * 0.55, Math.min(full, Math.floor(w)));
+  fitSize = { key, px, w: sw, h: sh };
+  boardEl.style.setProperty("--blk-max", px + "px");
 }
-addEventListener("resize", () => requestAnimationFrame(fitBoard));
-window.visualViewport?.addEventListener("resize", () => requestAnimationFrame(fitBoard));
+// повернули экран — считаем заново; высота «гуляет» из-за адресной строки — не трогаем
+addEventListener("resize", () => requestAnimationFrame(() => fitBoard()));
+window.visualViewport?.addEventListener("resize", () => requestAnimationFrame(() => fitBoard()));
 
 function applyUi() {
   $("levelview").classList.toggle("blk", uiBlocks);
@@ -5707,7 +5726,7 @@ function setVariant(k, flash = true) {
   L.map = L.maps[k];
   buildBoard();
   reset();
-  requestAnimationFrame(fitBoard);
+  fitBoard();             // размер поля прежний: варианты одного уровня одинаковой величины
   if (flash) {
     const f = document.createElement("div");
     f.className = "varflash";
@@ -7067,7 +7086,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 41;
+const APP_VERSION = 42;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
