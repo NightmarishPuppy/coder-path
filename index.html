@@ -207,6 +207,7 @@ html.still .ripple { animation: none; opacity: 0.5; }
 .route .gridlines line { stroke: #3b2a12; stroke-opacity: 0.28; stroke-width: 0.025; stroke-dasharray: 0.08 0.06; }
 .route .stepnum rect { fill: #fffdf5; fill-opacity: 0.9; stroke: #2a1f14; stroke-width: 0.025; }
 .route .stepnum text { font-family: var(--font-body); font-weight: 700; font-size: 0.22px; fill: #2a1f14; text-anchor: middle; dominant-baseline: central; }
+.route .stepnum.more rect { fill: #ffe9b3; stroke: #8a5a12; stroke-width: 0.03; }
 .route .seg-under { fill: none; stroke: #0007; stroke-width: 0.16; stroke-linecap: round; }
 
 /* --- Заставка --- */
@@ -4254,12 +4255,16 @@ function drawStepHints(p) {
   const back = last && last.cells?.length ? [-last.dx, -last.dy] : null;   // откуда пришёл — не считаем
   for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     if (back && back[0] === dx && back[1] === dy) continue;
+    // В ту же сторону, куда уже идёт последняя команда, пишем «+1», «+2»:
+    // это не новая команда, а «добавь шагов к той, что уже есть».
+    const more = !!(back && last.dx === dx && last.dy === dy);
     for (let k = 1; k <= MAX_STEPS; k++) {
       const x = from.x + dx * k, y = from.y + dy * k;
       if (isWall(x, y) || alive.has(enemyKey(x, y))) break;
-      const g = svg("g", { class: "stepnum" }, routeEl);
-      svg("rect", { x: x + 0.29, y: y + 0.62, width: 0.42, height: 0.3, rx: 0.15 }, g);
-      svg("text", { x: x + 0.5, y: y + 0.775 }, g).textContent = k;
+      const g = svg("g", { class: "stepnum" + (more ? " more" : "") }, routeEl);
+      const w = more ? 0.54 : 0.42;
+      svg("rect", { x: x + 0.5 - w / 2, y: y + 0.62, width: w, height: 0.3, rx: 0.15 }, g);
+      svg("text", { x: x + 0.5, y: y + 0.775 }, g).textContent = more ? "+" + k : k;
       if (x === exitPos.x && y === exitPos.y) break;  // дальше двери не считаем
     }
   }
@@ -6047,7 +6052,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 25;
+const APP_VERSION = 26;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
