@@ -6,7 +6,7 @@
 // (страница присылает сообщение "activate"). Старый кэш после этого удаляется.
 
 // Меняй номер версии при каждом обновлении игры (и в version.json, и APP_VERSION в index.html)
-const VERSION = "coder-path-v34";
+const VERSION = "coder-path-v35";
 const FILES = ["./", "index.html", "manifest.webmanifest", "version.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 // 1. Установка: скачиваем все файлы новой версии мимо HTTP-кэша браузера
@@ -34,18 +34,6 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-
-  // Шрифты Google: берём из кэша, а в фоне обновляем
-  if (url.hostname.endsWith("fonts.googleapis.com") || url.hostname.endsWith("fonts.gstatic.com")) {
-    e.respondWith(
-      caches.open(VERSION).then(async (c) => {
-        const cached = await c.match(req);
-        const fresh = fetch(req).then((r) => { c.put(req, r.clone()); return r; }).catch(() => cached);
-        return cached || fresh;
-      })
-    );
-    return;
-  }
 
   if (url.origin !== location.origin) return; // Firebase и прочее — напрямую
 
