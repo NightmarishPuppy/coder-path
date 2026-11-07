@@ -175,7 +175,7 @@ html.still .hero.hurt .kwrap { animation: none; }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .enemy, html.still .enemy.hit .ewrap, html.still .poof { transition: none; animation: none; }
 .route .badge.a rect { stroke: var(--sword); }
-.route.marks { z-index: 3; }
+.route.marks { z-index: 6; }
 .route .cross { stroke: #b3262b; stroke-width: 0.085; stroke-linecap: square; }
 .route .cross-under { stroke: #2a1012; stroke-width: 0.15; stroke-linecap: square; opacity: 0.75; }
 /* спрайт: картинка-полоска кадров; рисуем чётко, по пикселям */
@@ -306,6 +306,16 @@ html.still .itemstag .khearts.hurt img { animation: none; }
 .route .seg.now { stroke-dasharray: none; opacity: 1; stroke-width: 0.12; }
 .route .seg.done { opacity: 0.3; stroke-dasharray: none; }
 .route .dot { opacity: 0.8; }
+.route .chev, .route .chev-under { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.route .chev-under { stroke: #0009; stroke-width: 0.13; }
+.route .chev { stroke-width: 0.07; }
+.route .chev.h { stroke: var(--torch); } .route .chev.v { stroke: var(--frost); }
+.route .chev.now { stroke: #fff; }
+.route .times rect { fill: var(--bg); stroke: var(--muted); stroke-width: 0.025; }
+.route .times text { font-family: var(--font-body); font-weight: 700; font-size: 0.17px; fill: var(--fg); text-anchor: middle; dominant-baseline: central; }
+.route .roundmark rect { fill: var(--loop); stroke: #1b1530; stroke-width: 0.03; }
+.route .roundmark text { font-family: var(--font-body); font-weight: 800; font-size: 0.23px; fill: #1b1530; text-anchor: middle; dominant-baseline: central; }
+.route .roundmark.endless rect { fill: var(--bad); }
 .route .dot.h { fill: var(--torch); }
 .route .dot.v { fill: var(--frost); }
 .route .badge rect { fill: var(--bg); stroke-width: 0.04; }
@@ -619,6 +629,7 @@ textarea#code:focus-visible { box-shadow: inset 0 0 0 2px var(--torch); }
   font-size: 13px; line-height: 1; color: #ffd54a; text-shadow: 0 1px 0 #000;
   animation: tile-arrow 1s ease-in-out infinite;
 }
+.bloop.err { border-style: dashed; border-color: var(--bad); background: var(--bad-bg); }
 .bloop > .lhead { position: relative; }
 @keyframes tile-sel { 0%, 100% { box-shadow: 0 0 0 3px #ffd54a99, 0 4px 10px #0008; } 50% { box-shadow: 0 0 0 7px #ffd54a33, 0 4px 10px #0008; } }
 @keyframes tile-arrow { 0%, 100% { translate: -50% 0; } 50% { translate: -50% -4px; } }
@@ -3465,7 +3476,6 @@ function buildBoard() {
   markEl.setAttribute("class", "route marks");
   markEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
   markEl.setAttribute("preserveAspectRatio", "none");
-  boardEl.appendChild(markEl);
 
   heroEl = document.createElement("div");
   heroEl.className = "hero";
@@ -3483,6 +3493,7 @@ function buildBoard() {
   // сердечки рыцаря — только на уровнях с гоблинами
 
   boardEl.appendChild(heroEl);
+  boardEl.appendChild(markEl);   // отметки (крестики, начало круга) — поверх рыцаря
 
   roundTag = document.createElement("div");
   roundTag.className = "roundtag";
@@ -3930,8 +3941,16 @@ function buildPlan(code) {
     return list;
   };
 
+  // Бесконечный цикл: если новый круг начинается ровно там же и так же (место, взгляд,
+  // собранное, сердечки гоблинов), как один из прошлых, — дальше будет одно повторение.
+  // Тогда останавливаемся: на карте один раз рисуем круг и знак «∞».
+  const seenRound = new Set();
+  let endless = null;
   const __loop = (line) => {
     rounds[line] = (rounds[line] || 0) + 1;
+    const st = `${line}|${pos.x},${pos.y}|${got.key}|${got.coins}|${[...hpLeft.values()].join(",")}`;
+    if (seenRound.has(st)) { endless = { line, round: rounds[line], at: { ...pos }, empty: !commands.some((c) => c.loop?.line === line) }; throw STOP; }
+    seenRound.add(st);
     if (++ticks > 300) throw pyError(line, "Цикл крутится, а рыцарь стоит на месте. Положи команды внутрь цикла");
   };
 
@@ -4014,7 +4033,7 @@ function buildPlan(code) {
     const program = new Function("__loop", ...names, instrument(js));
     program(__loop, ...L.commands.map(make));
   } catch (e) {
-    if (e === STOP) return { commands, crash, reachedAt, hpLeft, dead };
+    if (e === STOP) return { commands, crash, reachedAt, hpLeft, dead, endless };
     return { commands: [], error: explainError(e), errorLine: e.line };
   }
   // Код кончился, а рыцарь стоит рядом с гоблином — гоблин бьёт, пока рыцарь не упадёт
@@ -4123,7 +4142,7 @@ function renderBlocks(active = 0, err = 0) {
   const items = parseBlocks(codeEl.value);
   if (!items.length) { box.innerHTML = `<span class="empty">Нажимай стрелки — здесь появятся шаги рыцаря</span>`; return; }
   box.innerHTML = items.map((it) => it.loop
-    ? `<div class="bloop"><button class="lhead${it.line === selLine ? " sel" : ""}" data-line="${it.line}">🔁 ${it.times ? `повторить ${it.times}` : "повторять"}</button>` +
+    ? `<div class="bloop${it.line === err ? " err" : ""}"><button class="lhead${it.line === selLine ? " sel" : ""}" data-line="${it.line}">🔁 ${it.times ? `повторить ${it.times}` : "повторять"}</button>` +
       (it.body.length ? it.body.map((t) => tileHtml(t, active, err)).join("") : `<span class="lempty">кнопки положат команды сюда</span>`) + `</div>`
     : tileHtml(it, active, err)).join("");
 }
@@ -4167,7 +4186,7 @@ function drawCode(activeLine = 0) {
   const lines = text.split("\n");
   const loops = findLoops(text);
   // Красным подсвечиваем строку с ошибкой, а если ошибок нет — строку, где рыцарь врежется
-  const crashLine = showProblems && plan?.crash ? plan.commands[plan.crash.cmd]?.line : 0;
+  const crashLine = showProblems && plan?.crash ? plan.commands[plan.crash.cmd]?.line : showProblems && plan?.endless ? plan.endless.line : 0;
   const errLine = activeLine ? 0 : plan?.errorLine || crashLine || 0;
   if (selLine && selLine > lines.length) selLine = null;
   const sel = activeLine ? 0 : selLine;
@@ -4243,14 +4262,62 @@ function drawRoute(p, activeIdx = -1) {
   if (activeIdx < 0 && !running) drawStepHints(p);
   if (!p || p.error) return;
   const c = (v) => v + 0.5;
+  // Путь рисуем по отрезкам «клетка → соседняя клетка». Отрезок, пройденный несколько раз
+  // в одну сторону, рисуем один раз (и подписываем «×N»). Если по нему ходили и туда, и обратно,
+  // линии разводим, как полосы на дороге: каждая сдвинута к правому краю своего направления.
+  const edges = new Map();               // "x,y>x,y" → { a, b, dx, dy, axis, cmds: [] }
   p.commands.forEach((cmd, i) => {
-    const state = i < activeIdx ? " done" : i === activeIdx ? " now" : "";
-    if (cmd.cells.length) {
-      svg("line", { class: "seg-under", x1: c(cmd.from.x), y1: c(cmd.from.y), x2: c(cmd.to.x), y2: c(cmd.to.y) }, routeEl);
-      svg("line", { class: `seg ${cmd.axis}${state}`, x1: c(cmd.from.x), y1: c(cmd.from.y), x2: c(cmd.to.x), y2: c(cmd.to.y) }, routeEl);
-      cmd.cells.forEach((cell) => svg("circle", { class: `dot ${cmd.axis}`, cx: c(cell.x), cy: c(cell.y), r: 0.07 }, routeEl));
-    }
+    let prev = cmd.from;
+    cmd.cells.forEach((cell) => {
+      const k = `${prev.x},${prev.y}>${cell.x},${cell.y}`;
+      if (!edges.has(k)) edges.set(k, { a: prev, b: cell, dx: cmd.dx, dy: cmd.dy, axis: cmd.axis, cmds: [] });
+      edges.get(k).cmds.push(i);
+      prev = cell;
+    });
   });
+  const LANE = 0.14;
+  for (const [k, e] of edges) {
+    const twoWay = edges.has(`${e.b.x},${e.b.y}>${e.a.x},${e.a.y}`);
+    const ox = twoWay ? -e.dy * LANE : 0, oy = twoWay ? e.dx * LANE : 0;
+    const x1 = c(e.a.x) + ox, y1 = c(e.a.y) + oy, x2 = c(e.b.x) + ox, y2 = c(e.b.y) + oy;
+    const st = activeIdx < 0 ? "" : e.cmds.includes(activeIdx) ? " now" : e.cmds.every((i) => i < activeIdx) ? " done" : "";
+    svg("line", { class: "seg-under", x1, y1, x2, y2 }, routeEl);
+    svg("line", { class: `seg ${e.axis}${st}`, x1, y1, x2, y2 }, routeEl);
+    // стрелка-шеврон посередине отрезка: куда идёт рыцарь
+    const mx = (x1 + x2) / 2 + e.dx * 0.06, my = (y1 + y2) / 2 + e.dy * 0.06, a = 0.13, w = 0.11;
+    const pts = `${mx - e.dx * a - e.dy * w},${my - e.dy * a + e.dx * w} ${mx},${my} ${mx - e.dx * a + e.dy * w},${my - e.dy * a - e.dx * w}`;
+    svg("polyline", { class: "chev-under", points: pts }, routeEl);
+    svg("polyline", { class: `chev ${e.axis}${st}`, points: pts }, routeEl);
+    // много раз в одну сторону — подпись «×N»
+    if (e.cmds.length > 1) {
+      const g = svg("g", { class: "times" }, routeEl);
+      const tx = mx + (twoWay ? -e.dy * 0.2 : -e.dy * 0.22 + (e.dy ? 0 : 0)), ty = my + (twoWay ? e.dx * 0.2 : e.dx * 0.22) - (e.dx ? 0 : 0);
+      svg("rect", { x: tx - 0.17, y: ty - 0.11, width: 0.34, height: 0.22, rx: 0.11 }, g);
+      svg("text", { x: tx, y: ty }, g).textContent = `×${e.cmds.length}`;
+    }
+  }
+  // Начало каждого круга цикла — заметная фиолетовая метка «↻ 2» на клетке, где круг начинается
+  const roundMarks = new Map();
+  p.commands.forEach((cmd, i) => {
+    if (!cmd.loop) return;
+    const prevCmd = p.commands[i - 1];
+    if (prevCmd?.loop && prevCmd.loop.line === cmd.loop.line && prevCmd.loop.round === cmd.loop.round) return;
+    const k = `${cmd.from.x},${cmd.from.y}`;
+    if (!roundMarks.has(k)) roundMarks.set(k, { at: cmd.from, rounds: [] });
+    roundMarks.get(k).rounds.push(cmd.loop.round);
+  });
+  if (p.endless) {                                    // круг повторяется без конца — знак «∞» там, где он начинается
+    const k = `${p.endless.at.x},${p.endless.at.y}`;
+    if (!roundMarks.has(k)) roundMarks.set(k, { at: p.endless.at, rounds: [] });
+    roundMarks.get(k).endless = true;
+  }
+  for (const { at, rounds, endless } of roundMarks.values()) {
+    const g = svg("g", { class: "roundmark" + (endless ? " endless" : "") }, markEl);
+    const label = (rounds.length ? "↻" + rounds.join(",") : "↻") + (endless ? " ∞" : "");
+    const w = Math.max(0.56, 0.19 * label.length + 0.16);
+    svg("rect", { x: at.x + 0.03, y: at.y + 0.03, width: w, height: 0.34, rx: 0.17 }, g);
+    svg("text", { x: at.x + 0.03 + w / 2, y: at.y + 0.2 }, g).textContent = label;
+  }
   // Удары — как в стратегиях: крестик стоит ПЕРЕД гоблином, на границе клеток, откуда рыцарь бьёт,
   // а сам гоблин остаётся открытым. Рядом — номер команды. Гоблин побеждён — крестик убираем.
   p.commands.forEach((cmd, i) => {
@@ -4271,10 +4338,14 @@ function drawRoute(p, activeIdx = -1) {
     svg("rect", { x: bx - 0.15, y: by - 0.135, width: 0.3, height: 0.27, rx: 0.135 }, g);
     svg("text", { x: bx, y: by, style: "font-size:0.21px" }, g).textContent = i + 1;
   });
+  const badgeAt = new Set();
   p.commands.forEach((cmd, i) => {
     if (!cmd.cells.length) return;
     const state = i === activeIdx ? " now" : "";
     const mx = (cmd.from.x + cmd.to.x) / 2 + 0.5, my = (cmd.from.y + cmd.to.y) / 2 + 0.5;
+    const bk = `${mx},${my}`;
+    if (badgeAt.has(bk) && i !== activeIdx) return;     // в этом месте номер уже стоит
+    badgeAt.add(bk);
     const g = svg("g", { class: `badge ${cmd.axis}${state}` }, routeEl);
     svg("rect", { x: mx - 0.19, y: my - 0.17, width: 0.38, height: 0.34, rx: 0.17 }, g);
     svg("text", { x: mx, y: my }, g).textContent = i + 1;
@@ -4586,6 +4657,17 @@ async function run() {
   if (p.finalHits?.length) {
     await playStrikes(p.finalHits);
     if (p.dead) { await knightFalls(p.dead); return finish(); }
+  }
+  if (p.endless) {
+    showProblems = true;
+    drawCode();
+    setStatus(p.endless.empty
+      ? "Цикл пустой: рыцарь стоит на месте. Положи в цикл шаги"
+      : uiBlocks
+        ? "Цикл ходит по кругу: рыцарь снова пришёл туда, где начал круг (знак ∞), и так будет без конца. Поменяй плитки в рамке 🔁"
+        : `Цикл ходит по кругу: рыцарь снова пришёл туда, где начал круг (знак ∞), и так будет без конца. Поменяй команды в цикле (строка ${p.endless.line})`, "fail");
+    sfx("almost");
+    return finish();
   }
   setStatus("Почти! До двери ещё немного — добавь шагов", "fail");
   sfx("almost");
@@ -5920,7 +6002,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 22;
+const APP_VERSION = 23;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
