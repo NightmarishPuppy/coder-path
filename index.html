@@ -524,6 +524,7 @@ html.still .hero.bump .kwrap { animation: none; }
   border: 0; border-left: 1px solid var(--loop); border-radius: 0;
   font-size: 14px; font-weight: 600; color: var(--fg); padding: 6px 12px;
 }
+.shift[hidden], .lb-actions .chip[hidden] { display: none !important; }
 .lb-actions .shift .chip svg { width: 20px; height: 20px; fill: none; stroke: var(--loop); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .lb-actions .shift .chip:hover:not(:disabled) { background: var(--wall-edge); }
 .lb-actions .shift .chip:disabled svg { stroke: var(--muted); }
@@ -580,6 +581,86 @@ textarea#code::selection { background: #f2a54155; }
 textarea#code:focus-visible { box-shadow: inset 0 0 0 2px var(--torch); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ===== Режим «Блоки»: всё на одном экране, без набора текста ===== */
+.goal-more { display: none; }
+.blocks { display: none; }
+#levelview.blk .blocks {
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px;
+  min-height: 64px; padding: 8px;
+  border: 1px solid var(--wall-edge); border-radius: 8px; background: var(--panel);
+}
+#levelview.blk .scroll .editor, #levelview.blk .tape-wrap, #levelview.blk .hint, #levelview.blk #lb-add,
+#levelview.blk .lb-note, #levelview.blk .lb-info code { display: none; }
+#levelview.blk .scroll { border: 0; background: none; }
+#levelview.blk .scroll-head { padding: 0 0 6px; border: 0; }
+.blocks .empty { color: var(--muted); font-size: 14px; padding: 12px 6px; }
+.tile {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 4px;
+  min-width: 56px; height: 48px; padding: 0 10px 0 8px;
+  border-radius: 10px; border: 2px solid var(--wall-edge); background: var(--bg);
+  color: var(--fg); font-family: var(--font-display); font-size: 22px; font-weight: 700;
+  cursor: pointer; touch-action: manipulation;
+}
+.tile .ar { font-size: 26px; line-height: 1; }
+.tile .nn { font-size: 20px; min-width: 14px; text-align: center; }
+.tile.h { border-color: var(--torch); } .tile.h .ar { color: var(--torch); }
+.tile.v { border-color: var(--frost); } .tile.v .ar { color: var(--frost); }
+.tile.a { border-color: var(--sword); } .tile.a .ar { color: var(--sword); }
+.tile.sel { background: var(--wall-edge); box-shadow: 0 0 0 3px #fff3; }
+.tile.now { background: var(--now-bg); box-shadow: 0 0 0 3px var(--torch); }
+.tile.bad { border-style: dashed; color: var(--muted); font-size: 13px; }
+.bloop {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 6px; border: 2px solid var(--loop); border-radius: 12px; background: #8f7cd914;
+  flex-basis: 100%;
+}
+.bloop > .lhead {
+  display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 10px;
+  border: 0; border-radius: 8px; background: var(--loop); color: #1b1530; font-weight: 700; font-size: 15px; cursor: pointer;
+}
+.bloop > .lhead.sel { box-shadow: 0 0 0 3px #fff6; }
+.bloop .lempty { color: var(--loop); font-size: 13px; padding: 0 6px; }
+/* палитра: крупные стрелки */
+#levelview.blk .chips .chip:not(.num) { font-family: var(--font-display); font-size: 26px; min-width: 64px; height: 56px; padding: 0 14px; border-style: solid; border-width: 2px; }
+#levelview.blk .chips .chip.num { height: 44px; font-size: 18px; }
+#levelview.blk .chips .chip.loopchip { font-size: 16px; }
+@media (max-width: 819px) {
+  #levelview.blk .board { max-width: min(100%, var(--blk-max)) !important; }
+  #levelview.blk .game { gap: 8px; }
+  #levelview.blk .col { gap: 8px; }
+  #levelview.blk header { gap: 2px; position: relative; }
+  #levelview.blk #eyebrow { display: none; }
+  #levelview.blk h1 { font-size: 20px; margin: 0; }
+  #levelview.blk .goal { font-size: 14px; line-height: 1.35; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+  #levelview.blk .goal.open { display: block; }
+  #levelview.blk .goal-more:not([hidden]) { display: inline; }
+  #levelview.blk .goal-more { align-self: flex-start; border: 0; background: none; color: var(--torch); font-size: 13px; padding: 0; cursor: pointer; }
+  #levelview.blk .chips { gap: 6px; }
+  #levelview.blk .chips .chip:not(.num) { height: 52px; min-width: 60px; }
+  #levelview.blk .chips .chip.num { height: 40px; min-width: 44px; padding: 0 8px; }
+  #levelview.blk .undo-btn { padding: 8px 12px; font-size: 15px; }
+  #levelview.blk .actions .btn { padding: 8px 16px; }
+  #levelview.blk .linebar { padding: 6px 8px; gap: 6px; }
+  #levelview.blk .lb-info b { font-size: 13px; }
+  #levelview.blk .lb-actions { flex-wrap: nowrap; gap: 4px; }
+  #levelview.blk .lb-actions .chip { padding: 6px 8px; font-size: 13px; white-space: nowrap; }
+  #levelview.blk .par { font-size: 12px; margin: 0; }
+  #levelview.blk .voicebar { position: absolute; top: 2px; left: 96px; margin: 0; }
+  #levelview.blk .speak #speak-label { display: none; }
+  #levelview.blk .status { font-size: 14px; padding: 6px 10px; min-height: 0; }
+}
+/* порядок в правой колонке: программа → выбранная плитка → кнопки → действия → переключатель языка */
+#levelview.blk .col:last-child { flex-direction: row; flex-wrap: wrap; }
+#levelview.blk .col:last-child > * { flex: 1 1 100%; }
+#levelview.blk .blocks { order: 1; }
+#levelview.blk .linebar { order: 2; }
+#levelview.blk .chips { order: 3; }
+#levelview.blk .undo-row { order: 4; }
+#levelview.blk .actions { order: 5; }
+#levelview.blk .scroll { order: 6; }
+#levelview.blk .hint { order: 7; }
 /* «Отменить команду»: заметная, красноватая, со значком "назад" и словами — понятно без инструкции */
 .undo-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .undo-btn, .redo-btn {
@@ -1135,6 +1216,7 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
     <span class="eyebrow" id="eyebrow"></span>
     <h1 id="title"></h1>
     <p class="goal" id="goal"></p>
+    <button class="goal-more" id="goal-more" hidden>ещё ▾</button>
     <div class="voicebar" id="voicebar" hidden>
       <button class="speak" id="speak">
         <svg class="ic-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1170,9 +1252,11 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
     </div>
 
     <div class="col">
+      <div class="blocks" id="blocks" aria-label="Программа рыцаря"></div>
       <div class="scroll">
         <div class="scroll-head">
           <div class="langs" role="group" aria-label="Язык">
+            <button id="lang-blocks" data-lang="blocks">Блоки</button>
             <button id="lang-py" data-lang="py">Python</button>
             <button id="lang-js" data-lang="js">JavaScript</button>
           </div>
@@ -2043,6 +2127,7 @@ if (syncOn) {
   addEventListener("online", () => syncNow());
 }
 lang = save.lang === "js" ? "js" : "py";
+if (save.ui ? save.ui === "blocks" : true) lang = "py";   // блоки строятся на Python
 const codeKey = () => `${lang}:${L.name}`;
 
 // ===== 4. Элементы страницы и состояние =====
@@ -2585,11 +2670,13 @@ function loadLevel(i) {
   $("eyebrow").textContent = `${ch.name} · ` + (L.challenge ? "испытание" : `уровень ${numInChapter}`) + (L.bug ? " · найди ошибку" : "");
   $("title").textContent = L.name;
   $("goal").innerHTML = langify(L.goal);
+  $("goal").classList.remove("open");
+  requestAnimationFrame(() => { const g = $("goal"); $("goal-more").hidden = !(uiBlocks && g.scrollHeight > g.clientHeight + 2); });
   $("par").innerHTML = `<span class="star">★★★</span> — не больше ${L.par} ${cmdWord(L.par)} в коде, <span class="star">★★</span> — не больше ${L.good}`;
   $("hint").innerHTML = lang === "py"
     ? "Если код кончается циклом, кнопки ставят команду внутрь него со сдвигом. В Python сдвиг вправо (4 пробела) и есть «внутри цикла»."
     : "Если код кончается циклом, кнопки ставят команду внутрь фигурных скобок. Звёзды считаются по числу команд в тексте кода.";
-  document.querySelectorAll(".langs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  applyUi();
 
   selLine = null;
   buildBoard();
@@ -3245,6 +3332,8 @@ function buildBoard() {
   boardEl.style.gridTemplateRows = `repeat(${H}, 1fr)`;
   boardEl.style.aspectRatio = `${W} / ${H}`;
   boardEl.style.maxWidth = `min(100%, ${Math.round(W / H * 460)}px)`;
+  // в режиме блоков на телефоне поле не выше 40% экрана — чтобы всё влезло без прокрутки
+  boardEl.style.setProperty("--blk-max", `calc(36dvh * ${(W / H).toFixed(3)})`);
   boardEl.setAttribute("aria-label", `Игровое поле ${W} на ${H} клеток`);
   items = [];
   enemies = [];
@@ -3434,16 +3523,17 @@ function buildChips() {
     chipsEl.appendChild(b);
   };
   L.commands.forEach((name) => {
-    add("add-" + name, L.newCommands?.includes(name) ? "new" : "", `${DIRS[name].arrow} ${disp(name)}`,
+    add("add-" + name, L.newCommands?.includes(name) ? "new" : "", uiBlocks ? DIRS[name].arrow : `${DIRS[name].arrow} ${disp(name)}`,
       () => selLine ? putCommandOnLine(disp(name)) : insertLine(disp(name) + (lang === "py" ? "()" : "();")));
   });
   if (L.loopButton) {
-    add("add-loop", "new loopchip", "↻ повторять", () => {
+    add("add-loop", "new loopchip", uiBlocks ? "🔁 повторять" : "↻ повторять", () => {
       const code = codeEl.value.replace(/\s+$/, "");
       codeEl.value = (code ? code + "\n" : "") + (lang === "py" ? "while True:\n" : "while (true) {\n\n}\n");
       onCodeChange();
     });
   }
+  if (uiBlocks) { const br = document.createElement("span"); br.style.flexBasis = "100%"; chipsEl.appendChild(br); }
   [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
 }
 
@@ -3456,7 +3546,7 @@ const hasCommand = () => new RegExp(`\\b(${ANY_NAME})\\s*\\(`).test(codeEl.value
 function drawUndo() {
   const btn = $("undo-cmd");
   if (!btn) return;
-  $("undo-label").textContent = selLine ? `Удалить строку ${selLine}` : "Отменить команду";
+  $("undo-label").textContent = selLine ? (uiBlocks ? "Удалить плитку" : `Удалить строку ${selLine}`) : "Отменить команду";
   btn.disabled = running || (!selLine && !hasCommand());
 }
 $("undo-cmd").addEventListener("click", () => {
@@ -3932,6 +4022,66 @@ function highlightLine(line) {
 }
 
 // Рисуем подсветку, номера строк и полоски циклов
+// ===== Режим «Блоки» =====
+// Программа — плитки «стрелка + число» и рамка цикла. Внутри это тот же Python:
+// плитки строятся из текста кода и меняют текст, поэтому маршрут, звёзды, «Отменить»
+// и сохранение работают как в текстовом режиме. Нажал на плитку — она выбрана
+// (это выбор строки): кнопки-стрелки меняют её направление, цифры — число шагов.
+let uiBlocks = save.ui ? save.ui === "blocks" : true;   // по умолчанию — блоки
+const BLK_RE = new RegExp(`^(\\s*)(${ANY_NAME})\\s*\\(\\s*(\\d*)\\s*\\)\\s*;?\\s*(?:#.*|//.*)?$`);
+function parseBlocks(code) {
+  const items = [];
+  let loop = null;
+  code.split("\n").forEach((raw, k) => {
+    const line = k + 1, t = raw.trim();
+    if (!t || t.startsWith("#") || t.startsWith("//") || t === "}") return;
+    const indent = raw.length - raw.trimStart().length;
+    if (/^while\s*\(?\s*(True|true)\s*\)?\s*[:{]?$/.test(t) || /^for\s+\w+\s+in\s+range\(/.test(t)) {
+      const times = (t.match(/range\((\d+)\)/) || [])[1];
+      loop = { loop: true, line, times, body: [] };
+      items.push(loop);
+      return;
+    }
+    const m = raw.match(BLK_RE);
+    const tile = m ? { name: m[2], n: Number(m[3] || 1), line } : { bad: t, line };
+    if (loop && indent > 0) loop.body.push(tile);
+    else { loop = indent > 0 ? loop : null; items.push(tile); }
+  });
+  return items;
+}
+function tileHtml(t, active) {
+  const cls = (t.line === selLine ? " sel" : "") + (t.line === active ? " now" : "");
+  if (t.bad) return `<button class="tile bad${cls}" data-line="${t.line}">${esc(t.bad)}</button>`;
+  const key = ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name);
+  const d = DIRS[key];
+  return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.n}"><span class="ar">${d.arrow}</span><span class="nn">${t.n}</span></button>`;
+}
+function renderBlocks(active = 0) {
+  const box = $("blocks");
+  if (!uiBlocks || !box) return;
+  const items = parseBlocks(codeEl.value);
+  if (!items.length) { box.innerHTML = `<span class="empty">Нажимай стрелки — здесь появятся шаги рыцаря</span>`; return; }
+  box.innerHTML = items.map((it) => it.loop
+    ? `<div class="bloop"><button class="lhead${it.line === selLine ? " sel" : ""}" data-line="${it.line}">🔁 ${it.times ? `повторить ${it.times}` : "повторять"}</button>` +
+      (it.body.length ? it.body.map((t) => tileHtml(t, active)).join("") : `<span class="lempty">кнопки положат команды сюда</span>`) + `</div>`
+    : tileHtml(it, active)).join("");
+}
+const toggleGoal = () => { const g = $("goal"); g.classList.toggle("open"); $("goal-more").textContent = g.classList.contains("open") ? "свернуть ▴" : "ещё ▾"; };
+$("goal-more").addEventListener("click", toggleGoal);
+$("goal").addEventListener("click", () => { if (!$("goal-more").hidden) toggleGoal(); });
+$("blocks").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-line]");
+  if (!b || running) return;
+  sfx("tap");
+  const n = Number(b.dataset.line);
+  if (selLine === n) { selLine = null; drawCode(); } else selectLine(n);
+});
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function applyUi() {
+  $("levelview").classList.toggle("blk", uiBlocks);
+  document.querySelectorAll(".langs button").forEach((b) => b.setAttribute("aria-pressed", String(uiBlocks ? b.dataset.lang === "blocks" : b.dataset.lang === lang)));
+}
+
 function drawCode(activeLine = 0) {
   const text = codeEl.value;
   const lines = text.split("\n");
@@ -3954,6 +4104,7 @@ function drawCode(activeLine = 0) {
   drawLineBar();
   gutterEl.innerHTML = gut;
   syncScroll();
+  renderBlocks(activeLine);
 }
 function syncScroll() {
   hlEl.scrollTop = codeEl.scrollTop;
@@ -4143,9 +4294,8 @@ function reset() {
   drawItems(noneGot());
   drawEnemies(fullHp());
   refreshPlan();
-  setStatus(showSteps() && L.chapter === 0
-    ? "Цифры на поле — сколько шагов до клетки. Напиши код и нажми «Запустить»"
-    : "Напиши код и нажми «Запустить»");
+  const todo = uiBlocks ? "Нажимай стрелки, потом «Запустить»" : "Напиши код и нажми «Запустить»";
+  setStatus(showSteps() && L.chapter === 0 ? "Цифры на поле — сколько шагов до клетки. " + todo : todo);
 }
 
 // Пока игрок пишет код, мы не показываем, где он ошибся: только маршрут.
@@ -4410,7 +4560,24 @@ function drawLineBar() {
   if (bar.hidden) return;
   const lines = codeEl.value.split("\n");
   const line = lines[selLine - 1] ?? "";
-  $("lb-label").textContent = `Строка ${selLine}`;
+  $("lb-label").textContent = uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : `Строка ${selLine}`;
+  $("lb-up").textContent = uiBlocks ? "◀ раньше" : "↑ выше";
+  // сдвиг строки в блоках — это «в цикл» и «из цикла»
+  const setTxt = (el, t) => { for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) { n.textContent = t; return; } };
+  setTxt($("lb-out"), uiBlocks ? "из цикла" : "влево");
+  setTxt($("lb-in"), uiBlocks ? "в цикл" : "вправо");
+  document.querySelector(".shift-label").textContent = uiBlocks ? "цикл" : "сдвиг";
+  if (uiBlocks) {
+    // показываем только то, что можно сделать с этой плиткой
+    const inside = /^ /.test(line), hasLoop = findLoops(codeEl.value).length > 0, isLoopLine = /^\s*(while|for)\b/.test(line);
+    $("lb-out").hidden = !inside;
+    $("lb-in").hidden = inside || !hasLoop || isLoopLine;
+    document.querySelector(".shift").hidden = $("lb-out").hidden && $("lb-in").hidden;
+    document.querySelector(".shift-label").hidden = true;
+  } else {
+    $("lb-out").hidden = $("lb-in").hidden = document.querySelector(".shift").hidden = document.querySelector(".shift-label").hidden = false;
+  }
+  $("lb-down").textContent = uiBlocks ? "позже ▶" : "↓ ниже";
   $("lb-text").textContent = line.trim() || "пустая";
   $("lb-up").disabled = selLine === 1;
   $("lb-down").disabled = selLine === lines.length;
@@ -4468,8 +4635,10 @@ $("restore").addEventListener("click", () => {
 });
 document.querySelectorAll(".langs button").forEach((b) => {
   b.addEventListener("click", () => {
-    if (running || b.dataset.lang === lang) return;
-    lang = b.dataset.lang;
+    if (running) return;
+    const want = b.dataset.lang;
+    if (want === "blocks") { if (uiBlocks) return; uiBlocks = true; save.ui = "blocks"; lang = "py"; }
+    else { if (!uiBlocks && want === lang) return; uiBlocks = false; save.ui = "text"; lang = want; }
     save.lang = lang;
     writeSave();
     loadLevel(levelIdx);
@@ -5662,7 +5831,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 18;
+const APP_VERSION = 19;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
