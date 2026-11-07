@@ -900,7 +900,7 @@ html.still .mapclouds img.bank { animation: none; }
 .mapwrap { position: relative; aspect-ratio: 360 / 1080; }
 .mapwrap[hidden] { display: none; }
 /* актёры сценок на карте: лист кадров, кадр — сдвиг фона */
-.skactor { position: absolute; aspect-ratio: 1; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none;
+.skactor { position: absolute; aspect-ratio: 1; z-index: 1; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none;
   transform: translate(-50%, var(--foot)); transition: opacity 0.3s; }
 .skactor.flip { transform: translate(-50%, var(--foot)) scaleX(-1); }
 #mapview .isle-svg .lbl { font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-anchor: middle; dominant-baseline: central; fill: #4a2e14; }
@@ -3322,7 +3322,6 @@ ISLE_MAPS[1] = {
     ["goblin", 16.47, 12.6, 0.46, true, 13.61],
     ["mine", 3.3, 20.75, 0.78],
     ["mine", 13.95, 20.65, 0.78],
-    ["pawnpick", 3.25, 24.75, 0.8, true],
     ["pawnpick", 14.55, 24.7, 0.8],
     ["pawngold", 15.25, 20.55, 0.8, true],
     ["pawngold", 2.45, 21.6, 0.8],
@@ -3332,6 +3331,7 @@ ISLE_MAPS[1] = {
     ["goblin", 10.75, 6.62, 0.5, false],
     ["rock4", 15.6, 7.7, 0.6],
     ["rock1", 10.6, 3.9, 0.5],
+    ["gold2", 12.5, 22.1, 0.55],
   ],
   labels: [["БЕРЕГ", 300, 1032], ["ЛЕС", 70, 660], ["ПЕЩЕРЫ И ШАХТЫ", 112, 516], ["СКАЛЫ ГОБЛИНОВ", 262, 352]],
   bank: [["cloud_d", 170, -48, 1.1], ["cloud_b", 520, -70, 1.15], ["cloud_a", 930, -40, 1.25], ["cloud_c", 1110, -30, 1]],
@@ -3998,21 +3998,25 @@ function onMapTap(e) {
   logEv("status", { text: $("map-toast").textContent, kind: "map" });
 }
 
-// ===== Сценки на картах («движуха», как бои по краям карты в CodeCombat) =====
-// Время от времени на карте сама разыгрывается маленькая сценка из анимаций набора:
-// лучник отгоняет гоблина, гоблин-подрывник швыряет динамит в море, бочка-гоблин подглядывает.
-// Это не холст, а несколько <div> с листом кадров: кадр — сдвиг фона, перемещение — CSS-переход,
-// поэтому почти ничего не стоит телефону. Сценки идут, только пока карта острова на экране,
-// и не идут при «без движения». Поворачивать пиксельную графику нельзя — только отражение.
+// ===== Сценки («движуха», как бои по краям карты в CodeCombat) =====
+// Время от времени на карте острова и на поле уровня сама разыгрывается маленькая сценка
+// из анимаций набора: лучник отгоняет гоблина, гоблины дерутся из-за золота, гоблин пугает
+// шахтёра, монах колдует, житель рубит дерево. Это не холст, а несколько <div> с листом кадров:
+// кадр — сдвиг фона, перемещение — CSS-переход, поэтому почти ничего не стоит телефону.
+// Сценки идут, только пока их место на экране, и не идут при «без движения».
+// Поворачивать пиксельную графику нельзя — только отражение.
 // Лист: [столбцов, рядов, размер кадра в пикселях]; ряд — анимация, столбец — кадр.
 const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1, 192], barrel: [6, 6, 128],
-  archer: [8, 7, 192], arrow: [1, 2, 64], dead: [7, 2, 128] };
-const SK_ACTORS = [];
+  archer: [8, 7, 192], arrow: [1, 2, 64], dead: [7, 2, 128],
+  pidle: [8, 1, 192], paxe: [6, 1, 192], phammer: [3, 1, 192], ppick: [6, 1, 192], prunpick: [6, 1, 192],
+  monk: [6, 1, 192], heal: [11, 1, 192], healfx: [11, 1, 192], sheepb: [6, 1, 128] };
+let SK_ACTORS = [];
 let skLast = 0;
 function skTick(t) {
   requestAnimationFrame(skTick);
   if (t - skLast < 33) return;                // около 30 кадров в секунду хватает
   skLast = t;
+  SK_ACTORS = SK_ACTORS.filter((a) => a.el.isConnected);   // поле уровня перестроили — актёры ушли
   for (const a of SK_ACTORS) {
     const an = a.anim;
     if (!an) continue;
@@ -4026,21 +4030,40 @@ function skTick(t) {
 }
 requestAnimationFrame(skTick);
 
-// Актёр: x, y — точка, где он стоит (ноги), в крупных клетках карты (как украшения в раскладке)
-function skActor(wrap, key, scale, foot = 0.67) {
-  const [c, r, fp] = SK[key], VH = ISLE_MAPS[+wrap.dataset.isle].terr.length * 20;
+// Сцена — где играют актёры: на карте острова или на поле уровня.
+// unit — сколько процентов ширины сцены занимают 64 пикселя листа; pos(x, y) — проценты.
+function mapStage(wrap) {
+  const VH = ISLE_MAPS[+wrap.dataset.isle].terr.length * 20;
+  return { layer: wrap, before: wrap.querySelector(".isle-svg"), unit: 20 / 360 * 100,
+    pos: (x, y) => [x * 20 / 360 * 100, y * 20 / VH * 100], on: () => !$("mapview").hidden && !wrap.hidden, alive: () => true };
+}
+// Актёр: x, y — точка, где он стоит (ноги)
+function skActor(stage, key, scale, foot = 0.67) {
   const el = document.createElement("div");
   el.className = "skactor";
-  el.style.width = (fp * scale / 64 * 20 / 360 * 100) + "%";
-  el.style.backgroundImage = `url(${TS["sk_" + key]})`;
-  el.style.backgroundSize = `${c * 100}% ${r * 100}%`;
+  el.style.width = (SK[key][2] * scale / 64 * stage.unit) + "%";
   el.style.setProperty("--foot", -foot * 100 + "%");
   el.style.opacity = 0;
-  wrap.insertBefore(el, wrap.querySelector(".isle-svg"));   // под кнопками уровней
-  const a = { el, anim: null, x: 0, y: 0 };
-  a.frame = (col, row) => { el.style.backgroundPosition = `${c > 1 ? col / (c - 1) * 100 : 0}% ${r > 1 ? row / (r - 1) * 100 : 0}%`; };
-  a.at = (x, y) => { a.x = x; a.y = y; el.style.left = (x * 20 / 360 * 100) + "%"; el.style.top = (y * 20 / VH * 100) + "%"; };
-  a.play = (row, n, ms, loop = true) => new Promise((res) => { a.anim = { row, n, ms, loop, t0: performance.now(), res }; a.frame(0, row); if (loop) res(); });
+  stage.layer.insertBefore(el, stage.before || null);
+  const a = { el, anim: null, x: 0, y: 0, key };
+  // сменить лист (у жителей каждое действие — отдельная картинка)
+  a.sheet = (k) => {
+    a.key = k;
+    const [c, r] = SK[k];
+    el.style.backgroundImage = `url(${TS["sk_" + k]})`;
+    el.style.backgroundSize = `${c * 100}% ${r * 100}%`;
+  };
+  a.frame = (col, row) => {
+    const [c, r] = SK[a.key];
+    el.style.backgroundPosition = `${c > 1 ? col / (c - 1) * 100 : 0}% ${r > 1 ? row / (r - 1) * 100 : 0}%`;
+  };
+  a.at = (x, y) => { a.x = x; a.y = y; const [l, t] = stage.pos(x, y); el.style.left = l + "%"; el.style.top = t + "%"; };
+  a.play = (row, n, ms, loop = true, k) => new Promise((res) => {
+    if (k) a.sheet(k);
+    a.anim = { row, n, ms, loop, t0: performance.now(), res };
+    a.frame(0, row);
+    if (loop) res();
+  });
   a.face = (left) => el.classList.toggle("flip", left);
   a.show = (on) => (el.style.opacity = on ? 1 : 0);
   a.move = (x, y, ms) => new Promise((res) => {
@@ -4058,27 +4081,33 @@ function skActor(wrap, key, scale, foot = 0.67) {
     };
     requestAnimationFrame(step);
   });
+  a.sheet(key);
   a.frame(0, 0);
   SK_ACTORS.push(a);
   return a;
 }
-// Сценка играет, только пока её остров на экране (и анимация не выключена)
-const skOn = (wrap) => !STILL && !document.hidden && !$("mapview").hidden && !wrap.hidden;
-const skWait = async (wrap, ms) => {
+// Ждать: и паузу, и пока место сценки снова на экране. Если сцену убрали (другой уровень) — стоп.
+const SK_GONE = Symbol("ушла");
+const skOn = (stage) => !STILL && !document.hidden && stage.on();
+const skWait = async (stage, ms) => {
   const end = performance.now() + ms;
-  while (performance.now() < end || !skOn(wrap)) await sleep(250);
+  while (performance.now() < end || !skOn(stage)) {
+    if (!stage.alive()) throw SK_GONE;
+    await sleep(250);
+  }
 };
+const skRun = (fn) => fn().catch((e) => { if (e !== SK_GONE) console.warn(e); });
 let skRnd = (a, b) => a + Math.random() * (b - a);   // let — чтобы в проверке можно было ускорить
 
-// Лучник у деревни отгоняет гоблина с факелом: стрела летит прямо (без поворота картинки)
+// --- Сценки на картах островов ---
 // Лучник стоит справа и стреляет влево; гоблин бежит слева направо по свободной полосе
-async function skitArcher(wrap, [ax, ay], [gx0, gx1]) {
-  const archer = skActor(wrap, "archer", 0.9), gob = skActor(wrap, "torch", 0.9);
-  const arrow = skActor(wrap, "arrow", 0.9, 0.55), dead = skActor(wrap, "dead", 0.9, 0.75);
+async function skitArcher(st, [ax, ay], [gx0, gx1]) {
+  const archer = skActor(st, "archer", 0.9), gob = skActor(st, "torch", 0.9);
+  const arrow = skActor(st, "arrow", 0.9, 0.55), dead = skActor(st, "dead", 0.9, 0.75);
   archer.at(ax, ay); archer.face(true); archer.show(true); archer.play(0, 6, 150);
   arrow.face(true);
   for (;;) {
-    await skWait(wrap, skRnd(7000, 15000));
+    await skWait(st, skRnd(7000, 15000));
     gob.at(gx0, ay); gob.face(false); gob.show(true); gob.play(1, 6, 95);
     const run = gob.move(gx1, ay, 2600);
     await sleep(1300);
@@ -4098,11 +4127,11 @@ async function skitArcher(wrap, [ax, ay], [gx0, gx1]) {
   }
 }
 // Гоблин-подрывник на берегу швыряет динамит в море — бабах в воде
-async function skitTnt(wrap, [tx, ty], [bx, by], left = true) {
-  const tnt = skActor(wrap, "tnt", 0.9), dyn = skActor(wrap, "dyn", 1, 0.5), boom = skActor(wrap, "boom", 0.9, 0.6);
+async function skitTnt(st, [tx, ty], [bx, by], left = true) {
+  const tnt = skActor(st, "tnt", 0.9), dyn = skActor(st, "dyn", 1, 0.5), boom = skActor(st, "boom", 0.9, 0.6);
   tnt.at(tx, ty); tnt.face(left); tnt.show(true); tnt.play(0, 6, 130);
   for (;;) {
-    await skWait(wrap, skRnd(9000, 18000));
+    await skWait(st, skRnd(9000, 18000));
     tnt.play(2, 7, 90, false);
     await sleep(380);
     dyn.at(tx + (left ? -0.5 : 0.5), ty - 1.1); dyn.show(true); dyn.play(0, 6, 70);
@@ -4115,22 +4144,161 @@ async function skitTnt(wrap, [tx, ty], [bx, by], left = true) {
   }
 }
 // Бочка-гоблин: выглядывает, осматривается и прячется
-async function skitBarrel(wrap, [x, y]) {
-  const b = skActor(wrap, "barrel", 1, 0.72);
+async function skitBarrel(st, [x, y]) {
+  const b = skActor(st, "barrel", 1, 0.72);
   b.at(x, y); b.show(true); b.frame(0, 0);
   for (;;) {
-    await skWait(wrap, skRnd(6000, 13000));
+    await skWait(st, skRnd(6000, 13000));
     await b.play(1, 6, 150, false);
     await sleep(skRnd(900, 1800));
     await b.play(3, 6, 150, false);
     b.frame(0, 0);
   }
 }
+// Два гоблина делят золото: спорят, машут факелами, проигравший убегает и потом возвращается
+async function skitGoldFight(st, [x1, x2, y]) {
+  const a = skActor(st, "torch", 0.9), b = skActor(st, "torch", 0.9);
+  a.at(x1, y); b.at(x2, y); a.face(false); b.face(true);
+  a.show(true); b.show(true);
+  a.play(0, 7, 140); b.play(0, 7, 125);
+  for (;;) {
+    await skWait(st, skRnd(8000, 16000));
+    for (let k = 0; k < 3; k++) {                  // обмен ударами (ряд 2 — удар вбок)
+      await a.play(2, 6, 80, false); a.play(0, 7, 140);
+      await sleep(180);
+      await b.play(2, 6, 80, false); b.play(0, 7, 125);
+      await sleep(180);
+    }
+    const loser = Math.random() < 0.5 ? a : b, home = loser === a ? x1 : x2, away = loser === a ? x1 - 3 : x2 + 3;
+    loser.face(loser === a); loser.play(1, 6, 80);
+    loser.el.style.transition = "opacity 1.2s";
+    await loser.move(away, y, 1400);
+    loser.show(false);
+    (loser === a ? b : a).play(0, 7, 140);
+    await skWait(st, skRnd(5000, 9000));
+    loser.at(away, y); loser.face(loser !== a); loser.show(true); loser.play(1, 6, 90);
+    await loser.move(home, y, 1400);
+    loser.face(loser === b); loser.play(0, 7, 135);
+  }
+}
+// Гоблин пугает шахтёра: тот бросает кирку и убегает, гоблин стоит у золота, потом уходит
+async function skitScare(st, [px, py], [hx, hy], gx) {
+  const pawn = skActor(st, "ppick", 0.85), gob = skActor(st, "torch", 0.9);
+  pawn.at(px, py); pawn.face(true); pawn.show(true); pawn.play(0, 6, 120, true, "ppick");
+  for (;;) {
+    await skWait(st, skRnd(9000, 17000));
+    gob.at(gx, py); gob.face(true); gob.show(true); gob.play(1, 6, 90);
+    await gob.move(px + 1.1, py, 1600);
+    gob.play(2, 6, 85, false);                    // замахнулся факелом
+    pawn.face(false); pawn.play(0, 6, 70, true, "prunpick");
+    await pawn.move(hx, hy, 900);                  // шахтёр удирает и прячется
+    pawn.play(0, 8, 130, true, "pidle");
+    gob.play(0, 7, 130);
+    await skWait(st, skRnd(2500, 4000));
+    gob.face(false); gob.play(1, 6, 90);
+    gob.el.style.transition = "opacity 1s";
+    await gob.move(gx, py, 1500);
+    gob.show(false);
+    await sleep(skRnd(1200, 2400));
+    pawn.face(true); pawn.play(0, 6, 90, true, "prunpick");
+    await pawn.move(px, py, 900);
+    pawn.play(0, 6, 120, true, "ppick");
+  }
+}
 // Какие сценки на каком острове: запускаются, когда карта острова показана впервые
 const SKITS = {
-  1: (w) => { skitBarrel(w, [15.6, 47.9]); skitTnt(w, [3.6, 12.6], [1.0, 16.2]); },
-  2: (w) => { skitArcher(w, [12.3, 17.9], [4.4, 9.4]); skitTnt(w, [3.5, 22.7], [1.2, 24.8]); skitBarrel(w, [7.2, 11.8]); },
+  1: (w) => {
+    const st = mapStage(w);
+    skRun(() => skitBarrel(st, [15.6, 47.9]));
+    skRun(() => skitTnt(st, [3.6, 12.6], [1.0, 16.2]));
+    skRun(() => skitGoldFight(st, [11.6, 13.4, 22.3]));       // правое плато у шахты
+    skRun(() => skitScare(st, [3.3, 24.75], [3.4, 22.6], 7.4)); // левое плато: шахтёр у золота
+  },
+  2: (w) => {
+    const st = mapStage(w);
+    skRun(() => skitArcher(st, [12.3, 17.9], [4.4, 9.4]));
+    skRun(() => skitTnt(st, [3.5, 22.7], [1.2, 24.8]));
+    skRun(() => skitBarrel(st, [7.2, 11.8]));
+  },
 };
+
+// --- Сценки на поле уровня («в углах», как в CodeCombat) ---
+// Только мирные жители — монах, лесоруб, строитель, овечка: гоблин в углу поля можно принять
+// за врага уровня. Встают в клетки-стены у края поля, подальше от дороги и кнопок в углах поля;
+// дерево или камень в этой клетке на время уровня убирается.
+let boardGen = 0;
+function boardStage() {
+  const gen = ++boardGen;
+  return { layer: boardEl, before: null, unit: 100 / W,
+    pos: (x, y) => [x / W * 100, y / H * 100],
+    on: () => !$("levelview").hidden, alive: () => gen === boardGen && boardEl.isConnected };
+}
+function boardSkits(terr, cellOv) {
+  if (STILL) return;
+  const st = boardStage();
+  const map = L.map, wall = (x, y) => (map[y]?.[x] ?? "#") === "#";
+  const floorNear = (x, y, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (!wall(x + dx, y + dy)) return true; return false; };
+  // кандидаты: стена у края поля, не вода, не в верхних углах (там кнопки вариантов и кругов)
+  const cand = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!wall(x, y) || terr[y][x] === "water") continue;
+    if (!(x === 0 || y === 0 || x === W - 1 || y === H - 1)) continue;
+    if (y === 0 && (x < 3 || x > W - 3)) continue;
+    // не вплотную к старту рыцаря и к выходу — там и так много всего
+    if ([..."SE"].some((ch) => map.some((row, yy) => [...row].some((cc, xx) => cc === ch && Math.abs(xx - x) <= 1 && Math.abs(yy - y) <= 1)))) continue;
+    cand.push({ x, y, score: (floorNear(x, y, 1) ? 0 : 2) + (y === H - 1 ? 1 : 0) + ((x === 0 || x === W - 1) && y === H - 1 ? 1 : 0) });
+  }
+  if (!cand.length) return;
+  cand.sort((a, b) => b.score - a.score || (b.y - a.y));
+  // на маленьком поле — одна сценка, на большом — две (подальше друг от друга)
+  const picks = [cand[0]];
+  const far = cand.find((c) => Math.abs(c.x - cand[0].x) + Math.abs(c.y - cand[0].y) >= 4);
+  if (far && W * H >= 30) picks.push(far);
+  let h = 3; for (const c of L.name) h = (h * 17 + c.charCodeAt(0)) % 9973;
+  const kinds = ["monk", "chop", "sheep", "build"];
+  picks.forEach((c, i) => {
+    cellOv[c.y][c.x]?.remove();                    // дерево/камень в этой клетке убираем
+    const kind = kinds[(h + i * 2) % kinds.length];
+    const left = c.x > W / 2;                      // смотрит к середине поля
+    if (kind === "monk") skRun(() => boardMonk(st, c.x + 0.5, c.y + 0.92, left));
+    else if (kind === "sheep") skRun(() => boardSheep(st, c.x + 0.5, c.y + 0.9, left));
+    else skRun(() => boardPawn(st, c.x + 0.5, c.y + 0.92, left, kind === "chop" ? "paxe" : "phammer"));
+  });
+}
+// Монах в углу иногда колдует: свечение над ним
+async function boardMonk(st, x, y, left) {
+  const m = skActor(st, "monk", 0.9), fx = skActor(st, "healfx", 0.9);
+  m.at(x, y); m.face(left); m.show(true); m.play(0, 6, 150, true, "monk");
+  fx.at(x, y);
+  for (;;) {
+    await skWait(st, skRnd(6000, 12000));
+    fx.show(true); fx.play(0, 11, 90, true, "healfx");
+    await m.play(0, 11, 90, false, "heal");
+    fx.show(false);
+    m.play(0, 6, 150, true, "monk");
+  }
+}
+// Житель рубит дерево или стучит молотком; иногда отдыхает
+async function boardPawn(st, x, y, left, work) {
+  const p = skActor(st, "pidle", 0.9);
+  p.at(x, y); p.face(left); p.show(true); p.play(0, 8, 130, true, "pidle");
+  for (;;) {
+    await skWait(st, skRnd(2500, 6000));
+    p.play(0, SK[work][0], 110, true, work);
+    await skWait(st, skRnd(3000, 6000));
+    p.play(0, 8, 130, true, "pidle");
+  }
+}
+// Овечка иногда радостно подпрыгивает
+async function boardSheep(st, x, y, left) {
+  const s = skActor(st, "sheepb", 0.85, 0.6);
+  s.at(x, y); s.face(left); s.show(true); s.frame(0, 0);
+  for (;;) {
+    await skWait(st, skRnd(3500, 8000));
+    for (let k = 0; k < 2; k++) await s.play(0, 6, 90, false);
+    s.frame(0, 0);
+  }
+}
 
 // ===== Переход по мосту на другой остров =====
 // Рыцарь бежит от своего уровня к мосту и по мосту за край карты, камера едет за ним,
@@ -4279,6 +4447,7 @@ function buildBoard() {
   items = [];
   enemies = [];
   const waterRocks = []; // камни в воде: в луже на одну клетку им не место
+  const cellOv = map.map((row) => [...row].map(() => null)); // предмет в клетке (для сценок)
   const terr = map.map((row) => [...row].map(() => null)); // какая земля в каждой клетке
   const theme = themeFor(levelIdx);
   boardEl.dataset.theme = theme.name;
@@ -4303,6 +4472,7 @@ function buildBoard() {
         ov.style.cssText = `--wx:${((x / W) * 0.9).toFixed(2)}s;--wxr:${((1 - x / W) * 0.9).toFixed(2)}s`;
         ov.appendChild(sprite(tl.over, p.k, { bottom: p.bottom ?? 4, dur: p.dur ?? 0.9, delay: rnd() * 2 }));
         cell.appendChild(ov);
+        cellOv[y][x] = ov;
         if (tl.over.startsWith("wrock")) waterRocks.push({ x, y, ov });
       }
       if (ch === "S") start = { x, y };
@@ -4437,6 +4607,8 @@ function buildBoard() {
     }
     boardEl.appendChild(fx);
   }
+  // мирная сценка в углу поля: монах, лесоруб, строитель или овечка
+  boardSkits(terr, cellOv);
 }
 
 // Что нужно, чтобы открыть дверь на этом уровне
@@ -7321,7 +7493,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 48;
+const APP_VERSION = 49;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
