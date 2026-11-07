@@ -6,12 +6,35 @@
 // (страница присылает сообщение "activate"). Старый кэш после этого удаляется.
 
 // Меняй номер версии при каждом обновлении игры (и в version.json, и APP_VERSION в index.html)
-const VERSION = "coder-path-v43";
-const FILES = ["./", "index.html", "manifest.webmanifest", "version.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+const VERSION = "coder-path-v44";
+const FILES = ["./", "index.html", "art.js", "fonts.css", "manifest.webmanifest", "version.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
-// 1. Установка: скачиваем все файлы новой версии мимо HTTP-кэша браузера
+// 1. Установка: скачиваем только то, что изменилось. В version.json у каждого файла есть отпечаток;
+// если он такой же, как в кэше прошлой версии, файл берём оттуда, а не из интернета.
+// Поэтому обычное обновление кода не тянет заново картинки (art.js) и шрифты (fonts.css).
+async function install() {
+  const cache = await caches.open(VERSION);
+  const fresh = await fetch(new Request("version.json", { cache: "reload" }));
+  const info = await fresh.clone().json();
+  let old = null, oldInfo = null;
+  for (const k of await caches.keys()) {
+    if (!k.startsWith("coder-path-") || k === VERSION) continue;
+    const c = await caches.open(k), r = await c.match("version.json");
+    if (r) { old = c; oldInfo = await r.json().catch(() => null); }
+  }
+  await cache.put("version.json", fresh);
+  await Promise.all(FILES.filter((f) => f !== "version.json").map(async (f) => {
+    const name = f === "./" ? "index.html" : f;
+    const same = oldInfo?.files?.[name] && info.files?.[name] && oldInfo.files[name].hash === info.files[name].hash;
+    if (same) {
+      const r = await old.match(f);
+      if (r) return cache.put(f, r);
+    }
+    await cache.add(new Request(f, { cache: "reload" }));
+  }));
+}
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: "reload" })))));
+  e.waitUntil(install());
   // Здесь нет skipWaiting: новая версия ждёт, пока игрок подтвердит обновление
 });
 
