@@ -957,15 +957,24 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
 .sync-dot.ok { background: var(--ok); }
 .sync-dot.busy { background: var(--torch); }
 .sync-state { color: var(--muted); font-size: 12px; }
+/* Окно поверх игры. Высота — ровно видимая часть экрана (--vvh считает скрипт:
+   на некоторых телефонах 100vh больше экрана, и верх окна уезжал за край).
+   Окно прижато к низу через margin-top:auto, а не align-items:flex-end — так высокое
+   окно не обрезается сверху, а просто прокручивается. overscroll-behavior: прокрутка
+   не «проваливается» в игру под окном. */
 .sheet {
-  position: fixed; inset: 0; z-index: 60;
-  display: flex; align-items: flex-end; justify-content: center;
+  position: fixed; left: 0; right: 0; top: var(--vvt, 0px); z-index: 60;
+  height: var(--vvh, 100vh); box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center;
   padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   background: #000b;
-  overflow-y: auto;
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
 }
 .sheet[hidden] { display: none; }
-@media (min-width: 600px) { .sheet { align-items: center; } }
+html.sheet-open, html.sheet-open body { overflow: hidden; }
+.sheet-box { margin-top: auto; flex: none; }
+@media (min-width: 600px) { .sheet-box { margin-bottom: auto; } }
+.sheet-done { min-height: 44px; border-radius: 10px; border: 1px solid var(--wall-edge); background: var(--panel); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; }
 .sheet-box {
   position: relative;
   width: 100%; max-width: 440px;
@@ -6052,7 +6061,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 26;
+const APP_VERSION = 27;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
@@ -6322,6 +6331,31 @@ $("set-close").addEventListener("click", () => { sfx("tap"); setSheet.hidden = t
 setSheet.addEventListener("click", (e) => { if (e.target === setSheet) setSheet.hidden = true; });
 addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !setSheet.hidden && $("sync-sheet").hidden && $("inst-sheet").hidden) setSheet.hidden = true;
+});
+
+// --- Окна поверх игры: высота по видимой части экрана, игра под окном не прокручивается,
+// внизу каждого окна — большая кнопка «Закрыть» (до верхнего крестика на телефоне бывает далеко)
+function sizeSheets() {
+  const vv = window.visualViewport;
+  document.documentElement.style.setProperty("--vvh", (vv?.height || innerHeight) + "px");
+  document.documentElement.style.setProperty("--vvt", (vv?.offsetTop || 0) + "px");
+}
+sizeSheets();
+addEventListener("resize", sizeSheets);
+window.visualViewport?.addEventListener("resize", sizeSheets);
+window.visualViewport?.addEventListener("scroll", sizeSheets);
+document.querySelectorAll(".sheet").forEach((sh) => {
+  const x = sh.querySelector(".sheet-x");
+  const done = document.createElement("button");
+  done.className = "sheet-done";
+  done.textContent = "Закрыть";
+  done.addEventListener("click", () => x.click());
+  sh.querySelector(".sheet-box").appendChild(done);
+  new MutationObserver(() => {
+    const open = [...document.querySelectorAll(".sheet")].some((s2) => !s2.hidden);
+    document.documentElement.classList.toggle("sheet-open", open);
+    if (!sh.hidden) { sizeSheets(); sh.scrollTop = 0; }
+  }).observe(sh, { attributes: true, attributeFilter: ["hidden"] });
 });
 
 // --- Запуск ---
