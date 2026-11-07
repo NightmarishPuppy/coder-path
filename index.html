@@ -348,7 +348,7 @@ html.still .route .fight .sw { animation: none; }
   left: 0; top: 0;
   display: grid;
   place-items: center;
-  transition: transform 0.22s ease-in-out;
+  transition: transform calc(0.22s * var(--tm, 1.6)) ease-in-out;   /* --tm: медленнее/быстрее по кнопкам скорости */
   z-index: 2;
 }
 /* рыцарь: kwrap — для разворота и "отскока" от стены, внутри два спрайта: стоит и бежит */
@@ -405,6 +405,14 @@ html.still .varflash { animation: none; opacity: 1; }
   border: 1px solid var(--loop);
 }
 
+/* скорость рыцаря (×1 ×2 ×5 ×10, как в видеоплеере) — в строке с переключателем языка */
+.speedbar { flex: 0 0 auto; display: inline-flex; padding: 2px; border-radius: 16px; background: #1d212b; border: 1px solid var(--wall-edge); }
+.speedbar button { min-width: 36px; height: 30px; padding: 0 7px; border: 0; border-radius: 13px; background: transparent; color: var(--muted);
+  font-family: var(--font-display); font-size: 13px; font-weight: 700; cursor: pointer; touch-action: manipulation; }
+.speedbar button.on { background: var(--torch); color: #241a08; }
+@media (max-width: 380px) { .speedbar button { min-width: 31px; padding: 0 5px; font-size: 12px; } }
+/* счётчик команд, если не влез в строку, уходит на следующую строку справа */
+.scroll-head #count { margin-left: auto; }
 .status {
   font-family: var(--font-body);
   font-weight: 600;
@@ -1471,6 +1479,9 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
             <button id="lang-blocks" data-lang="blocks">Блоки</button>
             <button id="lang-py" data-lang="py">Python</button>
             <button id="lang-js" data-lang="js">JavaScript</button>
+          </div>
+          <div class="speedbar" id="speedbar" role="group" aria-label="Скорость рыцаря">
+            <button data-speed="1" aria-label="Обычная скорость">×1</button><button data-speed="2" aria-label="Скорость ×2">×2</button><button data-speed="5" aria-label="Скорость ×5">×5</button><button data-speed="10" aria-label="Скорость ×10">×10</button>
           </div>
           <span id="count"></span>
         </div>
@@ -4321,6 +4332,8 @@ function boardSkits(terr, cellOv) {
     if (!wall(x, y) || terr[y][x] === "water") continue;
     if (!(x === 0 || y === 0 || x === W - 1 || y === H - 1)) continue;
     if (y === 0 && (x < 3 || x > W - 3)) continue;
+    // клетка ниже — без дерева: высокое дерево снизу закрыло бы актёра, будто он стоит на кроне
+    if (y < H - 1 && /^tree/.test(cellOv[y + 1]?.[x]?.dataset.kind || "")) continue;
     // не вплотную к старту рыцаря и к выходу — там и так много всего
     if ([..."SE"].some((ch) => map.some((row, yy) => [...row].some((cc, xx) => cc === ch && Math.abs(xx - x) <= 1 && Math.abs(yy - y) <= 1)))) continue;
     cand.push({ x, y, score: (floorNear(x, y, 1) ? 0 : 2) + (y === H - 1 ? 1 : 0) + ((x === 0 || x === W - 1) && y === H - 1 ? 1 : 0) });
@@ -5911,6 +5924,28 @@ function onCodeChange() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// ===== Скорость рыцаря =====
+// ×1 — спокойная скорость (медленнее, чем было раньше: всё время умножается на 1,6), ×2, ×5, ×10 — быстрее.
+// Можно переключать и во время запуска. Все паузы запуска идут через wait(), а не sleep().
+const SLOW = 1.6;
+const SPEEDS = [1, 2, 5, 10];
+let speed = SPEEDS.includes(save.speed) ? save.speed : 1;
+const wait = (ms) => sleep(ms * SLOW / speed);
+function applySpeed() {
+  document.documentElement.style.setProperty("--tm", (SLOW / speed).toFixed(3));
+  document.querySelectorAll("#speedbar button").forEach((b) => b.classList.toggle("on", +b.dataset.speed === speed));
+}
+$("speedbar").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-speed]");
+  if (!b) return;
+  speed = +b.dataset.speed;
+  save.speed = speed;
+  writeSave();
+  sfx("tap");
+  applySpeed();
+});
+applySpeed();
+
 // Гоблины бьют рыцаря: гоблин замахивается в сторону рыцаря, рыцарь прикрывается щитом,
 // вздрагивает и теряет сердечко
 async function playStrikes(list) {
@@ -5922,17 +5957,17 @@ async function playStrikes(list) {
     heroEl.classList.remove("run", "atk");
     heroEl.classList.add("guard");
     if (st.dx) heroEl.classList.toggle("flip", st.dx > 0); // рыцарь поворачивается к гоблину
-    await sleep(260);
+    await wait(260);
     sfx("ouch");
     heroEl.style.setProperty("--kx", st.dx >= 0 ? "8%" : "-8%");
     heroEl.classList.remove("hurt");
     void heroEl.offsetWidth;
     heroEl.classList.add("hurt");
     drawKnightHp(st.hp, true);
-    await sleep(260);
+    await wait(260);
     e.el.classList.remove("atk-" + dir);
     heroEl.classList.remove("guard");
-    await sleep(120);
+    await wait(120);
   }
 }
 
@@ -5948,7 +5983,7 @@ async function knightFalls(why) {
   heroEl.appendChild(sk);
   setTimeout(() => { sk.style.animation = "none"; sk.style.backgroundPosition = "100% 0"; }, 700);
   sfx("fall");
-  await sleep(900);
+  await wait(900);
   const n = why?.max || 1;
   setStatus(why?.hurt
     ? `Гоблин выдержал удар и победил рыцаря! У него ${n} ${plural(n, "сердечко", "сердечка", "сердечек")} — бей его столько раз: attack(${n})`
@@ -5992,7 +6027,7 @@ async function run() {
         if (h.face.dx) heroEl.classList.toggle("flip", h.face.dx < 0);
         heroEl.classList.add("atk");
         sfx(h.target ? "hit" : "swish");
-        await sleep(200);
+        await wait(200);
         if (h.target) {
           const e = enemies.find((e) => enemyKey(e.x, e.y) === h.target);
           e.el.classList.remove("hit");
@@ -6013,17 +6048,17 @@ async function run() {
             sfx("poof");
           }
         }
-        await sleep(220);
+        await wait(220);
         heroEl.classList.remove("atk");
         if (h.post) {
-          await sleep(120);
+          await wait(120);
           await playStrikes(h.post); // гоблин устоял и бьёт в ответ
           if (p.dead && p.dead.after && p.dead.cmd === i && p.dead.step === s) { await knightFalls(p.dead); return finish(); }
         }
         drawTape(p, i, s + 1);
-        await sleep(80);
+        await wait(80);
       }
-      await sleep(120);
+      await wait(120);
       continue;
     }
 
@@ -6045,7 +6080,7 @@ async function run() {
         sfx("bump");
         showProblems = true;
         drawRoute(p, i);
-        await sleep(420);
+        await wait(420);
         if (p.crash.reason === "goblin") {
           const { hp, max } = p.crash;
           const more = `${hp} ${plural(hp, "удар", "удара", "ударов")}`;
@@ -6074,13 +6109,13 @@ async function run() {
       // звуки шага и подобранных предметов
       const before = s ? cmd.got[s - 1] : (i ? p.commands[i - 1].got.at(-1) : null) || noneGot();
       const now = cmd.got[s];
-      sfx("step");
+      if (speed < 5) sfx("step");
       if (now.key && !before.key) sfx("key");
       if (now.coins > before.coins) sfx("coin");
       if (items.length && doorLocked(before) && !doorLocked(now)) setTimeout(() => sfx("unlock"), 180);
       drawItems(now);
       walkedTotal++;
-      await sleep(240);
+      await wait(240);
       drawTape(p, i, s + 1);
 
       if (p.reachedAt && p.reachedAt.cmd === i && p.reachedAt.step === s) {
@@ -6097,10 +6132,10 @@ async function run() {
             finish();
             drawVariants();
             setDisabled(true);
-            await sleep(1500);
+            await wait(1500);
             setDisabled(false);
             setVariant(nextV);
-            await sleep(900);
+            await wait(900);
             return run();
           }
           setStatus(`Победа! Одна программа прошла ${L.maps.length} ${plural(L.maps.length, "вариант", "варианта", "вариантов")} поля`, "win");
@@ -6110,7 +6145,7 @@ async function run() {
         return win();
       }
     }
-    await sleep(120);
+    await wait(120);
   }
   await showChecks(p, p.commands.length);
   drawRoute(p, p.commands.length);
@@ -6203,7 +6238,7 @@ async function showChecks(p, before) {
     const k = CONDS[ch.cond];
     setStatus(`${k.ru[0].toUpperCase() + k.ru.slice(1)} ${WHAT_RU[k.what]}? — ${ch.yes ? "да" : "нет"}`, "", "если");
     heroEl.classList.remove("run");
-    await sleep(650);
+    await wait(650);
     curCheck = null;
   }
 }
@@ -7575,7 +7610,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 50;
+const APP_VERSION = 51;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
