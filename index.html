@@ -811,6 +811,9 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 /* Облака — самый верхний слой карты. pointer-events: none — нажатие проходит
    сквозь облако на кнопку уровня под ним. */
 #map-clouds { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.mapstrip { position: absolute; left: 0; width: 100%; display: block; }
+.mapclouds { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.mapclouds img { position: absolute; left: 0; height: auto; opacity: 0.85; image-rendering: pixelated; will-change: transform; }
 .mapwrap { position: relative; aspect-ratio: 360 / 920; }
 #island .lbl { font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-anchor: middle; dominant-baseline: central; fill: #4a2e14; }
 #island .bnum { font-family: var(--font-display); font-weight: 700; font-size: 14px; text-anchor: middle; dominant-baseline: central; fill: #fff; stroke: #1d2a3a; stroke-width: 3; paint-order: stroke; }
@@ -822,10 +825,11 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 #island .nstars { font-family: var(--font-body); font-size: 10px; text-anchor: middle; letter-spacing: 1px; }
 #island .region { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; text-anchor: middle; }
 #island .soon { font-family: var(--font-body); font-weight: 600; font-size: 12px; text-anchor: middle; }
-#island .pulse { animation: pulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-@keyframes pulse { 0%, 100% { opacity: 0.9; transform: scale(1); } 50% { opacity: 0.2; transform: scale(1.35); } }
+.mapring { position: absolute; aspect-ratio: 1; margin: 0; box-sizing: border-box; border: 3px solid #fff3c4; border-radius: 50%; pointer-events: none;
+  transform: translate(-50%, -50%); animation: mapring 1.6s ease-in-out infinite; will-change: transform, opacity; }
+@keyframes mapring { 0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 0.2; transform: translate(-50%, -50%) scale(1.35); } }
 /* без движения (настройка «Анимация» или просьба системы) */
-html.still #island .pulse { animation: none; }
+html.still .mapring { animation: none; }
 .map-toast { min-height: 1.5em; margin: 0; text-align: center; color: var(--torch); font-weight: 600; }
 .howto {
   max-width: 480px;
@@ -1957,6 +1961,32 @@ document.addEventListener("click", (ev) => {
   if (b.dataset.line) label = "номер строки " + b.dataset.line;
   logEv("tap", { b: label || b.id });
 }, true);
+// Сторож зависаний: раз в полсекунды отмечаемся. Если между отметками прошло больше
+// двух секунд, а игра была на экране, — она «висела». Записываем, сколько и после чего.
+{
+  let beat = performance.now(), lastAct = "";
+  document.addEventListener("pointerdown", (ev) => {
+    const b = ev.target.closest?.("button, .node, .tile, [role=button]");
+    lastAct = b ? (b.getAttribute("aria-label") || b.textContent || b.id || "").replace(/\s+/g, " ").trim().slice(0, 40) : "";
+  }, true);
+  setInterval(() => {
+    const now = performance.now(), gap = now - beat;
+    beat = now;
+    if (gap > 2000 && !document.hidden) logEv("freeze", { ms: Math.round(gap), after: lastAct, sheet: !!document.querySelector(".sheet:not([hidden])") });
+  }, 500);
+  document.addEventListener("visibilitychange", () => { beat = performance.now(); });
+  // долгие задачи (дольше 0,4 с) — тоже в журнал, но не чаще раза в 5 секунд
+  try {
+    let lastSlow = 0;
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) {
+        if (e.duration < 400 || Date.now() - lastSlow < 5000) continue;
+        lastSlow = Date.now();
+        logEv("slow", { ms: Math.round(e.duration), after: lastAct });
+      }
+    }).observe({ type: "longtask" });
+  } catch (e) { /* браузер не умеет — ничего */ }
+}
 // выбор в списках настроек
 document.addEventListener("change", (ev) => {
   if (ev.target.tagName === "SELECT") logEv("set", { b: `${ev.target.id} = ${ev.target.value}` });
@@ -3131,16 +3161,48 @@ function mapTrees() {
 
 function startMapScene(canvas) {
   canvas.width = MAP_W * MT; canvas.height = MAP_H * MT;
-  const ctx = canvas.getContext("2d");
+  // Карта в 3–4 экрана высотой. Если рисовать её одним большим холстом, телефон после
+  // каждого кадра заново отправляет в видеокарту всю огромную картинку — на слабых
+  // телефонах это и было «зависание». Поэтому карта разрезана на полосы-холсты:
+  // каждый кадр перерисовываются только полосы, которые сейчас видно на экране.
+  const wrap = canvas.parentNode;
+  canvas.style.display = "none";
+  // Слои снизу вверх: море с пеной (полосы) → суша (один холст, рисуется один раз и больше
+  // не меняется) → живые предметы: деревья, овцы, гоблины (полосы).
+  const STRIP = 512;
+  const makeStrips = () => {
+    const list = [];
+    for (let y0 = 0; y0 < canvas.height; y0 += STRIP) {
+      const h = Math.min(STRIP, canvas.height - y0);
+      const cv = newCanvas(canvas.width, h);
+      cv.className = "mapstrip";
+      cv.setAttribute("aria-hidden", "true");
+      cv.style.top = (y0 / canvas.height * 100) + "%";
+      cv.style.height = (h / canvas.height * 100) + "%";
+      wrap.insertBefore(cv, canvas);
+      list.push({ cv, c2: cv.getContext("2d"), y0, y1: y0 + h });
+    }
+    return list;
+  };
+  const seaStrips = makeStrips();
+  let ctx = null;              // холст полосы, которую рисуем сейчас
+  // Облака — не холст, а две картинки: их двигает видеокарта (transform), ничего не перерисовывая
   const cloudCv = document.getElementById("map-clouds");
-  cloudCv.width = canvas.width; cloudCv.height = canvas.height;
-  const cctx = cloudCv.getContext("2d");
+  cloudCv.style.display = "none";
+  const cloudLayer = document.createElement("div");
+  cloudLayer.className = "mapclouds";
+  wrap.insertBefore(cloudLayer, cloudCv);
   const S = 64;
   const keys = new Set(["flat", "elev", "sc_tm", "foam", "bridge", "gwtower", "gt_idle", "gx_idle", "sc_cloud1", "sc_cloud2", "sc_sheep", "sc_sheepg",
     ...MAP_DECO.map((d) => d[0]).filter((k) => !MAP_SHEEP[k]), "tree1", "tree2", "tree3", "tree4", "bush1", "bush3"]);
   const img = {};
   const objs = [...MAP_DECO, ...mapTrees()].sort((a, b) => (a[5] ?? a[2]) - (b[5] ?? b[2]));
   const land = newCanvas(canvas.width, canvas.height);
+  land.className = "mapstrip";
+  land.setAttribute("aria-hidden", "true");
+  land.style.top = "0"; land.style.height = "100%";
+  wrap.insertBefore(land, canvas);
+  const objStrips = makeStrips();
 
   // Плитка по соседям (как в наборе): середина, край, угол, полоска или одиночная.
   // T — размер клетки на холсте, w×h — размер сетки
@@ -3249,7 +3311,9 @@ function startMapScene(canvas) {
     if (!solid(x, y)) continue;
     let wet = false;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!solid(x + dx, y + dy)) wet = true;
-    if (wet) shore.push([x, y, (x * 7 + y * 5) % 16]);
+    // пена втрое шире клетки, поэтому хватает каждой второй клетки в шахматном порядке:
+    // берег покрыт так же, а рисовать вдвое меньше
+    if (wet && (x + y) % 2 === 0) shore.push([x, y, (x * 7 + y * 5) % 16]);
   }
   const clouds = [
     { k: "sc_cloud1", y: 9 * OU, v: 6, x0: 0.1 },
@@ -3272,34 +3336,81 @@ function startMapScene(canvas) {
       ctx.restore();
     } else ctx.drawImage(im, f * fw, 0, fw, fh, dx, dy, Math.round(w), Math.round(h));
   }
-  function frame(t) {
-    ctx.imageSmoothingEnabled = false;
+  function visibleBand() {
+    const r = wrap.getBoundingClientRect();
+    if (!r.height) return null;
+    const k = canvas.height / r.height, vh = window.visualViewport?.height || innerHeight;
+    const top = Math.max(0, Math.floor((-r.top - 40) * k)), bot = Math.min(canvas.height, Math.ceil((vh - r.top + 40) * k));
+    return bot > top ? [top, bot] : null;
+  }
+  function drawSea(st, t) {
+    const top = st.y0, bot = st.y1, bh = bot - top;
+    ctx = st.c2;
+    ctx.setTransform(1, 0, 0, 1, 0, -top);     // рисуем в координатах всей карты
     ctx.fillStyle = TS_INFO.water;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, top, canvas.width, bh);
     const ff = Math.floor(t / 85);
     ctx.imageSmoothingEnabled = true;          // пена в половину размера
-    for (const [x, y, ph] of shore) ctx.drawImage(img.foam, ((ff + ph) % 16) * 192, 0, 192, 192, x * MT - MT, y * MT - MT, MT * 3, MT * 3);
+    for (const [x, y, ph] of shore) {
+      const py = y * MT - MT;
+      if (py > bot || py + MT * 3 < top) continue;
+      ctx.drawImage(img.foam, ((ff + ph) % 16) * 192, 0, 192, 192, x * MT - MT, py, MT * 3, MT * 3);
+    }
+  }
+  function drawObjs(st, t) {
+    const top = st.y0, bot = st.y1;
+    ctx = st.c2;
+    ctx.setTransform(1, 0, 0, 1, 0, -top);
+    ctx.clearRect(0, top, canvas.width, bot - top);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(land, 0, 0);
-    for (const o of objs) drawObj(o, t);
-    // Облака — на своём холсте поверх кнопок уровней: плывут медленно и уходят за край
-    const span = canvas.width + 600;
-    cctx.clearRect(0, 0, cloudCv.width, cloudCv.height);
-    cctx.imageSmoothingEnabled = false;
-    cctx.globalAlpha = 0.85;
-    for (const c of clouds) cctx.drawImage(img[c.k], Math.round(((c.x0 * span + (t / 1000) * c.v * 4) % span) - 600), c.y);
-    cctx.globalAlpha = 1;
+    for (const o of objs) {
+      const py = o[2] * OU;
+      if (py < top - 40 || py - 400 > bot) continue;  // предмет целиком вне полосы
+      drawObj(o, t);
+    }
+  }
+  const cloudEls = [];
+  function placeClouds(t) {
+    if (!cloudEls.length) clouds.forEach((c) => {
+      const im = new Image();
+      im.src = TS[c.k];
+      im.alt = "";
+      im.style.top = (c.y / canvas.height * 100) + "%";
+      im.style.width = (img[c.k].width / canvas.width * 100) + "%";
+      cloudLayer.appendChild(im);
+      cloudEls.push(im);
+    });
+    const span = canvas.width + 600, k = wrap.clientWidth / canvas.width;
+    clouds.forEach((c, i) => {
+      const x = ((c.x0 * span + (t / 1000) * c.v * 4) % span) - 600;
+      cloudEls[i].style.transform = `translateX(${Math.round(x * k)}px)`;
+    });
+  }
+  function frame(t, full) {
+    const band = full ? [0, canvas.height] : visibleBand();
+    if (band) seaStrips.forEach((st, i) => {
+      if (st.y1 <= band[0] || st.y0 >= band[1]) return;
+      drawSea(st, t);
+      drawObjs(objStrips[i], t);
+    });
+    placeClouds(t);
   }
   let last = 0;
   const loop = (t) => {
     requestAnimationFrame(loop);
-    if (STILL || t - last < (LIGHT ? 250 : 80) || document.hidden || document.getElementById("mapview").hidden) return;
+    if (STILL || t - last < (LIGHT ? 300 : 150) || document.hidden || document.getElementById("mapview").hidden) return;
     last = t;
     frame(t);
   };
+  // Прокрутили карту — сразу дорисовать открывшийся кусок (и при «без движения» тоже)
+  let scrollRaf = 0;
+  addEventListener("scroll", () => {
+    if (scrollRaf || document.getElementById("mapview").hidden) return;
+    scrollRaf = requestAnimationFrame((t) => { scrollRaf = 0; frame(STILL ? 0 : t); });
+  }, { passive: true, capture: true });
   Promise.all([...keys].map((k) => tsImage(k).then((im) => (img[k] = im)))).then(() => {
     paintLand();
-    frame(0);
+    frame(0, true);
     requestAnimationFrame(loop);   // при «без движения» цикл ничего не рисует, кадр стоит
   });
 }
@@ -3380,6 +3491,22 @@ function renderMap() {
   add(`<use href="#im-hero" x="${hx - 2}" y="${hy - 52}" width="44" height="44" aria-hidden="true"/>`);
 
   $("island").innerHTML = out.join("");
+  // Пульсирующее кольцо у следующего уровня — отдельный HTML-кружок, а не часть SVG.
+  // Анимация внутри SVG заставляла телефон 60 раз в секунду перерисовывать всю карту
+  // с уровнями; кружок с transform/opacity двигает видеокарта, ничего не перерисовывая.
+  document.querySelector(".mapwrap .mapring")?.remove();
+  const ring = $("island").querySelector(".pulse");
+  if (ring) {
+    const vb = $("island").viewBox.baseVal, r = +ring.getAttribute("r");
+    const d = document.createElement("div");
+    d.className = "mapring";
+    d.style.left = (+ring.getAttribute("cx") / vb.width * 100) + "%";
+    d.style.top = (+ring.getAttribute("cy") / vb.height * 100) + "%";
+    d.style.width = d.style.height = (2 * r / vb.width * 100) + "%";
+    d.style.height = "auto";
+    ring.remove();
+    $("island").after(d);
+  }
   const total = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
   $("map-progress").innerHTML = `Звёзд собрано: <b>${total}</b> из ${LEVELS.length * 3}`;
   $("sync-move").hidden = !syncOn || total > 0; // новое устройство без звёзд — подсказываем перенос
@@ -6142,7 +6269,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 29;
+const APP_VERSION = 30;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
@@ -6375,6 +6502,8 @@ function buildReport() {
       run: () => `ЗАПУСК: ${ev.code || "(пусто)"}`,
       status: () => `${ev.kind === "fail" ? "подсказка" : ev.kind === "ok" ? "итог" : "сообщение"}: «${ev.text}»`,
       win: () => `ПРОЙДЕН: ${"★".repeat(ev.stars)}, команд ${ev.written}`,
+      freeze: () => `ЗАВИСАНИЕ: игра не отвечала ${(ev.ms / 1000).toFixed(1)} с${ev.after ? ", после «" + ev.after + "»" : ""}${ev.sheet ? ", открыто окно" : ""}`,
+      slow: () => `тормоз: ${ev.ms} мс${ev.after ? ", после «" + ev.after + "»" : ""}`,
     }[ev.e];
     out.push(`${hhmmss(ev.t)} ${w} ${line ? line() : ev.e}`);
   }
