@@ -607,7 +607,23 @@ textarea#code:focus-visible { box-shadow: inset 0 0 0 2px var(--torch); }
 .tile.h { border-color: var(--torch); } .tile.h .ar { color: var(--torch); }
 .tile.v { border-color: var(--frost); } .tile.v .ar { color: var(--frost); }
 .tile.a { border-color: var(--sword); } .tile.a .ar { color: var(--sword); }
-.tile.sel { background: var(--wall-edge); box-shadow: 0 0 0 3px #fff3; }
+/* Выбранная плитка — видно сразу: жёлтая заливка, приподнята, пульсирующая рамка и стрелка-указатель */
+.tile.sel, .bloop > .lhead.sel {
+  background: #ffd54a !important; border-color: #fff !important; color: #241a08 !important;
+  transform: translateY(-3px) scale(1.12); z-index: 2;
+  animation: tile-sel 1s ease-in-out infinite;
+}
+.tile.sel .ar, .tile.sel .nn { color: #241a08 !important; }
+.tile.sel::after, .bloop > .lhead.sel::after {
+  content: "▼"; position: absolute; top: -17px; left: 50%; translate: -50% 0;
+  font-size: 13px; line-height: 1; color: #ffd54a; text-shadow: 0 1px 0 #000;
+  animation: tile-arrow 1s ease-in-out infinite;
+}
+.bloop > .lhead { position: relative; }
+@keyframes tile-sel { 0%, 100% { box-shadow: 0 0 0 3px #ffd54a99, 0 4px 10px #0008; } 50% { box-shadow: 0 0 0 7px #ffd54a33, 0 4px 10px #0008; } }
+@keyframes tile-arrow { 0%, 100% { translate: -50% 0; } 50% { translate: -50% -4px; } }
+html.still .tile.sel, html.still .bloop > .lhead.sel, html.still .tile.sel::after { animation: none; box-shadow: 0 0 0 4px #ffd54a99; }
+.blocks { padding-top: 14px !important; }
 .tile.now { background: var(--now-bg); box-shadow: 0 0 0 3px var(--torch); }
 /* ошибка — мягко, жёлтым, как в тексте: «вот тут что-то не так», а не красный крестик */
 .tile.err { border-style: dashed; border-color: var(--bad); background: var(--bad-bg); animation: tile-nudge 1.4s ease-in-out infinite; }
@@ -649,10 +665,43 @@ html.still .tile.err { animation: none; }
   #levelview.blk .lb-info b { font-size: 13px; }
   #levelview.blk .lb-actions { flex-wrap: nowrap; gap: 4px; }
   #levelview.blk .lb-actions .chip { padding: 6px 8px; font-size: 13px; white-space: nowrap; }
-  #levelview.blk .par { font-size: 12px; margin: 0; }
+  #levelview.blk .par { display: none; }
   #levelview.blk .voicebar { position: absolute; top: 2px; left: 96px; margin: 0; }
   #levelview.blk .speak #speak-label { display: none; }
   #levelview.blk .status { font-size: 14px; padding: 6px 10px; min-height: 0; }
+}
+/* Невысокий экран телефона (видимая высота меньше 780): всё ещё плотнее, чтобы поле было крупнее */
+@media (max-width: 819px) and (max-height: 780px) {
+  #levelview.blk .goal { -webkit-line-clamp: 2; }
+  #levelview.blk .status { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding: 4px 8px; font-size: 13px; }
+  #levelview.blk .status.fail { display: block; }
+  #levelview.blk .chips .chip:not(.num) { height: 44px; font-size: 22px; }
+  #levelview.blk .chips .chip.num { height: 34px; }
+  #levelview.blk .tile { height: 42px; }
+  #levelview.blk .bloop { padding: 4px; gap: 4px; }
+  #levelview.blk .bloop > .lhead { height: 34px; }
+  #levelview.blk #run, #levelview.blk #undo-cmd, #levelview.blk #reset { padding-top: 6px; padding-bottom: 6px; }
+  #levelview.blk h1 { font-size: 18px; }
+  #levelview.blk .blocks { padding: 12px 6px 6px !important; min-height: 54px; }
+  #levelview.blk.tall .undo-btn svg { display: none; }
+}
+/* Высокое поле (например, 4×7) на телефоне: поле слева во всю высоту, справа — программа и кнопки */
+@media (max-width: 819px) {
+  #levelview.blk.tall .game { grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; }
+  #levelview.blk.tall .col:first-child { width: var(--tallw, min(58vw, calc((100dvh - 190px) * var(--ratio)))); }
+  #levelview.blk.tall .board { max-width: 100% !important; }
+  #levelview.blk.tall .chips .chip:not(.num) { flex: 1 0 calc(50% - 3px); min-width: 0; }
+  #levelview.blk.tall .chips .chip.num { flex: 1 0 calc(33% - 4px); min-width: 0; }
+  #levelview.blk.tall .chips .chip.loopchip { flex-basis: 100%; }
+  #levelview.blk.tall .undo-btn { min-width: 0; white-space: normal; font-size: 14px; padding: 8px; }
+  #levelview.blk.tall #undo-cmd, #levelview.blk.tall #run { flex: 1 1 100%; }
+  #levelview.blk.tall #reset { flex: 1 1 100%; }
+  #levelview.blk.tall .tile { min-width: 0; padding: 0 8px 0 6px; }
+  #levelview.blk.tall .status { font-size: 13px; }
+  #levelview.blk.tall .lb-actions { flex-wrap: wrap; }
+  #levelview.blk.tall .lb-info { display: none; }
+  #levelview.blk.tall .lb-actions > .chip, #levelview.blk.tall .lb-actions > .shift { flex: 1 0 calc(50% - 2px); justify-content: center; }
+  #levelview.blk.tall .lb-actions .shift .chip { flex: 1; justify-content: center; }
 }
 /* порядок в правой колонке: программа → выбранная плитка → кнопки → действия → переключатель языка */
 #levelview.blk .col:last-child { flex-direction: row; flex-wrap: wrap; }
@@ -660,8 +709,15 @@ html.still .tile.err { animation: none; }
 #levelview.blk .blocks { order: 1; }
 #levelview.blk .linebar { order: 2; }
 #levelview.blk .chips { order: 3; }
-#levelview.blk .undo-row { order: 4; }
-#levelview.blk .actions { order: 5; }
+/* «Отменить команду», «Запустить» и «↺» — одним рядом */
+#levelview.blk .undo-row, #levelview.blk .actions { display: contents; }
+#levelview.blk #undo-cmd, #levelview.blk #redo-cmd { order: 4; }
+#levelview.blk #run, #levelview.blk #reset { order: 5; }
+#levelview.blk #undo-cmd { flex: 1.45 1 0; min-width: 0; font-size: 13px; padding: 8px 6px; gap: 5px; }
+#levelview.blk #undo-cmd svg { width: 18px; height: 18px; }
+#levelview.blk #redo-cmd { flex: 0 0 auto; }
+#levelview.blk #run { flex: 1 1 0; min-width: 0; }
+#levelview.blk #reset { flex: 0 0 auto; padding: 8px 12px; font-size: 20px; }
 #levelview.blk .scroll { order: 6; }
 #levelview.blk .hint { order: 7; }
 #levelview.blk .restore-row { order: 8; }
@@ -2690,6 +2746,7 @@ function loadLevel(i) {
   codeEl.value = save.code[codeKey()] ?? (lang === "js" ? save.code[L.name] : undefined) ?? L.starter[lang];
   winBox.hidden = true;
   reset();
+  requestAnimationFrame(() => requestAnimationFrame(fitBoard));
 }
 
 // ===== Карта острова =====
@@ -3338,7 +3395,10 @@ function buildBoard() {
   boardEl.style.aspectRatio = `${W} / ${H}`;
   boardEl.style.maxWidth = `min(100%, ${Math.round(W / H * 460)}px)`;
   // в режиме блоков на телефоне поле не выше 40% экрана — чтобы всё влезло без прокрутки
-  boardEl.style.setProperty("--blk-max", `calc(36dvh * ${(W / H).toFixed(3)})`);
+  boardEl.style.setProperty("--blk-max", `calc(40dvh * ${(W / H).toFixed(3)})`);
+  // высокое узкое поле на телефоне ставим сбоку, а программу и кнопки — колонкой справа
+  $("levelview").style.setProperty("--ratio", (W / H).toFixed(3));
+  $("levelview").classList.toggle("tall", W / H < 0.8);
   boardEl.setAttribute("aria-label", `Игровое поле ${W} на ${H} клеток`);
   items = [];
   enemies = [];
@@ -4098,8 +4158,34 @@ $("blocks").addEventListener("click", (e) => {
   if (selLine === n) { selLine = null; drawCode(); } else selectLine(n);
 });
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// Поле на телефоне — сколько влезает: меряем, сколько места занимают шапка, программа
+// и кнопки до «Запустить», и отдаём полю всю остальную видимую высоту экрана
+// (на телефоне видимая высота меньше экрана: браузер занимает полосу адреса и панель).
+function fitBoard() {
+  const lv = $("levelview");
+  if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); lv.style.removeProperty("--tallw"); return; }
+  const ratio = W / H, vh = (window.visualViewport?.height || innerHeight) - 6;
+  if (lv.classList.contains("tall")) {
+    const top = boardEl.getBoundingClientRect().top + scrollY;
+    const statusH = $("status").getBoundingClientRect().height + 10;
+    const w = Math.min(innerWidth * 0.6, (vh - top - statusH) * ratio);
+    lv.style.setProperty("--tallw", Math.max(140, Math.floor(w)) + "px");
+    return;
+  }
+  const bh = boardEl.getBoundingClientRect().height;
+  const runBottom = $("run").getBoundingClientRect().bottom + scrollY;
+  const rest = runBottom - bh + 4;
+  const w = (vh - rest) * ratio;
+  const full = boardEl.parentElement.getBoundingClientRect().width;
+  boardEl.style.setProperty("--blk-max", Math.max(full * 0.55, Math.min(full, Math.floor(w))) + "px");
+}
+addEventListener("resize", () => requestAnimationFrame(fitBoard));
+window.visualViewport?.addEventListener("resize", () => requestAnimationFrame(fitBoard));
+
 function applyUi() {
   $("levelview").classList.toggle("blk", uiBlocks);
+  $("reset").textContent = uiBlocks ? "↺" : "Сначала";
+  $("reset").setAttribute("aria-label", "Сначала: рыцарь на старт");
   document.querySelectorAll(".langs button").forEach((b) => b.setAttribute("aria-pressed", String(uiBlocks ? b.dataset.lang === "blocks" : b.dataset.lang === lang)));
 }
 
@@ -5861,7 +5947,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 20;
+const APP_VERSION = 21;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
