@@ -644,7 +644,11 @@ html.still .tile.err { animation: none; }
 /* палитра: крупные стрелки */
 #levelview.blk .chips .chip:not(.num) { font-family: var(--font-display); font-size: 26px; min-width: 64px; height: 56px; padding: 0 14px; border-style: solid; border-width: 2px; }
 #levelview.blk .chips .chip.num { height: 44px; font-size: 18px; }
-#levelview.blk .chips .chip.loopchip { font-size: 16px; }
+#levelview.blk .chips .chip.loopchip { font-size: 15px; }
+/* ряды кнопок ровные: стрелки и цифры делят ширину поровну, «повторять» — в ряду стрелок */
+#levelview.blk .chips .chip:not(.num):not(.loopchip) { flex: 1 1 0; min-width: 44px; padding: 0 4px; }
+#levelview.blk .chips .chip.loopchip { flex: 0 0 auto; padding: 0 10px; font-size: 15px !important; }
+#levelview.blk .chips .chip.num { flex: 1 1 0; min-width: 0; padding: 0; }
 @media (max-width: 819px) {
   #levelview.blk .board { max-width: min(100%, var(--blk-max)) !important; }
   #levelview.blk .game { gap: 8px; }
@@ -683,25 +687,6 @@ html.still .tile.err { animation: none; }
   #levelview.blk #run, #levelview.blk #undo-cmd, #levelview.blk #reset { padding-top: 6px; padding-bottom: 6px; }
   #levelview.blk h1 { font-size: 18px; }
   #levelview.blk .blocks { padding: 12px 6px 6px !important; min-height: 54px; }
-  #levelview.blk.tall .undo-btn svg { display: none; }
-}
-/* Высокое поле (например, 4×7) на телефоне: поле слева во всю высоту, справа — программа и кнопки */
-@media (max-width: 819px) {
-  #levelview.blk.tall .game { grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; }
-  #levelview.blk.tall .col:first-child { width: var(--tallw, min(58vw, calc((100dvh - 190px) * var(--ratio)))); }
-  #levelview.blk.tall .board { max-width: 100% !important; }
-  #levelview.blk.tall .chips .chip:not(.num) { flex: 1 0 calc(50% - 3px); min-width: 0; }
-  #levelview.blk.tall .chips .chip.num { flex: 1 0 calc(33% - 4px); min-width: 0; }
-  #levelview.blk.tall .chips .chip.loopchip { flex-basis: 100%; }
-  #levelview.blk.tall .undo-btn { min-width: 0; white-space: normal; font-size: 14px; padding: 8px; }
-  #levelview.blk.tall #undo-cmd, #levelview.blk.tall #run { flex: 1 1 100%; }
-  #levelview.blk.tall #reset { flex: 1 1 100%; }
-  #levelview.blk.tall .tile { min-width: 0; padding: 0 8px 0 6px; }
-  #levelview.blk.tall .status { font-size: 13px; }
-  #levelview.blk.tall .lb-actions { flex-wrap: wrap; }
-  #levelview.blk.tall .lb-info { display: none; }
-  #levelview.blk.tall .lb-actions > .chip, #levelview.blk.tall .lb-actions > .shift { flex: 1 0 calc(50% - 2px); justify-content: center; }
-  #levelview.blk.tall .lb-actions .shift .chip { flex: 1; justify-content: center; }
 }
 /* порядок в правой колонке: программа → выбранная плитка → кнопки → действия → переключатель языка */
 #levelview.blk .col:last-child { flex-direction: row; flex-wrap: wrap; }
@@ -1593,25 +1578,24 @@ const LEVELS = [
   },
   {
     name: "Серпантин",
+    codeRev: 2, // карту повернули: старый сохранённый код не подходит
     chapter: 1,
     after: "Лестница",
-    goal: "Дорога петляет туда и обратно, но шаги повторяются: вправо, вниз, влево, вниз. В цикл можно положить сколько угодно команд.",
+    goal: "Дорога петляет туда и обратно, но шаги повторяются: вниз, вправо, вверх, вправо. В цикл можно положить сколько угодно команд.",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     loopButton: true,
     par: 4, good: 5,
     map: [
-      "S...",
-      "###.",
-      "....",
-      ".###",
-      "....",
-      "###.",
-      "E...",
+      "S#...#E",
+      ".#.#.#.",
+      ".#.#.#.",
+      "...#...",
     ],
     starter: { py: "", js: "" },
   },
   {
     name: "Беглянка",
+    codeRev: 2, // карту повернули: старый сохранённый код не подходит
     chapter: 1,
     after: "Лестница",
     bug: true,
@@ -1619,17 +1603,14 @@ const LEVELS = [
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     par: 2, good: 4,
     map: [
-      "S###",
-      ".###",
-      "..##",
-      "#.##",
-      "#..#",
-      "##.#",
-      "##.E",
+      "S..####",
+      "##...##",
+      "####...",
+      "######E",
     ],
     starter: {
-      py: "# Одна команда сбежала из цикла\nwhile True:\n    move_down(2)\nmove_right()\n",
-      js: "// Одна команда сбежала из цикла\nwhile (true) {\n  moveDown(2);\n}\nmoveRight();\n",
+      py: "# Одна команда сбежала из цикла\nwhile True:\n    move_right(2)\nmove_down()\n",
+      js: "// Одна команда сбежала из цикла\nwhile (true) {\n  moveRight(2);\n}\nmoveDown();\n",
     },
   },
   {
@@ -1733,6 +1714,7 @@ const LEVELS = [
   },
   {
     name: "Сокровища пещер",
+    codeRev: 2, // карту повернули: старый сохранённый код не подходит
     chapter: 2,
     challenge: true,
     requireLoop: true,
@@ -1741,13 +1723,12 @@ const LEVELS = [
     loopButton: true,
     par: 4, good: 5,
     map: [
-      "S..C..",
-      "#####.",
-      "..K...",
-      ".#####",
-      "C.....",
-      "#####.",
-      "E..C..",
+      "S#..C#E",
+      ".#.#.#.",
+      ".#K#.#.",
+      "C#.#.#C",
+      ".#.#.#.",
+      "...#...",
     ],
     starter: { py: "", js: "" },
   },
@@ -2189,7 +2170,7 @@ if (syncOn) {
 }
 lang = save.lang === "js" ? "js" : "py";
 if (save.ui ? save.ui === "blocks" : true) lang = "py";   // блоки строятся на Python
-const codeKey = () => `${lang}:${L.name}`;
+const codeKey = () => `${lang}:${L.name}${L.codeRev ? "#" + L.codeRev : ""}`;
 
 // ===== 4. Элементы страницы и состояние =====
 const $ = (id) => document.getElementById(id);
@@ -3396,9 +3377,8 @@ function buildBoard() {
   boardEl.style.maxWidth = `min(100%, ${Math.round(W / H * 460)}px)`;
   // в режиме блоков на телефоне поле не выше 40% экрана — чтобы всё влезло без прокрутки
   boardEl.style.setProperty("--blk-max", `calc(40dvh * ${(W / H).toFixed(3)})`);
-  // высокое узкое поле на телефоне ставим сбоку, а программу и кнопки — колонкой справа
-  $("levelview").style.setProperty("--ratio", (W / H).toFixed(3));
-  $("levelview").classList.toggle("tall", W / H < 0.8);
+  // Раскладка экрана одна для всех уровней. Высоких узких полей нет: на телефоне они
+  // выглядят плохо (пустые полосы по бокам), поэтому такие уровни повёрнуты набок.
   boardEl.setAttribute("aria-label", `Игровое поле ${W} на ${H} клеток`);
   items = [];
   enemies = [];
@@ -4163,15 +4143,8 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 // (на телефоне видимая высота меньше экрана: браузер занимает полосу адреса и панель).
 function fitBoard() {
   const lv = $("levelview");
-  if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); lv.style.removeProperty("--tallw"); return; }
+  if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); return; }
   const ratio = W / H, vh = (window.visualViewport?.height || innerHeight) - 6;
-  if (lv.classList.contains("tall")) {
-    const top = boardEl.getBoundingClientRect().top + scrollY;
-    const statusH = $("status").getBoundingClientRect().height + 10;
-    const w = Math.min(innerWidth * 0.6, (vh - top - statusH) * ratio);
-    lv.style.setProperty("--tallw", Math.max(140, Math.floor(w)) + "px");
-    return;
-  }
   const bh = boardEl.getBoundingClientRect().height;
   const runBottom = $("run").getBoundingClientRect().bottom + scrollY;
   const rest = runBottom - bh + 4;
@@ -5947,7 +5920,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 21;
+const APP_VERSION = 22;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
