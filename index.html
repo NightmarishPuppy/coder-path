@@ -361,6 +361,18 @@ html.still .itemstag .khearts.hurt img { animation: none; }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .hero { transition: none; }
 html.still .hero.bump .kwrap { animation: none; }
+.loopview {
+  position: absolute; top: 6px; right: 6px; z-index: 7;
+  display: flex; align-items: center; gap: 2px;
+  min-width: 40px; height: 36px; padding: 0 8px;
+  border-radius: 18px; border: 2px solid var(--loop);
+  background: var(--bg); color: var(--loop);
+  font-family: var(--font-display); font-size: 17px; cursor: pointer;
+  box-shadow: 0 2px 6px #0007;
+}
+.loopview[hidden] { display: none; }
+.loopview svg { width: 24px; height: 24px; fill: currentColor; }
+.loopview.on { background: var(--loop); color: #1b1530; }
 .roundtag {
   position: absolute;
   top: 6px; right: 6px;
@@ -2272,6 +2284,7 @@ function goblinSprites(hp) {
 const KNIGHT_HP = 3; // столько ударов гоблина выдерживает рыцарь
 let hero = { x: 0, y: 0 };
 let running = false;
+let showAll = false, loopViewBtn = null;   // кнопка 🔂/🔁 на поле
 let plan = null;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -3519,6 +3532,20 @@ function buildBoard() {
   roundTag.hidden = true;
   boardEl.appendChild(roundTag);
 
+  // Кнопка 🔂/🔁 как в музыкальном плеере: один круг цикла или все круги.
+  // На каждом новом уровне снова «один круг» — начинаем с простого вида.
+  showAll = false;
+  loopViewBtn = document.createElement("button");
+  loopViewBtn.className = "loopview";
+  loopViewBtn.hidden = true;
+  loopViewBtn.addEventListener("click", () => {
+    sfx("tap");
+    showAll = !showAll;
+    logEv?.("loopview", showAll ? "all" : "one");
+    drawRoute(plan);
+  });
+  boardEl.appendChild(loopViewBtn);
+
   // Счётчик предметов
   // (он стоит над полем, а не на нём, чтобы не закрывать рыцаря)
   document.getElementById("itemstag")?.remove();
@@ -4258,7 +4285,9 @@ function drawStepHints(p) {
     for (let y = 1; y < H; y++) svg("line", { x1: 0, y1: y, x2: W, y2: y }, g);
   }
   if (p && p.reachedAt) return;                       // уже дошёл — считать нечего
-  const last = p && !p.error && p.commands.length ? p.commands[p.commands.length - 1] : null;
+  // считаем от конца того, что видно на поле: в режиме «один круг» — от конца первого круга
+  const vis = p && !p.error ? (showAll ? p.commands : p.commands.filter((c) => !c.loop || c.loop.round === 1)) : [];
+  const last = vis.length ? vis[vis.length - 1] : null;
   const from = last ? last.to : start;
   const alive = new Set(enemies.map((e) => enemyKey(e.x, e.y)));
   const back = last && last.cells?.length ? [-last.dx, -last.dy] : null;   // откуда пришёл — не считаем
@@ -4291,15 +4320,31 @@ function drawRoute(p, activeIdx = -1) {
   // будущих не видно. role[i]: "show" — рисуем полностью, "trace" — серым следом, "hide" — нет.
   const cur = activeIdx >= 0 ? Math.min(activeIdx, p.commands.length - 1) : showProblems && p.crash ? p.crash.cmd : showProblems && p.endless ? -2 : -1;
   const curLoop = cur >= 0 ? p.commands[cur].loop : null;
+  drawLoopView(p);
   const role = p.commands.map((cmd) => {
     if (!cmd.loop) return "show";
+    if (showAll && activeIdx < 0) return "show";
     if (cur === -2) return cmd.loop.round === 1 ? "show" : "hide";          // бесконечный: один круг
     if (cur < 0) return cmd.loop.round === 1 ? "show" : "hide";
     if (!curLoop || cmd.loop.line !== curLoop.line) return cmd.loop.round === 1 ? "show" : "hide";
     return cmd.loop.round === curLoop.round ? "show" : cmd.loop.round < curLoop.round ? "trace" : "hide";
   });
   const shown = p.commands.map((cmd, i) => ({ cmd, i })).filter(({ i }) => role[i] === "show");
-  const num = new Map(shown.map(({ i }, k) => [i, k + 1]));   // номер команды как в коде: 1, 2, 3…
+  // Номер команды как в коде: 1, 2, 3… На втором круге та же команда — тот же номер.
+  const num = new Map();
+  {
+    let n = 0, grp = "", k = 0;
+    const firstRound = {};
+    p.commands.forEach((cmd, i) => {
+      if (!cmd.loop) { num.set(i, ++n); grp = ""; return; }
+      const g = cmd.loop.line + "|" + cmd.loop.round;
+      if (g !== grp) { grp = g; k = 0; }
+      const list = (firstRound[cmd.loop.line] ||= []);
+      if (cmd.loop.round === 1 || list[k] == null) list[k] = list[k] ?? ++n;
+      num.set(i, list[k]);
+      k++;
+    });
+  }
   // серая дорожка прошлых кругов
   p.commands.forEach((cmd, i) => {
     if (role[i] !== "trace" || !cmd.cells.length) return;
@@ -4325,7 +4370,8 @@ function drawRoute(p, activeIdx = -1) {
     const x1 = c(e.a.x) + ox, y1 = c(e.a.y) + oy, x2 = c(e.b.x) + ox, y2 = c(e.b.y) + oy;
     const st = activeIdx < 0 ? "" : e.cmds.includes(activeIdx) ? " now" : e.cmds.every((i) => i < activeIdx) ? " done" : "";
     svg("line", { class: "seg-under", x1, y1, x2, y2 }, routeEl);
-    svg("line", { class: `seg ${e.axis}${st}`, x1, y1, x2, y2 }, routeEl);
+    const fade = showAll && activeIdx < 0 ? Math.max(0.4, 1 - (Math.min(...e.cmds.map((i) => p.commands[i].loop?.round || 1)) - 1) * 0.15) : 1;
+    svg("line", { class: `seg ${e.axis}${st}`, x1, y1, x2, y2, ...(fade < 1 ? { style: `opacity:${fade}` } : {}) }, routeEl);
     // стрелка-шеврон посередине отрезка: куда идёт рыцарь
     const mx = (x1 + x2) / 2 + e.dx * 0.06, my = (y1 + y2) / 2 + e.dy * 0.06, a = 0.13, w = 0.11;
     const pts = `${mx - e.dx * a - e.dy * w},${my - e.dy * a + e.dx * w} ${mx},${my} ${mx - e.dx * a + e.dy * w},${my - e.dy * a - e.dx * w}`;
@@ -4349,7 +4395,7 @@ function drawRoute(p, activeIdx = -1) {
     if (!roundMarks.has(k)) roundMarks.set(k, { at: cmd.from, rounds: [] });
     roundMarks.get(k).rounds.push(cmd.loop.round);
   });
-  if (p.endless && showProblems) {                                    // круг повторяется без конца — знак «∞» там, где он начинается
+  if (p.endless && (showProblems || showAll)) {                                    // круг повторяется без конца — знак «∞» там, где он начинается
     const k = `${p.endless.at.x},${p.endless.at.y}`;
     if (!roundMarks.has(k)) roundMarks.set(k, { at: p.endless.at, rounds: [] });
     roundMarks.get(k).endless = true;
@@ -4357,13 +4403,33 @@ function drawRoute(p, activeIdx = -1) {
   // На каком круге рыцарь упрётся (в стену, гоблина, запертую дверь) — тот круг помечаем «✕»
   const crashCmd = p.crash && role[p.crash.cmd] === "show" ? p.commands[p.crash.cmd] : null;
   const crashRound = crashCmd?.loop?.round;
+  // Метку круга ставим к той стороне клетки, откуда рыцарь не приходит и куда не уходит,
+  // чтобы она не закрывала номера команд на линиях
+  const SIDES = { top: [0.5, 0.2, 0, -1], bottom: [0.5, 0.8, 0, 1], left: [0.31, 0.5, -1, 0], right: [0.69, 0.5, 1, 0] };
+  const sideFor = (at) => {
+    const used = [];
+    p.commands.forEach((cmd, i) => {
+      if (role[i] !== "show" || !cmd.cells.length) return;
+      if (cmd.from.x === at.x && cmd.from.y === at.y) used.push([cmd.dx, cmd.dy]);
+      const end = cmd.cells[cmd.cells.length - 1];
+      if (end.x === at.x && end.y === at.y) used.push([-cmd.dx, -cmd.dy]);
+      if (cmd.cells.some((q) => q.x === at.x && q.y === at.y) && !(end.x === at.x && end.y === at.y)) used.push([cmd.dx, cmd.dy], [-cmd.dx, -cmd.dy]);
+    });
+    for (const k of ["top", "left", "bottom", "right"]) {
+      const [, , dx, dy] = SIDES[k];
+      if (!used.some(([a, b]) => a === dx && b === dy)) return SIDES[k];
+    }
+    return SIDES.top;
+  };
   for (const { at, rounds, endless } of roundMarks.values()) {
     const bad = crashRound && rounds.includes(crashRound);
     const g = svg("g", { class: "roundmark" + (endless ? " endless" : "") + (bad ? " bad" : "") }, markEl);
     const label = (rounds.length ? "↻" + rounds.join(",") : "↻") + (endless ? " ∞" : "") + (bad ? " ✕" : "");
     const w = Math.max(0.56, 0.19 * label.length + 0.16);
-    svg("rect", { x: at.x + 0.03, y: at.y + 0.03, width: w, height: 0.34, rx: 0.17 }, g);
-    svg("text", { x: at.x + 0.03 + w / 2, y: at.y + 0.2 }, g).textContent = label;
+    let [sx, sy] = sideFor(at);
+    sx = Math.min(Math.max(sx, w / 2 + 0.02), 0.98 - w / 2);        // не вылезать за клетку
+    svg("rect", { x: at.x + sx - w / 2, y: at.y + sy - 0.17, width: w, height: 0.34, rx: 0.17 }, g);
+    svg("text", { x: at.x + sx, y: at.y + sy }, g).textContent = label;
   }
   // Где рыцарь упрётся: короткая стрелка «пытается шагнуть» с последней клетки
   // и крестик на клетке, которая не пускает. Видно и до запуска, чтобы было понятно,
@@ -4513,6 +4579,19 @@ function reset() {
 // Место удара и строку подсвечиваем после запуска — как в настоящей игре:
 // сначала попробуй, потом разберёмся.
 let showProblems = false;
+// Значки Material «repeat» и «repeat_one»
+const ICON_REPEAT = "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z";
+const ICON_ONE = "M13 15V9h-1l-2 1v1h1.5v4H13z";
+function drawLoopView(p) {
+  if (!loopViewBtn) return;
+  const rounds = p && !p.error ? Math.max(0, ...p.commands.map((c) => c.loop?.round || 0)) : 0;
+  loopViewBtn.hidden = running || !(rounds > 1 || (p?.endless && rounds));
+  const n = p?.endless ? "∞" : rounds;
+  loopViewBtn.classList.toggle("on", showAll);
+  loopViewBtn.setAttribute("aria-label", showAll ? `Показаны все круги цикла (${n}). Показать один круг` : "Показан один круг цикла. Показать все круги");
+  loopViewBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON_REPEAT}"/>${showAll ? "" : `<path d="${ICON_ONE}"/>`}</svg>` +
+    (showAll ? `<span>${n}</span>` : "");
+}
 
 function onCodeChange() {
   if (running) return;
@@ -4765,6 +4844,7 @@ function win() {
 
 function finish() {
   running = false;
+  drawLoopView(plan);
   heroEl.classList.remove("run");
   setDisabled(false);
   drawCode(0);
@@ -6062,7 +6142,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 28;
+const APP_VERSION = 29;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
