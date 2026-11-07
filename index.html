@@ -6118,7 +6118,7 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheetEl.hidden) 
 // На E-Ink и при "уменьшить движение" рисуем один неподвижный кадр.
 const SCENE_MAP = [
   "~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~",
+  "~~~~~~~~pppp~",
   "~~~gggg~pppp~",
   "~gggggggpppp~",
   "~gggggggCCCC~",
@@ -6138,10 +6138,12 @@ const SCENE_SPR = {
 };
 // Кто где стоит: [вид, x и y основания в клетках, скорость кадров (мс на кадр), смотрит влево]
 const SCENE_OBJ = [
-  ["tree2", 1.7, 3.3, 110], ["tree1", 3.1, 2.9, 120], ["tree4", 2.3, 4.4, 105], ["tree3", 5.6, 3.1, 115],
-  ["tree4", 1.6, 6.2, 112], ["bush1", 6.9, 4.5, 120], ["bush3", 10.6, 6.1, 110], ["bush1", 3.4, 7.6, 125],
-  ["ghouse", 11.0, 3.6, 0], ["goblin", 8.7, 3.85, 110, true], ["tnt", 10.0, 2.95, 120, true], ["fire", 9.7, 3.95, 100],
-  ["knight", 6.3, 5.85, 120], ["sheep", 3.2, 6.0, 140], ["sheepg", 8.6, 6.6, 130, true], ["sheep", 5.0, 7.2, 150, true],
+  // всё живое стоит целиком на своей земле, не ближе полклетки к воде или обрыву
+  // (проверка — scenechk.py в черновиках; правила — в плане)
+  ["tree2", 2.0, 3.75, 110], ["tree1", 3.8, 2.85, 120], ["tree4", 2.3, 4.6, 105], ["tree3", 5.6, 3.1, 115],
+  ["tree4", 2.75, 5.95, 112], ["bush1", 6.9, 4.5, 120], ["bush3", 9.8, 5.9, 110], ["bush1", 4.2, 7.3, 125],
+  ["ghouse", 10.7, 2.75, 0], ["tnt", 8.9, 2.35, 120, true], ["goblin", 9.0, 3.5, 110], ["fire", 10.2, 3.45, 100],
+  ["knight", 6.3, 5.85, 120], ["sheep", 4.4, 6.35, 140], ["sheepg", 8.6, 6.6, 130, true], ["sheep", 6.1, 7.1, 150, true],
   ["wrock1", 0.5, 7.7, 110], ["wrock3", 12.2, 6.6, 120], ["wrock1", 11.3, 8.4, 100], ["wrock3", 6.4, 1.5, 115],
 ];
 
@@ -6269,7 +6271,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 30;
+const APP_VERSION = 31;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
