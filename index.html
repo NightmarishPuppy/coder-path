@@ -2018,19 +2018,20 @@ const LEVELS = [
   // поэтому без «если» не обойтись: в одном варианте тропу завалило, в другом — нет.
   // ifs — какие условия есть на уровне (wall — стена, goblin — гоблин).
   {
-    name: "Ручей на тропе",
+    name: "Перегороженная тропа",
     chapter: 4,
     isle: 2,
-    goal: "Новое: <b>if</b> — «если». У поля два варианта (кнопки 1 и 2 в углу), а программа одна — она должна пройти оба. В варианте 1 тропу перегородил ручей, в варианте 2 тропа чистая. Обход ручья уже написан под строкой [[if]] — «если справа стена». Это не цикл: строки под <b>if</b> выполняются один раз и только когда справа стена, а потом код идёт дальше. В варианте 2 стены нет — обход пропускается, и рыцарю не хватает двух шагов. Добавь <b>else</b> — «иначе», что делать, если стены нет: нажми на номер строки с <b>if</b>, потом «＋ иначе», потом → и цифру 2. Получится [[else]].",
-    commands: ["moveRight", "moveDown", "moveUp"],
+    goal: "Новое: <b>if</b> — «если». У поля два варианта (кнопки 1 и 2 в углу), а программа одна — она должна пройти оба. В варианте 1 тропа справа перегорожена и надо спуститься на клетку вниз, в варианте 2 — нет. Под строкой [[if]] — «если справа стена» — пока пусто. Что положишь под неё, рыцарь сделает, только когда справа стена; если стены нет, это пропускается, и код идёт дальше. Нажми на номер строки с <b>if</b> и кнопку ↓.",
+    commands: ["moveRight", "moveDown"],
+    newCommands: [],
+    codeRev: 2,          // уровень переделан (без else) — старый сохранённый код не подхватываем
     ifs: ["wall"],
-    ifButton: true,
-    par: 6, good: 7,
+    par: 3, good: 4,
     maps: [
       [
         "#######",
-        "S..#..E",
-        "##...##",
+        "S..####",
+        "##....E",
       ],
       [
         "#######",
@@ -2039,8 +2040,8 @@ const LEVELS = [
       ],
     ],
     starter: {
-      py: "move_right(2)\nif wall_right():\n    move_down()\n    move_right(2)\n    move_up()\nmove_right(2)\n",
-      js: "moveRight(2);\nif (wallRight()) {\n  moveDown();\n  moveRight(2);\n  moveUp();\n}\nmoveRight(2);\n",
+      py: "move_right(2)\nif wall_right():\nmove_right(4)\n",
+      js: "moveRight(2);\nif (wallRight()) {\n}\nmoveRight(4);\n",
     },
   },
 ];
@@ -2056,9 +2057,6 @@ function langify(html) {
     : "Подсказка: внутри цикла только то, что стоит до скобки <code>}</code>. Выбери её номер и нажми «↑ выше».");
   // если/иначе: как это пишется в языке игрока
   html = html.replace("[[if]]", lang === "py" ? "<code>if wall_right():</code>" : "<code>if (wallRight()) {</code>");
-  html = html.replace("[[else]]", lang === "py"
-    ? "строка <code>else:</code> под строкой <code>if</code> (без сдвига), а под ней со сдвигом <code>move_right(2)</code>"
-    : "<code>} else {</code> после обхода, внутри <code>moveRight(2);</code> и закрывающая <code>}</code>");
   if (lang === "py") html = html.replace(new RegExp(`\\b(${ALL_COMMANDS.join("|")})\\b`, "g"), (n) => DIRS[n].py);
   if (lang === "py") html = html.replace(new RegExp(`\\b(${COND_NAMES.join("|")})\\b`, "g"), (n) => CONDS[n].py);
   return html;
@@ -4476,14 +4474,6 @@ function selectLine(n) {
 // Команда на выбранной строке: заменить имя (число сохраняем),
 // на пустой строке — вписать команду, на строке цикла — добавить команду внутрь
 function putCommandOnLine(name) {
-  const ifm = (codeEl.value.split("\n")[selLine - 1] ?? "").match(IF_LINE);
-  if (ifm) {                       // выбрана рамка «если»: стрелка — в какую сторону смотреть
-    const move = PY_TO_JS[name] || name;
-    const old = CONDS[condKey(ifm[2])];
-    const c = COND_NAMES.find((k) => CONDS[k].what === old.what && CONDS[k].move === move);
-    if (c) editLines((lines) => { lines[selLine - 1] = lines[selLine - 1].replace(ifm[2], condDisp(c)); });
-    return;
-  }
   editLines((lines) => {
     const i = selLine - 1;
     const line = lines[i] ?? "";
@@ -4675,6 +4665,7 @@ function pyToJs(code) {
   const out = [];
   const stack = [0];        // отступы открытых блоков
   let expectIndent = 0;     // номер строки с двоеточием, после которой ждём сдвиг
+  let expectIf = false;     // это была строка if: пустая рамка «если» — не ошибка, она просто ничего не делает
 
   for (let i = 0; i < src.length; i++) {
     const n = i + 1;
@@ -4688,6 +4679,7 @@ function pyToJs(code) {
     const text = body.trim();
     let closers = "";
 
+    if (expectIndent && expectIf && indent <= stack[stack.length - 1]) { closers = "} "; expectIndent = 0; }
     if (expectIndent) {
       if (indent <= stack[stack.length - 1]) {
         throw pyError(expectIndent, "Под строкой с двоеточием нужна хотя бы одна команда со сдвигом вправо");
@@ -4711,19 +4703,19 @@ function pyToJs(code) {
     if ((m = text.match(/^(if|elif)\s+(.+):$/))) {
       if (m[1] === "elif" && !closers) throw pyError(n, "elif должен стоять под своим if, без сдвига");
       js = `${m[1] === "elif" ? "else if" : "if"} (${pyCond(m[2])}) {`;
-      expectIndent = n;
+      expectIndent = n; expectIf = true;
     } else if (/^else\s*:$/.test(text)) {
       if (!closers) throw pyError(n, "else должен стоять под своим if, без сдвига");
       js = "else {";
-      expectIndent = n;
+      expectIndent = n; expectIf = true;
     } else if ((m = text.match(/^while\s+(.+):$/))) {
       js = `while (${m[1].replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false")}) {`;
-      expectIndent = n;
+      expectIndent = n; expectIf = false;
     } else if ((m = text.match(/^for\s+([A-Za-z_]\w*)\s+in\s+range\((.+)\):$/))) {
       const args = m[2].split(",").map((s) => s.trim());
       const [from, to] = args.length > 1 ? args : ["0", args[0]];
       js = `for (let ${m[1]} = ${from}; ${m[1]} < ${to}; ${m[1]}++) {`;
-      expectIndent = n;
+      expectIndent = n; expectIf = false;
     } else if (/^(while|for|if|else|elif)\b/.test(text) && !text.endsWith(":")) {
       throw pyError(n, "В конце этой строки нужно двоеточие :");
     } else if (text.endsWith(":")) {
@@ -4737,7 +4729,8 @@ function pyToJs(code) {
     }
     out.push(" ".repeat(indent) + closers + js + comment);
   }
-  if (expectIndent) throw pyError(expectIndent, "Под строкой с двоеточием нужна хотя бы одна команда со сдвигом вправо");
+  if (expectIndent && expectIf) out.push("}");
+  else if (expectIndent) throw pyError(expectIndent, "Под строкой с двоеточием нужна хотя бы одна команда со сдвигом вправо");
   out.push("} ".repeat(stack.length - 1)); // закрываем то, что осталось открытым
   return out.join("\n");
 }
@@ -4974,7 +4967,7 @@ const BLOCK_GOALS = {
   "Гоблин": "Новое: <b>гоблин</b>! Он загородил тропу. Нажми <b>⚔</b>: рыцарь ударит того, кто стоит рядом. Потом иди к двери: <b>→</b> и цифра <b>5</b>. Не мешкай: если стоять рядом и не бить, гоблин ударит сам. У рыцаря три сердечка.",
   "Крепкий гоблин": "Над этим гоблином два сердечка: ему нужно <b>два удара</b>, и после первого он успеет ударить в ответ. Плитки почти готовы. Нажми на плитку <b>⚔1</b>, потом цифру <b>2</b>: получится <b>⚔2</b>.",
   "Строй гоблинов": "Гоблины стоят через клетку. Удар и два шага повторяются: положи в рамку 🔁 плитки <b>⚔</b> и <b>→2</b>. Если рядом никого нет, рыцарь просто взмахнёт мечом.",
-  "Ручей на тропе": "Новое: рамка <b>❓ если</b>. У поля два варианта (кнопки <b>1</b> и <b>2</b> в углу), а программа одна — она должна пройти оба. Обход ручья уже лежит в рамке «если → стена». Это не повтор: то, что в рамке, рыцарь делает один раз и только когда справа стена, а потом идёт дальше по плиткам. Нажми на заголовок рамки и потом <b>＋ иначе</b>: положи туда то, что делать, если стены нет — <b>→2</b>.",
+  "Перегороженная тропа": "Новое: рамка <b>❓ если</b>. У поля два варианта (кнопки <b>1</b> и <b>2</b> в углу), а программа одна — она должна пройти оба. В варианте 1 тропа справа перегорожена и надо спуститься на клетку вниз, в варианте 2 — нет. Рамка «если → стена» пока пустая. Что положишь в неё, рыцарь сделает, только когда справа стена; если стены нет, рамка пропускается. Нажми на заголовок рамки и стрелку <b>↓</b>.",
   "Нехватка удара": "Плитки почти правильные, но одному гоблину не хватает удара. Запусти и посмотри, какой гоблин выдержит удар: сколько у него сердечек? Нажми на нужную плитку <b>⚔</b> и поставь число.",
 };
 
@@ -5807,19 +5800,19 @@ function drawLineBar() {
   const fr = frames.find((f) => f.start === selLine);
   // у рамки «если» можно добавить «иначе», если его ещё нет
   const after = fr ? lines[fr.end] ?? "" : "";
-  $("lb-else").hidden = !ifm || ELSE_LINE.test(after) || /^\s*elif\b/.test(after);
+  $("lb-else").hidden = !ifm || !L.elseButton || ELSE_LINE.test(after) || /^\s*elif\b/.test(after);
   const whats = L.ifs || [];
   $("lb-what").hidden = !ifm || whats.length < 2;
   if (ifm) {
     const k = CONDS[condKey(ifm[2])];
     $("lb-what").textContent = `${WHAT_RU[k.what]} ⇄ ${WHAT_RU[whats.find((w) => w !== k.what) || k.what]}`;
   }
-  $("lb-label").textContent = ifm ? "Стрелка — в какую сторону смотреть" : isElse ? "Рамка «иначе»: что делать, если нет"
+  $("lb-label").textContent = ifm ? "Стрелка кладёт шаг в рамку «если»" : isElse ? "Рамка «иначе»: что делать, если нет"
     : uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : `Строка ${selLine}`;
   $("lb-up").textContent = uiBlocks ? "◀ раньше" : "↑ выше";
   // сдвиг строки в блоках — это «в цикл» и «из цикла»
   const setTxt = (el, t) => { for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) { n.textContent = t; return; } };
-  const frameWord = L.ifButton ? ["из рамки", "в рамку"] : ["из цикла", "в цикл"];
+  const frameWord = L.ifs ? ["из рамки", "в рамку"] : ["из цикла", "в цикл"];
   setTxt($("lb-out"), uiBlocks ? frameWord[0] : "влево");
   setTxt($("lb-in"), uiBlocks ? frameWord[1] : "вправо");
   document.querySelector(".shift-label").textContent = uiBlocks ? "цикл" : "сдвиг";
@@ -7112,7 +7105,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 37;
+const APP_VERSION = 38;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
