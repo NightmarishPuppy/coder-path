@@ -317,6 +317,11 @@ html.still .itemstag .khearts.hurt img { animation: none; }
 .route .roundmark rect { fill: var(--loop); stroke: #1b1530; stroke-width: 0.03; }
 .route .roundmark text { font-family: var(--font-body); font-weight: 800; font-size: 0.23px; fill: #1b1530; text-anchor: middle; dominant-baseline: central; }
 .route .roundmark.endless rect { fill: var(--bad); }
+.route .fight-bg { fill: #1b1530b3; stroke: #fff6; stroke-width: 0.02; }
+.route .fight .sw { transform-box: fill-box; transform-origin: 50% 50%; animation: sw-clash 1.2s ease-in-out infinite; }
+.route .fight.now .sw { animation-duration: 0.45s; }
+@keyframes sw-clash { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-12deg); } }
+html.still .route .fight .sw { animation: none; }
 .route .trace { stroke: #f3eedf; stroke-width: 0.07; stroke-linecap: round; stroke-dasharray: 0.02 0.12; opacity: 0.85; }
 .route .roundmark.bad rect { fill: #ffb0a8; stroke: #c0392b; stroke-width: 0.045; }
 .route .blocked .try, .route .blocked .try-under { fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -4591,19 +4596,25 @@ function drawRoute(p, activeIdx = -1) {
       svg("line", { class: "x", x1: ax, y1: ay, x2: bx, y2: by }, g);
     }
   }
-  // Удары — как в стратегиях: крестик стоит ПЕРЕД гоблином, на границе клеток, откуда рыцарь бьёт,
-  // а сам гоблин остаётся открытым. Рядом — номер команды. Гоблин побеждён — крестик убираем.
+  // Удары — как в стратегиях: скрещённые мечи стоят ПЕРЕД гоблином, на границе клеток, откуда
+  // рыцарь бьёт, а сам гоблин остаётся открытым. Рядом — номер команды. Гоблин побеждён — мечи убираем.
+  // (Красный крестик значит «ошибка, сюда нельзя» — для битвы он не годится.)
   shown.forEach(({ cmd, i }) => {
     if (cmd.name !== "attack") return;
     const t = cmd.hits.find((h) => h.target);
     if (!t) return;
     const ex = (cmd.from.x + t.at.x) / 2 + 0.5, ey = (cmd.from.y + t.at.y) / 2 + 0.5;
     if (i >= activeIdx || activeIdx < 0) {
-      const r = 0.12;
-      ["cross-under", "cross"].forEach((cls) => {
-        svg("line", { class: cls, x1: ex - r, y1: ey - r, x2: ex + r, y2: ey + r }, markEl);
-        svg("line", { class: cls, x1: ex + r, y1: ey - r, x2: ex - r, y2: ey + r }, markEl);
-      });
+      // один меч из набора и его зеркальная копия — вместе получаются скрещённые мечи;
+      // они чуть покачиваются навстречу друг другу, как в схватке
+      const sz = 0.6, g = svg("g", { class: "fight" + (i === activeIdx ? " now" : "") }, markEl);
+      svg("circle", { class: "fight-bg", cx: ex, cy: ey, r: 0.33 }, g);
+      const one = (parent) => {
+        const w = svg("g", { class: "sw" }, parent);
+        svg("image", { href: TS.ui_sword, x: ex - sz / 2, y: ey - sz / 2, width: sz, height: sz, style: "image-rendering:pixelated" }, w);
+      };
+      one(g);
+      one(svg("g", { transform: `translate(${2 * ex} 0) scale(-1 1)` }, g));
     }
     const state = i === activeIdx ? " now" : "";
     const bx = ex + (t.at.y !== cmd.from.y ? 0.3 : 0), by = ey - (t.at.y !== cmd.from.y ? 0 : 0.32);
@@ -6283,7 +6294,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 32;
+const APP_VERSION = 33;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
