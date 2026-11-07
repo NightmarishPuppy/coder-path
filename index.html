@@ -788,10 +788,10 @@ html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: n
 #levelview.blk .undo-row, #levelview.blk .actions { display: contents; }
 #levelview.blk #undo-cmd, #levelview.blk #redo-cmd { order: 4; }
 #levelview.blk #run, #levelview.blk #reset { order: 5; }
-#levelview.blk #undo-cmd { flex: 1.45 1 0; min-width: 0; font-size: 13px; padding: 8px 6px; gap: 5px; }
+#levelview.blk #undo-cmd { flex: 1.15 1 0; min-width: 0; font-size: 13px; padding: 6px 8px; gap: 5px; line-height: 1.15; }
 #levelview.blk #undo-cmd svg { width: 18px; height: 18px; }
 #levelview.blk #redo-cmd { flex: 0 0 auto; }
-#levelview.blk #run { flex: 1 1 0; min-width: 0; }
+#levelview.blk #run { flex: 1 1 0; min-width: 0; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
 #levelview.blk #reset { flex: 0 0 auto; padding: 8px 12px; font-size: 20px; }
 #levelview.blk .scroll { order: 6; }
 #levelview.blk .hint { order: 7; }
@@ -1026,6 +1026,11 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
 .toprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .toprow .backbtn { margin-bottom: 0; }
 .soundbar { display: inline-flex; gap: 6px; margin-left: auto; }
+/* узкий экран: в шапке уровня у «Музыки» и «Звуков» только значки — иначе кнопки наезжают друг на друга */
+@media (max-width: 430px) {
+  #levelview .snd span { display: none; }
+  #levelview .snd:not(.gearbtn) { padding: 5px 9px; }
+}
 .snd {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 5px 10px 5px 7px;
@@ -2986,7 +2991,7 @@ function loadLevel(i) {
   codeEl.value = save.code[codeKey()] ?? (lang === "js" ? save.code[L.name] : undefined) ?? L.starter[lang];
   winBox.hidden = true;
   reset();
-  requestAnimationFrame(() => requestAnimationFrame(() => fitBoard(true)));
+  requestAnimationFrame(() => requestAnimationFrame(() => { fitText(); fitBoard(true); }));
 }
 
 // ===== Карта острова =====
@@ -4359,6 +4364,7 @@ function drawUndo() {
   const frameLine = selLine && /^\s*(while|for|if|elif|else)\b.*:\s*$/.test(codeEl.value.split("\n")[selLine - 1] ?? "");
   $("undo-label").textContent = selLine ? (uiBlocks ? (frameLine ? "Убрать рамку" : "Удалить плитку") : `Удалить строку ${selLine}`) : "Отменить команду";
   btn.disabled = running || (!selLine && !hasCommand());
+  fitText();
 }
 $("undo-cmd").addEventListener("click", () => {
   sfx("tap");
@@ -5058,6 +5064,31 @@ function fitBoard(force = false) {
 // повернули экран — считаем заново; высота «гуляет» из-за адресной строки — не трогаем
 addEventListener("resize", () => requestAnimationFrame(() => fitBoard()));
 window.visualViewport?.addEventListener("resize", () => requestAnimationFrame(() => fitBoard()));
+
+// Слова на кнопке всегда целиком: если не влезают — шрифт уменьшается (не меньше 10 px),
+// с запасом по краям. Считается при открытии уровня, повороте экрана и смене надписи.
+const FIT_TEXT = ["run", "undo-cmd", "redo-cmd", "reset", "to-map"];
+function fitText() {
+  for (const id of FIT_TEXT) {
+    const el = $(id);
+    if (!el || el.hidden || !el.offsetWidth) continue;
+    el.style.fontSize = "";
+    const cs = getComputedStyle(el);
+    // сколько места внутри кнопки (без внутренних отступов) и сколько занимает содержимое
+    const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 6;
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    let size = parseFloat(cs.fontSize);
+    el.style.whiteSpace = "";
+    while (r.getBoundingClientRect().width > room && size > 12) {
+      size -= 0.5;
+      el.style.fontSize = size + "px";
+    }
+    // всё равно не влезает (очень узкий экран) — две строки вместо крошечного шрифта
+    if (r.getBoundingClientRect().width > room && el.id === "undo-cmd") el.style.whiteSpace = "normal";
+  }
+}
+addEventListener("resize", () => requestAnimationFrame(fitText));
 
 function applyUi() {
   $("levelview").classList.toggle("blk", uiBlocks);
@@ -7086,7 +7117,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 42;
+const APP_VERSION = 43;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
