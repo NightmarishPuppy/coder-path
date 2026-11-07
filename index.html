@@ -382,6 +382,19 @@ html.still .hero.bump .kwrap { animation: none; }
   box-shadow: 0 2px 6px #0007;
 }
 .loopview[hidden] { display: none; }
+/* Варианты поля: одна программа должна пройти их все. Кнопки 1, 2, 3 в левом верхнем углу поля */
+.variants { position: absolute; top: 6px; left: 6px; z-index: 7; display: flex; gap: 4px; padding: 3px;
+  border-radius: 20px; background: #13151bcc; box-shadow: 0 2px 6px #0007; }
+.variants button { min-width: 34px; height: 32px; padding: 0 8px; border-radius: 16px; border: 2px solid #5fd3a6;
+  background: transparent; color: #5fd3a6; font-family: var(--font-display); font-size: 15px; font-weight: 700; cursor: pointer; }
+.variants button.on { background: #5fd3a6; color: #10241c; }
+.variants button.done::after { content: " ✓"; }
+.variants button:disabled { cursor: default; }
+.varflash { position: absolute; left: 50%; top: 42%; z-index: 8; translate: -50% -50%; padding: 8px 16px; border-radius: 14px;
+  background: #13151be6; color: #5fd3a6; font-family: var(--font-display); font-size: 20px; font-weight: 700; pointer-events: none; white-space: nowrap;
+  animation: varflash 1.3s ease forwards; }
+@keyframes varflash { 0% { opacity: 0; scale: 0.8; } 15%, 70% { opacity: 1; scale: 1; } 100% { opacity: 0; } }
+html.still .varflash { animation: none; opacity: 1; }
 .loopview svg { width: 24px; height: 24px; fill: currentColor; }
 .loopview.on { background: var(--loop); color: #1b1530; }
 .roundtag {
@@ -603,6 +616,7 @@ html.still .hero.bump .kwrap { animation: none; }
 .tk-cmd-a { color: var(--sword); }
 .tk-num { color: var(--num); font-weight: 600; }
 .tk-kw { color: var(--loop); font-weight: 600; }
+.tk-cond { color: #5fd3a6; font-weight: 600; }
 .tk-com { color: var(--muted); font-style: italic; }
 .tk-p { color: var(--muted); }
 textarea#code {
@@ -684,13 +698,40 @@ html.still .tile.err { animation: none; }
   border: 0; border-radius: 8px; background: var(--loop); color: #1b1530; font-weight: 700; font-size: 15px; cursor: pointer;
 }
 .bloop > .lhead.sel { box-shadow: 0 0 0 3px #fff6; }
-.bloop .lempty { color: var(--loop); font-size: 13px; padding: 0 6px; }
+.bloop .lempty, .bif .lempty { color: var(--loop); font-size: 13px; padding: 0 6px; }
+.bif .lempty { color: #5fd3a6; }
+/* Рамка «если»: зелёная, с заголовком-условием; «иначе» — вторая половина рамки */
+.bif {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 6px; border: 2px solid #5fd3a6; border-radius: 12px; background: #5fd3a614; flex-basis: 100%;
+}
+.bif > .brk { flex-basis: 100%; height: 0; }
+.bif > .ihead {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 10px;
+  border: 0; border-radius: 8px; background: #5fd3a6; color: #10241c; font-weight: 700; font-size: 15px; cursor: pointer;
+}
+.bif > .ihead .ar { font-family: var(--font-display); font-size: 22px; line-height: 1; }
+.bif > .ihead.else { background: #2c6b55; color: #e9fff6; }
+.bif.err { border-style: dashed; border-color: var(--bad); background: var(--bad-bg); }
+.bif > .ihead.now { box-shadow: 0 0 0 3px var(--torch); }
+.bif > .ihead.yes::before, .bif > .ihead.no::before { position: absolute; top: -9px; right: -6px; padding: 0 5px; border-radius: 8px;
+  font-size: 11px; line-height: 16px; background: #13151b; color: #5fd3a6; border: 1px solid #5fd3a6; }
+.bif > .ihead.yes::before { content: "да"; }
+.bif > .ihead.no::before { content: "нет"; color: var(--muted); border-color: var(--muted); }
+.bif > .ihead.sel {
+  background: #ffd54a !important; color: #241a08 !important;
+  transform: translateY(-3px) scale(1.08); z-index: 2; animation: tile-sel 1s ease-in-out infinite;
+}
+.bif > .ihead.sel::after { content: "▼"; position: absolute; top: -17px; left: 50%; translate: -50% 0;
+  font-size: 13px; line-height: 1; color: #ffd54a; text-shadow: 0 1px 0 #000; animation: tile-arrow 1s ease-in-out infinite; }
+html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: none; box-shadow: 0 0 0 4px #ffd54a99; }
+#levelview.blk .chips .chip.ifchip { flex: 0 0 auto; padding: 0 10px; font-size: 15px !important; border-color: #5fd3a6; color: #5fd3a6; }
 /* палитра: крупные стрелки */
 #levelview.blk .chips .chip:not(.num) { font-family: var(--font-display); font-size: 26px; min-width: 64px; height: 56px; padding: 0 14px; border-style: solid; border-width: 2px; }
 #levelview.blk .chips .chip.num { height: 44px; font-size: 18px; }
 #levelview.blk .chips .chip.loopchip { font-size: 15px; }
 /* ряды кнопок ровные: стрелки и цифры делят ширину поровну, «повторять» — в ряду стрелок */
-#levelview.blk .chips .chip:not(.num):not(.loopchip) { flex: 1 1 0; min-width: 44px; padding: 0 4px; }
+#levelview.blk .chips .chip:not(.num):not(.loopchip):not(.ifchip) { flex: 1 1 0; min-width: 44px; padding: 0 4px; }
 #levelview.blk .chips .chip.loopchip { flex: 0 0 auto; padding: 0 10px; font-size: 15px !important; }
 #levelview.blk .chips .chip.num { flex: 1 1 0; min-width: 0; padding: 0; }
 @media (max-width: 819px) {
@@ -1434,6 +1475,8 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
             <button class="chip" id="lb-out" aria-label="Сдвинуть строку влево"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg>влево</button>
             <button class="chip" id="lb-in" aria-label="Сдвинуть строку вправо">вправо<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg></button>
           </span>
+          <button class="chip" id="lb-else" hidden>＋ иначе</button>
+          <button class="chip" id="lb-what" hidden></button>
           <button class="chip" id="lb-done">✓ готово</button>
         </div>
       </div>
@@ -1488,8 +1531,24 @@ const ANY_NAME = [...ALL_COMMANDS, ...PY_NAMES].join("|");      // для пои
 const PY_TO_JS = Object.fromEntries(ALL_COMMANDS.map((c) => [DIRS[c].py, c]));
 const MAX_STEPS = 10;
 
+// Условия для if: «справа стена», «справа гоблин» и так же слева, снизу, сверху.
+// В Python: wall_right(), goblin_right(); в JavaScript: wallRight(), goblinRight().
+// Это не команды (рыцарь не двигается и звёзды за них не отнимаются), а вопросы к полю.
+const CONDS = {};
+for (const [d, ru] of [["Right", "справа"], ["Left", "слева"], ["Down", "снизу"], ["Up", "сверху"]]) {
+  const dir = DIRS["move" + d];
+  CONDS["wall" + d] = { what: "wall", move: "move" + d, dx: dir.dx, dy: dir.dy, arrow: dir.arrow, ru, py: "wall_" + d.toLowerCase() };
+  CONDS["goblin" + d] = { what: "goblin", move: "move" + d, dx: dir.dx, dy: dir.dy, arrow: dir.arrow, ru, py: "goblin_" + d.toLowerCase() };
+}
+const COND_NAMES = Object.keys(CONDS);
+const COND_ANY = [...COND_NAMES, ...COND_NAMES.map((c) => CONDS[c].py)].join("|");
+const condKey = (name) => COND_NAMES.find((c) => c === name || CONDS[c].py === name);
+const WHAT_RU = { wall: "стена", goblin: "гоблин" };
+
 let lang = "py"; // "py" или "js"
 const disp = (name) => (lang === "py" ? DIRS[name].py : name); // как команда пишется в текущем языке
+const condDisp = (c) => (lang === "py" ? CONDS[c].py : c);
+const levelConds = () => (L?.ifs ? COND_NAMES.filter((c) => L.ifs.includes(CONDS[c].what)) : []);
 
 // ===== 2. Уровни =====
 // S — старт, E — выход, # — стена, . — пол.
@@ -1502,6 +1561,8 @@ const CHAPTERS = [
   { name: "Лес", topic: "циклы" },
   { name: "Пещеры и шахты", topic: "ключи и монеты" },
   { name: "Скалы гоблинов", topic: "гоблины" },
+  // Второй остров (isle: 2) — условия «если»
+  { name: "Деревня у причала", topic: "условия «если»", isle: 2 },
 ];
 
 // Уровни по порядку на карте.
@@ -1951,6 +2012,37 @@ const LEVELS = [
     ],
     starter: { py: "", js: "" },
   },
+
+  // ========== Второй остров: условия «если» ==========
+  // maps — несколько вариантов поля. Одна и та же программа должна пройти их все,
+  // поэтому без «если» не обойтись: в одном варианте тропу завалило, в другом — нет.
+  // ifs — какие условия есть на уровне (wall — стена, goblin — гоблин).
+  {
+    name: "Ручей на тропе",
+    chapter: 4,
+    isle: 2,
+    goal: "Новое: <b>if</b> — «если». У поля два варианта (кнопки 1 и 2 в углу), и одна программа должна пройти оба. В варианте 1 тропу перегородил ручей — нужен обход, в варианте 2 тропа чистая. Обход уже написан под <code>if wallRight():</code> — «если справа стена». Допиши <code>else:</code> — «иначе»: что делать, если стены нет.",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 6, good: 7,
+    maps: [
+      [
+        "#######",
+        "S..#..E",
+        "##...##",
+      ],
+      [
+        "#######",
+        "S.....E",
+        "#######",
+      ],
+    ],
+    starter: {
+      py: "move_right(2)\nif wall_right():\n    move_down()\n    move_right(2)\n    move_up()\nmove_right(2)\n",
+      js: "moveRight(2);\nif (wallRight()) {\n  moveDown();\n  moveRight(2);\n  moveUp();\n}\nmoveRight(2);\n",
+    },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -2340,11 +2432,14 @@ function isOpen(i) {
 }
 // Какой уровень советуем следующим: первый открытый и ещё не пройденный
 function suggested() {
-  const i = LEVELS.findIndex((lv, k) => isOpen(k) && !passed(lv.name));
-  return i === -1 ? LEVELS.length - 1 : i;
+  const i = LEVELS.findIndex((lv, k) => !lv.isle && isOpen(k) && !passed(lv.name));
+  return i === -1 ? indexOf(LAST_LEVEL().name) : i;
 }
 const indexOf = (name) => LEVELS.findIndex((lv) => lv.name === name);
 let levelIdx = Math.max(0, indexOf(save.currentName) );
+// Варианты поля (у уровня есть maps): какой показан и какие уже пройдены этим кодом
+let variant = 0, variantsDone = new Set();
+let curCheck = null;   // проверка условия, которую сейчас показываем при запуске
 let L = null;
 let W = 0, H = 0;
 let start, exitPos, exitCell, routeEl, markEl, heroEl, roundTag, itemsTag;
@@ -2790,6 +2885,7 @@ function themeFor(i) {
   const lv = LEVELS[i];
   const inCh = LEVELS.filter((l) => l.chapter === lv.chapter);
   const t = inCh.length > 1 ? inCh.indexOf(lv) / (inCh.length - 1) : 0; // 0 — начало главы, 1 — конец
+  if (lv.isle === 2) return { name: "beach", t: 0.85 };
   return { name: ["beach", "forest", "cave", "mountain"][lv.chapter] || "mountain", t };
 }
 // Что в клетке: ground — земля (sand, grass, mix, water, rock), over — что стоит сверху
@@ -2866,6 +2962,8 @@ function loadLevel(i) {
   applyUi();
 
   selLine = null;
+  variant = 0; variantsDone = new Set();
+  if (L.maps) L.map = L.maps[0];
   buildBoard();
   buildChips();
   // для JavaScript подхватываем код, сохранённый до появления Python
@@ -3551,7 +3649,8 @@ function showView(v) {
   if (v === "map") renderMap();
   if (v === "arch") renderArch();
   // у каждой главы своя мелодия; на карте играет мелодия последней главы, где играли
-  const ci = v === "level" ? L.chapter : LEVELS[Math.max(0, indexOf(save.currentName))].chapter;
+  const cur = v === "level" ? L : LEVELS[Math.max(0, indexOf(save.currentName))];
+  const ci = cur.isle ? 0 : cur.chapter;
   if (typeof setTune === "function") setTune(ci);
   window.scrollTo(0, 0);
   if ("speechSynthesis" in window) stopSpeech(); // ушли с уровня — замолкаем
@@ -3597,6 +3696,7 @@ function renderMap() {
   // Точки уровней — круглые кнопки из набора
   const next = suggested();
   LEVELS.forEach((lv, i) => {
+    if (lv.isle) return;              // уровни других островов — не на этой карте
     const [x, y] = NODE_POS[i];
     const open = isOpen(i), stars = save.stars[lv.name] || 0;
     const num = LEVELS.filter((l, k) => l.chapter === lv.chapter && k <= i && !l.challenge).length;
@@ -3626,7 +3726,9 @@ function renderMap() {
   }
 
   // Рыцарь стоит у последнего уровня, где играли
-  const here = indexOf(save.currentName) >= 0 ? indexOf(save.currentName) : next;
+  // (если последний уровень — на другом острове, рыцарь ждёт у крепости, откуда мост)
+  const cur = indexOf(save.currentName);
+  const here = cur < 0 ? next : LEVELS[cur].isle ? indexOf(LAST_LEVEL().name) : cur;
   const [hx, hy] = NODE_POS[here];
   add(`<use id="map-hero" href="#im-hero" x="${hx - 2}" y="${hy - 52}" width="44" height="44" aria-hidden="true"/>`);
 
@@ -3647,8 +3749,9 @@ function renderMap() {
     ring.remove();
     $("island").after(d);
   }
-  const total = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
-  $("map-progress").innerHTML = `Звёзд собрано: <b>${total}</b> из ${LEVELS.length * 3}`;
+  const isle1 = LEVELS.filter((lv) => !lv.isle);
+  const total = isle1.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
+  $("map-progress").innerHTML = `Звёзд собрано: <b>${total}</b> из ${isle1.length * 3}`;
   $("sync-move").hidden = !syncOn || total > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
 }
@@ -3680,7 +3783,7 @@ function onMapTap(e) {
 // рыцарь бежит по мосту, камера едет за ним, облака смыкаются и расходятся —
 // и открывается архипелаг: острова-миры, соединённые мостами. Дальние — под облаками.
 const BRIDGE_AT = [290, 66];                     // кнопка моста на карте (единицы карты)
-const LAST_LEVEL = () => LEVELS[LEVELS.length - 1];
+const LAST_LEVEL = () => LEVELS.filter((lv) => !lv.isle).at(-1);   // «Перевал»
 const bridgeOpen = () => save.dev || (save.stars[LAST_LEVEL().name] || 0) > 0;
 let islandRun = false;
 
@@ -3747,7 +3850,7 @@ async function startIslandRun() {
       const r = wrap.getBoundingClientRect();
       return Math.max(0, r.top + scrollY + y * (r.height / vbH) - innerHeight * 0.55);
     };
-    const [sx, sy] = NODE_POS[LEVELS.length - 1];
+    const [sx, sy] = NODE_POS[indexOf(LAST_LEVEL().name)];
     const pts = [[sx, sy], [BRIDGE_AT[0], sy], [BRIDGE_AT[0], -50]];
     put(sx, sy);
     // 1. Камера плавно подъезжает к крепости
@@ -3952,8 +4055,9 @@ function putArchHero(x, y, cls = "idle", flip = false) {
 
 function renderArch() {
   const sc = startArchScene();
-  const total = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
-  $("arch-progress").innerHTML = `Звёзд собрано: <b>${total}</b> из ${LEVELS.length * 3}`;
+  const isle1 = LEVELS.filter((lv) => !lv.isle);
+  const total = isle1.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
+  $("arch-progress").innerHTML = `Звёзд собрано: <b>${LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0)}</b> из ${LEVELS.length * 3}`;
   const rib = (t, x, y) => {
     const w = t.length * 12 + 18, h = 30, cap = 20;
     return `<g aria-hidden="true"><use href="#ar-rib0" x="${x - w / 2 - cap}" y="${y - h / 2}" width="${cap}" height="${h}"/>`
@@ -3967,9 +4071,9 @@ function renderArch() {
     <ellipse class="hit" data-isle="2" ${e(1)} role="button" tabindex="0" aria-label="Новый остров, скоро"/>
     ${[2, 3, 4].map((i) => `<ellipse class="hit" data-isle="cloud" ${e(i)} role="button" tabindex="0" aria-label="Остров под облаками"/>`).join("")}
     ${rib("ОСТРОВ ПРОГРАММИСТОВ", 8.6 * AT, 30.6 * AT)}
-    <text class="sub" x="${8.6 * AT}" y="${29.3 * AT}">★ ${total} из ${LEVELS.length * 3}</text>
+    <text class="sub" x="${8.6 * AT}" y="${29.3 * AT}">★ ${total} из ${isle1.length * 3}</text>
     ${rib("НОВЫЙ ОСТРОВ", 12.8 * AT, 6.2 * AT)}
-    <text class="sub" x="${7.2 * AT}" y="${15.8 * AT}">скоро · условия «если»</text>`;
+    <text class="sub" x="${7.2 * AT}" y="${15.8 * AT}">${bridgeOpen() ? "условия «если» · пробный уровень" : "условия «если»"}</text>`;
   sc.ready.then(() => { if (!islandRun) putArchHero(...ARCH_SPOT[bridgeOpen() ? 2 : 1]); });
 }
 
@@ -4003,7 +4107,11 @@ function onArchTap(e) {
   if (!h || islandRun) return;
   const which = h.dataset.isle;
   if (which === "1") { showView("map"); return; }
-  if (which === "2") floatToast(bridgeOpen() ? "Новый остров: здесь рыцарь научится решать «если впереди гоблин — бей, иначе иди». Скоро!" : "Сюда ведёт мост от крепости на вершине Острова программистов");
+  if (which === "2") {
+    // пока карты второго острова нет — сразу пробный уровень про «если»
+    if (bridgeOpen()) loadLevel(LEVELS.findIndex((lv) => lv.isle === 2));
+    else floatToast("Сюда ведёт мост от крепости на вершине Острова программистов");
+  }
   else floatToast("Этот остров пока скрыт облаками");
 }
 
@@ -4151,6 +4259,23 @@ function buildBoard() {
   });
   boardEl.appendChild(loopViewBtn);
 
+  // Кнопки вариантов поля: 1, 2, 3. Пройденный этим кодом вариант — с галочкой.
+  if (L.maps) {
+    const vb = document.createElement("div");
+    vb.className = "variants";
+    vb.id = "variants";
+    vb.setAttribute("role", "group");
+    vb.setAttribute("aria-label", "Варианты поля");
+    L.maps.forEach((_, k) => {
+      const b = document.createElement("button");
+      b.textContent = k + 1;
+      b.addEventListener("click", () => { if (running || k === variant) return; sfx("tap"); setVariant(k); });
+      vb.appendChild(b);
+    });
+    boardEl.appendChild(vb);
+    drawVariants();
+  }
+
   // Счётчик предметов
   // (он стоит над полем, а не на нём, чтобы не закрывать рыцаря)
   document.getElementById("itemstag")?.remove();
@@ -4240,6 +4365,17 @@ function buildChips() {
       onCodeChange();
     });
   }
+  if (L.ifButton) {
+    add("add-if", "new ifchip", uiBlocks ? "❓ если" : "? если", () => {
+      const c = condDisp(levelConds()[0]);
+      if (lang === "py") insertLine(`if ${c}():`);
+      else {
+        const code = codeEl.value.replace(/\s+$/, "");
+        codeEl.value = (code ? code + "\n" : "") + `if (${c}()) {\n\n}\n`;
+        onCodeChange();
+      }
+    });
+  }
   if (uiBlocks) { const br = document.createElement("span"); br.style.flexBasis = "100%"; chipsEl.appendChild(br); }
   [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
 }
@@ -4253,13 +4389,25 @@ const hasCommand = () => new RegExp(`\\b(${ANY_NAME})\\s*\\(`).test(codeEl.value
 function drawUndo() {
   const btn = $("undo-cmd");
   if (!btn) return;
-  $("undo-label").textContent = selLine ? (uiBlocks ? "Удалить плитку" : `Удалить строку ${selLine}`) : "Отменить команду";
+  const frameLine = selLine && /^\s*(while|for|if|elif|else)\b.*:\s*$/.test(codeEl.value.split("\n")[selLine - 1] ?? "");
+  $("undo-label").textContent = selLine ? (uiBlocks ? (frameLine ? "Убрать рамку" : "Удалить плитку") : `Удалить строку ${selLine}`) : "Отменить команду";
   btn.disabled = running || (!selLine && !hasCommand());
 }
 $("undo-cmd").addEventListener("click", () => {
   sfx("tap");
   const before = codeEl.value;
-  if (selLine) {
+  if (selLine && lang === "py" && /^\s*(while|for|if|elif|else)\b.*:\s*$/.test(codeEl.value.split("\n")[selLine - 1] ?? "")) {
+    const frames = findFrames(codeEl.value);
+    const fr = frames.find((f) => f.start === selLine);
+    editLines((lines) => {
+      const out = (a, b) => { for (let j = a; j < b; j++) lines[j] = lines[j].replace(/^ {1,4}/, ""); };
+      const els = /^\s*if\b/.test(lines[fr.start - 1]) && frames.find((f) => f.start === fr.end + 1 && /^\s*else\b/.test(lines[f.start - 1]));
+      if (els) { out(els.start, els.end); lines.splice(els.start - 1, 1); }
+      out(fr.start, fr.end);
+      lines.splice(fr.start - 1, 1);
+      selLine = null;
+    });
+  } else if (selLine) {
     editLines((lines) => {
       lines.splice(selLine - 1, 1);
       selLine = Math.min(selLine, lines.length) || null;
@@ -4322,6 +4470,14 @@ function selectLine(n) {
 // Команда на выбранной строке: заменить имя (число сохраняем),
 // на пустой строке — вписать команду, на строке цикла — добавить команду внутрь
 function putCommandOnLine(name) {
+  const ifm = (codeEl.value.split("\n")[selLine - 1] ?? "").match(IF_LINE);
+  if (ifm) {                       // выбрана рамка «если»: стрелка — в какую сторону смотреть
+    const move = PY_TO_JS[name] || name;
+    const old = CONDS[condKey(ifm[2])];
+    const c = COND_NAMES.find((k) => CONDS[k].what === old.what && CONDS[k].move === move);
+    if (c) editLines((lines) => { lines[selLine - 1] = lines[selLine - 1].replace(ifm[2], condDisp(c)); });
+    return;
+  }
   editLines((lines) => {
     const i = selLine - 1;
     const line = lines[i] ?? "";
@@ -4332,7 +4488,7 @@ function putCommandOnLine(name) {
     } else if (line.trim() === "") {
       lines[i] = indent + name + (lang === "py" ? "()" : "();");
     } else {
-      const inside = /^\s*(while|for)\b/.test(line) ? INDENT() : 0;
+      const inside = /^\s*(while|for|if|elif|else)\b/.test(line) ? INDENT() : 0;
       lines.splice(i + 1, 0, indent + " ".repeat(inside) + name + (lang === "py" ? "()" : "();"));
       selLine = i + 2;
     }
@@ -4369,7 +4525,7 @@ function addLineBelow() {
     const i = selLine - 1;
     const line = lines[i] ?? "";
     let indent = line.match(/^ */)[0].length;
-    if (/^\s*(while|for)\b/.test(line)) indent += INDENT();
+    if (/^\s*(while|for|if|elif|else)\b/.test(line)) indent += INDENT();
     lines.splice(i + 1, 0, " ".repeat(indent));
     selLine = i + 2;
   });
@@ -4379,7 +4535,7 @@ function addLineBelow() {
 function insertLine(text) {
   const code = codeEl.value.replace(/\s+$/, "");
   const lines = code ? code.split("\n") : [];
-  const loops = findLoops(code).filter((lp) => lp.end === lines.length && lp.closed);
+  const loops = findFrames(code).filter((lp) => lp.end === lines.length && lp.closed);
   const lastLoop = loops.sort((a, b) => b.start - a.start)[0]; // самый внутренний
   if (lastLoop && lang === "py") {
     lines.push(" ".repeat(lastLoop.indent + 4) + text);
@@ -4451,6 +4607,44 @@ function findLoopsPy(code) {
   return loops;
 }
 
+// Рамки: циклы и «если»/«иначе» — куда кнопки кладут новые команды
+function findFrames(code) {
+  if (lang === "py") {
+    const lines = code.split("\n");
+    const indentOf = (l) => l.replace(/\t/g, "    ").match(/^ */)[0].length;
+    const out = [];
+    lines.forEach((line, i) => {
+      if (!/^\s*(while|for|if|elif|else)\b.*:\s*(#.*)?$/.test(line)) return;
+      const indent = indentOf(line);
+      let end = i + 1;
+      for (let j = i + 1; j < lines.length; j++) {
+        if (lines[j].trim() === "" || /^\s*#/.test(lines[j])) continue;
+        if (indentOf(lines[j]) <= indent) break;
+        end = j + 1;
+      }
+      out.push({ start: i + 1, end, closed: true, indent });
+    });
+    return out;
+  }
+  const out = [];
+  const re = /\b(?:(?:while|for|if)\s*\([^\n]*\)|else)\s*\{/g;
+  const lineOf = (idx) => code.slice(0, idx).split("\n").length;
+  let m;
+  while ((m = re.exec(code))) {
+    let depth = 0, i = m.index + m[0].length - 1;
+    for (; i < code.length; i++) {
+      if (code[i] === "{") depth++;
+      else if (code[i] === "}" && --depth === 0) break;
+    }
+    const startLine = lineOf(m.index);
+    out.push({ start: startLine, end: i < code.length ? lineOf(i) : code.split("\n").length, closed: i < code.length,
+      indent: code.split("\n")[startLine - 1].match(/^ */)[0].length });
+  }
+  return out;
+}
+const IF_LINE = new RegExp(`^\\s*(?:\\}\\s*)?(?:if|elif|else\\s+if)\\s*\\(?\\s*(not\\s+|!)?(${COND_ANY})\\s*\\(\\s*\\)\\s*\\)?\\s*[:{]?\\s*$`);
+const ELSE_LINE = /^\s*(?:\}\s*)?else\s*[:{]?\s*$/;
+
 function loopOfLine(loops, line) {
   let best = null;
   for (const lp of loops) if (line >= lp.start && line <= lp.end && (!best || lp.start > best.start)) best = lp;
@@ -4495,7 +4689,7 @@ function pyToJs(code) {
       stack.push(indent);
       expectIndent = 0;
     } else if (indent > stack[stack.length - 1]) {
-      throw pyError(n, "Лишний сдвиг вправо: сдвигать нужно только строки под while");
+      throw pyError(n, "Лишний сдвиг вправо: сдвигать нужно только строки под while или if");
     } else {
       while (indent < stack[stack.length - 1]) { stack.pop(); closers += "} "; }
       if (indent !== stack[stack.length - 1]) throw pyError(n, "Сдвиг не совпадает со строками выше");
@@ -4505,7 +4699,18 @@ function pyToJs(code) {
     if (opens !== shut) throw pyError(n, opens > shut ? "Не хватает закрывающей скобки )" : "Лишняя скобка )");
 
     let js, m;
-    if ((m = text.match(/^while\s+(.+):$/))) {
+    // условие Python → JavaScript: not → !, and → &&, or → ||
+    const pyCond = (c) => c.replace(/\bnot\s+/g, "!").replace(/\band\b/g, "&&").replace(/\bor\b/g, "||")
+      .replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");
+    if ((m = text.match(/^(if|elif)\s+(.+):$/))) {
+      if (m[1] === "elif" && !closers) throw pyError(n, "elif должен стоять под своим if, без сдвига");
+      js = `${m[1] === "elif" ? "else if" : "if"} (${pyCond(m[2])}) {`;
+      expectIndent = n;
+    } else if (/^else\s*:$/.test(text)) {
+      if (!closers) throw pyError(n, "else должен стоять под своим if, без сдвига");
+      js = "else {";
+      expectIndent = n;
+    } else if ((m = text.match(/^while\s+(.+):$/))) {
       js = `while (${m[1].replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false")}) {`;
       expectIndent = n;
     } else if ((m = text.match(/^for\s+([A-Za-z_]\w*)\s+in\s+range\((.+)\):$/))) {
@@ -4537,10 +4742,12 @@ function pyToJs(code) {
 // пустому циклу повесить браузер.
 function instrument(code) {
   const cmdRe = new RegExp(`\\b(${ANY_NAME})\\s*\\(`, "g");
+  const condRe = new RegExp(`\\b(${COND_ANY})\\s*\\(`, "g");
   return code
     .split("\n")
     .map((line, i) => line
       .replace(cmdRe, `$1(${i + 1}, `)
+      .replace(condRe, `$1(${i + 1}, `)
       .replace(/\b(while|for)\s*\(([^\n]*)\)\s*\{/, (m) => `${m} __loop(${i + 1});`))
     .join("\n");
 }
@@ -4564,6 +4771,7 @@ const STOP = { stop: true };
 
 function buildPlan(code) {
   const commands = [];
+  const checks = [];          // проверки условий: какое, ответ, где стоял рыцарь
   const loops = findLoops(code);
   const rounds = {};
   let pos = { ...start };
@@ -4681,16 +4889,26 @@ function buildPlan(code) {
     const js = lang === "py" ? pyToJs(code) : code;
     // Внутрь передаём только команды этого уровня (с именами текущего языка) и счётчик кругов
     const names = L.commands.map(disp);
-    const program = new Function("__loop", ...names, instrument(js));
-    program(__loop, ...L.commands.map(make));
+    // Условия смотрят на поле в ту минуту, когда до них дошёл код: где сейчас рыцарь
+    // и кто из гоблинов ещё стоит. Проверку запоминаем, чтобы показать её при запуске.
+    const conds = levelConds();
+    const ask = (c) => (line) => {
+      const k = CONDS[c], x = pos.x + k.dx, y = pos.y + k.dy;
+      const yes = k.what === "wall" ? isWall(x, y) : goblinAt(x, y);
+      checks.push({ cond: c, yes, line, at: { ...pos }, before: commands.length });
+      if (++ticks > 600) throw pyError(0, "Условие проверяется снова и снова, а рыцарь стоит на месте");
+      return yes;
+    };
+    const program = new Function("__loop", ...names, ...conds.map(condDisp), instrument(js));
+    program(__loop, ...L.commands.map(make), ...conds.map(ask));
   } catch (e) {
-    if (e === STOP) return { commands, crash, reachedAt, hpLeft, dead, endless };
+    if (e === STOP) return { commands, crash, reachedAt, hpLeft, dead, endless, checks };
     return { commands: [], error: explainError(e), errorLine: e.line };
   }
   // Код кончился, а рыцарь стоит рядом с гоблином — гоблин бьёт, пока рыцарь не упадёт
   const finalHits = strikes(null, true);
   if (dead) dead.final = true;
-  return { commands, crash, reachedAt, hpLeft, dead, finalHits };
+  return { commands, crash, reachedAt, hpLeft, dead, finalHits, checks };
 }
 
 // Переводим ошибки JavaScript на понятный язык
@@ -4716,7 +4934,7 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 const TOKEN_RE = new RegExp(
-  `\\b(${ANY_NAME})\\b|\\b(\\d+)\\b|\\b(while|for|in|range|True|False|true|false|let|pass)\\b|([(){};:+<=])`, "g");
+  `\\b(${ANY_NAME})\\b|\\b(\\d+)\\b|\\b(while|for|in|range|True|False|true|false|let|pass|if|elif|else|not|and|or)\\b|([(){};:+<=!&|])|\\b(${COND_ANY})\\b`, "g");
 const axisOf = (name) => DIRS[name]?.axis || DIRS[PY_TO_JS[name]]?.axis;
 
 function highlightLine(line) {
@@ -4727,7 +4945,7 @@ function highlightLine(line) {
   TOKEN_RE.lastIndex = 0;
   while ((m = TOKEN_RE.exec(code))) {
     html += escapeHtml(code.slice(last, m.index));
-    const cls = m[1] ? `tk-cmd-${axisOf(m[1])}` : m[2] ? "tk-num" : m[3] ? "tk-kw" : "tk-p";
+    const cls = m[1] ? `tk-cmd-${axisOf(m[1])}` : m[2] ? "tk-num" : m[3] ? "tk-kw" : m[5] ? "tk-cond" : "tk-p";
     html += `<span class="${cls}">${escapeHtml(m[0])}</span>`;
     last = m.index + m[0].length;
   }
@@ -4750,6 +4968,7 @@ const BLOCK_GOALS = {
   "Гоблин": "Новое: <b>гоблин</b>! Он загородил тропу. Нажми <b>⚔</b>: рыцарь ударит того, кто стоит рядом. Потом иди к двери: <b>→</b> и цифра <b>5</b>. Не мешкай: если стоять рядом и не бить, гоблин ударит сам. У рыцаря три сердечка.",
   "Крепкий гоблин": "Над этим гоблином два сердечка: ему нужно <b>два удара</b>, и после первого он успеет ударить в ответ. Плитки почти готовы. Нажми на плитку <b>⚔1</b>, потом цифру <b>2</b>: получится <b>⚔2</b>.",
   "Строй гоблинов": "Гоблины стоят через клетку. Удар и два шага повторяются: положи в рамку 🔁 плитки <b>⚔</b> и <b>→2</b>. Если рядом никого нет, рыцарь просто взмахнёт мечом.",
+  "Ручей на тропе": "Новое: рамка <b>❓ если</b>. У поля два варианта (кнопки <b>1</b> и <b>2</b> в углу), а программа одна — она должна пройти оба. Обход ручья уже лежит в рамке «если → стена»: рыцарь обойдёт, только если справа стена. Нажми на заголовок рамки и потом <b>＋ иначе</b>: положи туда то, что делать, если стены нет — <b>→2</b>.",
   "Нехватка удара": "Плитки почти правильные, но одному гоблину не хватает удара. Запусти и посмотри, какой гоблин выдержит удар: сколько у него сердечек? Нажми на нужную плитку <b>⚔</b> и поставь число.",
 };
 
@@ -4760,25 +4979,46 @@ const BLOCK_GOALS = {
 // (это выбор строки): кнопки-стрелки меняют её направление, цифры — число шагов.
 let uiBlocks = save.ui ? save.ui === "blocks" : true;   // по умолчанию — блоки
 const BLK_RE = new RegExp(`^(\\s*)(${ANY_NAME})\\s*\\(\\s*(\\d*)\\s*\\)\\s*;?\\s*(?:#.*|//.*)?$`);
+// Программа как дерево: плитки, рамки цикла и рамки «если» (с половиной «иначе»).
+// Что внутри рамки — решает сдвиг строки, как в Python.
 function parseBlocks(code) {
-  const items = [];
-  let loop = null;
+  const root = { body: [], indent: -1 };
+  const stack = [root];
+  let lastIf = null;
   code.split("\n").forEach((raw, k) => {
     const line = k + 1, t = raw.trim();
     if (!t || t.startsWith("#") || t.startsWith("//") || t === "}") return;
     const indent = raw.length - raw.trimStart().length;
+    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop();
+    const parent = stack[stack.length - 1];
+    if (ELSE_LINE.test(raw)) {
+      const prev = parent.body[parent.body.length - 1];
+      if (prev && prev.cond && !prev.els) {
+        prev.els = { line, body: [], indent };
+        stack.push(prev.els);
+        return;
+      }
+      parent.body.push({ bad: t, line });
+      return;
+    }
     if (/^while\s*\(?\s*(True|true)\s*\)?\s*[:{]?$/.test(t) || /^for\s+\w+\s+in\s+range\(/.test(t)) {
       const times = (t.match(/range\((\d+)\)/) || [])[1];
-      loop = { loop: true, line, times, body: [] };
-      items.push(loop);
+      const loop = { loop: true, line, times, body: [], indent };
+      parent.body.push(loop);
+      stack.push(loop);
+      return;
+    }
+    const im = raw.match(IF_LINE);
+    if (im) {
+      const node = { cond: condKey(im[2]), neg: !!im[1], line, body: [], indent };
+      parent.body.push(node);
+      stack.push(node);
       return;
     }
     const m = raw.match(BLK_RE);
-    const tile = m ? { name: m[2], n: Number(m[3] || 1), line } : { bad: t, line };
-    if (loop && indent > 0) loop.body.push(tile);
-    else { loop = indent > 0 ? loop : null; items.push(tile); }
+    parent.body.push(m ? { name: m[2], n: Number(m[3] || 1), line } : { bad: t, line });
   });
-  return items;
+  return root.body;
 }
 function tileHtml(t, active, err) {
   const cls = (t.line === selLine ? " sel" : "") + (t.line === active ? " now" : "") + (t.line === err ? " err" : "");
@@ -4787,15 +5027,28 @@ function tileHtml(t, active, err) {
   const d = DIRS[key];
   return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.n}"><span class="ar">${d.arrow}</span><span class="nn">${t.n}</span></button>`;
 }
+function blockHtml(it, active, err) {
+  const body = (list, empty) => list.length ? list.map((x) => blockHtml(x, active, err)).join("") : `<span class="lempty">${empty}</span>`;
+  if (it.loop) {
+    return `<div class="bloop${it.line === err ? " err" : ""}"><button class="lhead${it.line === selLine ? " sel" : ""}" data-line="${it.line}">🔁 ${it.times ? `повторить ${it.times}` : "повторять"}</button>`
+      + body(it.body, "кнопки положат команды сюда") + `</div>`;
+  }
+  if (it.cond) {
+    const k = CONDS[it.cond];
+    const st = (line) => (line === selLine ? " sel" : "") + (line === active ? " now" : "")
+      + (curCheck && curCheck.line === line ? (curCheck.yes ? " yes" : " no") : "");
+    const head = `<button class="ihead${st(it.line)}" data-line="${it.line}" aria-label="если ${it.neg ? "не " : ""}${k.ru} ${WHAT_RU[k.what]}">❓ если ${it.neg ? "не " : ""}<span class="ar">${k.arrow}</span>${WHAT_RU[k.what]}</button>`;
+    const els = it.els ? `<span class="brk"></span><button class="ihead else${st(it.els.line)}" data-line="${it.els.line}">иначе</button>` + body(it.els.body, "что делать, если нет") : "";
+    return `<div class="bif${it.line === err ? " err" : ""}">${head}${body(it.body, "что делать, если да")}${els}</div>`;
+  }
+  return tileHtml(it, active, err);
+}
 function renderBlocks(active = 0, err = 0) {
   const box = $("blocks");
   if (!uiBlocks || !box) return;
   const items = parseBlocks(codeEl.value);
   if (!items.length) { box.innerHTML = `<span class="empty">Нажимай стрелки — здесь появятся шаги рыцаря</span>`; return; }
-  box.innerHTML = items.map((it) => it.loop
-    ? `<div class="bloop${it.line === err ? " err" : ""}"><button class="lhead${it.line === selLine ? " sel" : ""}" data-line="${it.line}">🔁 ${it.times ? `повторить ${it.times}` : "повторять"}</button>` +
-      (it.body.length ? it.body.map((t) => tileHtml(t, active, err)).join("") : `<span class="lempty">кнопки положат команды сюда</span>`) + `</div>`
-    : tileHtml(it, active, err)).join("");
+  box.innerHTML = items.map((it) => blockHtml(it, active, err)).join("");
 }
 const toggleGoal = () => { const g = $("goal"); g.classList.toggle("open"); $("goal-more").textContent = g.classList.contains("open") ? "свернуть ▴" : "ещё ▾"; };
 $("goal-more").addEventListener("click", toggleGoal);
@@ -5143,6 +5396,7 @@ function setStatus(text, kind = "", pill = "") {
   // в журнал — без шума: строка «move_right(3)» во время запуска не нужна
   if (text !== lastStatusLogged && !/^Напиши код|^Цифры на поле/.test(text) && !/^[A-Za-z_]+\(\d*\)$/.test(text)) { lastStatusLogged = text; logEv("status", { text: text.slice(0, 200), kind }); }
   if (/^Напиши код|^Цифры на поле/.test(text)) lastStatusLogged = "";
+  if (kind === "fail" && L?.maps) text = `Вариант ${variant + 1}: ${text}`;
   statusEl.className = "status " + kind;
   statusEl.innerHTML = (pill ? `<span class="pill"></span>` : "") + `<span></span>`;
   if (pill) statusEl.firstChild.textContent = pill;
@@ -5211,6 +5465,7 @@ function onCodeChange() {
   (save.codeAt ||= {})[codeKey()] = Date.now(); // когда правили — для синхронизации
   writeSave();
   winBox.hidden = true;
+  if (variantsDone.size) { variantsDone.clear(); drawVariants(); }
   reset();
 }
 
@@ -5276,6 +5531,7 @@ async function run() {
 
   for (let i = 0; i < p.commands.length; i++) {
     const cmd = p.commands[i];
+    await showChecks(p, i);
     const label = `${disp(cmd.name)}(${cmd.n})`;
     drawCode(cmd.line);
     drawRoute(p, i);
@@ -5391,7 +5647,24 @@ async function run() {
         exitCell.classList.add("open");
         drawRoute(p, p.commands.length);
         drawTape(p, p.commands.length);
-        setStatus(`Победа! ${walkedTotal} ${cellsWord(walkedTotal)} пройдено`, "win");
+        // Варианты поля: тот же код должен пройти и остальные — запускаем их сами по очереди
+        if (L.maps) {
+          variantsDone.add(variant);
+          const nextV = L.maps.findIndex((_, k) => !variantsDone.has(k));
+          if (nextV >= 0) {
+            setStatus(`Вариант ${variant + 1} пройден! Теперь тот же код — на варианте ${nextV + 1}`, "win");
+            sfx("unlock");
+            finish();
+            drawVariants();
+            setDisabled(true);
+            await sleep(1500);
+            setDisabled(false);
+            setVariant(nextV);
+            await sleep(900);
+            return run();
+          }
+          setStatus(`Победа! Одна программа прошла ${L.maps.length} ${plural(L.maps.length, "вариант", "варианта", "вариантов")} поля`, "win");
+        } else setStatus(`Победа! ${walkedTotal} ${cellsWord(walkedTotal)} пройдено`, "win");
         sfx("win");
         finish();
         return win();
@@ -5399,6 +5672,7 @@ async function run() {
     }
     await sleep(120);
   }
+  await showChecks(p, p.commands.length);
   drawRoute(p, p.commands.length);
   drawTape(p, p.commands.length);
   heroEl.classList.remove("run");
@@ -5442,16 +5716,56 @@ function win() {
   let note = `В коде ${written} ${plural(written, "команда", "команды", "команд")}.`;
   note += stars < 3 ? ` Для ★★★ нужно не больше ${L.par}.` : " Идеально!";
   const nextCh = CHAPTERS[L.chapter + 1];
-  if (wasChapterLocked && nextCh && chapterOpen(L.chapter + 1)) note += ` Открыта новая глава: ${nextCh.name}!`;
+  const lastOfIsle = L.name === LAST_LEVEL().name;
+  if (lastOfIsle) note += " Ты прошёл весь остров! От крепости открылся мост к новому острову.";
+  else if (wasChapterLocked && nextCh && chapterOpen(L.chapter + 1)) note += ` Открыта новая глава: ${nextCh.name}!`;
   else if (L.challenge && nextCh?.soon) note += ` Глава «${nextCh.name}» скоро появится.`;
-  else if (L.challenge && !nextCh) note += " Ты прошёл весь остров! От крепости открылся мост к новому острову.";
-  $("win-isle").hidden = !(L.challenge && !nextCh);
+  $("win-isle").hidden = !lastOfIsle;
 
   // "Дальше" ведёт к следующему уровню по порядку, если он открыт
   const nxt = levelIdx + 1;
-  nextBtn.hidden = !(nxt < LEVELS.length && isOpen(nxt));
+  nextBtn.hidden = !(nxt < LEVELS.length && isOpen(nxt) && !!LEVELS[nxt].isle === !!L.isle);
   $("win-note").textContent = note;
   winBox.hidden = false;
+}
+
+function drawVariants() {
+  const vb = $("variants");
+  if (!vb || !L.maps) return;
+  [...vb.children].forEach((b, k) => {
+    b.classList.toggle("on", k === variant);
+    b.classList.toggle("done", variantsDone.has(k));
+    b.disabled = running;
+    b.setAttribute("aria-label", `Вариант ${k + 1}${variantsDone.has(k) ? ", пройден" : ""}`);
+  });
+}
+// Показать другой вариант поля: поле строится заново, код тот же
+function setVariant(k, flash = true) {
+  variant = k;
+  L.map = L.maps[k];
+  buildBoard();
+  reset();
+  requestAnimationFrame(fitBoard);
+  if (flash) {
+    const f = document.createElement("div");
+    f.className = "varflash";
+    f.textContent = `Вариант ${k + 1}`;
+    boardEl.appendChild(f);
+    setTimeout(() => f.remove(), 1400);
+  }
+}
+
+// Проверка условия во время запуска: подсвечиваем строку «если» и говорим ответ
+async function showChecks(p, before) {
+  for (const ch of (p.checks || []).filter((c) => c.before === before)) {
+    curCheck = ch;
+    drawCode(ch.line);
+    const k = CONDS[ch.cond];
+    setStatus(`${k.ru[0].toUpperCase() + k.ru.slice(1)} ${WHAT_RU[k.what]}? — ${ch.yes ? "да" : "нет"}`, "", "если");
+    heroEl.classList.remove("run");
+    await sleep(650);
+    curCheck = null;
+  }
 }
 
 function finish() {
@@ -5470,6 +5784,7 @@ function setDisabled(v) {
   chipsEl.querySelectorAll(".chip").forEach((b) => (b.disabled = v));
   document.querySelectorAll(".langs button").forEach((b) => (b.disabled = v));
   $("to-map").disabled = v;
+  drawVariants();
   drawLineBar();
 }
 
@@ -5481,16 +5796,30 @@ function drawLineBar() {
   if (bar.hidden) return;
   const lines = codeEl.value.split("\n");
   const line = lines[selLine - 1] ?? "";
-  $("lb-label").textContent = uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : `Строка ${selLine}`;
+  const ifm = line.match(IF_LINE), isElse = ELSE_LINE.test(line);
+  const frames = findFrames(codeEl.value);
+  const fr = frames.find((f) => f.start === selLine);
+  // у рамки «если» можно добавить «иначе», если его ещё нет
+  const after = fr ? lines[fr.end] ?? "" : "";
+  $("lb-else").hidden = !ifm || ELSE_LINE.test(after) || /^\s*elif\b/.test(after);
+  const whats = L.ifs || [];
+  $("lb-what").hidden = !ifm || whats.length < 2;
+  if (ifm) {
+    const k = CONDS[condKey(ifm[2])];
+    $("lb-what").textContent = `${WHAT_RU[k.what]} ⇄ ${WHAT_RU[whats.find((w) => w !== k.what) || k.what]}`;
+  }
+  $("lb-label").textContent = ifm ? "Стрелка — в какую сторону смотреть" : isElse ? "Рамка «иначе»: что делать, если нет"
+    : uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : `Строка ${selLine}`;
   $("lb-up").textContent = uiBlocks ? "◀ раньше" : "↑ выше";
   // сдвиг строки в блоках — это «в цикл» и «из цикла»
   const setTxt = (el, t) => { for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) { n.textContent = t; return; } };
-  setTxt($("lb-out"), uiBlocks ? "из цикла" : "влево");
-  setTxt($("lb-in"), uiBlocks ? "в цикл" : "вправо");
+  const frameWord = L.ifButton ? ["из рамки", "в рамку"] : ["из цикла", "в цикл"];
+  setTxt($("lb-out"), uiBlocks ? frameWord[0] : "влево");
+  setTxt($("lb-in"), uiBlocks ? frameWord[1] : "вправо");
   document.querySelector(".shift-label").textContent = uiBlocks ? "цикл" : "сдвиг";
   if (uiBlocks) {
     // показываем только то, что можно сделать с этой плиткой
-    const inside = /^ /.test(line), hasLoop = findLoops(codeEl.value).length > 0, isLoopLine = /^\s*(while|for)\b/.test(line);
+    const inside = /^ /.test(line), hasLoop = frames.length > 0, isLoopLine = /^\s*(while|for|if|elif|else)\b/.test(line);
     $("lb-out").hidden = !inside;
     $("lb-in").hidden = inside || !hasLoop || isLoopLine;
     document.querySelector(".shift").hidden = $("lb-out").hidden && $("lb-in").hidden;
@@ -5515,6 +5844,22 @@ $("lb-add").addEventListener("click", addLineBelow);
 $("lb-out").addEventListener("click", () => shiftSelected(-1));
 $("lb-in").addEventListener("click", () => shiftSelected(1));
 $("lb-done").addEventListener("click", () => { selLine = null; drawCode(); });
+$("lb-else").addEventListener("click", () => {
+  const fr = findFrames(codeEl.value).find((f) => f.start === selLine);
+  if (!fr) return;
+  editLines((lines) => {
+    const ind = " ".repeat(fr.indent);
+    if (lang === "py") { lines.splice(fr.end, 0, ind + "else:"); selLine = fr.end + 1; }
+    else { lines[fr.end - 1] = lines[fr.end - 1].replace(/\}\s*$/, "} else {"); lines.splice(fr.end, 0, ind + "}"); selLine = fr.end; }
+  });
+});
+$("lb-what").addEventListener("click", () => {
+  const lines = codeEl.value.split("\n"), m = (lines[selLine - 1] ?? "").match(IF_LINE);
+  if (!m) return;
+  const k = CONDS[condKey(m[2])], other = (L.ifs || []).find((w) => w !== k.what);
+  const c = COND_NAMES.find((x) => CONDS[x].what === other && CONDS[x].move === k.move);
+  if (c) editLines((ls) => { ls[selLine - 1] = ls[selLine - 1].replace(m[2], condDisp(c)); });
+});
 
 // ===== 15. Удобства клавиатуры =====
 // Enter сохраняет сдвиг строки (а после "while True:" добавляет ещё 4 пробела),
@@ -5789,8 +6134,8 @@ $("voice").addEventListener("change", () => {
 // ===== Карта: переходы =====
 $("island").addEventListener("click", onMapTap);
 $("island").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onMapTap(e); } });
-$("to-map").addEventListener("click", () => { if (!running) showView("map"); });
-$("win-map").addEventListener("click", () => showView("map"));
+$("to-map").addEventListener("click", () => { if (!running) showView(L.isle ? "arch" : "map"); });
+$("win-map").addEventListener("click", () => showView(L.isle ? "arch" : "map"));
 $("win-isle").addEventListener("click", () => { winBox.hidden = true; startIslandRun(); });
 $("arch-svg").addEventListener("click", onArchTap);
 $("arch-svg").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onArchTap(e); } });
@@ -6761,7 +7106,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 35;
+const APP_VERSION = 36;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
