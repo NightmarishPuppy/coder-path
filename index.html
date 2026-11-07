@@ -316,6 +316,7 @@ html.still .itemstag .khearts.hurt img { animation: none; }
 .route .roundmark rect { fill: var(--loop); stroke: #1b1530; stroke-width: 0.03; }
 .route .roundmark text { font-family: var(--font-body); font-weight: 800; font-size: 0.23px; fill: #1b1530; text-anchor: middle; dominant-baseline: central; }
 .route .roundmark.endless rect { fill: var(--bad); }
+.route .trace { stroke: #f3eedf; stroke-width: 0.07; stroke-linecap: round; stroke-dasharray: 0.02 0.12; opacity: 0.85; }
 .route .roundmark.bad rect { fill: #ffb0a8; stroke: #c0392b; stroke-width: 0.045; }
 .route .blocked .try, .route .blocked .try-under { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .route .blocked .try-under { stroke: #000a; stroke-width: 0.14; }
@@ -4270,11 +4271,30 @@ function drawRoute(p, activeIdx = -1) {
   if (activeIdx < 0 && !running) drawStepHints(p);
   if (!p || p.error) return;
   const c = (v) => v + 0.5;
+  // Круги цикла не рисуем все сразу — это каша. До запуска виден только ПЕРВЫЙ круг.
+  // Во время запуска ярко горит текущий круг, прошлые круги — тонкая серая дорожка,
+  // будущих не видно. role[i]: "show" — рисуем полностью, "trace" — серым следом, "hide" — нет.
+  const cur = activeIdx >= 0 ? Math.min(activeIdx, p.commands.length - 1) : showProblems && p.crash ? p.crash.cmd : showProblems && p.endless ? -2 : -1;
+  const curLoop = cur >= 0 ? p.commands[cur].loop : null;
+  const role = p.commands.map((cmd) => {
+    if (!cmd.loop) return "show";
+    if (cur === -2) return cmd.loop.round === 1 ? "show" : "hide";          // бесконечный: один круг
+    if (cur < 0) return cmd.loop.round === 1 ? "show" : "hide";
+    if (!curLoop || cmd.loop.line !== curLoop.line) return cmd.loop.round === 1 ? "show" : "hide";
+    return cmd.loop.round === curLoop.round ? "show" : cmd.loop.round < curLoop.round ? "trace" : "hide";
+  });
+  const shown = p.commands.map((cmd, i) => ({ cmd, i })).filter(({ i }) => role[i] === "show");
+  const num = new Map(shown.map(({ i }, k) => [i, k + 1]));   // номер команды как в коде: 1, 2, 3…
+  // серая дорожка прошлых кругов
+  p.commands.forEach((cmd, i) => {
+    if (role[i] !== "trace" || !cmd.cells.length) return;
+    svg("line", { class: "trace", x1: c(cmd.from.x), y1: c(cmd.from.y), x2: c(cmd.to.x), y2: c(cmd.to.y) }, routeEl);
+  });
   // Путь рисуем по отрезкам «клетка → соседняя клетка». Отрезок, пройденный несколько раз
   // в одну сторону, рисуем один раз (и подписываем «×N»). Если по нему ходили и туда, и обратно,
   // линии разводим, как полосы на дороге: каждая сдвинута к правому краю своего направления.
   const edges = new Map();               // "x,y>x,y" → { a, b, dx, dy, axis, cmds: [] }
-  p.commands.forEach((cmd, i) => {
+  shown.forEach(({ cmd, i }) => {
     let prev = cmd.from;
     cmd.cells.forEach((cell) => {
       const k = `${prev.x},${prev.y}>${cell.x},${cell.y}`;
@@ -4306,7 +4326,7 @@ function drawRoute(p, activeIdx = -1) {
   }
   // Начало каждого круга цикла — заметная фиолетовая метка «↻ 2» на клетке, где круг начинается
   const roundMarks = new Map();
-  p.commands.forEach((cmd, i) => {
+  shown.forEach(({ cmd, i }) => {
     if (!cmd.loop) return;
     const prevCmd = p.commands[i - 1];
     if (prevCmd?.loop && prevCmd.loop.line === cmd.loop.line && prevCmd.loop.round === cmd.loop.round) return;
@@ -4314,13 +4334,13 @@ function drawRoute(p, activeIdx = -1) {
     if (!roundMarks.has(k)) roundMarks.set(k, { at: cmd.from, rounds: [] });
     roundMarks.get(k).rounds.push(cmd.loop.round);
   });
-  if (p.endless) {                                    // круг повторяется без конца — знак «∞» там, где он начинается
+  if (p.endless && showProblems) {                                    // круг повторяется без конца — знак «∞» там, где он начинается
     const k = `${p.endless.at.x},${p.endless.at.y}`;
     if (!roundMarks.has(k)) roundMarks.set(k, { at: p.endless.at, rounds: [] });
     roundMarks.get(k).endless = true;
   }
   // На каком круге рыцарь упрётся (в стену, гоблина, запертую дверь) — тот круг помечаем «✕»
-  const crashCmd = p.crash ? p.commands[p.crash.cmd] : null;
+  const crashCmd = p.crash && role[p.crash.cmd] === "show" ? p.commands[p.crash.cmd] : null;
   const crashRound = crashCmd?.loop?.round;
   for (const { at, rounds, endless } of roundMarks.values()) {
     const bad = crashRound && rounds.includes(crashRound);
@@ -4353,7 +4373,7 @@ function drawRoute(p, activeIdx = -1) {
   }
   // Удары — как в стратегиях: крестик стоит ПЕРЕД гоблином, на границе клеток, откуда рыцарь бьёт,
   // а сам гоблин остаётся открытым. Рядом — номер команды. Гоблин побеждён — крестик убираем.
-  p.commands.forEach((cmd, i) => {
+  shown.forEach(({ cmd, i }) => {
     if (cmd.name !== "attack") return;
     const t = cmd.hits.find((h) => h.target);
     if (!t) return;
@@ -4369,10 +4389,10 @@ function drawRoute(p, activeIdx = -1) {
     const bx = ex + (t.at.y !== cmd.from.y ? 0.3 : 0), by = ey - (t.at.y !== cmd.from.y ? 0 : 0.32);
     const g = svg("g", { class: `badge a${state}` }, markEl);
     svg("rect", { x: bx - 0.15, y: by - 0.135, width: 0.3, height: 0.27, rx: 0.135 }, g);
-    svg("text", { x: bx, y: by, style: "font-size:0.21px" }, g).textContent = i + 1;
+    svg("text", { x: bx, y: by, style: "font-size:0.21px" }, g).textContent = num.get(i);
   });
   const badgeAt = new Set();
-  p.commands.forEach((cmd, i) => {
+  shown.forEach(({ cmd, i }) => {
     if (!cmd.cells.length) return;
     const state = i === activeIdx ? " now" : "";
     const mx = (cmd.from.x + cmd.to.x) / 2 + 0.5, my = (cmd.from.y + cmd.to.y) / 2 + 0.5;
@@ -4381,7 +4401,7 @@ function drawRoute(p, activeIdx = -1) {
     badgeAt.add(bk);
     const g = svg("g", { class: `badge ${cmd.axis}${state}` }, routeEl);
     svg("rect", { x: mx - 0.19, y: my - 0.17, width: 0.38, height: 0.34, rx: 0.17 }, g);
-    svg("text", { x: mx, y: my }, g).textContent = i + 1;
+    svg("text", { x: mx, y: my }, g).textContent = num.get(i);
   });
 }
 
@@ -4684,6 +4704,8 @@ async function run() {
   if (p.endless) {
     showProblems = true;
     drawCode();
+    drawRoute(p);
+    roundTag.hidden = true;
     setStatus(p.endless.empty
       ? "Цикл пустой: рыцарь стоит на месте. Положи в цикл шаги"
       : uiBlocks
@@ -6025,7 +6047,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 24;
+const APP_VERSION = 25;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
