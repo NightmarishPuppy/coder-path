@@ -4270,7 +4270,8 @@ function drawStepHints(p) {
     for (let k = 1; k <= MAX_STEPS; k++) {
       const x = from.x + dx * k, y = from.y + dy * k;
       if (isWall(x, y) || alive.has(enemyKey(x, y))) break;
-      const g = svg("g", { class: "stepnum" + (more ? " more" : "") }, routeEl);
+      // в верхнем слое: иначе цифру на двери, ключе или монете закрывает их картинка
+      const g = svg("g", { class: "stepnum" + (more ? " more" : "") }, markEl);
       const w = more ? 0.54 : 0.42;
       svg("rect", { x: x + 0.5 - w / 2, y: y + 0.62, width: w, height: 0.3, rx: 0.15 }, g);
       svg("text", { x: x + 0.5, y: y + 0.775 }, g).textContent = more ? "+" + k : k;
@@ -6061,7 +6062,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 27;
+const APP_VERSION = 28;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
