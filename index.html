@@ -9445,7 +9445,7 @@ const MOODS = [
   },
   { // Лес: шелест листвы, птицы, сверчки, кукушка
     root: 220, beat: 0.72, scale: [0, 2, 3, 5, 7, 9, 10], themes: ["c", "a"], reverb: 1.6, wet: 0.3,
-    events: { leaves: [7, 15], grass: [14, 26], birds: [12, 26], crickets: [18, 36], cuckoo: [70, 140], chimes: [50, 90], melody: [150, 260] },
+    events: { leaves: [7, 15], grass: [14, 26], birds: [12, 26], crickets: [18, 36], cuckoo: [70, 140], leafsteps: [45, 90], chimes: [50, 90], melody: [150, 260] },
   },
   { // Пещеры: только капли и шкатулка — без гула
     root: 196, beat: 0.85, scale: [0, 1, 3, 5, 7, 8, 10], themes: ["c", "b"], reverb: 3.5, wet: 0.5,
@@ -9495,6 +9495,15 @@ function setPlace(moodIdx, water) {
   setTune(moodIdx);
   waterLevel = water;
   applyWater();
+}
+// Короткие записи (шаги по листве и т. п.): скачиваются один раз при первом использовании
+const SOUND_BUF = {}, SOUND_LOAD = {};
+function soundBuf(file) {
+  if (SOUND_BUF[file]) return SOUND_BUF[file];
+  if (!SOUND_LOAD[file] && actx) SOUND_LOAD[file] = fetch(file).then((r) => r.arrayBuffer())
+    .then((b) => new Promise((ok, bad) => actx.decodeAudioData(b, ok, bad))).then((buf) => (SOUND_BUF[file] = buf))
+    .catch(() => { delete SOUND_LOAD[file]; });
+  return null;                                  // в этот раз ещё не готово — прозвучит в следующий
 }
 // Вода: настоящая запись (Pixabay, soul_serenity_sounds — «water noises»), плавный повтор 24 с.
 // Скачивается при первой нужде; громкость плавно следует за тем, насколько близко вода.
@@ -9795,6 +9804,22 @@ const EVENTS = {
   },
   // порыв на поле уровня — лёгкий шелест листвы с той стороны, откуда дует
   gust(t, dir) { EVENTS.leaves(t, dir); },
+  // кто-то прошёл по сухой листве где-то сбоку (настоящая запись, Pixabay, dbsound). Звук резкий —
+  // поэтому только в лесу, тихо, кусок 4–6 с, не чаще раза в 45–90 с (см. MOODS, «Лес»)
+  leafsteps(t) {
+    const buf = soundBuf("leafsteps.mp3");
+    if (!buf) return;
+    const s = actx.createBufferSource(), g = actx.createGain(), len = rand(4, 6), from = rand(0.3, buf.duration - len - 0.3);
+    s.buffer = buf;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.3, t + 0.6);
+    g.gain.setValueAtTime(0.3, t + len - 0.8);
+    g.gain.linearRampToValueAtTime(0, t + len);
+    s.connect(g);
+    const side = pick([-1, 1]);
+    placeAt(g, t, { x: side * 3.5, z: rand(1, 3), toX: side * 1.5, toZ: rand(-1, 1), move: len });
+    s.start(t, from); s.stop(t + len + 0.05);
+  },
   // птица где-то рядом: то спереди, то сбоку, то сзади
   birds(t) {
     const n = 2 + Math.floor(Math.random() * 3), base = rand(2300, 3200);
@@ -9840,7 +9865,7 @@ function scheduleMusic() {
   const now = actx.currentTime;
   for (const name in mood.events) {
     const [a, b] = mood.events[name];
-    if (nextAt[name] === undefined) nextAt[name] = now + (name === "melody" ? rand(40, 70) : rand(3, b * 0.6));
+    if (nextAt[name] === undefined) nextAt[name] = now + (name === "melody" ? rand(40, 70) : name === "leafsteps" ? rand(30, 60) : rand(3, b * 0.6));
     if (now >= nextAt[name]) {
       EVENTS[name](now + 0.1);
       nextAt[name] = now + rand(a, b);
@@ -9870,6 +9895,7 @@ function startMusic() {
   nextAt = {};
   // сразу задать атмосферу: первый звук места — через полсекунды, а не через минуту
   const first = { 0: "grass", 1: "leaves", 2: "drips", 3: "grass" }[MOODS.indexOf(mood)];
+  if (mood.events.leafsteps) soundBuf("leafsteps.mp3");   // заранее, чтобы к первому разу была готова
   if (first) nextAt[first] = actx.currentTime + 0.5;
   if (mood.events.chimes) nextAt.chimes = actx.currentTime + rand(3, 6);
   musicTimer = setInterval(() => { try { scheduleMusic(); } catch (e) {} }, 250);
@@ -10266,7 +10292,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 78;
+const APP_VERSION = 79;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
