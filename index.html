@@ -4357,7 +4357,6 @@ ISLE_MAPS[1] = {
     ["goblin", 16.47, 12.6, 0.46, true, 13.61],
     ["mine", 3.3, 20.75, 0.78],
     ["mine", 13.95, 20.65, 0.78],
-    ["pawnpick", 14.55, 24.7, 0.8],
     ["fortress", 12.4, 5.3, 0.66],
     ["gwtower", 15.9, 5.4, 0.66],
     ["goblin", 15.95, 4.358, 0.5, true, 5.41],
@@ -5430,6 +5429,13 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
     if (d) await throwAt(d);
   }
 }
+// Рудокоп у золотого камня (раньше рисовался картой; на стыке полос карты на некоторых телефонах
+// замирал — теперь сценка со своей анимацией). Острие кирки на кадре удара — на 0,60 клетки впереди
+// (масштаб 0.85) и на уровне ног, поэтому камень стоит центром в этой точке.
+async function skitMiner(st, { at: [x, y], left }) {
+  const p = skActor(st, "ppick", 0.85);
+  p.at(x, y); p.face(!!left); p.show(true); p.play(0, 6, 120, true, "ppick");
+}
 // Гоблин-подрывник на берегу швыряет динамит в море — бабах в воде
 async function skitTnt(st, [tx, ty], [bx, by], left = true) {
   const tnt = skActor(st, "tnt", 0.9), dyn = skActor(st, "dyn", 1, 0.5), boom = skActor(st, "boom", 0.9, 0.6);
@@ -5959,6 +5965,7 @@ const SKIT_PLAN = {
     // шахтёр убегает вверх-влево, в угол плато
     // шахтёры выносят золото из шахт и складывают в кучку рядом, потом уходят обратно в шахту
     { name: "золото из правой шахты", fn: "haul", door: [13.95, 20.35], pile: [15.45, 20.35], ok: ["mine"] },
+    { name: "рудокоп у камня справа", fn: "miner", at: [14.38, 24.62], ok: ["goldsp6"] },
     { name: "гоблин пугает шахтёра", fn: "scare", pawn: [3.0, 25.0], hide: [2.6, 23.3], gob: [7.5, 25.0], ok: ["goldsp4"] },
   ],
   2: [
@@ -5978,6 +5985,7 @@ const SKIT_PLAN = {
 // что проверять у каждой сценки
 const SKIT_GEOM = {
   barrel: (s) => ({ stand: [s.at] }),
+  miner: (s) => ({ stand: [s.at] }),
   ducks: (s) => ({ swim: s.lanes.map(([[x, y], [a, b]]) => [[x, y], [Math.abs(a - x) > Math.abs(b - x) ? a : b, y]]) }),
   tnt: (s) => ({ stand: [s.at], water: [s.to] }),
   archer: (s) => ({ stand: [s.at], paths: [[[s.run[0], s.at[1]], [s.run[1], s.at[1]]]] }),
@@ -5998,6 +6006,7 @@ const SKIT_FN = {
   scare: (st, s) => skitScare(st, s),
   haul: (st, s) => skitHaul(st, s),
   ducks: (st, s) => skitDuckHunt(st, s),
+  miner: (st, s) => skitMiner(st, s),
   siege: (st) => skitSiege(st, SIEGE),
   lumber: (st, s) => skitLumber(st, s),
 };
@@ -10031,7 +10040,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 72;
+const APP_VERSION = 73;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
