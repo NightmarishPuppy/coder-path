@@ -5171,10 +5171,8 @@ function showView(v) {
   $("mapview").hidden = v !== "map";
   $("levelview").hidden = v !== "level";
   if (v === "map") renderMap();
-  // у каждой главы своя мелодия; на карте играет мелодия последней главы, где играли
-  const cur = v === "level" ? L : LEVELS[Math.max(0, indexOf(save.currentName))];
-  const ci = cur.isle ? 0 : cur.chapter;
-  if (typeof setTune === "function") setTune(ci);
+  // фон звучит по месту, где герой: у воды, в лесу, под землёй (см. updatePlace)
+  if (typeof updatePlace === "function") updatePlace();
   window.scrollTo(0, 0);
   if ("speechSynthesis" in window) stopSpeech(); // ушли с уровня — замолкаем
   scheduleCoach();
@@ -5340,6 +5338,7 @@ function renderMap() {
   const all = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
   $("sync-move").hidden = !syncOn || all > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
+  if (!$("mapview").hidden && typeof updatePlace === "function") updatePlace();   // фон — по месту, где теперь рыцарь
 }
 
 // Нажатие на точку уровня или на мост
@@ -6666,7 +6665,9 @@ async function tunnelRun(from, to, gA, gB, hx, hy) {
   const tx = +hB.getAttribute("x") + 2, ty = +hB.getAttribute("y") + 52;
   hB.setAttribute("visibility", "hidden");
   isleSvg().querySelectorAll("[data-bridge]").forEach((b) => b.setAttribute("visibility", "hidden"));
+  placeLock = [2, 0]; updatePlace();                 // под землёй: капли и эхо
   await tunnelScene(tn.querySelector("canvas"), to > from ? 1 : -1);
+  placeLock = null;
   // 3. выход из двери на другом острове — с порога прямо к своему месту, по земле
   const [ex, ey] = gB.door;
   const wrap = isleWrap(), r = wrap.getBoundingClientRect(), VH = ISLE_MAPS[to].terr.length * 20;
@@ -6821,6 +6822,7 @@ function buildBoard() {
   const cellOv = map.map((row) => [...row].map(() => null)); // предмет в клетке (для сценок)
   const cellEl = map.map((row) => [...row].map(() => null)); // сами клетки
   const terr = map.map((row) => [...row].map(() => null)); // какая земля в каждой клетке
+  boardTerr = terr;                                           // для звука: сколько на поле воды
   const theme = themeFor(levelIdx);
   boardEl.dataset.theme = theme.name;
   // одинаковое "случайное" оформление при каждом открытии уровня
@@ -7014,6 +7016,7 @@ function buildBoard() {
     p.play(0, 6, 110, true, "paxe");
     return { e, f, p, ov: cellOv[f.tree[1]][f.tree[0]] };
   });
+  if (!$("levelview").hidden && typeof updatePlace === "function") updatePlace();   // фон — по полю уровня
 }
 
 // Что нужно, чтобы открыть дверь на этом уровне
@@ -9438,7 +9441,7 @@ const THEMES = {
 const MOODS = [
   { // Берег и луг (и острова 2–3): лёгкий шелест травы, сверчки и кузнечики, изредка тихий накат и чайка
     root: 261.63, beat: 0.66, scale: [0, 2, 4, 5, 7, 9, 11], themes: ["a", "b"], reverb: 2.2, wet: 0.32,
-    events: { grass: [6, 14], crickets: [12, 26], hopper: [22, 45], wave: [26, 48], gull: [70, 130], chimes: [40, 80], melody: [150, 260] },
+    events: { grass: [6, 14], crickets: [12, 26], hopper: [22, 45], gull: [70, 130], chimes: [40, 80], melody: [150, 260] },
   },
   { // Лес: шелест листвы, птицы, сверчки, кукушка
     root: 220, beat: 0.72, scale: [0, 2, 3, 5, 7, 9, 10], themes: ["c", "a"], reverb: 1.6, wet: 0.3,
@@ -9456,6 +9459,76 @@ const MOODS = [
 const PENTA = [0, 2, 4, 7, 9];
 
 let mood = MOODS[0], musicTimer = null, musicOut = null, reverbIn = null, nextAt = {}, spots = {};
+
+// ===== Звук по месту, где герой =====
+// Где стоит рыцарь — такой и фон: у моря или озера слышна вода (чем ближе, тем громче), в центре
+// острова — трава и сверчки, в лесу — листва и птицы, под землёй (подземный ход, шахты) — капли и эхо.
+// На карте острова — по точке, где стоит рыцарь (его глава и сколько до открытой воды);
+// на уровне — по местности поля и по тому, сколько на нём воды.
+let boardTerr = [];
+const MOOD_OF_THEME = { beach: 0, forest: 1, cave: 2, mountain: 3 };
+// главы второго острова: деревня и кусты — луг, просека — лес, «Свои и чужие» — луг
+const MOOD_OF_CHAPTER = (lv) => !lv ? 0 : lv.isle === 2 ? (lv.chapter === 6 ? 1 : 0) : lv.isle === 3 ? 0 : Math.min(lv.chapter, 3);
+let placeLock = null;           // подземный ход и т. п.: место задано вручную, пока не снимут
+function updatePlace() {
+  if (placeLock) return setPlace(...placeLock);
+  if (!$("levelview").hidden && L) {
+    // уровень: местность поля и доля воды на нём
+    const th = boardEl.dataset.theme, cells = boardTerr.flat().filter(Boolean);
+    const wet = cells.length ? cells.filter((g) => g === "water").length / cells.length : 0;
+    return setPlace(MOOD_OF_THEME[th] ?? 0, th === "cave" ? 0 : wet ? Math.min(1, 0.3 + wet * 2.5) : 0);
+  }
+  // карта острова: где стоит рыцарь
+  const E = ISLE_ENG[curIsle], hB = isleSvg(curIsle)?.querySelector(".map-hero");
+  if (!E || !hB) return setPlace(0, 0);
+  const hx = (+hB.getAttribute("x") + 2) / 20, hy = (+hB.getAttribute("y") + 52) / 20;
+  let d = 5;                                                       // до ближайшей открытой воды, клеток
+  for (let r = 0.5; r <= 4.5 && d === 5; r += 0.5)
+    for (let a = 0; a < 16; a++) if (E.waterAt(hx + Math.cos(a * Math.PI / 8) * r, hy + Math.sin(a * Math.PI / 8) * r)) { d = r; break; }
+  // глава уровня, у которого стоит рыцарь
+  const D = ISLE_MAPS[curIsle], mine = isleLevels(curIsle);
+  let best = null, bd = Infinity;
+  mine.forEach(([lv], k) => { const [nx, ny] = D.nodes[k] || [0, 0]; const dd = Math.hypot(nx / 20 - hx, ny / 20 - hy); if (dd < bd) { bd = dd; best = lv; } });
+  setPlace(MOOD_OF_CHAPTER(best), Math.max(0, Math.min(1, (4.5 - d) / 3.5)));
+}
+function setPlace(moodIdx, water) {
+  setTune(moodIdx);
+  waterLevel = water;
+  applyWater();
+}
+// Вода: настоящая запись (Pixabay, soul_serenity_sounds — «water noises»), плавный повтор 24 с.
+// Скачивается при первой нужде; громкость плавно следует за тем, насколько близко вода.
+let waterBuf = null, waterLoading = null, waterSrc = null, waterGain = null, waterLevel = 0;
+function loadWater() {
+  if (waterBuf || waterLoading || !actx) return waterLoading;
+  waterLoading = fetch("water.mp3").then((r) => r.arrayBuffer()).then((b) => new Promise((ok, bad) => actx.decodeAudioData(b, ok, bad)))
+    .then((buf) => { waterBuf = buf; applyWater(); }).catch(() => { waterLoading = null; });
+  return waterLoading;
+}
+function applyWater() {
+  if (!actx) return;
+  const want = save.music && musicTimer && !document.hidden ? waterLevel * 0.55 : 0;
+  if (want > 0 && !waterBuf) { loadWater(); return; }
+  if (!waterBuf) return;
+  if (want > 0 && !waterSrc) {
+    waterGain = actx.createGain(); waterGain.gain.value = 0.0001;
+    waterGain.connect(musicBus);
+    waterSrc = actx.createBufferSource();
+    waterSrc.buffer = waterBuf; waterSrc.loop = true;
+    // у mp3 в начале и в конце есть доли секунды тишины — повторяем без них, иначе на стыке пауза
+    waterSrc.loopStart = 0.06; waterSrc.loopEnd = waterBuf.duration - 0.06;
+    waterSrc.connect(waterGain);
+    waterSrc.start(actx.currentTime, 0.06 + Math.random() * 20);
+  }
+  if (!waterGain) return;
+  waterGain.gain.cancelScheduledValues(actx.currentTime);
+  waterGain.gain.setTargetAtTime(Math.max(0.0001, want), actx.currentTime, 0.9);   // плавно, за пару секунд
+  if (want === 0 && waterSrc) {
+    const src = waterSrc, g = waterGain;
+    waterSrc = null; waterGain = null;
+    setTimeout(() => { try { src.stop(); g.disconnect(); } catch (e) {} }, 4000);
+  }
+}
 
 function setTune(chapter) {
   const m = MOODS[Math.min(chapter, MOODS.length - 1)];
@@ -9800,6 +9873,7 @@ function startMusic() {
   if (first) nextAt[first] = actx.currentTime + 0.5;
   if (mood.events.chimes) nextAt.chimes = actx.currentTime + rand(3, 6);
   musicTimer = setInterval(() => { try { scheduleMusic(); } catch (e) {} }, 250);
+  applyWater();
 }
 function stopMusic() {
   clearInterval(musicTimer);
@@ -9812,6 +9886,7 @@ function stopMusic() {
   }
   musicOut = null;
   reverbIn = null;
+  applyWater();
 }
 
 // Выбор режима звука в панели «Приложение»
@@ -10191,7 +10266,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 77;
+const APP_VERSION = 78;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
