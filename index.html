@@ -240,11 +240,28 @@ html.still .ripple { animation: none; opacity: 0.5; }
 .splash p { margin: 0; color: var(--muted); }
 .splash .btn.run { flex: none; margin-top: 10px; padding: 14px 48px; font-size: 22px; }
 .splash-note { font-size: 13px; }
-.splash-scene {
-  display: block; width: 100%; max-width: 440px; height: auto; aspect-ratio: 13 / 9;
-  border-radius: 14px; border: 2px solid #2d5a6a; background: #47aba9;
-  image-rendering: pixelated; margin-block: 6px;
-}
+/* Заставка: живой бой на островке заставки (окно показывает 15 из 18 клеток в ширину — бойцы крупнее) */
+.splash-view { position: relative; width: min(100%, 480px, calc((100dvh - 300px) / 1.05)); min-width: 240px; aspect-ratio: 1 / 1.05;
+  overflow: hidden; border-radius: 16px; border: 2px solid #2d5a6a; background: #47aba9; margin-block: 6px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); container-type: inline-size; }
+.splash-world { position: relative; width: 120%; margin-left: -10%; margin-top: -6.667%; }   /* сверху срезана одна клетка (вода) */
+.splash-world .mapstrip { image-rendering: pixelated; }
+.splash-code { position: absolute; right: 8px; bottom: 8px; z-index: 5; margin: 0; padding: 5px 8px 5px 5px; text-align: left;
+  font: 500 clamp(8px, 2.6cqw, 11px)/1.42 var(--font-code);   /* табличка растёт вместе с кадром */ color: #d9d4c7; background: rgba(15, 17, 23, 0.78); border: 1px solid rgba(185, 147, 242, 0.35);
+  border-radius: 9px; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
+.splash-code .ln { display: block; padding: 0 4px; border-radius: 4px; transition: background 0.2s; }
+.splash-code .ln.on { background: rgba(255, 215, 106, 0.22); }
+.splash-code .n { color: #6f6a80; margin-right: 7px; }
+.cbub i, .splash-code i { color: var(--loop); font-style: normal; font-weight: 700; }
+.cbub b, .splash-code b { color: #5fd3a6; font-weight: 700; }
+.cbub em, .splash-code em { color: var(--sword); font-style: normal; font-weight: 700; }
+.splash-code u { color: var(--torch); text-decoration: none; font-weight: 700; }
+/* строчка кода над бойцом: всплывает и тает */
+.cbub { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none;
+  font: 600 10px/1.2 var(--font-code); color: #e8e4da; padding: 3px 6px; border-radius: 6px;
+  background: rgba(15, 17, 23, 0.84); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); animation: cbub 1.7s ease-out forwards; }
+@keyframes cbub { 0% { opacity: 0; transform: translate(-50%, -70%) scale(0.8); } 12% { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+  75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -175%); } }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .splash { background: var(--bg); transition: none; }
 /* экран E-Ink: всё стоит неподвижно, видно первый кадр */
@@ -1344,8 +1361,11 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
     <span class="eyebrow">Остров программистов</span>
     <h1>Coder Path</h1>
 
-    <canvas id="splash-scene" class="splash-scene" aria-label="Остров: рыцарь, овцы и гоблины у костра"></canvas>
-    <p>Рыцарь ждёт твоих команд</p>
+    <div class="splash-view" role="img" aria-label="Бой у замка: рыцарь, мечники, копейщики и лучники на башнях отбивают гоблинов, над бойцами — строчки кода">
+      <div class="splash-world" id="splash-world"><canvas class="map-canvas" aria-hidden="true"></canvas><canvas class="map-clouds" aria-hidden="true"></canvas></div>
+      <pre class="splash-code" id="splash-code" aria-hidden="true"></pre>
+    </div>
+    <p>Пиши код — веди рыцаря в бой</p>
     <button class="btn run" id="start-game">Играть</button>
     <p class="splash-note">Лучше в наушниках</p>
   </div>
@@ -4679,6 +4699,103 @@ ISLE_MAPS[3] = {
   clear: [[13.6, 6.0, 17.9, 24.5]],
 };
 // @@/isle3@@
+// Островок заставки (не остров игры): поле боя, замок на плато, мосты в облака по краям
+// @@isle0@@
+ISLE_MAPS[0] = {
+  nodes: [],
+  rows: [
+    "....................................",
+    "....................................",
+    ".................ssssssss...........",
+    "..............ssssggggggss..........",
+    ".........ssssssggggggggggs..........",
+    "........ssgggggggggggggggss.........",
+    ".......ssgggggggggggggggggss........",
+    ".......sgggggggggggggggggggs........",
+    "......ssgggggggggggggggggggss.......",
+    "......sgggggggggggggggggggggss......",
+    "......sggggggggggggggggggggggs......",
+    ".....ssggggggggggggggggggggggss.....",
+    ".....sggggggggggggggggggggggggs.....",
+    ".....sggggggggggggggggggggggggs.....",
+    ".....sggggggggggggggggggggggggs.....",
+    ".....sggggggggggggggggggggggggss....",
+    ".....sgggggggggggggggggggggggggs....",
+    ".....sgggggggggggggggggggggggggs....",
+    ".....sgggggggggggggggggggggggggs....",
+    ".....sgggggggggggggggggggggggggs....",
+    ".....sgggggggggggggggggggggggggs....",
+    ".....sggggggggggggggggggggggggss....",
+    ".....sggggggggggggggggggggggggs.....",
+    ".....sgggggggggggggggggggggggss.....",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sggggggggggggggggggggggss......",
+    ".....ssgggggggggggggggggggggs.......",
+    "......ssgggggggggggggggggggss.......",
+    ".......ssgggggggggggggggggss........",
+    "........sssggggggggggggggss.........",
+    "..........ssgggggggggggsss..........",
+    "...........sssgggggggsss............",
+    ".............sssssssss..............",
+    "....................................",
+    "....................................",
+  ],
+  terr: [
+    "..................",
+    "..................",
+    ".....11111111.....",
+    ".....11111111.....",
+    ".....11111111.....",
+    ".....11111111.....",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  road: [
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "........#.........",
+    "........#.........",
+    "........#.........",
+    "........#.........",
+    "..................",
+    "..................",
+    "..................",
+    "==#############===",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  ramps: [],
+  deco: [
+    ["castle", 8.5, 4.55, 0.5],
+    ["wrock1", 1.0, 5.0, 0.8],
+    ["wrock3", 16.9, 15.6, 0.8],
+    ["wrock2", 1.3, 16.4, 0.7],
+    ["wrock4", 16.4, 3.0, 0.7],
+  ],
+  labels: [],
+  bank: [["cloud_b", 30, 700, 0.75], ["cloud_d", 1125, 705, 0.8]],
+  clouds: [["sc_cloud1", 3, 3, 0.2]],
+  tm: "sc_tm",
+  clear: [[2.6, 6.3, 15.4, 14.6]],
+};
+// @@/isle0@@
 
 function mapEngine(D) {
   const NODE_POS = D.nodes, MAP_ROWS = D.rows, TERR = D.terr, ROAD = D.road, RAMPS = D.ramps, MAP_DECO = D.deco, MAP_LABELS = D.labels;
@@ -5004,7 +5121,7 @@ function mapEngine(D) {
     let last = 0;
     const loop = (t) => {
       requestAnimationFrame(loop);
-      if (STILL || t - last < MAP_STEP() || document.hidden || document.getElementById("mapview").hidden || wrap.hidden) return;
+      if (STILL || t - last < MAP_STEP() || document.hidden || (wrap.closest("#mapview") && $("mapview").hidden) || wrap.hidden) return;
       last = t;
       frame(t);
     };
@@ -5249,7 +5366,7 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   prun: [6, 1, 192], prunaxe: [6, 1, 192], prunwood: [6, 1, 192], prungold: [6, 1, 192], wspawn: [7, 1, 128], gheaphl: [6, 1, 128], gnug: [1, 1, 128],
   gmount: [12, 1, 320], towerb: [1, 1, 256], towerbf: [1, 1, 256], arrowd: [1, 1, 64], arrowu: [1, 1, 64], archb: [8, 7, 192], kwar: [6, 8, 192],
   torchp: [7, 5, 192], lidle: [12, 1, 320], lrun: [6, 1, 320], ldatk: [3, 1, 320], lddef: [6, 1, 320],
-  lratk: [3, 1, 320], luatk: [3, 1, 320], ldratk: [3, 1, 320], luratk: [3, 1, 320], monkrun: [4, 1, 192], duck: [3, 1, 32], splash: [9, 1, 192],
+  lratk: [3, 1, 320], luatk: [3, 1, 320], ldratk: [3, 1, 320], luratk: [3, 1, 320], monkrun: [4, 1, 192], duck: [3, 1, 32], splash: [9, 1, 192], hidle: [8, 1, 120], hrun: [6, 1, 120], hatk: [4, 1, 120],
   mtree: [8, 1, 192], stump3: [1, 1, 192] };
 let SK_ACTORS = [];
 let skLast = 0;
@@ -5514,6 +5631,7 @@ const SIEGE = {
 const SIEGE_UNITS = {
   war: { side: "us", hp: 7, dmg: 2, reach: 0.8, cd: 850, speed: 1.8, sight: 4.5, leash: 4.5, key: "kwar", sc: 0.85 },
   lan: { side: "us", hp: 7, dmg: 2, reach: 1.1, cd: 1000, speed: 1.7, sight: 4.5, leash: 5, key: "lidle", sc: 0.8, foot: 0.625 },
+  hero: { side: "us", hp: 10, dmg: 2, reach: 0.8, cd: 700, speed: 2.0, sight: 5, leash: 5, key: "hidle", sc: 0.85, foot: 0.825 },
   monk: { side: "us", hp: 4, heal: 2, reach: 3.5, cd: 3200, speed: 1.6, sight: 1.6, key: "monk", sc: 0.8 },
   torch: { side: "gob", hp: 3, dmg: 1, reach: 0.75, cd: 850, speed: 1.5, sight: 4, key: "torch", sc: 0.85 },
   torchp: { side: "gob", hp: 4, dmg: 1, reach: 0.75, cd: 800, speed: 1.35, sight: 4, key: "torchp", sc: 0.85 },
@@ -5521,8 +5639,14 @@ const SIEGE_UNITS = {
   barrel: { side: "gob", hp: 1, dmg: 3, reach: 0.6, cd: 0, speed: 1.0, sight: 5, key: "barrel", sc: 0.85, foot: 0.72 },
 };
 const ARCHER = { reach: 5.5, dmg: 1, cd: 1300 };
-async function skitSiege(st0, S) {
-  const E = ISLE_ENG[3], TICK = 120;
+// Общий движок живого боя (бой у шахты и заставка). B — описание поля боя:
+//   walk(x, y) — можно ли тут стоять; towers — башни с лучниками [x, y]; posts — наши на постах
+//   [{ kind, at, left }]; respawn — откуда выходит подкрепление; spawns — откуда приходят гоблины;
+//   goal — куда идут гоблины, если никого не видят; mount — гора золота { at, sc }; haul — рабочие
+//   { mine, stands, dangerY }; waves — { kinds, min, max, gap: [от, до] }; code — пузыри кода над нашими.
+TS.sk_hidle = TS.kidle; TS.sk_hrun = TS.krun; TS.sk_hatk = TS.katk;      // рыцарь-герой (полоски 120×120)
+async function battle(st0, B) {
+  const TICK = 120;
   // свой слой: внутри него порядок рисования — по высоте ног (кто ниже на карте, тот ближе)
   const box = document.createElement("div"); box.className = "skbox";
   st0.layer.insertBefore(box, st0.before || null);
@@ -5530,37 +5654,48 @@ async function skitSiege(st0, S) {
   const A = (k, sc, foot) => skActor(st, k, sc, foot);
   const Z = (a, y, d = 0) => (a.el.style.zIndex = Math.round(y * 10) * 4 + d);
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const walk = B.walk;
   let now = performance.now();
 
-  // ----- где можно ходить -----
-  const [tx, ty] = S.tower, archY = ty - (232 - 118) / 64 * 0.75;
-  const blocked = (x, y) => ((x - S.mount[0]) / 1.25) ** 2 + ((y - S.mount[1] + 0.15) / 0.55) ** 2 < 1   // гора золота
-    || (Math.abs(x - tx) < 0.65 && y > ty - 0.55 && y < ty + 0.15)                                      // башня
-    || y < 8.3                                                                                          // шахта
-    || (Math.abs(x - 13.5) < 1.05 && y > 19.8 && y < 21.7);                                              // кнопка уровня
-  const onBridge = (x, y) => Math.abs(x - S.bridgeX) < 0.3 && y > 19.9 && y < 30.5;
-  const walk = (x, y) => onBridge(x, y) || (x > 14.05 && y < 21.9 && !blocked(x, y)
-    && E.groundAt(x, y) === 0 && E.groundAt(x - 0.22, y) === 0 && E.groundAt(x + 0.22, y) === 0);
-
-  // ----- постройки и гора золота -----
-  const mount = A("gmount", 0.6, 0.875); mount.at(...S.mount); mount.show(true); Z(mount, S.mount[1]);
-  const tower = A("towerb", 0.75, 232 / 256), archer = A("archb", 0.75), front = A("towerbf", 0.75, 232 / 256);
-  [[tower, 0], [archer, 1], [front, 2]].forEach(([a, d]) => Z(a, ty, d));
-  tower.at(tx, ty); front.at(tx, ty); archer.at(tx, archY);
-  [tower, archer, front].forEach((a) => a.show(true));
-  archer.play(0, 6, 150);
+  // ----- гора золота, башни с лучниками -----
+  let mount = null;
+  if (B.mount) { mount = A("gmount", B.mount.sc || 0.6, 0.875); mount.at(...B.mount.at); mount.show(true); Z(mount, B.mount.at[1]); }
+  const archers = (B.towers || []).map(([tx, ty]) => {
+    const tower = A("towerb", 0.75, 232 / 256), a = A("archb", 0.75), front = A("towerbf", 0.75, 232 / 256);
+    const ay = ty - (232 - 118) / 64 * 0.75;                       // площадка башни
+    [[tower, 0], [a, 1], [front, 2]].forEach(([x, d]) => Z(x, ty, d));
+    tower.at(tx, ty); front.at(tx, ty); a.at(tx, ay);
+    [tower, a, front].forEach((x) => x.show(true));
+    a.play(0, 6, 150);
+    return { a, x: tx, y: ay, next: 0, busy: 0, idle: true };
+  });
 
   // ----- эффекты (заготовки, используются по очереди) -----
   const pool = (k, n, sc, foot) => Array.from({ length: n }, () => A(k, sc, foot));
-  const deads = pool("dead", 6, 0.9, 0.75), booms = pool("boom", 3, 0.9, 0.6), dyns = pool("dyn", 2, 1, 0.5);
-  const arrows = pool("arrow", 4, 0.75, 0.5), heals = pool("healfx", 2, 0.8);
+  const deads = pool("dead", 8, 0.9, 0.75), booms = pool("boom", 4, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5);
+  const arrows = pool("arrow", 6, 0.75, 0.5), heals = pool("healfx", 2, 0.8);
   const take = (list) => { const a = list.find((x) => !x.busy) || list[0]; a.busy = true; return a; };
   const free = (a) => { a.busy = false; a.show(false); };
   const later = [];                                   // отложенные действия: [время, что сделать]
   const after = (ms, fn) => later.push([now + ms, fn]);
 
+  // ----- пузыри кода над нашими: что «программа» юнита сейчас делает -----
+  let bubbles = 0;
+  const say = (u, html, p = 1) => {
+    if (!B.code || bubbles >= 4 || Math.random() > p || now - (u.said || 0) < 2600) return;
+    u.said = now; bubbles++;
+    const el = document.createElement("span");
+    el.className = "cbub"; el.innerHTML = html;
+    const [l, t] = st.pos(B.bubbleX ? Math.min(B.bubbleX[1], Math.max(B.bubbleX[0], u.x)) : u.x, u.y - 1.05);
+    el.style.left = l + "%"; el.style.top = t + "%"; el.style.zIndex = 9999;
+    box.appendChild(el);
+    setTimeout(() => { el.remove(); bubbles--; }, 1700);
+  };
+  const SIDE = (dx, dy) => Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
+  const IF = (d) => `<i>if</i> <b>enemy_${d}()</b>:`, CMD = (c) => `<em>${c}()</em>`;
+
   // ----- юниты -----
-  const units = []; S.units = units; S.walk = (x, y) => walk(x, y);   // для проверки в браузере
+  const units = []; B.units = units;
   // поставить сразу на место, без плавного переезда с того места, где юнит был раньше (погиб):
   // переход выключен и браузер обязан применить новое место до того, как переход включится снова
   const place = (u) => {
@@ -5572,12 +5707,14 @@ async function skitSiege(st0, S) {
     const T = SIEGE_UNITS[kind];
     let u = units.find((v) => v.dead && v.kind === kind && !v.post && !post);
     if (!u) { u = { kind, T, a: A(T.key, T.sc, T.foot) }; units.push(u); }
-    Object.assign(u, { x, y, hp: T.hp, dead: false, post, busy: 0, next: 0, anim: "", left: x > 15.6, fuse: false });
+    Object.assign(u, { x, y, hp: T.hp, dead: false, post, busy: 0, next: 0, anim: "", left: x > 9, fuse: false, tgt: null });
     place(u);
     return u;
   };
-  const IDLE = { war: [0, 6, 140, "kwar"], lan: [0, 12, 110, "lidle"], monk: [0, 6, 150, "monk"], torch: [0, 7, 120], torchp: [0, 7, 120], tnt: [0, 6, 130], barrel: [0, 1, 200] };
-  const RUN = { war: [1, 6, 90, "kwar"], lan: [0, 6, 90, "lrun"], monk: [0, 4, 100, "monkrun"], torch: [1, 6, 90], torchp: [1, 6, 90], tnt: [1, 6, 90], barrel: [4, 3, 160] };
+  const IDLE = { war: [0, 6, 140, "kwar"], lan: [0, 12, 110, "lidle"], monk: [0, 6, 150, "monk"], hero: [0, 8, 110, "hidle"],
+    torch: [0, 7, 120], torchp: [0, 7, 120], tnt: [0, 6, 130], barrel: [0, 1, 200] };
+  const RUN = { war: [1, 6, 90, "kwar"], lan: [0, 6, 90, "lrun"], monk: [0, 4, 100, "monkrun"], hero: [0, 6, 85, "hrun"],
+    torch: [1, 6, 90], torchp: [1, 6, 90], tnt: [1, 6, 90], barrel: [4, 3, 160] };
   const anim = (u, name, spec) => {
     if (u.anim === name) return;
     u.anim = name;
@@ -5593,6 +5730,7 @@ async function skitSiege(st0, S) {
     torch: { side: [2, 6, 85], dside: [2, 6, 85], uside: [2, 6, 85], down: [3, 6, 85], up: [4, 6, 85] },
   };
   ATK.torchp = ATK.torch;
+  ATK.hero = Object.fromEntries(["side", "dside", "uside", "down", "up"].map((k) => [k, [0, 4, 85, "hatk"]]));
   const flash = (u) => u.a.el.animate([{ filter: "brightness(2.4) saturate(0.3)" }, { filter: "none" }], 220);
   const boom = (x, y) => { const b = take(booms); b.at(x, y); Z(b, y + 0.5); b.show(true); b.play(0, 9, 70, false).then(() => free(b)); };
   const hurt = (u, dmg) => {
@@ -5607,8 +5745,8 @@ async function skitSiege(st0, S) {
     const d = take(deads); d.at(u.x, u.y); Z(d, u.y); d.show(true);
     d.play(0, 7, 110, false);
     after(2600, () => d.play(1, 7, 120, false).then(() => free(d)));
-    if (u.post) after(8000, () => {                      // подкрепление выходит из шахты
-      Object.assign(u, { x: S.mine[0], y: S.mine[1] + 0.1, hp: u.T.hp, dead: false, busy: 0, anim: "" });
+    if (u.post) after(8000, () => {                      // подкрепление
+      Object.assign(u, { x: B.respawn[0], y: B.respawn[1], hp: u.T.hp, dead: false, busy: 0, anim: "", tgt: null });
       place(u);
     });
   };
@@ -5634,6 +5772,7 @@ async function skitSiege(st0, S) {
     return best && bd <= u.T.sight ? best : null;
   };
   const melee = (u, t) => {
+    if (u.T.side === "us" && u.tgt !== t) { u.tgt = t; say(u, IF(SIDE(t.x - u.x, t.y - u.y)), 0.7); }
     const d = dist(u, t);
     if (d > u.T.reach) {                              // подойти сбоку (так удары видны лучше)
       const side = Math.sign(u.x - t.x) || 1;
@@ -5647,6 +5786,7 @@ async function skitSiege(st0, S) {
     const spec = ATK[u.kind][dirOf(t.x - u.x, t.y - u.y)];
     u.next = now + u.T.cd; u.busy = now + spec[1] * spec[2];
     anim(u, "atk" + now, spec);
+    if (u.T.side === "us") say(u, CMD("attack"), 0.3);
     after(spec[1] * spec[2] * 0.55, () => { if (!u.dead && dist(u, t) < u.T.reach + 0.45) hurt(t, u.T.dmg); });
   };
   const throwTnt = (u, t) => {
@@ -5671,20 +5811,20 @@ async function skitSiege(st0, S) {
   };
   const monkThink = (u) => {
     const danger = nearest(u, () => true);
-    if (danger) { stepTo(u, S.posts.monk[0], S.posts.monk[1] - 1.4) || anim(u, "idle"); return; }
+    if (danger) { stepTo(u, u.post[0], u.post[1] - 1.4) || anim(u, "idle"); return; }
     if (now >= u.next) {
       let t = null;
       for (const v of units) if (!v.dead && v.T.side === "us" && v.hp < v.T.hp && dist(u, v) <= u.T.reach && (!t || v.hp / v.T.hp < t.hp / t.T.hp)) t = v;
       if (t) {
         u.left = t.x < u.x; u.next = now + u.T.cd; u.busy = now + 11 * 80;
         anim(u, "heal" + now, [0, 11, 80, "heal"]);
+        say(u, CMD("heal"), 0.8);
         const h = take(heals); h.at(t.x, t.y); Z(h, t.y + 0.1); h.show(true); h.play(0, 11, 80, false).then(() => free(h));
         after(500, () => { if (!t.dead) t.hp = Math.min(t.T.hp, t.hp + u.T.heal); });
         return;
       }
     }
-    const [px, py] = u.post;
-    if (!stepTo(u, px, py)) { u.left = true; anim(u, "idle"); }
+    if (!stepTo(u, ...u.post)) { u.left = u.postLeft; anim(u, "idle"); }
   };
   const think = (u) => {
     if (u.dead || now < u.busy) return;
@@ -5693,73 +5833,80 @@ async function skitSiege(st0, S) {
       const [px, py] = u.post;
       const t = nearest(u, (v) => Math.hypot(v.x - px, v.y - py) <= u.T.leash);
       if (t) return melee(u, t);
-      if (!stepTo(u, px, py)) { u.left = px > 15.6 ? false : false; anim(u, "idle"); }
+      u.tgt = null;
+      if (!stepTo(u, px, py)) { u.left = u.postLeft; anim(u, "idle"); }
       return;
     }
     const t = nearest(u, () => true);
     if (t) return u.kind === "tnt" ? throwTnt(u, t) : u.kind === "barrel" ? barrelGo(u, t) : melee(u, t);
     // никого не видно — к золоту; дошёл — долбит гору
-    if (stepTo(u, ...S.goal)) return;
+    if (stepTo(u, ...B.goal)) return;
     if (u.kind === "torch" || u.kind === "torchp") { u.busy = now + 600; anim(u, "atk" + now, ATK[u.kind].up); }
     else anim(u, "idle");
   };
   // лучник на башне: ближайший гоблин в пределах выстрела
-  let archNext = 0, archBusy = 0, archIdle = true;
   const ARCH_ROW = { up: 2, uside: 3, side: 4, dside: 5, down: 6 };
-  const archerThink = () => {
-    if (now < archBusy) return;
+  const AR = { ...ARCHER, ...B.archer };            // у заставки лучники бьют ближе — гоблины успевают добежать
+  const archerThink = (ar) => {
+    if (now < ar.busy) return;
     let t = null, bd = Infinity;
-    for (const v of units) if (!v.dead && v.T.side === "gob") { const d = Math.hypot(v.x - tx, v.y - archY); if (d < bd) { bd = d; t = v; } }
-    if (!t || bd > ARCHER.reach || now < archNext) { if (!archIdle) archer.play(0, 6, 150); archIdle = true; return; }
-    archIdle = false;
-    const dx = t.x - tx, dy = t.y - archY;
-    archer.face(dx < -0.05);
-    archer.play(ARCH_ROW[dirOf(dx, dy)], 8, 55, false);
-    archNext = now + ARCHER.cd; archBusy = now + 8 * 55;
+    for (const v of units) if (!v.dead && v.T.side === "gob") { const d = Math.hypot(v.x - ar.x, v.y - ar.y); if (d < bd) { bd = d; t = v; } }
+    if (!t || bd > AR.reach || now < ar.next) { if (!ar.idle) ar.a.play(0, 6, 150); ar.idle = true; return; }
+    ar.idle = false;
+    const dx = t.x - ar.x, dy = t.y - ar.y;
+    ar.a.face(dx < -0.05);
+    ar.a.play(ARCH_ROW[dirOf(dx, dy)], 8, 55, false);
+    ar.next = now + AR.cd; ar.busy = now + 8 * 55;
+    say({ get said() { return ar.said; }, set said(v) { ar.said = v; }, x: ar.x, y: ar.y + 0.2 }, CMD("shoot"), 0.35);
     after(300, () => {
       if (t.dead) return;
-      const a = take(arrows), sx = tx + (dx < 0 ? -0.2 : 0.2), sy = archY - 0.35, ex = t.x, ey = t.y - 0.35;
+      const a = take(arrows), sx = ar.x + (dx < 0 ? -0.2 : 0.2), sy = ar.y - 0.35, ex = t.x, ey = t.y - 0.35;
       const ax = Math.abs(ex - sx), ay = Math.abs(ey - sy);
       a.sheet(ax >= ay ? "arrow" : ey > sy ? "arrowd" : "arrowu"); a.frame(0, 0); a.face(ax >= ay && ex < sx);
       a.el.style.transition = "none"; a.at(sx, sy); Z(a, 200); a.show(true);
-      a.move(ex, ey, Math.hypot(ex - sx, ey - sy) * 75).then(() => { free(a); if (!t.dead) hurt(t, ARCHER.dmg); });
+      a.move(ex, ey, Math.hypot(ex - sx, ey - sy) * 75).then(() => { free(a); if (!t.dead) hurt(t, AR.dmg); });
     });
   };
 
   // ----- наши на постах -----
-  for (const k of ["war", "lan", "monk"]) { const [x, y] = S.posts[k]; const u = make(k, x, y, [x, y]); u.left = k !== "lan"; }
+  for (const { kind, at, left } of B.posts) { const u = make(kind, at[0], at[1], at); u.left = u.postLeft = !!left; }
 
   // ----- рабочие: носят самородки на гору, пока гоблинов нет поблизости -----
-  const danger = () => units.some((v) => !v.dead && v.T.side === "gob" && v.y < 17);
-  const haul = async (p, n, stand) => {
-    for (;;) {
-      await skWait(st0, skRnd(2500, 6500));
-      while (danger()) await skWait(st0, 1000);
-      p.at(...S.mine); p.sheet("prungold"); p.el.style.transition = ""; Z(p, S.mine[1]); p.show(true);
-      await skSleep(st0, 250);
-      const f = Math.sign(S.mount[0] - stand[0]) || 1;
-      p.face(stand[0] < p.x); p.play(0, 6, 90, true, "prungold");
-      await p.move(...stand, Math.hypot(stand[0] - p.x, stand[1] - p.y) * 650);
-      p.face(f < 0); p.play(0, 8, 130, true, "pidle");
-      n.el.style.transition = ""; n.at(p.x + f * 0.28, p.y - 0.14); Z(n, 41); n.show(true);
-      await n.arc(S.mount[0] + (stand[0] - S.mount[0]) * 0.35, S.mount[1] - 1.05, 0.4, 360);
-      n.el.style.transition = "opacity 0.15s"; n.show(false);
-      await mount.play(0, 12, 70, false); mount.frame(0, 0);
-      await skSleep(st0, 400);
-      p.face(S.mine[0] < p.x); p.play(0, 6, 90, true, "prun");
-      await p.move(...S.mine, Math.hypot(S.mine[0] - p.x, S.mine[1] - p.y) * 650);
-      p.show(false);
-    }
-  };
-  S.stands.forEach((stand) => { const p = A("prungold", 0.8), n = A("gnug", 0.8, 0.585); Z(p, stand[1]); skRun(() => haul(p, n, stand)); });
+  if (B.haul) {
+    const H = B.haul, danger = () => units.some((v) => !v.dead && v.T.side === "gob" && v.y < H.dangerY);
+    const haul = async (p, n, stand) => {
+      for (;;) {
+        await skWait(st0, skRnd(2500, 6500));
+        while (danger()) await skWait(st0, 1000);
+        p.at(...H.mine); p.sheet("prungold"); p.el.style.transition = ""; Z(p, H.mine[1]); p.show(true);
+        await skSleep(st0, 250);
+        const f = Math.sign(B.mount.at[0] - stand[0]) || 1;
+        p.face(stand[0] < p.x); p.play(0, 6, 90, true, "prungold");
+        await p.move(...stand, Math.hypot(stand[0] - p.x, stand[1] - p.y) * 650);
+        p.face(f < 0); p.play(0, 8, 130, true, "pidle");
+        n.el.style.transition = ""; n.at(p.x + f * 0.28, p.y - 0.14); Z(n, 41); n.show(true);
+        await n.arc(B.mount.at[0] + (stand[0] - B.mount.at[0]) * 0.35, B.mount.at[1] - 1.05, 0.4, 360);
+        n.el.style.transition = "opacity 0.15s"; n.show(false);
+        await mount.play(0, 12, 70, false); mount.frame(0, 0);
+        await skSleep(st0, 400);
+        p.face(H.mine[0] < p.x); p.play(0, 6, 90, true, "prun");
+        await p.move(...H.mine, Math.hypot(H.mine[0] - p.x, H.mine[1] - p.y) * 650);
+        p.show(false);
+      }
+    };
+    H.stands.forEach((stand) => { const p = A("prungold", 0.8), n = A("gnug", 0.8, 0.585); Z(p, stand[1]); skRun(() => haul(p, n, stand)); });
+  } else if (mount) skRun(async () => { for (;;) { await skWait(st0, skRnd(2500, 5000)); await mount.play(0, 12, 70, false); mount.frame(0, 0); } });
 
   // ----- волны гоблинов: приходят из облаков по мосту -----
-  const KINDS = ["torch", "torch", "torchp", "torchp", "tnt", "barrel"];
-  let queue = [], nextWave = now + 2500;
+  const W = B.waves;
+  let queue = [], nextWave = now + (W.first ?? 2500);
   const wave = () => {
-    const n = 2 + Math.floor(Math.random() * 3) + (Math.random() < 0.15 ? 2 : 0);
-    const list = Array.from({ length: n }, () => KINDS[Math.floor(Math.random() * KINDS.length)]);
-    list.forEach((k, i) => queue.push([now + i * 900, k]));
+    const n = W.min + Math.floor(Math.random() * (W.max - W.min + 1)) + (Math.random() < 0.15 ? 2 : 0);
+    B.spawns.forEach((sp, si) => {
+      const k = B.spawns.length > 1 ? Math.ceil(n / B.spawns.length) : n;
+      for (let i = 0; i < k; i++) queue.push([now + i * 900 + si * 300, W.kinds[Math.floor(Math.random() * W.kinds.length)], sp]);
+    });
+    queue.sort((a, b) => a[0] - b[0]);
   };
   for (;;) {
     await (skOn(st0) ? skSleep(st0, TICK) : skWait(st0, 0));
@@ -5767,11 +5914,11 @@ async function skitSiege(st0, S) {
     const gobs = units.filter((v) => !v.dead && v.T.side === "gob").length;
     // штурм почти не прекращается: следующая волна выходит, когда от прежней остался один гоблин
     if (gobs <= 1 && !queue.length && now > nextWave) { wave(); nextWave = Infinity; }
-    if (gobs <= 1 && !queue.length && nextWave === Infinity) nextWave = now + skRnd(2500, 6000);
-    while (queue.length && queue[0][0] <= now) { const [, k] = queue.shift(); make(k, S.spawn[0], S.spawn[1]); }
+    if (gobs <= 1 && !queue.length && nextWave === Infinity) nextWave = now + skRnd(...W.gap);
+    while (queue.length && queue[0][0] <= now) { const [, k, sp] = queue.shift(); make(k, sp[0], sp[1]); }
     for (let i = later.length - 1; i >= 0; i--) if (later[i][0] <= now) { const fn = later[i][1]; later.splice(i, 1); fn(); }
     units.forEach(think);
-    archerThink();
+    archers.forEach(archerThink);
     // не стоять друг в друге
     const live = units.filter((v) => !v.dead);
     for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
@@ -5786,6 +5933,25 @@ async function skitSiege(st0, S) {
       u.a.at(u.x, u.y); u.a.face(u.left); Z(u.a, u.y, 1);
     }
   }
+}
+// Бой у золотой шахты на Острове рудокопов
+async function skitSiege(st0, S) {
+  const E = ISLE_ENG[3], [tx, ty] = S.tower;
+  const blocked = (x, y) => ((x - S.mount[0]) / 1.25) ** 2 + ((y - S.mount[1] + 0.15) / 0.55) ** 2 < 1   // гора золота
+    || (Math.abs(x - tx) < 0.65 && y > ty - 0.55 && y < ty + 0.15)                                      // башня
+    || y < 8.3                                                                                          // шахта
+    || (Math.abs(x - 13.5) < 1.05 && y > 19.8 && y < 21.7);                                              // кнопка уровня
+  const onBridge = (x, y) => Math.abs(x - S.bridgeX) < 0.3 && y > 19.9 && y < 30.5;
+  const walk = (x, y) => onBridge(x, y) || (x > 14.05 && y < 21.9 && !blocked(x, y)
+    && E.groundAt(x, y) === 0 && E.groundAt(x - 0.22, y) === 0 && E.groundAt(x + 0.22, y) === 0);
+  S.walk = walk;
+  const B = { walk, mount: { at: S.mount, sc: 0.6 }, towers: [S.tower], respawn: [S.mine[0], S.mine[1] + 0.1], spawns: [S.spawn], goal: S.goal,
+    posts: [{ kind: "war", at: S.posts.war }, { kind: "lan", at: S.posts.lan }, { kind: "monk", at: S.posts.monk, left: true }],
+    haul: { mine: S.mine, stands: S.stands, dangerY: 17 },
+    waves: { kinds: ["torch", "torch", "torchp", "torchp", "tnt", "barrel"], min: 2, max: 4, gap: [2500, 6000] } };
+  const run = battle(st0, B);
+  S.units = B.units;
+  return run;
 }
 // Лесоруб на карте: рубит дерево, оно падает в сторону от него, на месте остаётся пень и брёвна.
 // Брёвна он относит в поленницу (до трёх штук), потом отдыхает; на месте пня вырастает новое дерево.
@@ -9880,149 +10046,60 @@ async function codeFromLink() {
 sheetEl.addEventListener("click", (e) => { if (e.target === sheetEl) closeSheet(); }); // касание мимо окна
 addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheetEl.hidden) closeSheet(); });
 
-// ===== Живая заставка: островок из готовых анимаций Tiny Swords =====
-// Всё, что движется, — покадровые анимации самого набора (деревья, пена прибоя,
-// овцы, костёр, гоблины, рыцарь). Мы ничего не поворачиваем и не дорисовываем:
-// только показываем нужный кадр полоски в нужное время. Облака плывут по целым пикселям.
-// На E-Ink и при "уменьшить движение" рисуем один неподвижный кадр.
-const SCENE_MAP = [
-  "~~~~~~~~~~~~~",
-  "~~~~~~~~pppp~",
-  "~~~gggg~pppp~",
-  "~gggggggpppp~",
-  "~gggggggCCCC~",
-  "~ggggggggggg~",
-  "~~ggggggggg~~",
-  "~~~gggggg~~~~",
-  "~~~~~~~~~~~~~",
-];
-// [картинка, кадров, ширина кадра, высота кадра, сколько пустоты под ногами]
-const SCENE_SPR = {
-  tree1: ["sc_tree1", 8, 192, 256, 15], tree2: ["sc_tree2", 8, 192, 256, 7],
-  tree3: ["sc_tree3", 8, 192, 192, 22], tree4: ["sc_tree4", 8, 192, 192, 24],
-  bush1: ["sc_bush1", 8, 128, 128, 49], bush3: ["sc_bush3", 8, 128, 128, 44],
-  sheep: ["sc_sheep", 6, 128, 128, 44], sheepg: ["sc_sheepg", 12, 128, 128, 44],
-  fire: ["sc_fire", 7, 128, 128, 22, 0.5], wrock1: ["sc_wrock1", 16, 64, 64, 16], wrock3: ["sc_wrock3", 16, 64, 64, 16],
-  knight: ["kidle", 8, 120, 120, 19], goblin: ["gt_idle", 7, 166, 145, 36], tnt: ["gx_idle", 6, 98, 81, 0], ghouse: ["ghouse", 1, 113, 145, 0],
+
+
+// ===== Заставка: живой бой у замка (островок ISLE_MAPS[0]) и кусочки кода =====
+// Островок рисует тот же движок, что карты островов, бой — тот же движок, что бой у шахты:
+// каждый сам видит врага и дерётся. Гоблины приходят с двух сторон по мостам из облаков.
+// Над нашими всплывают строчки кода — «программа» бойца; в углу — маленькая программа, строки которой
+// подсвечиваются по очереди, будто она выполняется. Ходят только по земле поля и по дороге с мостами.
+const SPLASH = {
+  mount: [11.0, 8.9], towers: [[4.2, 10.0], [13.9, 10.0]], respawn: [8.5, 7.7], goal: [11.0, 9.7], roadY: 12.5,
+  spawns: [[-0.4, 12.5], [18.4, 12.5]],
+  posts: [{ kind: "hero", at: [8.5, 10.4] }, { kind: "war", at: [6.6, 11.0] }, { kind: "war", at: [10.4, 11.2], left: true },
+    { kind: "lan", at: [5.6, 12.2] }, { kind: "lan", at: [12.1, 11.9], left: true }, { kind: "monk", at: [9.4, 9.2], left: true }],
 };
-// Кто где стоит: [вид, x и y основания в клетках, скорость кадров (мс на кадр), смотрит влево]
-const SCENE_OBJ = [
-  // всё живое стоит целиком на своей земле, не ближе полклетки к воде или обрыву
-  // (проверка — scenechk.py в черновиках; правила — в плане)
-  ["tree2", 2.0, 3.75, 110], ["tree1", 3.8, 2.85, 120], ["tree4", 2.3, 4.6, 105], ["tree3", 5.6, 3.1, 115],
-  ["tree4", 2.75, 5.95, 112], ["bush1", 6.9, 4.5, 120], ["bush3", 9.8, 5.9, 110], ["bush1", 4.2, 7.3, 125],
-  ["ghouse", 10.7, 2.75, 0], ["tnt", 8.9, 2.35, 120, true], ["goblin", 9.0, 3.5, 110], ["fire", 10.2, 3.45, 100],
-  ["knight", 6.3, 5.85, 120], ["sheep", 4.4, 6.35, 140], ["sheepg", 8.6, 6.6, 130, true], ["sheep", 6.1, 7.1, 150, true],
-  ["wrock1", 0.5, 7.7, 110], ["wrock3", 12.2, 6.6, 120], ["wrock1", 11.3, 8.4, 100], ["wrock3", 6.4, 1.5, 115],
+const SPLASH_CODE = [
+  "<i>while</i> <b>True</b>:",
+  "    <i>if</i> <b>enemy_left</b>():",
+  "        <em>attack</em>()",
+  "    <i>else</i>:",
+  "        <u>move_right</u>(<span class=\"tk-num\">2</span>)",
 ];
-
-function startScene(canvas) {
-  const T = 64, H = SCENE_MAP.length, W = SCENE_MAP[0].length;
-  canvas.width = W * T; canvas.height = H * T;
-  const ctx = canvas.getContext("2d");
-  const keys = new Set(["sc_tm", "sc_foam", "sc_cloud1", "sc_cloud2", ...Object.values(SCENE_SPR).map((s) => s[0])]);
-  const img = {};
-  const at = (x, y) => (SCENE_MAP[y] && SCENE_MAP[y][x]) || "~";
-  const ground = (x, y) => at(x, y) !== "~";
-  const plateau = (x, y) => at(x, y) === "p";
-  const cliff = (x, y) => at(x, y) === "C";
-
-  // Земля одной картинкой: она не меняется, поэтому рисуем её один раз
-  const land = document.createElement("canvas");
-  land.width = canvas.width; land.height = canvas.height;
-  const tile = (g, cx, cy, x, y) => g.drawImage(img.sc_tm, cx * T, cy * T, T, T, x * T, y * T, T, T);
-  // Выбор куска плитки по соседям: середина, край, угол, полоска или одиночная
-  function autotile(g, is, bx, by) {
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!is(x, y)) continue;
-      const l = is(x - 1, y), r = is(x + 1, y), u = is(x, y - 1), d = is(x, y + 1);
-      const col = !l ? 0 : !r ? 2 : 1, row = !u ? 0 : !d ? 2 : 1;
-      if ((l || r) && (u || d)) tile(g, bx + col, by + row, x, y);
-      else if (u || d) tile(g, bx + 3, by + row, x, y);
-      else if (l || r) tile(g, bx + col, by + 3, x, y);
-      else tile(g, bx + 3, by + 3, x, y);
-    }
-  }
-  function paintLand() {
-    const g = land.getContext("2d");
-    g.imageSmoothingEnabled = false;
-    autotile(g, ground, 0, 0);                       // трава на всём острове
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!cliff(x, y)) continue;                    // обрыв под плато
-      const l = cliff(x - 1, y), r = cliff(x + 1, y);
-      tile(g, !l && !r ? 8 : !l ? 5 : !r ? 7 : 6, 4, x, y);
-    }
-    autotile(g, plateau, 5, 0);                      // плато наверху
-  }
-  // Пена прибоя под каждой клеткой берега
-  const shore = [];
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    if (!ground(x, y)) continue;
-    let wet = false;
-    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!ground(x + dx, y + dy)) wet = true;
-    if (wet) shore.push([x, y, (x * 7 + y * 5) % 16]);
-  }
-  const objs = SCENE_OBJ.map(([kind, x, y, ms, flip], k) => ({ s: SCENE_SPR[kind], x: x * T, y: y * T, ms, flip, ph: (k * 3) % 8 }))
-    .sort((a, b) => a.y - b.y);
-  const clouds = [
-    { k: "sc_cloud1", y: -40, v: 5.5, x0: 0.15 },
-    { k: "sc_cloud2", y: H * T - 150, v: 4, x0: 0.65 },
-  ];
-
-  function frame(t) {
-    ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = "#47aba9";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const ff = Math.floor(t / 85);
-    for (const [x, y, ph] of shore) {
-      const f = (ff + ph) % 16;
-      ctx.drawImage(img.sc_foam, f * 192, 0, 192, 192, x * T - 64, y * T - 64, 192, 192);
-    }
-    ctx.drawImage(land, 0, 0);
-    for (const o of objs) {
-      const [k, n, fw, fh, foot, sc = 1] = o.s;
-      const f = n > 1 ? (Math.floor(t / o.ms) + o.ph) % n : 0;
-      const w = fw * sc, h = fh * sc;
-      const dx = Math.round(o.x - w / 2), dy = Math.round(o.y - h + foot * sc);
-      if (o.flip) {
-        ctx.save();
-        ctx.translate(dx + w, dy);
-        ctx.scale(-1, 1);
-        ctx.drawImage(img[k], f * fw, 0, fw, fh, 0, 0, w, h);
-        ctx.restore();
-      } else ctx.drawImage(img[k], f * fw, 0, fw, fh, dx, dy, w, h);
-    }
-    // облака плывут медленно, по целым пикселям, и уходят за край
-    const span = canvas.width + 600;
-    for (const c of clouds) {
-      const x = Math.round(((c.x0 * span + (t / 1000) * c.v) % span) - 600);
-      ctx.globalAlpha = 0.92;
-      ctx.drawImage(img[c.k], x, c.y);
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  let raf = 0, last = 0;
-  const loop = (t) => {
-    raf = requestAnimationFrame(loop);
-    if (STILL || t - last < 33) return; // ~30 кадров в секунду хватает с запасом
-    last = t;
-    frame(t);
-  };
-  Promise.all([...keys].map((k) => tsImage(k).then((im) => (img[k] = im)))).then(() => {
-    paintLand();
-    frame(0);
-    raf = requestAnimationFrame(loop);
-  });
-  return () => cancelAnimationFrame(raf); // остановить, когда заставка спрятана
+function startSplash() {
+  const world = $("splash-world"), D = ISLE_MAPS[0], VH = D.terr.length * 20;
+  world.style.aspectRatio = `360 / ${VH}`;
+  const E = mapEngine(D);
+  let alive = true;
+  const ready = E.startMapScene(world.querySelector(".map-canvas"));
+  const S = SPLASH, trees = E.trees;
+  const blocked = (x, y) => ((x - S.mount[0]) / 1.25) ** 2 + ((y - S.mount[1] + 0.15) / 0.55) ** 2 < 1
+    || S.towers.some(([tx, ty]) => Math.abs(x - tx) < 0.65 && y > ty - 0.55 && y < ty + 0.15)
+    || trees.some(([, tx, ty]) => Math.abs(tx - x) < 0.4 && y > ty - 0.45 && y < ty + 0.15);
+  // дорога с мостами: по ней приходят из-за края карты; остальное — земля поля одной высоты
+  const onRoad = (x, y) => Math.abs(y - S.roadY) < 0.32 && (x < 0.2 || x > 17.8 || E.roadAt(Math.floor(x), Math.floor(y)) !== ".");
+  const walk = (x, y) => onRoad(x, y) || (x > 0 && x < 18 && !blocked(x, y) && [-0.22, 0, 0.22].every((dx) => E.groundAt(x + dx, y) === 0));
+  S.walk = walk; S.E = E;
+  const st = { layer: world, before: world.querySelector(".mapclouds"), unit: 20 / 360 * 100,
+    pos: (x, y) => [x * 20 / 360 * 100, y * 20 / VH * 100], on: () => alive, alive: () => alive };
+  const B = { walk, mount: { at: S.mount, sc: 0.6 }, towers: S.towers, respawn: S.respawn, spawns: S.spawns, goal: S.goal,
+    posts: S.posts, code: true, bubbleX: [3.9, 14.1], archer: { reach: 3.4, cd: 1700 }, waves: { kinds: ["torch", "torch", "torchp", "torchp", "tnt", "barrel"], min: 3, max: 5, gap: [1200, 3500], first: 900 } };
+  ready.then(() => { if (alive) skRun(() => battle(st, B)); S.units = B.units; });
+  // программа в углу: строки подсвечиваются по очереди
+  const pre = $("splash-code");
+  pre.innerHTML = SPLASH_CODE.map((l, i) => `<span class="ln"><span class="n">${i + 1}</span>${l}</span>`).join("");
+  const lines = [...pre.querySelectorAll(".ln")];
+  let k = 0;
+  const order = [0, 1, 2, 0, 1, 3, 4];
+  const tick = setInterval(() => { if (STILL) return; lines.forEach((l) => l.classList.remove("on")); lines[order[k++ % order.length]].classList.add("on"); }, 650);
+  return () => { alive = false; clearInterval(tick); world.hidden = true; };
 }
-
 // ===== Старт: всегда с карты =====
 L = LEVELS[levelIdx];
 showView("map");
 initCloud();
 if (syncOn) { setSyncState("idle"); codeFromLink().finally(syncNow); }
-const stopScene = startScene($("splash-scene"));
+const stopScene = startSplash();
 showIsle(curIsle);
 
 // Заставка: касание "Играть" разрешает браузеру звук, и атмосфера начинается сразу
@@ -10040,7 +10117,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 73;
+const APP_VERSION = 74;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
