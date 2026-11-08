@@ -151,6 +151,20 @@ h1 {
 .enemy.gone { opacity: 0; transform: translateY(-25%) scale(0.6); }
 .enemy .hp { position: absolute; top: 2%; left: 0; right: 0; display: flex; justify-content: center; gap: 2px; z-index: 3; }
 .enemy .hp i { width: 22%; max-width: 14px; aspect-ratio: 1; background: no-repeat center/contain; }
+.enemy.big .hp { gap: 0; }
+.enemy.big .hp i { width: 19%; }
+/* жители-союзники стоят у дороги; ударил своего — вздрагивает; победа — подпрыгивают */
+.ally { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.ally.left .spr { transform: scaleX(-1); }
+/* значок «свой»: зелёный кружок с галочкой над головой (у врагов — красные сердечки) */
+.ally::after { content: "✓"; position: absolute; top: 4%; left: 50%; transform: translateX(-50%); width: 30%; max-width: 18px; aspect-ratio: 1;
+  border-radius: 50%; background: #3fbf7f; color: #fff; font: 700 11px/1 var(--font-body, sans-serif); display: grid; place-items: center;
+  box-shadow: 0 0 0 2px #13151b; z-index: 3; }
+.ally.ouch { animation: ally-ouch 0.5s ease 2; }
+.ally.cheer { animation: ally-hop 0.45s ease-out 3; }
+@keyframes ally-ouch { 0%, 100% { transform: none; } 25% { transform: translateX(-8%) rotate(-4deg); } 75% { transform: translateX(8%) rotate(4deg); } }
+@keyframes ally-hop { 0%, 100% { transform: none; } 45% { transform: translateY(-18%); } }
+html.still .ally { animation: none !important; }
 .enemy .hp i.on { background-image: var(--heart); }
 .enemy .hp i.off { background-image: var(--heart); opacity: 0.25; filter: grayscale(1); }
 .poof { z-index: 3; }
@@ -1574,12 +1588,13 @@ const CONDS = {};
 for (const [d, ru] of [["Right", "справа"], ["Left", "слева"], ["Down", "снизу"], ["Up", "сверху"]]) {
   const dir = DIRS["move" + d];
   CONDS["obstacle" + d] = { what: "wall", move: "move" + d, dx: dir.dx, dy: dir.dy, arrow: dir.arrow, ru, py: "obstacle_" + d.toLowerCase() };
-  CONDS["goblin" + d] = { what: "goblin", move: "move" + d, dx: dir.dx, dy: dir.dy, arrow: dir.arrow, ru, py: "goblin_" + d.toLowerCase() };
+  // «враг справа» — враг в поле зрения: в этой стороне по прямой, пока не мешает препятствие
+  CONDS["enemy" + d] = { what: "enemy", move: "move" + d, dx: dir.dx, dy: dir.dy, arrow: dir.arrow, ru, py: "enemy_" + d.toLowerCase() };
 }
 const COND_NAMES = Object.keys(CONDS);
 const COND_ANY = [...COND_NAMES, ...COND_NAMES.map((c) => CONDS[c].py)].join("|");
 const condKey = (name) => COND_NAMES.find((c) => c === name || CONDS[c].py === name);
-const WHAT_RU = { wall: "препятствие", goblin: "гоблин" };
+const WHAT_RU = { wall: "препятствие", enemy: "враг" };
 
 let lang = "py"; // "py" или "js"
 const disp = (name) => (lang === "py" ? DIRS[name].py : name); // как команда пишется в текущем языке
@@ -1601,6 +1616,7 @@ const CHAPTERS = [
   { name: "Деревня у причала", topic: "условия «если»", isle: 2 },
   { name: "Тропа через кусты", topic: "засады и монеты", isle: 2 },
   { name: "Просека лесорубов", topic: "куда упадёт дерево", isle: 2 },
+  { name: "Свои и чужие", topic: "враг в поле зрения", isle: 2 },
 ];
 
 // Уровни по порядку на карте.
@@ -2606,6 +2622,107 @@ const LEVELS = [
     ],
     starter: { py: "", js: "" },
   },
+  // ========== Свои и чужие: «если враг в поле зрения» ==========
+  // enemy_right() — справа по прямой (пока не мешает препятствие) стоит враг.
+  // allies — жители-союзники у дороги: бить их нельзя, поэтому «бей всегда» проваливает вариант без врага.
+  // W — чёрный рыцарь вожака: 5 сердечек, победить нельзя (после каждого удара бьёт в ответ), только обойти подальше.
+  {
+    name: "Свой или чужой",
+    chapter: 7,
+    isle: 2,
+    goal: "Новое: свои и враги. Наверху у дороги стоит крестьянин — он <b>свой</b>. В варианте 1 на дороге гоблин, в варианте 2 — никого. Рамка «если → враг» уже стоит: нажми на номер строки [[line:2]] (строка с <b>if</b>) и кнопку [[btn:attack]]. Бей, только когда впереди враг — своего задеть нельзя!",
+    commands: ["moveRight", "moveDown", "moveUp", "attack"],
+    ifs: ["enemy"],
+    newCommands: ["attack"],
+    par: 3, good: 4,
+    allies: [{ at: [3, 1], kind: "pawn" }],
+    maps: [
+      ["#########", "#########", "S...G.CCE", "#########", "#########"],
+      ["#########", "#########", "S.....CCE", "#########", "#########"],
+    ],
+    starter: {
+      py: "move_right(3)\nif enemy_right():\nmove_right(5)\n",
+      js: "moveRight(3);\nif (enemyRight()) {\n}\nmoveRight(5);\n",
+    },
+  },
+  {
+    name: "Лучник на посту",
+    chapter: 7,
+    isle: 2,
+    after: "Свой или чужой",
+    goal: "Внизу у дороги — лучник, тоже свой. Поставь «если» сам: нажми на номер строки [[line:1]], потом [[ifbtn]], потом [[btn:attack]].",
+    commands: ["moveRight", "moveDown", "moveUp", "attack"],
+    ifs: ["enemy"],
+    ifButton: true,
+    par: 3, good: 4,
+    allies: [{ at: [5, 3], kind: "archer" }],
+    maps: [
+      ["#########", "#########", "SCC...G.E", "#########", "#########"],
+      ["#########", "#########", "SCC.....E", "#########", "#########"],
+    ],
+    starter: {
+      py: "move_right(5)\nmove_right(3)\n",
+      js: "moveRight(5);\nmoveRight(3);\n",
+    },
+  },
+  {
+    name: "Обходить не надо",
+    chapter: 7,
+    isle: 2,
+    after: "Лучник на посту",
+    goal: "Найди ошибку: в рамке рыцарь уходит вниз, а внизу стоит крестьянин — там не пройти. Гоблина надо просто ударить! Нажми на номер строки [[line:3]] и кнопку [[btn:attack]] — команда в строке сменится.",
+    commands: ["moveRight", "moveDown", "moveUp", "attack"],
+    ifs: ["enemy"],
+    ifButton: true,
+    par: 3, good: 4,
+    allies: [{ at: [2, 3], kind: "pawn" }],
+    maps: [
+      ["#########", "#########", "S..G..C.E", "#########", "#########"],
+      ["#########", "#########", "S.....C.E", "#########", "#########"],
+    ],
+    starter: {
+      py: "move_right(2)\nif enemy_right():\n    move_down()\nmove_right(6)\n",
+      js: "moveRight(2);\nif (enemyRight()) {\n  moveDown();\n}\nmoveRight(6);\n",
+    },
+  },
+  {
+    name: "Чёрный рыцарь",
+    chapter: 7,
+    isle: 2,
+    after: "Обходить не надо",
+    goal: "Новый враг — чёрный рыцарь вожака. У него пять сердечек: победить его нельзя, и он бьёт всех, кто рядом. «Если» видит врага издалека — по всей дороге вправо. В рамке рыцарь обходит на одну клетку вниз — это слишком близко. Нажми на номер строки [[line:3]] и кнопку [[num:2]].",
+    commands: ["moveRight", "moveDown", "moveUp", "attack"],
+    ifs: ["enemy"],
+    ifButton: true,
+    par: 4, good: 5,
+    allies: [{ at: [7, 1], kind: "archer" }, { at: [2, 3], kind: "pawn", v: [1] }],
+    maps: [
+      ["#########", "#########", "S....W...", "##.......", "##......E"],
+      ["#########", "#########", "S........", "###......", "##......E"],
+    ],
+    starter: {
+      py: "move_right(2)\nif enemy_right():\n    move_down()\nmove_right(6)\nmove_down(2)\n",
+      js: "moveRight(2);\nif (enemyRight()) {\n  moveDown();\n}\nmoveRight(6);\nmoveDown(2);\n",
+    },
+  },
+  {
+    name: "Свои и чужие: испытание",
+    chapter: 7,
+    isle: 2,
+    challenge: true,
+    goal: "Испытание: программа пустая, три варианта — гоблин на дороге или никого, а у дороги свои. Подсказка: [[btn:moveRight]] [[num:3]], потом [[ifbtn]] и [[btn:attack]], потом [[tool:done]] и [[btn:moveRight]] [[num:5]].",
+    commands: ["moveRight", "moveDown", "moveUp", "attack"],
+    ifs: ["enemy"],
+    ifButton: true,
+    par: 3, good: 4,
+    allies: [{ at: [3, 1], kind: "pawn", v: [0, 1] }, { at: [3, 3], kind: "archer", v: [2] }],
+    maps: [
+      ["#########", "#########", "S...G..CE", "#########", "#########"],
+      ["#########", "#########", "S......CE", "#########", "#########"],
+      ["#########", "#########", "S......CE", "#########", "#########"],
+    ],
+    starter: { py: "", js: "" },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -2619,7 +2736,7 @@ function btnRefs(html) {
     // [[tile:moveUp:1]] — плитка программы, как в рамке; [[num:2]] — кнопка цифры; [[ifhead]] — заголовок «если»
     .replace(/\[\[tile:(\w+):(\d+)\]\]/g, (m, n, k) => `<span class="tile tileref ${DIRS[n].axis}"><span class="ar">${DIRS[n].arrow}</span><span class="nn">${k}</span></span>`)
     .replace(/\[\[num:(\d+)\]\]/g, (m, k) => `<span class="numref">${k}</span>`)
-    .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ если <span class="ar">→</span> препятствие</span>`)
+    .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ если <span class="ar">→</span> ${WHAT_RU[CONDS[levelConds()[0]]?.what || "wall"]}</span>`)
     .replace(/\[\[ifbtn\]\]/g, () => `<span class="ifbtnref">${uiBlocks ? "❓ если" : "? если"}</span>`);
 }
 function langify(html) {
@@ -3034,7 +3151,11 @@ const HEART_URL = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http:/
 function goblinSprites(hp) {
   const out = document.createDocumentFragment();
   const mk = (key, k, bottom, dur, cls) => out.appendChild(sprite(key, k, { bottom, dur, delay: cls === "g-idle" ? Math.random() : 0, cls }));
-  if (hp > 1) {
+  if (hp >= 5) {
+    // чёрный рыцарь вожака: ростом с героя, пять сердечек — победить его нельзя
+    mk("bw_idle", 0.66, -14, 0.9, "g-idle");
+    mk("bw_side", 0.66, -14, 0.4, "g-atk side down up");
+  } else if (hp > 1) {
     mk("gx_idle", 0.8, 6, 0.8, "g-idle");
     mk("gx_side", 0.8, 6, 0.6, "g-atk side down up");
   } else {
@@ -3773,7 +3894,7 @@ ISLE_MAPS[1] = {
 // @@/isle1@@
 // @@isle2@@
 ISLE_MAPS[2] = {
-  nodes: [[170, 470], [210, 450], [250, 430], [230, 390], [190, 390], [150, 390], [110, 390], [70, 370], [90, 330], [130, 330], [170, 330], [210, 330], [250, 310], [230, 270], [190, 270], [90, 230], [130, 210], [170, 210], [210, 210], [250, 210]],
+  nodes: [[170, 470], [210, 450], [250, 430], [230, 390], [190, 390], [150, 390], [110, 390], [70, 370], [90, 330], [130, 330], [170, 330], [210, 330], [250, 310], [230, 270], [190, 270], [90, 230], [130, 210], [170, 210], [210, 210], [250, 210], [270, 170], [230, 170], [190, 170], [170, 130], [170, 90]],
   rows: [
     "....................................",
     "....................................",
@@ -3873,7 +3994,7 @@ ISLE_MAPS[2] = {
     "..................",
     "..................",
     "..................",
-    "..................",
+    "........#.........",
     "........#.........",
     "........#.........",
     "........#.........",
@@ -3917,7 +4038,7 @@ ISLE_MAPS[2] = {
     ["sheep", 6.4, 11.8, 0.42, true],
     ["sheepg", 11.4, 11.7, 0.42],
   ],
-  labels: [["ДЕРЕВНЯ", 80, 486], ["КУСТЫ", 112, 266], ["ПРОСЕКА", 210, 170]],
+  labels: [["ДЕРЕВНЯ", 80, 486], ["КУСТЫ", 112, 266], ["ПРОСЕКА", 80, 176], ["СВОИ И ЧУЖИЕ", 264, 136]],
   bank: [["cloud_b", 250, 1810, 1.1], ["cloud_a", 560, 1790, 1.3], ["cloud_c", 860, 1830, 1.0], ["cloud_d", 1080, 1820, 1.0]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm3",
@@ -4848,6 +4969,7 @@ function boardSkits(terr, cellOv) {
     const wet = (xx, yy) => terr[yy]?.[xx] === "water";
     if (!wall(x, y) || wet(x, y) || wet(x, y + 1) || wet(x - 1, y) || wet(x + 1, y) || wet(x, y - 1)) continue;
     if (evs().some((e) => e.from && Math.abs(e.from[0] - x) <= 1 && Math.abs(e.from[1] - y) <= 1)) continue;   // рядом с кустом засады
+    if ((L.allies || []).some((a) => Math.abs(a.at[0] - x) <= 1 && Math.abs(a.at[1] - y) <= 1)) continue;   // рядом с союзником
     if ((L.events || []).some((e) => e.tree && Math.abs(e.tree[0] - x) <= 2 && Math.abs(e.tree[1] - y) <= 1)) continue;   // у лесоруба уровня
     if (!(x === 0 || y === 0 || x === W - 1 || y === H - 1)) continue;
     if (y === 0 && (x < 3 || x > W - 3)) continue;
@@ -4874,7 +4996,7 @@ function boardSkits(terr, cellOv) {
     // лесоруб — если рядом (слева или справа) растёт дерево и лесоруба на поле ещё нет
     const tree = treeAt(c.x - 1, c.y) ? -1 : treeAt(c.x + 1, c.y) ? 1 : 0;
     // на уровне со своим лесорубом второго в углу не ставим — запутает
-    const kind = tree && !chop && !(L.events || []).some((e) => e.kind === "fell") ? "chop" : calm[(h + i) % 2];
+    const kind = tree && !chop && !(L.events || []).some((e) => e.kind === "fell") && !L.allies ? "chop" : calm[(h + i) % 2];
     const left = kind === "chop" ? tree < 0 : c.x > W / 2;   // лесоруб — к дереву, остальные — к середине поля
     if (kind === "monk") skRun(() => boardMonk(st, c.x + 0.5, c.y + 0.92, left));
     else if (kind === "sheep") skRun(() => boardSheep(st, c.x + 0.5, c.y + 0.9, left));
@@ -5120,6 +5242,7 @@ function buildBoard() {
   enemies = [];
   const waterRocks = []; // камни в воде: в луже на одну клетку им не место
   const cellOv = map.map((row) => [...row].map(() => null)); // предмет в клетке (для сценок)
+  const cellEl = map.map((row) => [...row].map(() => null)); // сами клетки
   const terr = map.map((row) => [...row].map(() => null)); // какая земля в каждой клетке
   const theme = themeFor(levelIdx);
   boardEl.dataset.theme = theme.name;
@@ -5136,12 +5259,14 @@ function buildBoard() {
       // засада: из этой клетки выскакивает гоблин или монах — здесь всегда густой куст на земле
       if (evs().some((e) => e.from && e.from[0] === x && e.from[1] === y)) { tl.over = "bush2"; if (tl.ground === "water") tl.ground = "grass"; }
       // дерево, которое повалит лесоруб, — невысокая ель; по бокам от неё пусто (там стоит лесоруб и падает дерево)
+      if (allyAt(x, y)) { tl.over = null; if (tl.ground === "water") tl.ground = "grass"; }
       for (const e of evs().filter((e) => e.kind === "fell")) {
         const f = fellCells(e);
         if (f.tree[0] === x && f.tree[1] === y) { tl.over = "tree1"; tl.ground = "grass"; }
         if ([f.cutter, f.away].some(([cx, cy]) => cx === x && cy === y)) { tl.over = null; if (tl.ground === "water") tl.ground = "grass"; }
       }
       cell.className = "cell " + (ch === "#" ? "wall" : "floor");
+      cellEl[y][x] = cell;
       terr[y][x] = tl.ground;
       // то, что стоит на клетке (дерево, куст, камень) — отдельный слой с анимацией
       if (tl.over) {
@@ -5167,10 +5292,10 @@ function buildBoard() {
         items.push({ type, x, y, el: it });
       }
       // Гоблины: G — один удар, B — два удара
-      if (ch === "G" || ch === "B") {
-        const hp = ch === "B" ? 2 : 1;
+      if (ch === "G" || ch === "B" || ch === "W") {
+        const hp = ch === "W" ? 5 : ch === "B" ? 2 : 1;
         const en = document.createElement("div");
-        en.className = "enemy";
+        en.className = "enemy" + (hp >= 5 ? " big" : "");
         en.style.setProperty("--heart", `url("${HEART_URL}")`);
         const ew = document.createElement("div");
         ew.className = "ewrap";
@@ -5290,6 +5415,14 @@ function buildBoard() {
   }
   // мирная сценка в углу поля: монах, лесоруб, строитель или овечка
   boardSkits(terr, cellOv);
+  // союзники у дороги: смотрят на дорогу (на середину поля)
+  allyEls = alliesNow().map((a) => {
+    const el = document.createElement("div");
+    el.className = "ally" + (a.at[0] > W / 2 ? " left" : "");
+    el.appendChild(sprite(a.kind === "archer" ? "al_archer" : "al_pawn", 0.66, { bottom: -14, dur: 0.9, delay: Math.random() }));
+    cellEl[a.at[1]]?.[a.at[0]]?.appendChild(el);
+    return { a, el };
+  });
   // лесорубы уровня: рубят «своё» дерево, пока рыцарь не подойдёт
   fellers = evs().filter((e) => e.kind === "fell").map((e) => {
     const f = fellCells(e), st = evStage();
@@ -5559,6 +5692,11 @@ function placeHero() {
 // События уровня (засады, монах, падающее дерево). У события может быть v: [номера вариантов] —
 // тогда оно бывает только на этих вариантах поля.
 const evs = () => (L.events || []).filter((e) => !e.v || e.v.includes(L.maps ? variant : 0));
+// Союзники — жители жёлтого королевства у дороги (в клетке-стене): { at: [x, y], kind: "pawn" | "archer", v }.
+// Бить их нельзя: удар, когда рядом нет врага, а рядом свой, — ошибка.
+const alliesNow = () => (L.allies || []).filter((a) => !a.v || a.v.includes(L.maps ? variant : 0));
+const allyAt = (x, y) => alliesNow().find((a) => a.at[0] === x && a.at[1] === y);
+let allyEls = [];
 // Лесоруб валит дерево: стоит рядом с деревом (с той стороны, откуда рубит), дерево падает
 // в другую сторону. onto — дерево стоит над дорогой и падает на неё: клетка справа внизу
 // от дерева становится препятствием.
@@ -5843,6 +5981,14 @@ function buildPlan(code) {
       for (let s = 0; s < n; s++) {
         const around = [face, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 0, dy: -1 }];
         const d = around.find((d) => goblinAt(pos.x + d.dx, pos.y + d.dy));
+        // врага рядом нет, а рядом стоит свой — удар достался бы ему
+        const friend = !d && around.find((d) => allyAt(pos.x + d.dx, pos.y + d.dy));
+        if (friend) {
+          const at = { x: pos.x + friend.dx, y: pos.y + friend.dy };
+          c.hits.push({ target: null, ally: at, face: { ...friend }, hp: new Map(hpLeft), pre: [] });
+          crash = { cmd: i, step: s, at, reason: "ally" };
+          break;
+        }
         const pre = d ? strikes(enemyKey(pos.x + d.dx, pos.y + d.dy), false) : strikes(null, true);
         if (kHp <= 0) { c.hits.push({ target: null, face: { ...face }, hp: new Map(hpLeft), pre }); Object.assign(dead, { cmd: i, step: s }); break; }
         if (d) {
@@ -5863,7 +6009,7 @@ function buildPlan(code) {
       }
       c.to = { ...pos };
       c.got.push({ ...got });
-      if (dead) throw STOP;
+      if (dead || crash) throw STOP;
       if (commands.length >= 100) throw new Error("Рыцарь сделал 100 команд и так и не дошёл. Он ходит по кругу?");
       return;
     }
@@ -5925,7 +6071,10 @@ function buildPlan(code) {
     const conds = levelConds();
     const ask = (c) => (line) => {
       const k = CONDS[c], x = pos.x + k.dx, y = pos.y + k.dy;
-      const yes = k.what === "wall" ? wallAt(x, y) : goblinAt(x, y);
+      let yes;
+      if (k.what === "wall") yes = wallAt(x, y);
+      else for (let cx = x, cy = y; !wallAt(cx, cy) || goblinAt(cx, cy); cx += k.dx, cy += k.dy) if (goblinAt(cx, cy)) { yes = true; break; }
+      yes = !!yes;
       checks.push({ cond: c, yes, line, at: { ...pos }, before: commands.length });
       if (++ticks > 600) throw pyError(0, "Условие проверяется снова и снова, а рыцарь стоит на месте");
       return yes;
@@ -6008,6 +6157,11 @@ const BLOCK_GOALS = {
   "Не туда от дерева": "Найди ошибку: в рамке рыцарь идёт вверх, а вверху лес. Нажми на плитку [[tile:moveUp:1]] и кнопку [[btn:moveDown]] — плитка станет [[tile:moveDown:1]].",
   "Лесоруб обедает": "Три варианта: дерево падает на дорогу, падает в лес — а на третьем лесоруб ушёл обедать, и ель стоит. Программа одна на все три. Нажми на плитку [[tile:moveRight:2]], потом [[ifbtn]], потом [[btn:moveDown]].",
   "Просека: испытание": "Испытание: программа пустая, вариантов три — дерево на дороге, в лесу или стоит. Подсказка: [[btn:moveRight]] [[num:6]], потом [[ifbtn]] и [[btn:moveDown]], потом [[tool:done]], [[btn:moveRight]] [[num:2]] и [[btn:moveDown]] [[num:2]].",
+  "Свой или чужой": "Новое: свои и враги. Наверху у дороги стоит крестьянин — он <b>свой</b>. В варианте 1 на дороге гоблин, в варианте 2 — никого. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:attack]]. Бей, только когда впереди враг — своего задеть нельзя!",
+  "Лучник на посту": "Внизу у дороги — лучник, тоже свой. Поставь «если» сам: нажми на плитку [[tile:moveRight:5]], потом [[ifbtn]], потом [[btn:attack]].",
+  "Обходить не надо": "Найди ошибку: в рамке рыцарь уходит вниз, а внизу стоит крестьянин — там не пройти. Гоблина надо просто ударить! Нажми на плитку [[tile:moveDown:1]] и кнопку [[btn:attack]].",
+  "Чёрный рыцарь": "Новый враг — чёрный рыцарь вожака. У него пять сердечек: победить его нельзя, и он бьёт всех, кто рядом. «Если» видит врага издалека — по всей дороге вправо. В рамке рыцарь обходит на одну клетку вниз — это слишком близко. Нажми на плитку [[tile:moveDown:1]] и кнопку [[num:2]] — плитка станет [[tile:moveDown:2]].",
+  "Свои и чужие: испытание": "Испытание: программа пустая, три варианта — гоблин на дороге или никого, а у дороги свои. Подсказка: [[btn:moveRight]] [[num:3]], потом [[ifbtn]] и [[btn:attack]], потом [[tool:done]] и [[btn:moveRight]] [[num:5]].",
   "Если у старта": "Теперь рамка «если» стоит в самом начале: препятствие может оказаться прямо перед рыцарем. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
   "Три варианта": "У поля уже <b>три</b> варианта — кнопки 1, 2, 3 в углу. Программа всё равно одна. Посмотри все три и нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
   "Сам поставь «если»": "Новое: кнопка [[ifbtn]] — ты сам ставишь рамку «если». Нажми на плитку [[tile:moveRight:2]], потом [[ifbtn]] — рамка встанет сразу за плиткой, — а потом кнопку [[btn:moveDown]].",
@@ -6635,6 +6789,7 @@ async function knightFalls(why) {
   sfx("fall");
   await wait(900);
   const n = why?.max || 1;
+  if (n >= 5) return setStatus("Чёрный рыцарь слишком силён — с ним не справиться. Не подходи к нему: если он впереди, обойди подальше", "fail");
   if (why?.ambush) return setStatus("Засада оказалась сильнее: у рыцаря кончились сердечки. Найди путь, где после засады рыцаря успеет подлечить монах", "fail");
   setStatus(why?.hurt
     ? `Гоблин выдержал удар и победил рыцаря! У него ${n} ${plural(n, "сердечко", "сердечка", "сердечек")} — бей его столько раз: attack(${n})`
@@ -6682,6 +6837,19 @@ async function run() {
         heroEl.classList.add("atk");
         sfx(h.target ? "hit" : "swish");
         await wait(200);
+        if (h.ally) {
+          const al = allyEls.find((x) => x.a.at[0] === h.ally.x && x.a.at[1] === h.ally.y);
+          al?.el.classList.remove("ouch"); void al?.el.offsetWidth; al?.el.classList.add("ouch");
+          sfx("bump");
+          await wait(400);
+          heroEl.classList.remove("atk");
+          showProblems = true;
+          drawRoute(p, i);
+          const who = al?.a.kind === "archer" ? "лучник" : "крестьянин";
+          setStatus(uiBlocks ? `Ой! Рядом не враг, а свой — ${who}. Бить можно только когда враг рядом: положи ⚔ в рамку «если → враг»`
+            : `Ой! Рядом не враг, а свой — ${who}. Бей, только если враг рядом: attack() — под if enemy_right()`, "fail");
+          return finish();
+        }
         if (h.target) {
           const e = enemies.find((e) => enemyKey(e.x, e.y) === h.target);
           e.el.classList.remove("hit");
@@ -6736,7 +6904,9 @@ async function run() {
         showProblems = true;
         drawRoute(p, i);
         await wait(420);
-        if (p.crash.reason === "goblin") {
+        if (p.crash.reason === "goblin" && p.crash.max >= 5) {
+          setStatus("Чёрный рыцарь не пропустит, а победить его нельзя — у него пять сердечек. Обойди его подальше", "fail");
+        } else if (p.crash.reason === "goblin") {
           const { hp, max } = p.crash;
           const more = `${hp} ${plural(hp, "удар", "удара", "ударов")}`;
           setStatus(hp < max
@@ -6794,6 +6964,7 @@ async function run() {
       if (p.reachedAt && p.reachedAt.cmd === i && p.reachedAt.step === s) {
         await shotPending;
         exitCell.classList.add("open");
+        allyEls.forEach(({ el }) => { el.classList.remove("cheer"); void el.offsetWidth; el.classList.add("cheer"); });   // свои радуются
         drawRoute(p, p.commands.length);
         drawTape(p, p.commands.length);
         // Варианты поля: тот же код должен пройти и остальные — запускаем их сами по очереди
@@ -8356,7 +8527,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 57;
+const APP_VERSION = 58;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
