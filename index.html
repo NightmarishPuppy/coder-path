@@ -241,6 +241,17 @@ html.still .ripple { animation: none; opacity: 0.5; }
 .splash .btn.run { flex: none; margin-top: 10px; padding: 14px 48px; font-size: 22px; }
 .splash-note { font-size: 13px; }
 /* Заставка: живой бой на островке заставки (окно показывает 15 из 18 клеток в ширину — бойцы крупнее) */
+/* Арена: карта островка во всё поле, видна середина (12 из 18 клеток, ряды 1,3…8) */
+.board.arena { display: block; position: relative; overflow: hidden; background: #47aba9; }
+.board.arena > :not(.arenawrap):not(.arenahud) { display: none; }
+.arenawrap { position: absolute; inset: 0; overflow: hidden; }
+.arenaworld { position: absolute; left: -25%; width: 150%; top: calc(-1.3 / 6.667 * 100%); }
+.arenaworld .mapstrip { image-rendering: pixelated; }
+.arenahud { position: absolute; left: 6px; right: 6px; top: 6px; display: flex; justify-content: space-between; pointer-events: none; z-index: 5;
+  font: 700 13px/1 var(--font-display); color: #fff; }
+.arenahud span { background: rgba(15, 17, 23, 0.72); padding: 5px 8px; border-radius: 8px; }
+.arenahud .ahp b { color: #ff6b81; } .arenahud .ahp i { font-style: normal; opacity: 0.6; font-weight: 500; }
+.arenahud.low .ahp { box-shadow: 0 0 0 2px #ff6b81; }
 .splash-view { position: relative; width: min(100%, 480px, calc((100dvh - 300px) / 1.05)); min-width: 240px; aspect-ratio: 1 / 1.05;
   overflow: hidden; border-radius: 16px; border: 2px solid #2d5a6a; background: #47aba9; margin-block: 6px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); container-type: inline-size; }
@@ -692,6 +703,8 @@ html.still .varflash { animation: none; opacity: 1; }
 .tk-cmd-h { color: var(--torch); }
 .tk-cmd-v { color: var(--frost); }
 .tk-cmd-a { color: var(--sword); }
+.tk-cmd-g { color: #5fd3a6; }
+.tk-cmd-l { color: #ff8fb3; }
 .tk-num { color: var(--num); font-weight: 600; }
 .tk-kw { color: var(--loop); font-weight: 600; }
 .tk-cond { color: #5fd3a6; font-weight: 600; }
@@ -742,6 +755,8 @@ textarea#code:focus-visible { box-shadow: inset 0 0 0 2px var(--torch); }
 .tile.h { border-color: var(--torch); } .tile.h .ar { color: var(--torch); }
 .tile.v { border-color: var(--frost); } .tile.v .ar { color: var(--frost); }
 .tile.a { border-color: var(--sword); } .tile.a .ar { color: var(--sword); }
+.tile.g { border-color: #5fd3a6; } .tile.g .ar { color: #5fd3a6; }
+.tile.l { border-color: #ff8fb3; } .tile.l .ar { color: #ff8fb3; }
 /* Выбранная плитка — видно сразу: жёлтая заливка, приподнята, пульсирующая рамка и стрелка-указатель */
 .tile.sel, .bloop > .lhead.sel {
   background: #ffd54a !important; border-color: #fff !important; color: #241a08 !important;
@@ -908,10 +923,12 @@ html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: n
 .chip.mv.h { border-color: var(--torch); color: var(--torch); }
 .chip.mv.v { border-color: var(--frost); color: var(--frost); }
 .chip.mv.a { border-color: var(--sword); color: var(--sword); }
+.chip.mv.g { border-color: #5fd3a6; color: #5fd3a6; }
+.chip.mv.l { border-color: #ff8fb3; color: #ff8fb3; }
 /* В тексте задания кнопка рисуется так же, как настоящая: та же рамка, стрелка и подпись */
 .chipref { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; border: 2px solid currentColor; border-radius: 4px;
   font-family: var(--font-code); font-size: 0.92em; font-weight: 600; line-height: 1.45; white-space: nowrap; vertical-align: middle; }
-.chipref.h { color: var(--torch); } .chipref.v { color: var(--frost); } .chipref.a { color: var(--sword); }
+.chipref.h { color: var(--torch); } .chipref.v { color: var(--frost); } .chipref.a { color: var(--sword); } .chipref.g { color: #5fd3a6; } .chipref.l { color: #ff8fb3; }
 .chipref.big { font-family: var(--font-display); font-size: 1.1em; padding: 0 9px; }
 /* картинки кнопок и плиток в тексте задания — ростом со строку текста; строки чуть реже, чтобы картинки не касались соседних */
 #goal:has(.tileref, .chipref, .numref, .ifref, .toolref, .ifbtnref, .elsebtnref, .elseref) { line-height: 1.85; }
@@ -1691,6 +1708,9 @@ const DIRS = {
   moveUp:    { dx: 0, dy: -1, arrow: "↑", axis: "v", py: "move_up" },
   // Удар: рыцарь не двигается, а бьёт гоблина рядом. attack(2) — два удара подряд.
   attack:    { dx: 0, dy: 0, arrow: "⚔", axis: "a", py: "attack" },
+  // Арена: идти к ближайшему врагу и лечиться (рыцарь сам решает куда — команда без числа)
+  goToEnemy: { dx: 0, dy: 0, arrow: "➤", axis: "g", py: "go_to_enemy" },
+  heal:      { dx: 0, dy: 0, arrow: "♥", axis: "l", py: "heal" },
 };
 const ALL_COMMANDS = Object.keys(DIRS);
 const PY_NAMES = ALL_COMMANDS.map((c) => DIRS[c].py);
@@ -1709,10 +1729,12 @@ for (const [d, ru] of [["Right", "справа"], ["Left", "слева"], ["Down
   // «враг справа» — враг в поле зрения: в этой стороне по прямой, пока не мешает препятствие
   CONDS["enemy" + d] = { what: "enemy", move: "move" + d, dx: dir.dx, dy: dir.dy, arrow: dir.arrow, ru, py: "enemy_" + d.toLowerCase() };
 }
+// Арена: «враг рядом» — кто-то из врагов на расстоянии удара (в любую сторону)
+CONDS.enemyNear = { what: "near", dx: 0, dy: 0, arrow: "◎", ru: "рядом", py: "enemy_near" };
 const COND_NAMES = Object.keys(CONDS);
 const COND_ANY = [...COND_NAMES, ...COND_NAMES.map((c) => CONDS[c].py)].join("|");
 const condKey = (name) => COND_NAMES.find((c) => c === name || CONDS[c].py === name);
-const WHAT_RU = { wall: "препятствие", enemy: "враг" };
+const WHAT_RU = { wall: "препятствие", enemy: "враг", near: "враг рядом" };
 
 let lang = "py"; // "py" или "js"
 const disp = (name) => (lang === "py" ? DIRS[name].py : name); // как команда пишется в текущем языке
@@ -1739,6 +1761,7 @@ const CHAPTERS = [
   { name: "Лестницы шахты", topic: "«если» внутри цикла", isle: 3 },
   { name: "Глубокая шахта", topic: "длинные карты и высокие ступени", isle: 3 },
   { name: "Кривые штольни", topic: "«если… иначе»", isle: 3 },
+  { name: "Арена", topic: "бой по своей программе", isle: 3 },
 ];
 
 // Уровни по порядку на карте.
@@ -3210,6 +3233,91 @@ const LEVELS = [
     ],
     starter: { py: "", js: "" },
   },
+  // ===== Глава 11 «Арена» (Остров рудокопов): свободный бой, рыцарь держится 20 секунд =====
+  {
+    name: "Арена",
+    chapter: 11,
+    isle: 3,
+    arena: { secs: 20, hp: 10, waves: [[1.5, "l", "torch"], [3, "r", "torch"], [6, "l", "torch"], [8, "r", "torch"], [11, "l", "torch"], [12.5, "r", "torch"], [15, "l", "torch"], [16, "r", "torch"]] },
+    goal: "Новое: арена! Здесь не клетки, а настоящий бой: гоблины идут с двух сторон, а рыцарь делает то, что написано в программе, снова и снова. Продержись 20 секунд. Если враг рядом — бей: attack().",
+    commands: ["attack"],
+    newCommands: [],
+    ifs: ["near"],
+    par: 1, good: 2,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n",
+      js: "while (true) {\n  if (enemyNear()) {\n  }\n}\n",
+    },
+  },
+  {
+    name: "Иди навстречу",
+    chapter: 11,
+    isle: 3,
+    arena: { secs: 20, hp: 10, waves: [[1, "l", "tnt"], [4, "r", "tnt"], [7, "l", "torch"], [9, "r", "tnt"], [12, "l", "tnt"], [14, "r", "torch"], [16, "l", "tnt"]] },
+    goal: "Гоблины с динамитом не подходят близко — бросают издалека. Когда врага рядом нет, иди к нему: goToEnemy().",
+    commands: ["attack", "goToEnemy"],
+    newCommands: ["goToEnemy"],
+    ifs: ["near"],
+    elseButton: true,
+    par: 2, good: 3,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n        attack()\n    else:\n",
+      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n  }\n}\n",
+    },
+  },
+  {
+    name: "Передышка",
+    chapter: 11,
+    isle: 3,
+    arena: { secs: 20, hp: 10, waves: [[1, "l", "torchp"], [1.4, "r", "torch"], [1.8, "l", "torch"], [8, "r", "torchp"], [8.4, "l", "torch"], [8.8, "r", "torch"], [14.5, "l", "torchp"], [14.9, "r", "torch"], [15.3, "l", "torch"]] },
+    goal: "Гоблины нападают толпой, а между набегами — передышка. Когда врага рядом нет, лечись: heal().",
+    commands: ["attack", "heal"],
+    newCommands: ["heal"],
+    ifs: ["near"],
+    elseButton: true,
+    par: 2, good: 3,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n        attack()\n    else:\n",
+      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n  }\n}\n",
+    },
+  },
+  {
+    name: "Удар в пустоту",
+    chapter: 11,
+    isle: 3,
+    bug: true,
+    arena: { secs: 20, hp: 10, waves: [[1, "l", "torchp"], [1.4, "r", "torch"], [1.8, "l", "torch"], [8, "r", "torchp"], [8.4, "l", "torch"], [8.8, "r", "torch"], [14.5, "l", "torchp"], [14.9, "r", "torch"], [15.3, "l", "torch"]] },
+    goal: "Найди ошибку: когда врага рядом нет, рыцарь машет мечом в воздух и не лечится. Поменяй это на heal().",
+    commands: ["attack", "heal"],
+    ifs: ["near"],
+    elseButton: true,
+    par: 2, good: 3,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n        attack()\n    else:\n        attack()\n",
+      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n    attack();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Арена: испытание",
+    chapter: 11,
+    isle: 3,
+    challenge: true,
+    requireLoop: true,
+    loopButton: true,
+    ifButton: true,
+    elseButton: true,
+    arena: { secs: 20, hp: 10, waves: [[1, "l", "torch"], [2, "r", "tnt"], [4.5, "l", "tnt"], [6, "r", "torchp"], [8, "l", "torch"], [9.5, "r", "tnt"], [12, "l", "torchp"], [13, "r", "torch"], [15, "l", "tnt"], [16.5, "r", "torch"]] },
+    goal: "Испытание: программа пустая. Гоблины с факелами идут к рыцарю сами, а с динамитом — бросают издалека. Подсказка: цикл, в нём «если враг рядом» с ударом и «иначе» — к врагу.",
+    commands: ["attack", "goToEnemy", "heal"],
+    ifs: ["near"],
+    par: 2, good: 3,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: { py: "", js: "" },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -4546,7 +4654,7 @@ ISLE_MAPS[2] = {
 // @@/isle2@@
 // @@isle3@@
 ISLE_MAPS[3] = {
-  nodes: [[190, 490], [90, 470], [110, 430], [150, 430], [190, 430], [230, 430], [270, 410], [250, 370], [210, 370], [170, 370], [130, 370], [110, 330], [150, 310], [190, 310], [230, 310], [250, 270]],
+  nodes: [[190, 490], [90, 470], [110, 430], [150, 430], [190, 430], [230, 430], [270, 410], [250, 370], [210, 370], [170, 370], [130, 370], [110, 330], [150, 310], [190, 310], [230, 310], [250, 270], [210, 250], [170, 250], [130, 230], [130, 190], [170, 190]],
   rows: [
     "....................................",
     "....................................",
@@ -4692,7 +4800,7 @@ ISLE_MAPS[3] = {
     ["goldsp4", 12.0, 25.6, 0.5],
     ["mine", 15.2, 8.1, 0.6],
   ],
-  labels: [["ЛЕСТНИЦЫ", 258, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274]],
+  labels: [["ЛЕСТНИЦЫ", 258, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274], ["АРЕНА", 140, 150]],
   bank: [["cloud_a", 990, 1800, 1.0], ["cloud_c", 1080, 1820, 0.9]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm5",
@@ -4796,6 +4904,70 @@ ISLE_MAPS[0] = {
   clear: [[2.6, 6.3, 15.4, 14.6]],
 };
 // @@/isle0@@
+// Арена (уровни главы «Арена»): островок с дорогой и мостами в облака по краям
+// @@isle20@@
+ISLE_MAPS[20] = {
+  nodes: [],
+  rows: [
+    "....................................",
+    "....................................",
+    "....................................",
+    ".....................s..............",
+    "...........sssssssssssss............",
+    "..........ssgggggggggggss...........",
+    ".........ssgggggggggggggss..........",
+    ".........sgggggggggggggggss.........",
+    ".........sggggggggggggggggss........",
+    ".........sgggggggggggggggggs........",
+    ".........sgggggggggggggggggs........",
+    ".........sggggggggggggggggss........",
+    ".........sgggggggggggggggss.........",
+    ".........ssgggggggggggggss..........",
+    "..........ssssggggggggsss...........",
+    ".............ssssssssss.............",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+  ],
+  terr: [
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  road: [
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "====##########====",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  ramps: [],
+  deco: [
+    ["wrock1", 3.6, 2.6, 0.7],
+    ["wrock3", 14.4, 7.8, 0.7],
+    ["wrock4", 14.2, 2.8, 0.6],
+    ["wrock2", 3.8, 8.0, 0.6],
+  ],
+  labels: [],
+  bank: [["cloud_b", 150, 255, 0.55], ["cloud_d", 1010, 260, 0.6]],
+  clouds: [["sc_cloud1", 3, 1, 0.2]],
+  tm: "sc_tm5",
+  clear: [[4.2, 3.2, 13.8, 7.4]],
+};
+// @@/isle20@@
 
 function mapEngine(D) {
   const NODE_POS = D.nodes, MAP_ROWS = D.rows, TERR = D.terr, ROAD = D.road, RAMPS = D.ramps, MAP_DECO = D.deco, MAP_LABELS = D.labels;
@@ -5122,7 +5294,7 @@ function mapEngine(D) {
     let last = 0;
     const loop = (t) => {
       requestAnimationFrame(loop);
-      if (STILL || t - last < MAP_STEP() || document.hidden || (wrap.closest("#mapview") && $("mapview").hidden) || wrap.hidden) return;
+      if (STILL || t - last < MAP_STEP() || document.hidden || !wrap.isConnected || (wrap.closest("#mapview") && $("mapview").hidden) || wrap.hidden) return;
       last = t;
       frame(t);
     };
@@ -6820,6 +6992,8 @@ function buildBoard() {
   // Раскладка экрана одна для всех уровней. Высоких узких полей нет: на телефоне они
   // выглядят плохо (пустые полосы по бокам), поэтому такие уровни повёрнуты набок.
   boardEl.setAttribute("aria-label", `Игровое поле ${W} на ${H} клеток`);
+  boardEl.classList.toggle("arena", !!L.arena);
+  if (L.arena) return buildArena();               // арена: свободный бой, а не клетки
   items = [];
   enemies = [];
   const waterRocks = []; // камни в воде: в луже на одну клетку им не место
@@ -7817,6 +7991,11 @@ const BLOCK_GOALS = {
   "Вниз на две": "Высокие ступени ведут вниз. Нажми на плитку [[tile:moveRight:1]], потом [[ifbtn]] и [[btn:moveDown]]. Появится плитка [[tile:moveDown:1]] — нажми на неё и на [[num:2]].",
   "Слишком высоко": "Найди ошибку: ступени низкие, а рыцарь прыгает на две клетки и бьётся о потолок. Нажми на плитку [[tile:moveUp:2]] и кнопку [[num:1]].",
   "Глубокая шахта: испытание": "Испытание: программа пустая, три части карты [[pages:3]], высокие ступени вниз. Подсказка: «🔁 повторять», в цикле шаг вправо и «если» со спуском на две клетки.",
+  "Арена": "Новое: арена! Не клетки, а настоящий бой: гоблины идут с двух сторон, а рыцарь снова и снова делает то, что в цикле 🔁. Продержись 20 секунд. Нажми на рамку [[ifhead]] и кнопку [[btn:attack]].",
+  "Иди навстречу": "Гоблины с динамитом бросают издалека и близко не подходят. Когда врага рядом нет — иди к нему: нажми на [[elsehead]] и кнопку [[btn:goToEnemy]].",
+  "Передышка": "Гоблины нападают толпой, между набегами — передышка. Когда врага рядом нет — лечись: нажми на [[elsehead]] и кнопку [[btn:heal]].",
+  "Удар в пустоту": "Найди ошибку: когда врага рядом нет, рыцарь машет мечом в воздух и не лечится. Нажми на нижнюю плитку [[tile:attack:1]] и кнопку [[btn:heal]].",
+  "Арена: испытание": "Испытание: программа пустая. С факелами гоблины идут сами, с динамитом — бросают издалека. Подсказка: «🔁 повторять», в нём «❓ если» с ⚔, потом «＋ иначе» и ➤.",
   "Если… иначе": "Новое: [[elsehead]] — «если нет». Рыцарь делает <b>одно из двух</b>. Нажми на [[ifhead]] и кнопку [[btn:moveUp]].",
   "Ступени разной высоты": "Ступени разной высоты. С «иначе» рыцарь каждый круг смотрит заново и поднимается, пока справа препятствие. Нажми на [[ifhead]] и кнопку [[btn:moveUp]].",
   "Вверх без конца": "Найди ошибку: в «иначе» тоже шаг вверх — рыцарь упрётся в потолок. Нажми на плитку под [[elsehead]] и кнопку [[btn:moveRight]].",
@@ -8353,6 +8532,13 @@ const cellsWord = (n) => plural(n, "клетку", "клетки", "клеток
 const cmdWord = (n) => plural(n, "команды", "команд", "команд"); // "не больше 1 команды"
 
 function refreshPlan() {
+  if (L.arena) {                                  // арена: просчёт боя; маршрута на поле нет
+    plan = arenaPlan(codeEl.value);
+    drawCode();
+    const written = countWrittenCommands(codeEl.value);
+    countEl.textContent = `в коде ${written} ${plural(written, "команда", "команды", "команд")}`;
+    return;
+  }
   plan = buildPlan(codeEl.value);
   drawRoute(plan);
   drawTape(plan);
@@ -8362,6 +8548,7 @@ function refreshPlan() {
 }
 
 function reset() {
+  if (L.arena) return arenaReset();
   showProblems = false;
   // поваленные деревья снова стоят, лесорубы снова рубят
   for (const fl of fellers) {
@@ -8492,6 +8679,7 @@ async function knightFalls(why) {
 // ===== 13. Запуск =====
 let shotPending = Promise.resolve();   // динамит из засады ещё летит (рыцарь при этом идёт дальше)
 async function run() {
+  if (L.arena) return runArena();
   if (running) return;
   shotPending = Promise.resolve();
   logEv("run", { code: oneLine(codeEl.value) });
@@ -8712,6 +8900,277 @@ async function run() {
   }
   setStatus("Почти! До двери ещё немного — добавь шагов", "fail");
   sfx("almost");
+  finish();
+}
+
+// ===== Арена: рыцарь держится против волн гоблинов по своей программе =====
+// Не пошаговое поле, а свободный бой (как на заставке). Программа игрока крутится в цикле:
+// каждая команда занимает время (удар 0,5 с, лечение 0,9 с, путь к врагу — пока не дойдёт),
+// а за это время гоблины идут, бьют и бросают динамит. Проверка «враг рядом?» тоже занимает
+// долю секунды — так цикл без действий не зависает. Весь бой просчитывается заранее (arenaPlan),
+// потом проигрывается, как обычный запуск: скорости ×1…×10, подсветка выполняемой строки.
+// Поле — островок ISLE_MAPS[20]: дорога через середину, по краям мосты в облака; в кадре — 12 клеток
+// в ширину (x 3…15) и ряды 1,3…8, поэтому бойцы крупные.
+const ARENA = { map: 20, x0: 3, y0: 1.3, cols: 12, start: [9, 5.5], roadY: 5.5,
+  reach: 1.0,                                   // «враг рядом» и удар — на столько клеток
+  spawn: { l: [-0.3, 5.5], r: [18.3, 5.5] } };
+// гоблины арены: сердечки, удар, дальность, перезарядка (с), скорость (клеток в секунду)
+const ARENA_FOES = {
+  torch:  { hp: 2, dmg: 1, reach: 0.75, cd: 1.2, speed: 1.4, key: "torch" },
+  torchp: { hp: 3, dmg: 1, reach: 0.75, cd: 1.1, speed: 1.25, key: "torchp" },
+  tnt:    { hp: 2, dmg: 1, reach: 2.6, cd: 2.4, speed: 1.2, key: "tnt" },
+};
+let arenaEng = null;
+function arenaEngine() { return (arenaEng ||= mapEngine(ISLE_MAPS[ARENA.map])); }
+// где можно стоять: трава островка или дорога с мостами (за краем карты — тоже дорога)
+function arenaWalk(x, y) {
+  const E = arenaEngine();
+  if (Math.abs(y - ARENA.roadY) < 0.32 && (x < 0.2 || x > 17.8 || E.roadAt(Math.floor(x), Math.floor(y)) !== ".")) return true;
+  return x > 0 && x < 18 && [-0.22, 0, 0.22].every((dx) => E.groundAt(x + dx, y) === 0);
+}
+
+// Просчёт боя по программе игрока
+function arenaPlan(code) {
+  const A = L.arena, DT = 0.05;
+  const hero = { x: ARENA.start[0], y: ARENA.start[1], hp: A.hp, act: "idle", left: false };
+  const foes = [], frames = [], events = [];
+  const waves = [...A.waves].sort((a, b) => a[0] - b[0]).map(([t, side, kind]) => ({ t, side, kind }));
+  let t = 0, nextFrame = 0, line = 0, ids = 0, loops = 0, endedAt = null, heals = 0, hits = 0, kills = 0, swings = 0;
+  const STOPA = { arena: true };
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const near = () => foes.filter((f) => f.hp > 0 && dist(f, hero) <= ARENA.reach).sort((a, b) => dist(a, hero) - dist(b, hero))[0];
+  const nearestAny = () => foes.filter((f) => f.hp > 0).sort((a, b) => dist(a, hero) - dist(b, hero))[0];
+  const stepTo = (u, gx, gy, sp) => {
+    const dx = gx - u.x, dy = gy - u.y, d = Math.hypot(dx, dy);
+    if (d < 0.02) return false;
+    const st = Math.min(sp * DT, d), ang = Math.atan2(dy, dx);
+    for (const tt of [0, 35, -35, 70, -70]) {
+      const a = ang + tt * Math.PI / 180, nx = u.x + Math.cos(a) * st, ny = u.y + Math.sin(a) * st;
+      if (arenaWalk(nx, ny)) { u.x = nx; u.y = ny; if (Math.abs(Math.cos(a)) > 0.15) u.left = Math.cos(a) < 0; return true; }
+    }
+    return false;
+  };
+  const snap = () => frames.push({ t: +t.toFixed(2), line, hero: { x: hero.x, y: hero.y, hp: hero.hp, act: hero.act, left: hero.left },
+    foes: foes.filter((f) => f.shown).map((f) => ({ id: f.id, kind: f.kind, x: f.x, y: f.y, hp: f.hp, act: f.act, left: f.left, dead: f.hp <= 0 })) });
+  // мир живёт dt секунд: гоблины выходят из облаков, идут, бьют, бросают динамит
+  const live = (dur) => {
+    const end = t + dur;
+    while (t < end - 1e-9) {
+      t += DT;
+      while (waves.length && waves[0].t <= t) {
+        const w = waves.shift(), T = ARENA_FOES[w.kind], [sx, sy] = ARENA.spawn[w.side];
+        foes.push({ id: ++ids, kind: w.kind, T, x: sx, y: sy + (Math.random() - 0.5) * 0.2, hp: T.hp, next: t + 0.6, act: "run", left: w.side === "r", shown: true });
+      }
+      for (const f of foes) {
+        if (f.hp <= 0 || hero.hp <= 0) continue;
+        if (f.busy > t) continue;
+        const d = dist(f, hero);
+        if (d > f.T.reach) { f.act = stepTo(f, hero.x, hero.y, f.T.speed) ? "run" : "idle"; continue; }
+        f.left = hero.x < f.x;
+        if (t < f.next) { f.act = "idle"; continue; }
+        f.next = t + f.T.cd;
+        if (f.kind === "tnt") {
+          f.act = "throw"; f.busy = t + 0.63;
+          const tx = hero.x, ty = hero.y, fx = f.x + (f.left ? -0.3 : 0.3), fy = f.y - 1.0;
+          events.push({ t: t + 0.38, kind: "throw", from: [fx, fy], to: [tx, ty], dur: 0.6 });
+          pend.push({ t: t + 0.98, fn: () => { events.push({ t, kind: "boom", at: [tx, ty] }); if (Math.hypot(hero.x - tx, hero.y - ty) < 0.8) hurtHero(f.T.dmg); } });
+        } else {
+          f.act = "atk"; f.busy = t + 0.5;
+          pend.push({ t: t + 0.3, fn: () => { if (f.hp > 0 && dist(f, hero) < f.T.reach + 0.35) hurtHero(f.T.dmg, f); } });
+        }
+      }
+      for (let i = pend.length - 1; i >= 0; i--) if (pend[i].t <= t) { const p = pend[i]; pend.splice(i, 1); p.fn(); }
+      // гоблины не стоят друг в друге и не залезают в рыцаря
+      for (const a of foes) if (a.hp > 0) {
+        for (const b of foes) if (b !== a && b.hp > 0) {
+          const d = dist(a, b);
+          if (d > 0 && d < 0.45) { const k = (0.45 - d) / d * 0.5, ex = (a.x - b.x) * k, ey = (a.y - b.y) * k; if (arenaWalk(a.x + ex, a.y + ey)) { a.x += ex; a.y += ey; } }
+        }
+        const d = dist(a, hero);
+        if (d > 0 && d < 0.5) { const k = (0.5 - d) / d, ex = (a.x - hero.x) * k, ey = (a.y - hero.y) * k; if (arenaWalk(a.x + ex, a.y + ey)) { a.x += ex; a.y += ey; } }
+      }
+      if (t >= nextFrame - 1e-9) { snap(); nextFrame += 0.1; }
+      if (hero.hp <= 0 || t >= A.secs) throw STOPA;
+    }
+  };
+  const pend = [];
+  const hurtHero = (dmg, f) => { if (hero.hp <= 0) return; hero.hp -= dmg; events.push({ t, kind: "hurt", by: f?.id }); };
+  // команды рыцаря
+  const attack = (ln) => {
+    line = ln; swings++;
+    const f = near();
+    hero.act = "atk"; if (f) hero.left = f.x < hero.x;
+    events.push({ t, kind: "swing", hit: !!f });
+    live(0.25);
+    if (f && f.hp > 0 && dist(f, hero) <= ARENA.reach + 0.3) {
+      f.hp--; hits++;
+      events.push({ t, kind: f.hp <= 0 ? "die" : "hit", id: f.id, at: [f.x, f.y] });
+      if (f.hp <= 0) kills++;
+    }
+    live(0.25);
+    hero.act = "idle";
+  };
+  const heal = (ln) => {
+    line = ln; heals++;
+    hero.act = "heal";
+    events.push({ t, kind: "heal" });
+    live(0.9);
+    hero.hp = Math.min(A.hp, hero.hp + 2);
+    hero.act = "idle";
+  };
+  const goToEnemy = (ln) => {
+    line = ln;
+    const f = nearestAny();
+    if (!f) { hero.act = "idle"; live(0.3); return; }
+    hero.act = "run";
+    let left = 1.4;
+    while (left > 0 && f.hp > 0 && dist(f, hero) > ARENA.reach * 0.8) { stepTo(hero, f.x, f.y, 2.4); live(DT); left -= DT; }
+    hero.act = "idle";
+  };
+  const enemyNear = (ln) => { line = ln; live(0.05); return !!near(); };
+  const fns = { attack, heal, goToEnemy };
+  try {
+    const js = lang === "py" ? pyToJs(code) : code;
+    const names = L.commands.map(disp), conds = levelConds();
+    const __loop = (ln) => { if (++loops > 20000) throw pyError(ln, "Цикл крутится, а время не идёт"); };
+    const program = new Function("__loop", ...names, ...conds.map(condDisp), instrument(js));
+    snap();
+    program(__loop, ...L.commands.map((c) => (ln) => fns[c](ln)), ...conds.map(() => enemyNear));
+    endedAt = t; line = 0;
+    live(A.secs - t + 0.05);                    // программа кончилась — рыцарь стоит, гоблины не ждут
+  } catch (e) {
+    if (e !== STOPA) return { arena: true, commands: [], error: explainError(e), errorLine: e.line };
+  }
+  snap();
+  const survived = hero.hp > 0;
+  return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp };
+}
+
+// Поле арены: карта островка + слой бойцов + таймер и сердечки
+let arenaWrap = null, arenaBox = null, arenaHud = null, arenaRun = 0;
+function buildArena() {
+  if (!arenaWrap) {
+    arenaWrap = document.createElement("div");
+    arenaWrap.className = "arenawrap";
+    arenaWrap.innerHTML = `<div class="arenaworld"><canvas class="map-canvas" aria-hidden="true"></canvas><canvas class="map-clouds" aria-hidden="true"></canvas></div>`;
+    boardEl.appendChild(arenaWrap);
+    const world = arenaWrap.firstChild, D = ISLE_MAPS[ARENA.map];
+    world.style.aspectRatio = `360 / ${D.terr.length * 20}`;
+    arenaEngine().startMapScene(world.querySelector(".map-canvas"));
+  } else boardEl.appendChild(arenaWrap);
+  boardEl.classList.add("arena");
+  arenaHud = document.createElement("div");
+  arenaHud.className = "arenahud";
+  arenaHud.innerHTML = `<span class="ahp"></span><span class="atime"></span>`;
+  boardEl.appendChild(arenaHud);
+  heroEl = document.createElement("div");          // у арены свой рыцарь (актёр), этот — для общих функций
+}
+function arenaStage() {
+  const world = arenaWrap.firstChild, VH = ISLE_MAPS[ARENA.map].terr.length;
+  arenaBox?.remove();
+  arenaBox = document.createElement("div");
+  arenaBox.className = "skbox";
+  world.insertBefore(arenaBox, world.querySelector(".mapclouds"));
+  const my = ++arenaRun;
+  return { layer: arenaBox, before: null, unit: 100 / 18, pos: (x, y) => [x / 18 * 100, y / VH * 100], on: () => true, alive: () => my === arenaRun };
+}
+function arenaHudDraw(hp, max, left) {
+  arenaHud.querySelector(".ahp").innerHTML = `<b>♥</b> ${Math.max(0, hp)}<i>/${max}</i>`;
+  arenaHud.querySelector(".atime").textContent = `⏱ ${Math.max(0, Math.ceil(left))} с`;
+  arenaHud.classList.toggle("low", hp <= 3);
+}
+let arenaHero = null;
+function arenaReset() {
+  showProblems = false;
+  const st = arenaStage();
+  arenaHero = skActor(st, "hidle", 0.85, 0.825);
+  arenaHero.at(...ARENA.start); arenaHero.show(true); arenaHero.play(0, 8, 110, true, "hidle");
+  arenaHero.el.style.zIndex = 400;
+  arenaHudDraw(L.arena.hp, L.arena.hp, L.arena.secs);
+  refreshPlan();
+  setStatus(uiBlocks ? "Собери программу рыцаря и нажми «Запустить» — продержись " + L.arena.secs + " секунд"
+    : "Напиши программу рыцаря и нажми «Запустить» — продержись " + L.arena.secs + " секунд");
+}
+// Проигрывание просчитанного боя
+async function runArena() {
+  if (running) return;
+  logEv("run", { code: oneLine(codeEl.value) });
+  winBox.hidden = true;
+  arenaReset();
+  const p = plan;
+  if (p.error) { setStatus(p.error, "fail"); return; }
+  running = true;
+  setDisabled(true);
+  const st = arenaStage(), A = L.arena;
+  const H = skActor(st, "hidle", 0.85, 0.825); H.at(...ARENA.start); H.show(true);
+  const fx = skActor(st, "healfx", 0.8);
+  const pool = (k, n, sc, foot) => Array.from({ length: n }, () => skActor(st, k, sc, foot));
+  const booms = pool("boom", 3, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5), deads = pool("dead", 6, 0.9, 0.75);
+  let bi = 0, di = 0, ki = 0;
+  const actors = {}, ANIM = {
+    run: (k) => [1, 6, 90], idle: (k) => k === "tnt" ? [0, 6, 130] : [0, 7, 120], atk: () => [2, 6, 85], throw: () => [2, 7, 90] };
+  const Z = (a, y) => (a.el.style.zIndex = Math.round(y * 40));
+  let heroAct = "", ev = 0;
+  const T0 = performance.now();
+  for (let i = 0; i < p.frames.length; i++) {
+    const fr = p.frames[i], prev = p.frames[i - 1];
+    const dur = Math.max(10, ((fr.t - (prev?.t ?? 0)) * 1000) / speed);
+    // события до этого кадра
+    while (ev < p.events.length && p.events[ev].t <= fr.t + 1e-6) {
+      const e = p.events[ev++];
+      if (e.kind === "throw") { const d = dyns[bi++ % dyns.length]; d.el.style.transition = "none"; d.at(...e.from); Z(d, 40); d.show(true); d.play(0, 6, 70); d.arc(...e.to, 1.0, e.dur * 1000 / speed).then(() => d.show(false)); }
+      if (e.kind === "boom") { const b = booms[ki++ % booms.length]; b.at(...e.at); Z(b, e.at[1] + 0.5); b.show(true); b.play(0, 9, Math.max(20, 70 / speed), false).then(() => b.show(false)); sfx("ouch"); }
+      if (e.kind === "swing") sfx(e.hit ? "hit" : "swish");
+      if (e.kind === "hurt") { H.el.animate([{ filter: "brightness(2.2) saturate(0.3)" }, { filter: "none" }], 220); if (e.by) sfx("gobatk"); }
+      if (e.kind === "hit") { const a = actors[e.id]; a?.el.animate([{ filter: "brightness(2.4) saturate(0.3)" }, { filter: "none" }], 220); }
+      if (e.kind === "die") { const a = actors[e.id]; if (a) a.show(false); const d = deads[di++ % deads.length]; d.at(...e.at); Z(d, e.at[1]); d.show(true); d.play(0, 7, Math.max(20, 110 / speed), false); sfx("gobdie"); }
+      if (e.kind === "heal") { fx.at(H.x ?? ARENA.start[0], H.y ?? ARENA.start[1]); Z(fx, 300); fx.show(true); fx.play(0, 11, Math.max(20, 80 / speed), false).then(() => fx.show(false)); }
+    }
+    // рыцарь
+    const h = fr.hero;
+    H.el.style.transition = `left ${dur}ms linear, top ${dur}ms linear`;
+    H.at(h.x, h.y); H.x = h.x; H.y = h.y; H.face(h.left); Z(H, h.y);
+    if (h.act !== heroAct) {
+      heroAct = h.act;
+      if (h.act === "run") H.play(0, 6, 85, true, "hrun");
+      else if (h.act === "atk") H.play(0, 4, Math.max(20, 110 / speed), false, "hatk");
+      else H.play(0, 8, 110, true, "hidle");
+    }
+    // гоблины
+    for (const f of fr.foes) {
+      let a = actors[f.id];
+      if (!a) { a = actors[f.id] = skActor(st, ARENA_FOES[f.kind].key, 0.85); a.el.style.transition = "none"; a.at(f.x, f.y); void a.el.offsetWidth; a.show(true); a.act = ""; }
+      if (f.dead) continue;
+      a.el.style.transition = `left ${dur}ms linear, top ${dur}ms linear`;
+      a.at(f.x, f.y); a.face(f.left); Z(a, f.y);
+      if (f.act !== a.act) { a.act = f.act; const [r, n, ms] = ANIM[f.act](f.kind); a.play(r, n, f.act === "atk" || f.act === "throw" ? Math.max(20, ms / speed) : ms, !(f.act === "atk" || f.act === "throw")); }
+    }
+    arenaHudDraw(h.hp, A.hp, A.secs - fr.t);
+    drawCode(fr.line);
+    await sleep(dur);
+    if (!running) return;
+  }
+  drawCode(0);
+  if (p.survived) {
+    setStatus(`Победа! Рыцарь продержался ${A.secs} секунд — побеждено гоблинов: ${p.kills}`, "win");
+    sfx("win");
+    finish();
+    return win();
+  }
+  // рыцарь не выдержал
+  H.play(0, 8, 110, true, "hidle"); H.show(false);
+  const d = deads[di++ % deads.length]; d.at(H.x, H.y); Z(d, H.y); d.show(true); d.play(0, 7, 110, false);
+  sfx("fall");
+  const sec = Math.floor(p.t);
+  let why;
+  if (p.endedAt !== null && p.endedAt < A.secs - 0.5)
+    why = `Программа кончилась на ${Math.max(1, Math.round(p.endedAt))}-й секунде, и дальше рыцарь просто стоял. Положи команды в цикл 🔁 — он крутится весь бой`;
+  else if (L.commands.includes("heal") && !p.heals)
+    why = "Рыцарь ни разу не полечился. Когда врага рядом нет — самое время для ♥ heal()";
+  else if (L.commands.includes("goToEnemy") && !p.hits)
+    why = "Гоблины с динамитом бьют издалека, а рыцарь так до них и не дошёл. Когда врага рядом нет — иди к нему: ➤ go_to_enemy()";
+  else why = `Рыцарь продержался ${sec} с из ${A.secs}. Посмотри, что он делает, когда враг рядом и когда нет`;
+  setStatus(why, "fail");
   finish();
 }
 
@@ -10317,7 +10776,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 82;
+const APP_VERSION = 83;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
