@@ -6,7 +6,7 @@
 // (страница присылает сообщение "activate"). Старый кэш после этого удаляется.
 
 // Меняй номер версии при каждом обновлении игры (и в version.json, и APP_VERSION в index.html)
-const VERSION = "coder-path-v61";
+const VERSION = "coder-path-v62";
 const FILES = ["./", "index.html", "art.js", "fonts.css", "manifest.webmanifest", "version.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 // 1. Установка: скачиваем только то, что изменилось. В version.json у каждого файла есть отпечаток;

@@ -399,6 +399,37 @@ html.still .hero.bump .kwrap { animation: none; }
 .variants button.on { background: #5fd3a6; color: #10241c; }
 .variants button.done::after { content: " ✓"; }
 .variants button:disabled { cursor: default; }
+/* метка [[pages]] в тексте задания — как кнопки частей карты на поле */
+.pagesref { display: inline-flex; align-items: center; gap: 2px; padding: 1px 4px; border-radius: 10px; background: #13151b; vertical-align: middle; }
+.pagesref b { min-width: 20px; padding: 0 4px; border-radius: 6px; border: 2px solid #f2b84b; color: #f2b84b; font-family: var(--font-display); font-size: 13px; line-height: 18px; text-align: center; }
+.pagesref b:first-child { background: #f2b84b; color: #2a1d05; }
+.pagesref i { width: 7px; height: 8px; background: #f2b84b; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+/* Длинная карта: поле шире экрана, видно окно в 9 клеток («камера»), поле едет под ним */
+.cam { position: relative; }
+.cam.long { overflow: hidden; width: 100%; max-width: min(100%, var(--cam-max)); border: 3px solid var(--wall-edge); border-radius: 6px; margin-inline: auto;
+  touch-action: pan-y; background: #1a1922; }
+#levelview #cam.long > .board { border: 0; border-radius: 0; max-width: none !important; margin: 0; will-change: transform;
+  transition: transform calc(0.22s * var(--tm, 1.6)) ease-in-out; }
+/* Части карты: кнопки 1 ▸ 2 — одна карта по кускам (не варианты: другой цвет и стрелка-связка) */
+.pages { position: absolute; top: 6px; left: 6px; z-index: 7; display: flex; align-items: center; gap: 2px; padding: 3px 5px;
+  border-radius: 20px; background: #13151bcc; box-shadow: 0 2px 6px #0007; }
+.pages.low { top: auto; bottom: 6px; }
+.pages button { min-width: 32px; height: 30px; padding: 0 8px; border-radius: 8px; border: 2px solid #f2b84b;
+  background: transparent; color: #f2b84b; font-family: var(--font-display); font-size: 15px; font-weight: 700; cursor: pointer; }
+.pages button.on { background: #f2b84b; color: #2a1d05; }
+.pages button:disabled { cursor: default; }
+.pages i { width: 10px; height: 10px; flex: none; background: #f2b84b; clip-path: polygon(0 0, 100% 50%, 0 100%); opacity: 0.85; }
+/* у края — стрелка: карта продолжается там */
+.camedge { position: absolute; top: 50%; z-index: 6; translate: 0 -50%; width: 30px; height: 56px; border: 0; padding: 0;
+  background: #13151bb0; cursor: pointer; display: grid; place-items: center; }
+.camedge.r { right: 0; border-radius: 12px 0 0 12px; }
+.camedge.l { left: 0; border-radius: 0 12px 12px 0; }
+.camedge::before { content: ""; width: 12px; height: 18px; background: #f2b84b; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.camedge.l::before { clip-path: polygon(100% 0, 0 50%, 100% 100%); }
+.camedge.r::before { animation: edgenudge 1.6s ease-in-out infinite; }
+@keyframes edgenudge { 0%, 100% { translate: 0; } 50% { translate: 4px; } }
+html.still .camedge.r::before { animation: none; }
+.camedge[hidden] { display: none; }
 .varflash { position: absolute; left: 50%; top: 42%; z-index: 8; translate: -50% -50%; padding: 8px 16px; border-radius: 14px;
   background: #13151be6; color: #5fd3a6; font-family: var(--font-display); font-size: 20px; font-weight: 700; pointer-events: none; white-space: nowrap;
   animation: varflash 1.3s ease forwards; }
@@ -406,6 +437,8 @@ html.still .hero.bump .kwrap { animation: none; }
 html.still .varflash { animation: none; opacity: 1; }
 .loopview svg { width: 24px; height: 24px; fill: currentColor; }
 .loopview.on { background: var(--loop); color: #1b1530; }
+/* когда видна кнопка 🔂/🔁 (тоже в правом верхнем углу) — табличка круга левее, не под ней */
+.roundtag:has(~ .loopview:not([hidden])) { right: 58px; }
 .roundtag {
   position: absolute;
   top: 6px; right: 6px;
@@ -728,6 +761,9 @@ html.still .tile.err { animation: none; }
 .bloop > .lhead.sel { box-shadow: 0 0 0 3px #fff6; }
 .bloop .lempty, .bif .lempty { color: var(--loop); font-size: 13px; padding: 0 6px; }
 .bif .lempty { color: #5fd3a6; }
+/* пустая рамка «если» — пустое место под плитку (пунктир), а не надпись: так рамка остаётся в одну строку */
+.bif .lempty.slot { display: inline-block; flex: none; width: 56px; height: 48px; padding: 0; border: 2px dashed #5fd3a6; border-radius: 10px; opacity: 0.75; }
+@media (max-width: 819px) { #levelview.blk .bif .lempty.slot { height: 42px; } }
 /* Рамка «если»: зелёная, с заголовком-условием; «иначе» — вторая половина рамки */
 .bif {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
@@ -765,6 +801,7 @@ html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: n
 #levelview.blk .chips .chip.num { flex: 1 1 0; min-width: 0; padding: 0; }
 @media (max-width: 819px) {
   #levelview.blk .board { max-width: min(100%, var(--blk-max)) !important; }
+  #levelview.blk .cam.long { max-width: min(100%, var(--blk-max)); }
   #levelview.blk .game { gap: 8px; }
   #levelview.blk .col { gap: 8px; }
   #levelview.blk header { gap: 2px; position: relative; }
@@ -1480,7 +1517,7 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 
   <div class="game">
     <div class="col">
-      <div class="board" id="board"></div>
+      <div class="cam" id="cam"><div class="board" id="board"></div></div>
       <div class="status" id="status" role="status"></div>
       <div class="winbox" id="winbox" hidden>
         <div>
@@ -1628,6 +1665,8 @@ const CHAPTERS = [
   { name: "Тропа через кусты", topic: "засады и монеты", isle: 2 },
   { name: "Просека лесорубов", topic: "куда упадёт дерево", isle: 2 },
   { name: "Свои и чужие", topic: "враг в поле зрения", isle: 2 },
+  // Третий остров (isle: 3) — Остров рудокопов, длинные карты
+  { name: "Лестницы шахты", topic: "«если» внутри цикла", isle: 3 },
 ];
 
 // Уровни по порядку на карте.
@@ -2735,6 +2774,119 @@ const LEVELS = [
     ],
     starter: { py: "", js: "" },
   },
+  // ===== Остров рудокопов, глава «Лестницы шахты»: «если» внутри цикла =====
+  // view: 9 — окно в 9 клеток, поле 18 — длинная карта в две части (камера едет за рыцарем)
+  {
+    name: "Ступеньки вверх",
+    chapter: 8,
+    isle: 3,
+    view: 9,
+    goal: "Новое: «если» внутри цикла. Карта длинная — не влезает в экран, поэтому показана частями [[pages]]. Это <b>одна</b> карта, а не варианты: полистай её кнопками или проведи пальцем по полю. Когда рыцарь пойдёт, карта поедет за ним. Рыцарь идёт вправо круг за кругом, а ступеньки вверх — в разных местах. На каждом круге «если» снова смотрит: справа препятствие? Под строкой с <b>if</b> пока пусто. Нажми на номер строки [[line:2]] и кнопку [[btn:moveUp]].",
+    commands: ["moveRight", "moveUp"],
+    ifs: ["wall"],
+    par: 2, good: 3,
+    map: [
+      "##################",
+      "############.C...E",
+      "########.....#####",
+      "###...C..#########",
+      "S...##############",
+    ],
+    starter: {
+      py: "while True:\n    if obstacle_right():\n    move_right()\n",
+      js: "while (true) {\n  if (obstacleRight()) {\n  }\n  moveRight();\n}\n",
+    },
+  },
+  {
+    name: "Ступеньки вниз",
+    chapter: 8,
+    isle: 3,
+    view: 9,
+    after: "Ступеньки вверх",
+    goal: "Теперь шахта уходит вниз. Карта снова длинная — полистай её [[pages]]. Нажми на номер строки [[line:2]] и кнопку [[btn:moveDown]].",
+    commands: ["moveRight", "moveDown"],
+    ifs: ["wall"],
+    par: 2, good: 3,
+    map: [
+      "S....#############",
+      "####..C...########",
+      "#########...C.####",
+      "#############....E",
+      "##################",
+    ],
+    starter: {
+      py: "while True:\n    if obstacle_right():\n    move_right()\n",
+      js: "while (true) {\n  if (obstacleRight()) {\n  }\n  moveRight();\n}\n",
+    },
+  },
+  {
+    name: "Не та ступенька",
+    chapter: 8,
+    isle: 3,
+    view: 9,
+    bug: true,
+    after: "Ступеньки вниз",
+    goal: "Найди ошибку: ступеньки ведут вверх, а у препятствия рыцарь шагает вниз. Нажми на номер строки [[line:3]] и кнопку [[btn:moveUp]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    par: 2, good: 3,
+    map: [
+      "##################",
+      "##########...C...E",
+      "######..C..#######",
+      "#...C..###########",
+      "S.################",
+    ],
+    starter: {
+      py: "while True:\n    if obstacle_right():\n        move_down()\n    move_right()\n",
+      js: "while (true) {\n  if (obstacleRight()) {\n    moveDown();\n  }\n  moveRight();\n}\n",
+    },
+  },
+  {
+    name: "«Если» в цикл",
+    chapter: 8,
+    isle: 3,
+    view: 9,
+    after: "Не та ступенька",
+    goal: "Рамки «если» нет — поставь её в цикл сам. Нажми на номер строки [[line:2]], потом [[ifbtn]] — <b>if</b> встанет под ней, внутри цикла, — и кнопку [[btn:moveUp]].",
+    commands: ["moveRight", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 2, good: 3,
+    map: [
+      "##################",
+      "##############...E",
+      "#########..C...###",
+      "#####..C..########",
+      "S.....############",
+    ],
+    starter: {
+      py: "while True:\n    move_right()\n",
+      js: "while (true) {\n  moveRight();\n}\n",
+    },
+  },
+  {
+    name: "Шахта: испытание",
+    chapter: 8,
+    isle: 3,
+    view: 9,
+    challenge: true,
+    requireLoop: true,
+    goal: "Испытание: программа пустая, ступенек четыре. Карта длинная — не влезает в экран, поэтому показана частями [[pages]]. Это <b>одна</b> карта, а не варианты: полистай её кнопками или проведи пальцем по полю. Когда рыцарь пойдёт, карта поедет за ним. Подсказка: цикл, в нём шаг вправо и «если» со ступенькой вверх.",
+    commands: ["moveRight", "moveUp"],
+    ifs: ["wall"],
+    loopButton: true,
+    ifButton: true,
+    par: 2, good: 3,
+    map: [
+      "##############..CE",
+      "###########....###",
+      "######...C..######",
+      "##..C..###########",
+      "S..###############",
+    ],
+    starter: { py: "", js: "" },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -2749,6 +2901,7 @@ function btnRefs(html) {
     .replace(/\[\[tile:(\w+):(\d+)\]\]/g, (m, n, k) => `<span class="tile tileref ${DIRS[n].axis}"><span class="ar">${DIRS[n].arrow}</span><span class="nn">${k}</span></span>`)
     .replace(/\[\[num:(\d+)\]\]/g, (m, k) => `<span class="numref">${k}</span>`)
     .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ если <span class="ar">→</span> ${WHAT_RU[CONDS[levelConds()[0]]?.what || "wall"]}</span>`)
+    .replace(/\[\[pages\]\]/g, () => `<span class="pagesref"><b>1</b><i></i><b>2</b></span>`)
     .replace(/\[\[ifbtn\]\]/g, () => `<span class="ifbtnref">${uiBlocks ? "❓ если" : "? если"}</span>`);
 }
 function langify(html) {
@@ -3107,6 +3260,14 @@ const codeKey = () => `${lang}:${L.name}${L.codeRev ? "#" + L.codeRev : ""}`;
 // ===== 4. Элементы страницы и состояние =====
 const $ = (id) => document.getElementById(id);
 const boardEl = $("board"), statusEl = $("status"), codeEl = $("code"), hlEl = $("code-hl");
+// Длинная карта: у уровня view — ширина окна в клетках. Если поле шире окна, его видно
+// через «камеру» (#cam): поле едет под окном за рыцарем, а до запуска карту можно листать.
+const camEl = $("cam");
+const viewW = () => Math.min(W, L?.view || W);
+const isLong = () => !!L && W > viewW();
+const camHost = () => (isLong() ? camEl : boardEl);   // куда класть кнопки поверх поля — они не едут вместе с картой
+let camX = null;          // левый край окна (в клетках); null — ещё не ставили
+const CAM_LEAD = 3;       // рыцарь держится на 4-й клетке окна: впереди видно 5 клеток
 const runBtn = $("run"), resetBtn = $("reset"), countEl = $("count");
 const tapeEl = $("tape"), gutterEl = $("gutter"), chipsEl = $("chips");
 const winBox = $("winbox"), nextBtn = $("next");
@@ -3506,6 +3667,7 @@ function themeFor(i) {
   const inCh = LEVELS.filter((l) => l.chapter === lv.chapter);
   const t = inCh.length > 1 ? inCh.indexOf(lv) / (inCh.length - 1) : 0; // 0 — начало главы, 1 — конец
   if (lv.isle === 2) return { name: "beach", t: 0.85 };
+  if (lv.isle === 3) return { name: "cave", t: 0.35 };   // Остров рудокопов — шахты
   return { name: ["beach", "forest", "cave", "mountain"][lv.chapter] || "mountain", t };
 }
 // Что в клетке: ground — земля (sand, grass, mix, water, rock), over — что стоит сверху
@@ -4058,7 +4220,7 @@ ISLE_MAPS[2] = {
 // @@/isle2@@
 // @@isle3@@
 ISLE_MAPS[3] = {
-  nodes: [],
+  nodes: [[190, 490], [90, 470], [110, 430], [150, 430], [190, 430]],
   rows: [
     "....................................",
     "....................................",
@@ -4204,7 +4366,7 @@ ISLE_MAPS[3] = {
     ["duck", 4.6, 29.0, 1.3],
     ["goldsp4", 12.0, 25.6, 0.5],
   ],
-  labels: [["СКОРО: НОВЫЕ УРОВНИ", 180, 402]],
+  labels: [["ЛЕСТНИЦЫ", 264, 462]],
   bank: [],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm5",
@@ -5167,7 +5329,8 @@ function boardSkits(terr, cellOv) {
     if ((L.allies || []).some((a) => Math.abs(a.at[0] - x) <= 1 && Math.abs(a.at[1] - y) <= 1)) continue;   // рядом с союзником
     if ((L.events || []).some((e) => e.tree && Math.abs(e.tree[0] - x) <= 2 && Math.abs(e.tree[1] - y) <= 1)) continue;   // у лесоруба уровня
     if (!(x === 0 || y === 0 || x === W - 1 || y === H - 1)) continue;
-    if (y === 0 && (x < 3 || x > W - 3)) continue;
+    // у длинной карты кнопки поверх окна стоят над любым куском верхнего ряда — его не берём
+    if (y === 0 && (isLong() || x < 3 || x > W - 3)) continue;
     // клетка ниже — без дерева: высокое дерево снизу закрыло бы актёра, будто он стоит на кроне
     if (y < H - 1 && /^tree/.test(cellOv[y + 1]?.[x]?.dataset.kind || "")) continue;
     // не вплотную к старту рыцаря и к выходу — там и так много всего
@@ -5175,15 +5338,18 @@ function boardSkits(terr, cellOv) {
     cand.push({ x, y, score: (floorNear(x, y, 1) ? 0 : 2) + (y === H - 1 ? 1 : 0) + ((x === 0 || x === W - 1) && y === H - 1 ? 1 : 0) });
   }
   if (!cand.length) return;
-  cand.sort((a, b) => b.score - a.score || (b.y - a.y));
+  // Остров рудокопов: шахтёр — у золотой глыбы в стене (слева или справа от него)
+  const goldAt = (x, y) => /^gold[123]$/.test(cellOv[y]?.[x]?.dataset.kind || "");
+  if (L.isle === 3) cand.forEach((c) => (c.gold = goldAt(c.x - 1, c.y) ? -1 : goldAt(c.x + 1, c.y) ? 1 : 0));
+  cand.sort((a, b) => (b.gold ? 1 : 0) - (a.gold ? 1 : 0) || b.score - a.score || (b.y - a.y));
   // на маленьком поле — одна сценка, на большом — две (подальше друг от друга)
   const picks = [cand[0]];
-  const far = cand.find((c) => Math.abs(c.x - cand[0].x) + Math.abs(c.y - cand[0].y) >= 4);
+  const far = cand.find((c) => Math.abs(c.x - cand[0].x) + Math.abs(c.y - cand[0].y) >= (isLong() ? 7 : 4));
   if (far && W * H >= 30) picks.push(far);
   let h = 3; for (const c of L.name) h = (h * 17 + c.charCodeAt(0)) % 9973;
   // лесоруб — только если рядом (слева или справа) растёт дерево: к нему он и повернётся
   const treeAt = (x, y) => /^tree/.test(cellOv[y]?.[x]?.dataset.kind || "");
-  const calm = ["monk", "sheep"];
+  const calm = L.isle === 3 ? ["monk", "monk"] : ["monk", "sheep"];   // в шахте овец нет
   let chop = false;
   picks.forEach((c, i) => {
     cellOv[c.y][c.x]?.remove();                    // дерево/камень в этой клетке убираем
@@ -5191,11 +5357,16 @@ function boardSkits(terr, cellOv) {
     // лесоруб — если рядом (слева или справа) растёт дерево и лесоруба на поле ещё нет
     const tree = treeAt(c.x - 1, c.y) ? -1 : treeAt(c.x + 1, c.y) ? 1 : 0;
     // на уровне со своим лесорубом второго в углу не ставим — запутает
-    const kind = tree && !chop && !(L.events || []).some((e) => e.kind === "fell") && !L.allies ? "chop" : calm[(h + i) % 2];
+    const kind = L.isle === 3 ? (c.gold && !chop ? "mine" : calm[0])
+      : tree && !chop && !(L.events || []).some((e) => e.kind === "fell") && !L.allies ? "chop" : calm[(h + i) % 2];
     const left = kind === "chop" ? tree < 0 : c.x > W / 2;   // лесоруб — к дереву, остальные — к середине поля
     if (kind === "monk") skRun(() => boardMonk(st, c.x + 0.5, c.y + 0.92, left));
     else if (kind === "sheep") skRun(() => boardSheep(st, c.x + 0.5, c.y + 0.9, left));
-    else {
+    else if (kind === "mine") {
+      chop = true;
+      const out = c.x === 0 ? [-1, 0] : c.x === W - 1 ? [1, 0] : c.y === H - 1 ? [0, 1] : [0, -1];
+      skRun(() => boardMiner(st, c, c.gold, cellOv[c.y][c.x + c.gold], out));
+    } else {
       chop = true;
       // куда уносить брёвна: за ближний край поля (сбоку — если стоит у бокового края)
       const out = c.x === 0 ? [-1, 0] : c.x === W - 1 ? [1, 0] : c.y === H - 1 ? [0, 1] : [0, -1];
@@ -5276,6 +5447,55 @@ async function boardWoodcutter(st, c, dir, tov, out) {
     tov.getAnimations().forEach((a) => a.cancel());
     await tov.animate([{ transform: "scale(0.15)", opacity: 0 }, { transform: "scale(0.5)", opacity: 1, offset: 0.2 }, { transform: "scale(1)", opacity: 1 }],
       { duration: 3500, easing: "ease-out" }).finished;
+  }
+}
+// Шахтёр в углу поля (Остров рудокопов) доводит дело до конца: бьёт киркой по золотой глыбе
+// в соседней клетке, глыба рассыпается самородком, он уносит его за край поля, возвращается
+// с киркой и отдыхает; тем временем в стене проступает новая глыба — и снова.
+async function boardMiner(st, c, dir, gov, out) {
+  const home = [c.x + 0.5 + dir * 0.35, c.y + 0.92];          // кирка достаёт до глыбы
+  const pick = [c.x + 0.5 + dir * 0.85, c.y + 0.92];          // у самородка
+  const gone = [home[0] + out[0] * 1.6, home[1] + out[1] * 1.6];   // за краем поля
+  const p = skActor(st, "pidle", 0.75), g = skActor(st, "gspawn", 0.55, 0.62);
+  p.at(...home); p.face(dir < 0); p.show(true); p.play(0, 8, 130, true, "pidle");
+  const run = async (to, sheet, cellMs = 650) => {
+    p.face(to[0] < p.x || (to[0] === p.x && dir < 0)); p.play(0, 6, 90, true, sheet);
+    await p.move(to[0], to[1], Math.hypot(to[0] - p.x, to[1] - p.y) * cellMs);
+  };
+  for (;;) {
+    await skWait(st, skRnd(1500, 4000));
+    // долбит: 5–7 ударов, глыба вздрагивает на каждый
+    p.face(dir < 0); p.play(0, 6, 110, true, "ppick");
+    const hits = 5 + Math.floor(skRnd(0, 3));
+    for (let k = 0; k < hits; k++) {
+      await skSleep(st, 420);
+      gov.animate([{ translate: "0 0" }, { translate: `${dir * 4}% 0` }, { translate: `${-dir * 2}% 0` }, { translate: "0 0" }], 240);
+      await skSleep(st, 240);
+    }
+    // глыба рассыпается — на её месте самородок
+    p.play(0, 8, 130, true, "pidle");
+    await gov.animate([{ opacity: 1, scale: "1" }, { opacity: 0, scale: "0.6" }], { duration: 380, fill: "forwards" }).finished;
+    g.at(c.x + dir + 0.5, c.y + 0.9); g.face(dir < 0); g.show(true);
+    await g.play(0, 7, 80, false);
+    await skWait(st, 600);
+    // подбирает и уносит за край поля
+    await run(pick, "prunpick", 900);
+    g.show(false);
+    p.play(0, 8, 130, true, "pidle");
+    await skSleep(st, 300);
+    await run(home, "prungold");
+    const fade = setTimeout(() => p.show(false), Math.hypot(gone[0] - home[0], gone[1] - home[1]) * 650 * 0.6);
+    await run(gone, "prungold");
+    clearTimeout(fade); p.show(false);
+    await skWait(st, skRnd(4000, 8000));
+    // возвращается с киркой и отдыхает
+    p.show(true);
+    await run(home, "prunpick");
+    p.face(dir < 0); p.play(0, 8, 130, true, "pidle");
+    await skWait(st, skRnd(9000, 15000));
+    // в стене проступает новая глыба
+    gov.getAnimations().forEach((a) => a.cancel());
+    await gov.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 2500, easing: "ease-out" }).finished;
   }
 }
 // Овечка иногда радостно подпрыгивает
@@ -5581,8 +5801,18 @@ function buildBoard() {
   boardEl.style.gridTemplateRows = `repeat(${H}, 1fr)`;
   boardEl.style.aspectRatio = `${W} / ${H}`;
   boardEl.style.maxWidth = `min(100%, ${Math.round(W / H * 460)}px)`;
+  // длинная карта: поле шире окна во столько раз, во сколько карта длиннее 9 клеток
+  const long = isLong(), vw = viewW();
+  camEl.classList.toggle("long", long);
+  camEl.querySelectorAll(":scope > :not(.board)").forEach((el) => el.remove());
+  camX = null;
+  boardEl.style.width = long ? `${(W / vw * 100).toFixed(4)}%` : "";
+  boardEl.style.transform = "";
+  camEl.style.setProperty("--cam-max", Math.round(vw / H * 460) + "px");   // на компьютере — как у обычного поля
   // в режиме блоков на телефоне поле не выше 40% экрана — чтобы всё влезло без прокрутки
-  boardEl.style.setProperty("--blk-max", fitSize?.key === `${levelIdx}|${uiBlocks}` ? fitSize.px + "px" : `calc(40dvh * ${(W / H).toFixed(3)})`);
+  const blkMax = fitSize?.key === `${levelIdx}|${uiBlocks}` ? fitSize.px + "px" : `calc(40dvh * ${(vw / H).toFixed(3)})`;
+  boardEl.style.setProperty("--blk-max", blkMax);
+  camEl.style.setProperty("--blk-max", blkMax);
   // Раскладка экрана одна для всех уровней. Высоких узких полей нет: на телефоне они
   // выглядят плохо (пустые полосы по бокам), поэтому такие уровни повёрнуты набок.
   boardEl.setAttribute("aria-label", `Игровое поле ${W} на ${H} клеток`);
@@ -5660,8 +5890,9 @@ function buildBoard() {
         const ov = document.createElement("div");
         ov.className = "ov house";
         // выход: на берегу — домик, в лесу — другой домик, в пещере — башня, в горах — хижина гоблинов
-        const hk = theme.name === "cave" ? "tower" : theme.name === "mountain" ? "ghouse" : theme.name === "forest" ? "house2" : "house";
-        ov.appendChild(sprite(hk, hk === "tower" ? 0.5 : 0.58, { bottom: 2 }));
+        // на Острове рудокопов выход — вход в шахту
+        const hk = L.isle === 3 ? "mine" : theme.name === "cave" ? "tower" : theme.name === "mountain" ? "ghouse" : theme.name === "forest" ? "house2" : "house";
+        ov.appendChild(sprite(hk, hk === "mine" ? 0.56 : hk === "tower" ? 0.5 : 0.58, { bottom: 2, dur: hk === "mine" ? 1.4 : 0.9 }));
         cell.appendChild(ov);
         cell.insertAdjacentHTML("beforeend", DOOR_SVG);
         exitCell = cell;
@@ -5707,7 +5938,7 @@ function buildBoard() {
   roundTag = document.createElement("div");
   roundTag.className = "roundtag";
   roundTag.hidden = true;
-  boardEl.appendChild(roundTag);
+  camHost().appendChild(roundTag);
 
   // Кнопка 🔂/🔁 как в музыкальном плеере: один круг цикла или все круги.
   // На каждом новом уровне снова «один круг» — начинаем с простого вида.
@@ -5721,7 +5952,7 @@ function buildBoard() {
     logEv?.("loopview", showAll ? "all" : "one");
     drawRoute(plan);
   });
-  boardEl.appendChild(loopViewBtn);
+  camHost().appendChild(loopViewBtn);
 
   // Кнопки вариантов поля: 1, 2, 3. Пройденный этим кодом вариант — с галочкой.
   if (L.maps) {
@@ -5736,7 +5967,7 @@ function buildBoard() {
       b.addEventListener("click", () => { if (running || k === variant) return; sfx("tap"); setVariant(k); });
       vb.appendChild(b);
     });
-    boardEl.appendChild(vb);
+    camHost().appendChild(vb);
     drawVariants();
   }
 
@@ -5747,7 +5978,7 @@ function buildBoard() {
   itemsTag.className = "itemstag";
   itemsTag.id = "itemstag";
   itemsTag.hidden = !items.length && !enemies.length;
-  boardEl.parentNode.insertBefore(itemsTag, boardEl);
+  camEl.parentNode.insertBefore(itemsTag, camEl);
 
   // в пещере в воздухе медленно плавают пылинки
   if (theme.name === "cave") {
@@ -5760,6 +5991,11 @@ function buildBoard() {
       fx.appendChild(m);
     }
     boardEl.appendChild(fx);
+  }
+  // длинная карта: кнопки частей карты, стрелки у края; рамка окна — цвета рамки поля
+  if (long) {
+    buildPages();
+    camEl.style.borderColor = getComputedStyle(boardEl).borderTopColor;
   }
   // мирная сценка в углу поля: монах, лесоруб, строитель или овечка
   boardSkits(terr, cellOv);
@@ -6036,6 +6272,83 @@ function insertLine(text) {
 function placeHero() {
   heroEl.style.transform = `translate(${hero.x * 100}%, ${hero.y * 100}%)`;
 }
+
+// ===== Камера длинной карты =====
+// Поле сдвигается влево на c клеток (translateX в процентах от ширины поля).
+// how: "step" — вместе с шагом рыцаря (та же длительность, что у его перехода), "page" — плавно
+// листаем, "now" — сразу. Возвращает true, если окно сдвинулось.
+function setCam(c, how = "step") {
+  if (!isLong()) return false;
+  c = Math.max(0, Math.min(W - viewW(), c));
+  const moved = c !== camX;
+  camX = c;
+  boardEl.style.transition = how === "now" ? "none" : how === "page" ? "transform 0.5s ease-in-out" : "";
+  boardEl.style.transform = `translateX(${(-c / W * 100).toFixed(4)}%)`;
+  if (how === "now") { void boardEl.offsetWidth; boardEl.style.transition = ""; }
+  drawPages();
+  return moved;
+}
+// Окно за рыцарем: идёт вправо — держим его на 4-й клетке окна, влево — на 3-й с другого края.
+// Вверх и вниз окно не едет (карта длинная только вбок).
+function camFollow(how = "step") {
+  if (!isLong()) return false;
+  let c = camX ?? 0;
+  const rel = hero.x - c;
+  if (camX === null || how !== "step") c = hero.x - CAM_LEAD;
+  else if (rel > CAM_LEAD) c = hero.x - CAM_LEAD;
+  else if (rel < 2) c = hero.x - 2;
+  return setCam(c, how);
+}
+const pageCount = () => Math.ceil(W / viewW());
+const pageAt = () => Math.min(pageCount() - 1, Math.round((camX || 0) / viewW()));
+const gotoPage = (k) => setCam(k * viewW(), "page");
+// Кнопки частей карты 1 ▸ 2 (стрелка между ними — «продолжение», а не другой вариант)
+// и полупрозрачные стрелки у края окна: там карта продолжается.
+function buildPages() {
+  const pg = document.createElement("div");
+  pg.className = "pages" + (L.maps ? " low" : "");
+  pg.id = "pages";
+  pg.setAttribute("role", "group");
+  pg.setAttribute("aria-label", "Части длинной карты");
+  for (let k = 0; k < pageCount(); k++) {
+    if (k) pg.appendChild(document.createElement("i"));
+    const b = document.createElement("button");
+    b.textContent = k + 1;
+    b.setAttribute("aria-label", `Часть карты ${k + 1}`);
+    b.addEventListener("click", () => { if (running || k === pageAt()) return; sfx("tap"); gotoPage(k); });
+    pg.appendChild(b);
+  }
+  camEl.appendChild(pg);
+  for (const side of ["l", "r"]) {
+    const b = document.createElement("button");
+    b.className = "camedge " + side;
+    b.setAttribute("aria-label", side === "r" ? "Карта дальше" : "Карта назад");
+    b.addEventListener("click", () => { if (running) return; sfx("tap"); gotoPage(pageAt() + (side === "r" ? 1 : -1)); });
+    camEl.appendChild(b);
+  }
+  drawPages();
+}
+function drawPages() {
+  const pg = $("pages");
+  if (!pg || !isLong()) return;
+  const k = pageAt();
+  pg.querySelectorAll("button").forEach((b, i) => { b.classList.toggle("on", i === k); b.disabled = running; b.setAttribute("aria-pressed", String(i === k)); });
+  const l = camEl.querySelector(".camedge.l"), r = camEl.querySelector(".camedge.r");
+  if (l) l.hidden = running || (camX || 0) <= 0;
+  if (r) r.hidden = running || (camX || 0) >= W - viewW();
+}
+// Листать пальцем: провёл влево — следующая часть карты, вправо — прошлая
+let camSwipe = null;
+camEl.addEventListener("pointerdown", (e) => { camSwipe = isLong() && !running ? { x: e.clientX, y: e.clientY } : null; });
+camEl.addEventListener("pointercancel", () => (camSwipe = null));
+camEl.addEventListener("pointerup", (e) => {
+  if (!camSwipe) return;
+  const dx = e.clientX - camSwipe.x, dy = e.clientY - camSwipe.y;
+  camSwipe = null;
+  if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+  const k = pageAt() + (dx < 0 ? 1 : -1);
+  if (k >= 0 && k < pageCount() && !running) { sfx("tap"); gotoPage(k); }
+});
 
 // События уровня (засады, монах, падающее дерево). У события может быть v: [номера вариантов] —
 // тогда оно бывает только на этих вариантах поля.
@@ -6485,6 +6798,12 @@ function highlightLine(line) {
 // Рисуем подсветку, номера строк и полоски циклов
 // Задания, которые в тексте ссылаются на код, для режима блоков пересказаны плитками
 const BLOCK_GOALS = {
+  // Остров рудокопов: длинные карты, «если» внутри цикла
+  "Ступеньки вверх": "Новое: длинная карта! Она не влезает в экран, поэтому показана частями [[pages]] — это <b>одна</b> карта, а не варианты. Полистай её кнопками или проведи пальцем по полю. В цикле 🔁 пустая рамка «если»: она проверяет на каждом круге. Нажми на неё [[ifhead]], потом кнопку [[btn:moveUp]].",
+  "Ступеньки вниз": "Шахта уходит вниз. Полистай карту [[pages]], потом нажми на рамку [[ifhead]] и кнопку [[btn:moveDown]].",
+  "Не та ступенька": "Найди ошибку: ступеньки ведут вверх, а рыцарь у препятствия шагает вниз. Нажми на плитку [[tile:moveDown:1]] и кнопку [[btn:moveUp]].",
+  "«Если» в цикл": "Рамки «если» нет — поставь её в цикл сам. Нажми на плитку [[tile:moveRight:1]], потом [[ifbtn]] — рамка встанет за плиткой, — и кнопку [[btn:moveUp]].",
+  "Шахта: испытание": "Испытание: программа пустая, ступенек четыре, карта длинная [[pages]]. Подсказка: «🔁 повторять», в цикле шаг вправо и «если» со ступенькой вверх.",
   "Первые шаги": "Это рыцарь, ему нужно к двери. Нажми стрелку <b>→</b>: появится плитка — это один шаг. Потом нажми <b>Запустить</b>. Хочешь ★★★? Нажми цифру <b>4</b>: плитка станет <b>→4</b>, четыре шага сразу.",
   "Поворот": "Новая стрелка <b>↓</b>. Плитки уже лежат, но рыцарь не доходит одну клетку. Нажми на плитку <b>↓2</b>, потом цифру <b>3</b> и «Запустить».",
   "Подвал": "Доведи рыцаря до двери сам. Цифра на плитке — сколько шагов: <b>→3</b> — три клетки вправо. Цифры на поле подскажут, сколько нужно.",
@@ -6580,7 +6899,8 @@ function tileHtml(t, active, err) {
   return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.n}"><span class="ar">${d.arrow}</span><span class="nn">${t.n}</span></button>`;
 }
 function blockHtml(it, active, err) {
-  const body = (list, empty) => list.length ? list.map((x) => blockHtml(x, active, err)).join("") : `<span class="lempty">${empty}</span>`;
+  const body = (list, empty, slot) => list.length ? list.map((x) => blockHtml(x, active, err)).join("")
+    : slot ? `<span class="lempty slot" role="img" aria-label="${empty}"></span>` : `<span class="lempty">${empty}</span>`;
   if (it.loop) {
     return `<div class="bloop${it.line === err ? " err" : ""}"><button class="lhead${it.line === selLine ? " sel" : ""}" data-line="${it.line}">🔁 ${it.times ? `повторить ${it.times}` : "повторять"}</button>`
       + body(it.body, "кнопки положат команды сюда") + `</div>`;
@@ -6591,7 +6911,7 @@ function blockHtml(it, active, err) {
       + (curCheck && curCheck.line === line ? (curCheck.yes ? " yes" : " no") : "");
     const head = `<button class="ihead${st(it.line)}" data-line="${it.line}" aria-label="если ${it.neg ? "не " : ""}${k.ru} ${WHAT_RU[k.what]}">❓ если ${it.neg ? "не " : ""}<span class="ar">${k.arrow}</span>${WHAT_RU[k.what]}</button>`;
     const els = it.els ? `<span class="brk"></span><button class="ihead else${st(it.els.line)}" data-line="${it.els.line}">иначе</button>` + body(it.els.body, "что делать, если нет") : "";
-    return `<div class="bif${it.line === err ? " err" : ""}">${head}${body(it.body, "что делать, если да")}${els}</div>`;
+    return `<div class="bif${it.line === err ? " err" : ""}">${head}${body(it.body, "что делать, если да", true)}${els}</div>`;
   }
   return tileHtml(it, active, err);
 }
@@ -6626,26 +6946,27 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 var fitSize = null;   // { key, px, w, h } — для какого уровня и экрана посчитано
 function fitBoard(force = false) {
   const lv = $("levelview");
-  if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); return; }
+  if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); camEl.style.removeProperty("--blk-max"); return; }
   const key = `${levelIdx}|${uiBlocks}`, sw = innerWidth, sh = window.visualViewport?.height || innerHeight;
   const same = fitSize && fitSize.key === key && fitSize.w === sw && Math.abs(fitSize.h - sh) < 160;
-  if (same && !force) { boardEl.style.setProperty("--blk-max", fitSize.px + "px"); return; }
+  if (same && !force) { boardEl.style.setProperty("--blk-max", fitSize.px + "px"); camEl.style.setProperty("--blk-max", fitSize.px + "px"); return; }
   // временное — на время замера прочь (браузер не успевает это нарисовать)
   const goal = $("goal"), wasOpen = goal.classList.contains("open");
   const hide = [winBox, $("linebar")].filter((el) => !el.hidden);
   goal.classList.remove("open");
   hide.forEach((el) => (el.hidden = true));
-  const ratio = W / H, vh = sh - 6;
-  const bh = boardEl.getBoundingClientRect().height;
+  const ratio = viewW() / H, vh = sh - 6;
+  const bh = camEl.getBoundingClientRect().height;   // у длинной карты меряем окно, а не всё поле
   const runBottom = $("run").getBoundingClientRect().bottom + scrollY;
   const rest = runBottom - bh + 4;
   const w = (vh - rest) * ratio;
-  const full = boardEl.parentElement.getBoundingClientRect().width;
+  const full = camEl.parentElement.getBoundingClientRect().width;
   if (wasOpen) goal.classList.add("open");
   hide.forEach((el) => (el.hidden = false));
   const px = Math.max(full * 0.55, Math.min(full, Math.floor(w)));
   fitSize = { key, px, w: sw, h: sh };
   boardEl.style.setProperty("--blk-max", px + "px");
+  camEl.style.setProperty("--blk-max", px + "px");
 }
 // повернули экран — считаем заново; высота «гуляет» из-за адресной строки — не трогаем
 addEventListener("resize", () => requestAnimationFrame(() => fitBoard()));
@@ -7029,10 +7350,13 @@ function reset() {
     fl.p.at(fl.f.cutter[0] + 0.5 + fl.e.dir * 0.4, fl.f.tree[1] + 0.92); fl.p.face(fl.e.dir < 0); fl.p.show(true);
     fl.p.play(0, 6, 110, true, "paxe");
   }
+  const moved = hero && (hero.x !== start.x || hero.y !== start.y);
   hero = { ...start };
   heroEl.classList.remove("flip", "run");
   roundTag.hidden = true;
   placeHero();
+  // длинная карта: рыцарь вернулся на старт — окно к нему (при открытии сразу, после запуска плавно)
+  if (camX === null) camFollow("now"); else if (moved) camFollow("page");
   exitCell.classList.remove("open");
   heroEl.classList.remove("atk", "guard", "hurt", "dead");
   boardEl.querySelectorAll(".poof").forEach((el) => el.remove());
@@ -7158,6 +7482,8 @@ async function run() {
 
   running = true;
   setDisabled(true);
+  // длинную карту листали — сначала окно возвращается к рыцарю
+  if (camFollow("page")) await sleep(520);
   let walkedTotal = 0;
 
   for (let i = 0; i < p.commands.length; i++) {
@@ -7282,6 +7608,7 @@ async function run() {
 
       hero = cmd.cells[s];
       placeHero();
+      camFollow();          // окно длинной карты едет вместе с рыцарем
       // звуки шага и подобранных предметов
       const before = s ? cmd.got[s - 1] : (i ? p.commands[i - 1].got.at(-1) : null) || noneGot();
       const now = cmd.got[s];
@@ -7394,7 +7721,7 @@ function win() {
 
   // "Дальше" ведёт к следующему уровню по порядку, если он открыт
   const nxt = levelIdx + 1;
-  nextBtn.hidden = !(nxt < LEVELS.length && isOpen(nxt) && !!LEVELS[nxt].isle === !!L.isle);
+  nextBtn.hidden = !(nxt < LEVELS.length && isOpen(nxt) && isleOf(LEVELS[nxt]) === isleOf(L));
   $("win-note").textContent = note;
   winBox.hidden = false;
 }
@@ -7420,7 +7747,7 @@ function setVariant(k, flash = true) {
     const f = document.createElement("div");
     f.className = "varflash";
     f.textContent = `Вариант ${k + 1}`;
-    boardEl.appendChild(f);
+    camHost().appendChild(f);
     setTimeout(() => f.remove(), 1400);
   }
 }
@@ -7526,6 +7853,7 @@ function setDisabled(v) {
   document.querySelectorAll(".langs button").forEach((b) => (b.disabled = v));
   $("to-map").disabled = v;
   drawVariants();
+  drawPages();
   drawLineBar();
 }
 
@@ -8877,7 +9205,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 61;
+const APP_VERSION = 62;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
