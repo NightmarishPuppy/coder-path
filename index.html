@@ -966,6 +966,7 @@ html.still .mapclouds img.bank { animation: none; }
 .mapwrap { position: relative; aspect-ratio: 360 / 1080; }
 .mapwrap[hidden] { display: none; }
 /* актёры сценок на карте: лист кадров, кадр — сдвиг фона */
+.skbox { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .skactor { position: absolute; aspect-ratio: 1; z-index: 1; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none;
   transform: translate(-50%, var(--foot)); transition: opacity 0.3s; }
 .skactor.flip { transform: translate(-50%, var(--foot)) scaleX(-1); }
@@ -4597,16 +4598,16 @@ ISLE_MAPS[3] = {
     ".....#............",
     ".....#########....",
     ".............#....",
-    ".............#....",
-    "....##########....",
-    "....#.............",
-    "....#.............",
-    "....######........",
-    "..................",
-    "..................",
-    "..................",
-    "..................",
-    "..................",
+    ".............#..#.",
+    "....##########..#.",
+    "....#...........=.",
+    "....#...........=.",
+    "....######......=.",
+    "................=.",
+    "................=.",
+    "................=.",
+    "................=.",
+    "................=.",
   ],
   ramps: [],
   deco: [
@@ -4621,18 +4622,17 @@ ISLE_MAPS[3] = {
     ["goldsp4", 12.4, 4.9, 0.5],
     ["rock3", 5.3, 5.6, 0.6],
     ["wrock1", 1.0, 27.0, 0.8],
-    ["wrock3", 16.8, 25.0, 0.8],
+    ["wrock3", 17.5, 23.6, 0.8],
     ["wrock2", 13.6, 29.0, 0.7],
     ["duck", 4.6, 29.0, 1.3],
     ["goldsp4", 12.0, 25.6, 0.5],
     ["mine", 15.2, 8.1, 0.6],
-    ["ghouse", 15.5, 19.3, 0.38],
   ],
-  labels: [["ЛЕСТНИЦЫ", 268, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274]],
-  bank: [],
+  labels: [["ЛЕСТНИЦЫ", 258, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274]],
+  bank: [["cloud_a", 990, 1800, 1.0], ["cloud_c", 1080, 1820, 0.9]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm5",
-  clear: [[13.6, 6.0, 17.9, 19.9]],
+  clear: [[13.6, 6.0, 17.9, 24.5]],
 };
 // @@/isle3@@
 
@@ -5190,8 +5190,9 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   pidle: [8, 1, 192], paxe: [6, 1, 192], phammer: [3, 1, 192], ppick: [6, 1, 192], prunpick: [6, 1, 192],
   monk: [6, 1, 192], heal: [11, 1, 192], healfx: [11, 1, 192], sheepb: [6, 1, 128],
   prun: [6, 1, 192], prunaxe: [6, 1, 192], prunwood: [6, 1, 192], prungold: [6, 1, 192], wspawn: [7, 1, 128], gheaphl: [6, 1, 128], gnug: [1, 1, 128],
-  gmount: [12, 1, 320], towerb: [1, 1, 256], towerbf: [1, 1, 256], arrowd: [1, 1, 64], archb: [8, 7, 192], kwar: [6, 8, 192],
+  gmount: [12, 1, 320], towerb: [1, 1, 256], towerbf: [1, 1, 256], arrowd: [1, 1, 64], arrowu: [1, 1, 64], archb: [8, 7, 192], kwar: [6, 8, 192],
   torchp: [7, 5, 192], lidle: [12, 1, 320], lrun: [6, 1, 320], ldatk: [3, 1, 320], lddef: [6, 1, 320],
+  lratk: [3, 1, 320], luatk: [3, 1, 320], ldratk: [3, 1, 320], luratk: [3, 1, 320], monkrun: [4, 1, 192],
   mtree: [8, 1, 192], stump3: [1, 1, 192] };
 let SK_ACTORS = [];
 let skLast = 0;
@@ -5370,154 +5371,287 @@ async function skitHaul(st, { door, pile }) {
     await sleep(400);
   }
 }
-// Оборона золотой шахты (Остров рудокопов, ущелье справа от каменного плато). Наверху — шахта и гора
-// золота, рабочие всё носят и носят самородки. Ниже стоят наши: лучник на синей башне, мечник,
-// копейщик и монах. Внизу ущелья — лагерь гоблинов; оттуда то и дело идут на штурм: двое с факелами,
-// подрывник с динамитом или бочка-камикадзе. Все ходят только по низине ущелья (одна высота, без воды
-// и обрывов) — это проверяет skProblems по точкам и путям из SKIT_GEOM.siege.
-// Лучник стреляет только строго вниз (стрела повёрнута на прямой угол — сетка пикселей цела),
-// поэтому всех, в кого он стреляет, ведём по «его» дорожке прямо под башней.
+// ===== Оборона золотой шахты: живой бой (Остров рудокопов, ущелье справа от каменного плато) =====
+// Это не постановка по шагам, а маленькая «игра сама в себя»: у каждого юнита свои сердечки, урон,
+// дальность удара, перезарядка, скорость и поле зрения. Раз в TICK мс каждый осматривается:
+// видит врага — идёт к нему и бьёт (лучник стреляет, подрывник бросает динамит), не видит — наши
+// возвращаются на пост, гоблины идут к горе золота. Гоблины приходят из облаков по мосту снизу.
+// Павших наших сменяет подкрепление из шахты. По карте все ходят только там, где можно (walk):
+// низина ущелья одной высоты (groundAt), мост, мимо горы золота, башни и кнопки уровня.
 const SIEGE = {
   mine: [15.2, 8.35], mount: [15.6, 10.6], stands: [[14.85, 9.45], [16.3, 9.45]],
-  tower: [14.7, 13.2], war: [16.45, 13.0], lan: [15.25, 14.2], monk: [16.85, 11.9],
-  // дверь хижины гоблинов смотрит вниз: из неё сначала выходят вбок и только потом идут вверх по ущелью
-  door: [15.5, 19.5], left: [14.7, 19.45], right: [16.3, 19.45],
-  lane: 14.7, duel: [16.45, 13.95], tntAt: [15.3, 17.1], dynTo: [15.25, 15.0],
-  lanHit: [15.3, 16.3], shotY: 15.8, barY: 16.3,
+  tower: [14.7, 13.2], goal: [15.6, 11.4], spawn: [16.5, 29.6], bridgeX: 16.5,
+  posts: { war: [16.4, 13.4], lan: [15.3, 14.1], monk: [16.85, 11.9] },
 };
-async function skitSiege(st, S) {
+// side — сторона; hp — сердечки; dmg — урон; reach — дальность удара (клеток); cd — перезарядка (мс);
+// speed — клеток в секунду; sight — поле зрения; leash — как далеко от поста наш уходит в погоню
+const SIEGE_UNITS = {
+  war: { side: "us", hp: 7, dmg: 2, reach: 0.8, cd: 850, speed: 1.8, sight: 4.5, leash: 4.5, key: "kwar", sc: 0.85 },
+  lan: { side: "us", hp: 7, dmg: 2, reach: 1.1, cd: 1000, speed: 1.7, sight: 4.5, leash: 5, key: "lidle", sc: 0.8, foot: 0.625 },
+  monk: { side: "us", hp: 4, heal: 2, reach: 3.5, cd: 3200, speed: 1.6, sight: 1.6, key: "monk", sc: 0.8 },
+  torch: { side: "gob", hp: 3, dmg: 1, reach: 0.75, cd: 850, speed: 1.5, sight: 4, key: "torch", sc: 0.85 },
+  torchp: { side: "gob", hp: 4, dmg: 1, reach: 0.75, cd: 800, speed: 1.35, sight: 4, key: "torchp", sc: 0.85 },
+  tnt: { side: "gob", hp: 2, dmg: 2, reach: 2.7, cd: 2300, speed: 1.4, sight: 4, key: "tnt", sc: 0.85 },
+  barrel: { side: "gob", hp: 1, dmg: 3, reach: 0.6, cd: 0, speed: 1.0, sight: 5, key: "barrel", sc: 0.85, foot: 0.72 },
+};
+const ARCHER = { reach: 5.5, dmg: 1, cd: 1300 };
+async function skitSiege(st0, S) {
+  const E = ISLE_ENG[3], TICK = 120;
+  // свой слой: внутри него порядок рисования — по высоте ног (кто ниже на карте, тот ближе)
+  const box = document.createElement("div"); box.className = "skbox";
+  st0.layer.insertBefore(box, st0.before || null);
+  const st = { ...st0, layer: box, before: null };
   const A = (k, sc, foot) => skActor(st, k, sc, foot);
-  // актёры в порядке глубины: кто ниже на карте — создаётся позже и рисуется поверх
-  const pawns = [A("prungold", 0.8), A("prungold", 0.8)];
-  const mount = A("gmount", 0.6, 0.875);
-  const nug = [A("gnug", 0.8, 0.585), A("gnug", 0.8, 0.585)];
-  const monk = A("monk", 0.8);
+  const Z = (a, y, d = 0) => (a.el.style.zIndex = Math.round(y * 10) * 4 + d);
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  let now = performance.now();
+
+  // ----- где можно ходить -----
+  const [tx, ty] = S.tower, archY = ty - (232 - 118) / 64 * 0.75;
+  const blocked = (x, y) => ((x - S.mount[0]) / 1.25) ** 2 + ((y - S.mount[1] + 0.15) / 0.55) ** 2 < 1   // гора золота
+    || (Math.abs(x - tx) < 0.65 && y > ty - 0.55 && y < ty + 0.15)                                      // башня
+    || y < 8.3                                                                                          // шахта
+    || (Math.abs(x - 13.5) < 1.05 && y > 19.8 && y < 21.7);                                              // кнопка уровня
+  const onBridge = (x, y) => Math.abs(x - S.bridgeX) < 0.3 && y > 19.9 && y < 30.5;
+  const walk = (x, y) => onBridge(x, y) || (x > 14.05 && y < 21.9 && !blocked(x, y)
+    && E.groundAt(x, y) === 0 && E.groundAt(x - 0.22, y) === 0 && E.groundAt(x + 0.22, y) === 0);
+
+  // ----- постройки и гора золота -----
+  const mount = A("gmount", 0.6, 0.875); mount.at(...S.mount); mount.show(true); Z(mount, S.mount[1]);
   const tower = A("towerb", 0.75, 232 / 256), archer = A("archb", 0.75), front = A("towerbf", 0.75, 232 / 256);
-  const war = A("kwar", 0.85), lan = A("lidle", 0.8, 0.625);
-  const gR = A("torch", 0.85), gP = A("torchp", 0.85), tnt = A("tnt", 0.85), bar = A("barrel", 0.85, 0.72);
-  const arrow = A("arrowd", 0.75, 0.5), dyn = A("dyn", 1, 0.5), boom = A("boom", 0.9, 0.6);
-  const dead = [A("dead", 0.9, 0.75), A("dead", 0.9, 0.75)], healfx = A("healfx", 0.8);
-  const [tx, ty] = S.tower, archY = ty - (232 - 118) / 64 * 0.75;   // площадка башни
-  mount.at(...S.mount); mount.show(true);
-  tower.at(tx, ty); tower.show(true); front.at(tx, ty); front.show(true);
-  archer.at(tx, archY); archer.show(true); archer.play(0, 6, 150);
-  war.at(...S.war); war.face(false); war.show(true); war.play(0, 6, 140);
-  lan.at(...S.lan); lan.show(true); lan.play(0, 12, 110);
-  monk.at(...S.monk); monk.face(true); monk.show(true); monk.play(0, 6, 150);
-  const run = async (a, to, row, n, cellMs, sheet) => {
-    a.face(to[0] < a.x - 0.01 || (Math.abs(to[0] - a.x) <= 0.01 && a.el.classList.contains("flip")));
-    a.play(row, n, 90, true, sheet);
-    await a.move(to[0], to[1], Math.max(1, Math.hypot(to[0] - a.x, to[1] - a.y) * cellMs));
+  [[tower, 0], [archer, 1], [front, 2]].forEach(([a, d]) => Z(a, ty, d));
+  tower.at(tx, ty); front.at(tx, ty); archer.at(tx, archY);
+  [tower, archer, front].forEach((a) => a.show(true));
+  archer.play(0, 6, 150);
+
+  // ----- эффекты (заготовки, используются по очереди) -----
+  const pool = (k, n, sc, foot) => Array.from({ length: n }, () => A(k, sc, foot));
+  const deads = pool("dead", 6, 0.9, 0.75), booms = pool("boom", 3, 0.9, 0.6), dyns = pool("dyn", 2, 1, 0.5);
+  const arrows = pool("arrow", 4, 0.75, 0.5), heals = pool("healfx", 2, 0.8);
+  const take = (list) => { const a = list.find((x) => !x.busy) || list[0]; a.busy = true; return a; };
+  const free = (a) => { a.busy = false; a.show(false); };
+  const later = [];                                   // отложенные действия: [время, что сделать]
+  const after = (ms, fn) => later.push([now + ms, fn]);
+
+  // ----- юниты -----
+  const units = []; S.units = units; S.walk = (x, y) => walk(x, y);   // для проверки в браузере
+  const make = (kind, x, y, post) => {
+    const T = SIEGE_UNITS[kind];
+    let u = units.find((v) => v.dead && v.kind === kind && !v.post && !post);
+    if (!u) { u = { kind, T, a: A(T.key, T.sc, T.foot) }; units.push(u); }
+    Object.assign(u, { x, y, hp: T.hp, dead: false, post, busy: 0, next: 0, anim: "", left: x > 15.6, fuse: false });
+    u.a.el.style.transition = "none"; u.a.at(x, y); u.a.show(true);
+    return u;
   };
-  const appear = async (a, row, n) => {         // выходит из двери хижины гоблинов
-    a.at(...S.door); a.play(row, n, 130); a.el.style.transition = "opacity 0.3s"; a.show(true);
-    await skSleep(st, 350);
+  const IDLE = { war: [0, 6, 140, "kwar"], lan: [0, 12, 110, "lidle"], monk: [0, 6, 150, "monk"], torch: [0, 7, 120], torchp: [0, 7, 120], tnt: [0, 6, 130], barrel: [0, 1, 200] };
+  const RUN = { war: [1, 6, 90, "kwar"], lan: [0, 6, 90, "lrun"], monk: [0, 4, 100, "monkrun"], torch: [1, 6, 90], torchp: [1, 6, 90], tnt: [1, 6, 90], barrel: [4, 3, 160] };
+  const anim = (u, name, spec) => {
+    if (u.anim === name) return;
+    u.anim = name;
+    const [row, n, ms, sheet] = spec || (name === "run" ? RUN : IDLE)[u.kind];
+    u.a.play(row, n, ms, !spec, sheet);
   };
-  const die = async (a, i) => {                 // облачко — череп — тает
-    const d = dead[i]; a.show(false);
-    d.at(a.x, a.y); d.show(true);
-    await d.play(0, 7, 110, false);
-    skRun(async () => { await skSleep(st, 1500); await d.play(1, 7, 120, false); d.show(false); });
+  // сторона удара: вбок, вверх, вниз или наискосок (рисунки есть не у всех — тогда ближайший)
+  const dirOf = (dx, dy) => { const ax = Math.abs(dx);
+    return dy > 1.6 * ax ? "down" : -dy > 1.6 * ax ? "up" : dy > 0.55 * ax ? "dside" : -dy > 0.55 * ax ? "uside" : "side"; };
+  const ATK = {
+    war: { side: [2, 6, 75, "kwar"], dside: [2, 6, 75, "kwar"], uside: [2, 6, 75, "kwar"], down: [4, 6, 75, "kwar"], up: [6, 6, 75, "kwar"] },
+    lan: { side: [0, 3, 120, "lratk"], dside: [0, 3, 120, "ldratk"], uside: [0, 3, 120, "luratk"], down: [0, 3, 120, "ldatk"], up: [0, 3, 120, "luatk"] },
+    torch: { side: [2, 6, 85], dside: [2, 6, 85], uside: [2, 6, 85], down: [3, 6, 85], up: [4, 6, 85] },
   };
-  const shoot = async (toY) => {                // лучник стреляет вниз, стрела летит по дорожке под башней
-    await archer.play(6, 8, 60, false).then(() => {});
-    arrow.at(tx, archY + 0.2); arrow.show(true);
-    await arrow.move(tx, toY - 0.35, (toY - archY) * 70);
-    arrow.show(false);
-    archer.play(0, 6, 150);
+  ATK.torchp = ATK.torch;
+  const flash = (u) => u.a.el.animate([{ filter: "brightness(2.4) saturate(0.3)" }, { filter: "none" }], 220);
+  const boom = (x, y) => { const b = take(booms); b.at(x, y); Z(b, y + 0.5); b.show(true); b.play(0, 9, 70, false).then(() => free(b)); };
+  const hurt = (u, dmg) => {
+    if (u.dead) return;
+    u.hp -= dmg; flash(u);
+    if (u.hp <= 0) kill(u);
   };
-  // рабочие носят самородки из шахты на гору золота — каждый в своём ритме
+  const splash = (x, y, r, dmg, side) => units.forEach((v) => !v.dead && v.T.side === side && Math.hypot(v.x - x, v.y - y) < r && hurt(v, dmg));
+  const kill = (u) => {
+    u.dead = true; u.a.show(false);
+    if (u.kind === "barrel") { boom(u.x, u.y); splash(u.x, u.y, 0.9, u.T.dmg, "us"); return; }
+    const d = take(deads); d.at(u.x, u.y); Z(d, u.y); d.show(true);
+    d.play(0, 7, 110, false);
+    after(2600, () => d.play(1, 7, 120, false).then(() => free(d)));
+    if (u.post) after(8000, () => {                      // подкрепление выходит из шахты
+      Object.assign(u, { x: S.mine[0], y: S.mine[1] + 0.1, hp: u.T.hp, dead: false, busy: 0, anim: "" });
+      u.a.el.style.transition = "none"; u.a.at(u.x, u.y); u.a.show(true);
+    });
+  };
+  // шаг к цели в обход препятствий: прямо, а если нельзя — чуть левее или правее
+  const stepTo = (u, gx, gy) => {
+    const dx = gx - u.x, dy = gy - u.y, d = Math.hypot(dx, dy);
+    if (d < 0.06) return false;
+    const s = Math.min(u.T.speed * TICK / 1000, d), ang = Math.atan2(dy, dx);
+    for (const t of [0, 35, -35, 70, -70, 110, -110]) {
+      const a = ang + t * Math.PI / 180, nx = u.x + Math.cos(a) * s, ny = u.y + Math.sin(a) * s;
+      if (walk(nx, ny)) {
+        u.x = nx; u.y = ny;
+        if (Math.abs(Math.cos(a)) > 0.15) u.left = Math.cos(a) < 0;
+        anim(u, "run");
+        return true;
+      }
+    }
+    return false;
+  };
+  const nearest = (u, ok) => {
+    let best = null, bd = Infinity;
+    for (const v of units) if (!v.dead && v.T.side !== u.T.side && ok(v)) { const d = dist(u, v); if (d < bd) { bd = d; best = v; } }
+    return best && bd <= u.T.sight ? best : null;
+  };
+  const melee = (u, t) => {
+    const d = dist(u, t);
+    if (d > u.T.reach) {                              // подойти сбоку (так удары видны лучше)
+      const side = Math.sign(u.x - t.x) || 1;
+      let gx = t.x + side * u.T.reach * 0.8, gy = t.y;
+      if (!walk(gx, gy)) { gx = t.x - side * u.T.reach * 0.8; if (!walk(gx, gy)) { gx = t.x; gy = t.y; } }
+      if (!stepTo(u, gx, gy)) anim(u, "idle");
+      return;
+    }
+    u.left = t.x < u.x - 0.05 ? true : t.x > u.x + 0.05 ? false : u.left;
+    if (now < u.next) { anim(u, "idle"); return; }
+    const spec = ATK[u.kind][dirOf(t.x - u.x, t.y - u.y)];
+    u.next = now + u.T.cd; u.busy = now + spec[1] * spec[2];
+    anim(u, "atk" + now, spec);
+    after(spec[1] * spec[2] * 0.55, () => { if (!u.dead && dist(u, t) < u.T.reach + 0.45) hurt(t, u.T.dmg); });
+  };
+  const throwTnt = (u, t) => {
+    if (dist(u, t) > u.T.reach) { if (!stepTo(u, t.x, t.y)) anim(u, "idle"); return; }
+    u.left = t.x < u.x;
+    if (now < u.next) { anim(u, "idle"); return; }
+    u.next = now + u.T.cd; u.busy = now + 7 * 90;
+    anim(u, "atk" + now, [2, 7, 90]);
+    const [x1, y1] = [t.x, t.y];
+    after(380, () => {
+      if (u.dead) return;
+      const d = take(dyns); d.el.style.transition = "none"; d.at(u.x + (u.left ? -0.3 : 0.3), u.y - 1.0); Z(d, 40); d.show(true); d.play(0, 6, 70);
+      d.arc(x1, y1, 1.1, 650).then(() => { free(d); boom(x1, y1); splash(x1, y1, 0.75, u.T.dmg, "us"); });
+    });
+  };
+  const barrelGo = (u, t) => {
+    if (u.fuse) return;
+    if (dist(u, t) > u.T.reach) { if (!stepTo(u, t.x, t.y)) anim(u, "idle"); return; }
+    u.fuse = true; u.busy = now + 450;
+    anim(u, "fuse", [5, 3, 150]);
+    after(450, () => { if (!u.dead) kill(u); });
+  };
+  const monkThink = (u) => {
+    const danger = nearest(u, () => true);
+    if (danger) { stepTo(u, S.posts.monk[0], S.posts.monk[1] - 1.4) || anim(u, "idle"); return; }
+    if (now >= u.next) {
+      let t = null;
+      for (const v of units) if (!v.dead && v.T.side === "us" && v.hp < v.T.hp && dist(u, v) <= u.T.reach && (!t || v.hp / v.T.hp < t.hp / t.T.hp)) t = v;
+      if (t) {
+        u.left = t.x < u.x; u.next = now + u.T.cd; u.busy = now + 11 * 80;
+        anim(u, "heal" + now, [0, 11, 80, "heal"]);
+        const h = take(heals); h.at(t.x, t.y); Z(h, t.y + 0.1); h.show(true); h.play(0, 11, 80, false).then(() => free(h));
+        after(500, () => { if (!t.dead) t.hp = Math.min(t.T.hp, t.hp + u.T.heal); });
+        return;
+      }
+    }
+    const [px, py] = u.post;
+    if (!stepTo(u, px, py)) { u.left = true; anim(u, "idle"); }
+  };
+  const think = (u) => {
+    if (u.dead || now < u.busy) return;
+    if (u.kind === "monk") return monkThink(u);
+    if (u.T.side === "us") {
+      const [px, py] = u.post;
+      const t = nearest(u, (v) => Math.hypot(v.x - px, v.y - py) <= u.T.leash);
+      if (t) return melee(u, t);
+      if (!stepTo(u, px, py)) { u.left = px > 15.6 ? false : false; anim(u, "idle"); }
+      return;
+    }
+    const t = nearest(u, () => true);
+    if (t) return u.kind === "tnt" ? throwTnt(u, t) : u.kind === "barrel" ? barrelGo(u, t) : melee(u, t);
+    // никого не видно — к золоту; дошёл — долбит гору
+    if (stepTo(u, ...S.goal)) return;
+    if (u.kind === "torch" || u.kind === "torchp") { u.busy = now + 600; anim(u, "atk" + now, ATK[u.kind].up); }
+    else anim(u, "idle");
+  };
+  // лучник на башне: ближайший гоблин в пределах выстрела
+  let archNext = 0, archBusy = 0, archIdle = true;
+  const ARCH_ROW = { up: 2, uside: 3, side: 4, dside: 5, down: 6 };
+  const archerThink = () => {
+    if (now < archBusy) return;
+    let t = null, bd = Infinity;
+    for (const v of units) if (!v.dead && v.T.side === "gob") { const d = Math.hypot(v.x - tx, v.y - archY); if (d < bd) { bd = d; t = v; } }
+    if (!t || bd > ARCHER.reach || now < archNext) { if (!archIdle) archer.play(0, 6, 150); archIdle = true; return; }
+    archIdle = false;
+    const dx = t.x - tx, dy = t.y - archY;
+    archer.face(dx < -0.05);
+    archer.play(ARCH_ROW[dirOf(dx, dy)], 8, 55, false);
+    archNext = now + ARCHER.cd; archBusy = now + 8 * 55;
+    after(300, () => {
+      if (t.dead) return;
+      const a = take(arrows), sx = tx + (dx < 0 ? -0.2 : 0.2), sy = archY - 0.35, ex = t.x, ey = t.y - 0.35;
+      const ax = Math.abs(ex - sx), ay = Math.abs(ey - sy);
+      a.sheet(ax >= ay ? "arrow" : ey > sy ? "arrowd" : "arrowu"); a.frame(0, 0); a.face(ax >= ay && ex < sx);
+      a.el.style.transition = "none"; a.at(sx, sy); Z(a, 200); a.show(true);
+      a.move(ex, ey, Math.hypot(ex - sx, ey - sy) * 75).then(() => { free(a); if (!t.dead) hurt(t, ARCHER.dmg); });
+    });
+  };
+
+  // ----- наши на постах -----
+  for (const k of ["war", "lan", "monk"]) { const [x, y] = S.posts[k]; const u = make(k, x, y, [x, y]); u.left = k !== "lan"; }
+
+  // ----- рабочие: носят самородки на гору, пока гоблинов нет поблизости -----
+  const danger = () => units.some((v) => !v.dead && v.T.side === "gob" && v.y < 17);
   const haul = async (p, n, stand) => {
     for (;;) {
-      await skWait(st, skRnd(2500, 6500));
-      p.at(...S.mine); p.sheet("prungold"); p.el.style.transition = ""; p.show(true);
-      await skSleep(st, 250);
-      await run(p, stand, 0, 6, 650, "prungold");
+      await skWait(st0, skRnd(2500, 6500));
+      while (danger()) await skWait(st0, 1000);
+      p.at(...S.mine); p.sheet("prungold"); p.el.style.transition = ""; Z(p, S.mine[1]); p.show(true);
+      await skSleep(st0, 250);
       const f = Math.sign(S.mount[0] - stand[0]) || 1;
+      p.face(stand[0] < p.x); p.play(0, 6, 90, true, "prungold");
+      await p.move(...stand, Math.hypot(stand[0] - p.x, stand[1] - p.y) * 650);
       p.face(f < 0); p.play(0, 8, 130, true, "pidle");
-      n.el.style.transition = ""; n.at(p.x + f * 0.28, p.y - 0.14); n.show(true);
+      n.el.style.transition = ""; n.at(p.x + f * 0.28, p.y - 0.14); Z(n, 41); n.show(true);
       await n.arc(S.mount[0] + (stand[0] - S.mount[0]) * 0.35, S.mount[1] - 1.05, 0.4, 360);
       n.el.style.transition = "opacity 0.15s"; n.show(false);
       await mount.play(0, 12, 70, false); mount.frame(0, 0);
-      await skSleep(st, 400);
-      await run(p, S.mine, 0, 6, 650, "prun");
+      await skSleep(st0, 400);
+      p.face(S.mine[0] < p.x); p.play(0, 6, 90, true, "prun");
+      await p.move(...S.mine, Math.hypot(S.mine[0] - p.x, S.mine[1] - p.y) * 650);
       p.show(false);
     }
   };
-  pawns.forEach((p, i) => skRun(() => haul(p, nug[i], S.stands[i])));
-  // штурмы
-  const torches = async () => {                 // двое с факелами: одного снимает лучник, второй бьётся с мечником
-    await appear(gR, 0, 7);
-    const rr = (async () => { await run(gR, S.left, 1, 6, 480); await run(gR, [S.lane, S.shotY], 1, 6, 480); })();
-    await skSleep(st, 500);
-    await appear(gP, 0, 7);
-    const rp = (async () => { await run(gP, S.right, 1, 6, 480); await run(gP, S.duel, 1, 6, 480); })();
-    await skSleep(st, Math.max(0, (S.left[1] - S.shotY) * 480 - 1100));
-    await shoot(S.shotY);
-    await rr; await die(gR, 0);
-    await rp;
-    gP.play(0, 7, 120);
-    for (let k = 0; k < 2; k++) {
-      await gP.play(4, 6, 85, false);           // гоблин бьёт вверх — мечник отражает
-      await skSleep(st, 120);
-      await war.play(4 + k, 6, 80, false);      // мечник бьёт вниз
-      war.play(0, 6, 140);
-      await skSleep(st, 200);
-    }
-    await die(gP, 1);
-    // монах подлечивает мечника
-    monk.face(S.war[0] < S.monk[0]);
-    healfx.at(...S.war); healfx.show(true);
-    healfx.play(0, 11, 90, false).then(() => healfx.show(false));
-    await monk.play(0, 11, 90, false, "heal");
-    monk.play(0, 6, 150, true, "monk");
+  S.stands.forEach((stand) => { const p = A("prungold", 0.8), n = A("gnug", 0.8, 0.585); Z(p, stand[1]); skRun(() => haul(p, n, stand)); });
+
+  // ----- волны гоблинов: приходят из облаков по мосту -----
+  const KINDS = ["torch", "torch", "torchp", "torchp", "tnt", "barrel"];
+  let queue = [], nextWave = now + 2500;
+  const wave = () => {
+    const n = 2 + Math.floor(Math.random() * 3) + (Math.random() < 0.15 ? 2 : 0);
+    const list = Array.from({ length: n }, () => KINDS[Math.floor(Math.random() * KINDS.length)]);
+    list.forEach((k, i) => queue.push([now + i * 900, k]));
   };
-  const dynamite = async () => {                // подрывник бросает динамит — копейщик закрывается и гонит его
-    await appear(tnt, 0, 6);
-    await run(tnt, S.right, 1, 6, 520);
-    await run(tnt, [S.right[0], S.tntAt[1] + 0.6], 1, 6, 520);
-    await run(tnt, S.tntAt, 1, 6, 520);
-    tnt.face(false); await tnt.play(2, 7, 90, false);
-    dyn.at(S.tntAt[0] + 0.2, S.tntAt[1] - 1.0); dyn.show(true); dyn.play(0, 6, 70);
-    lan.play(0, 6, 80, false, "lddef");         // щит вниз
-    await dyn.arc(...S.dynTo, 1.2, 700);
-    dyn.show(false);
-    boom.at(...S.dynTo); boom.show(true);
-    await boom.play(0, 9, 75, false); boom.show(false);
-    tnt.play(0, 6, 130);
-    await run(lan, S.lanHit, 0, 6, 420, "lrun");
-    const flee = Math.random() < 0.5;
-    if (flee) skRun(async () => { await run(tnt, [S.right[0], S.tntAt[1] + 0.6], 1, 6, 420); await run(tnt, S.right, 1, 6, 420);
-      await run(tnt, S.door, 1, 6, 420); tnt.show(false); });
-    await lan.play(0, 3, 110, false, "ldatk");
-    if (!flee) await die(tnt, 0);
-    await skSleep(st, 300);
-    await run(lan, S.lan, 0, 6, 520, "lrun");
-    lan.face(false); lan.play(0, 12, 110, true, "lidle");
-  };
-  const barrel = async () => {                  // бочка-камикадзе крадётся к башне — лучник поджигает её раньше
-    bar.at(...S.door); bar.frame(0, 4); bar.el.style.transition = "opacity 0.3s"; bar.show(true);
-    await skSleep(st, 400);
-    bar.play(4, 3, 160);
-    await run(bar, S.left, 4, 3, 900);
-    bar.play(4, 3, 160);
-    const go = run(bar, [S.lane, S.barY], 4, 3, 900);
-    await skSleep(st, Math.max(0, (S.left[1] - S.barY) * 900 - 900));
-    await shoot(S.barY);
-    await go;
-    await bar.play(5, 3, 150, false);           // фитиль загорелся
-    bar.show(false);
-    boom.at(bar.x, bar.y); boom.show(true);
-    await boom.play(0, 9, 75, false); boom.show(false);
-  };
-  const waves = [torches, dynamite, barrel];
-  let last = -1;
   for (;;) {
-    await skWait(st, skRnd(2500, 6000));
-    let i = Math.floor(Math.random() * waves.length);
-    if (i === last) i = (i + 1) % waves.length;
-    last = i;
-    await waves[i]();
+    await (skOn(st0) ? skSleep(st0, TICK) : skWait(st0, 0));
+    now = performance.now();
+    const gobs = units.filter((v) => !v.dead && v.T.side === "gob").length;
+    // штурм почти не прекращается: следующая волна выходит, когда от прежней остался один гоблин
+    if (gobs <= 1 && !queue.length && now > nextWave) { wave(); nextWave = Infinity; }
+    if (gobs <= 1 && !queue.length && nextWave === Infinity) nextWave = now + skRnd(2500, 6000);
+    while (queue.length && queue[0][0] <= now) { const [, k] = queue.shift(); make(k, S.spawn[0], S.spawn[1]); }
+    for (let i = later.length - 1; i >= 0; i--) if (later[i][0] <= now) { const fn = later[i][1]; later.splice(i, 1); fn(); }
+    units.forEach(think);
+    archerThink();
+    // не стоять друг в друге
+    const live = units.filter((v) => !v.dead);
+    for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
+      const a = live[i], b = live[j], d = dist(a, b);
+      if (d > 0.42 || d === 0) continue;
+      const k = (0.42 - d) / d * 0.5, ex = (a.x - b.x) * k, ey = (a.y - b.y) * k;
+      if (walk(a.x + ex, a.y + ey)) { a.x += ex; a.y += ey; }
+      if (walk(b.x - ex, b.y - ey)) { b.x -= ex; b.y -= ey; }
+    }
+    for (const u of live) {
+      u.a.el.style.transition = `left ${TICK}ms linear, top ${TICK}ms linear`;
+      u.a.at(u.x, u.y); u.a.face(u.left); Z(u.a, u.y, 1);
+    }
   }
 }
 // Лесоруб на карте: рубит дерево, оно падает в сторону от него, на месте остаётся пень и брёвна.
@@ -5707,11 +5841,9 @@ const SKIT_GEOM = {
   tnt: (s) => ({ stand: [s.at], water: [s.to] }),
   archer: (s) => ({ stand: [s.at], paths: [[[s.run[0], s.at[1]], [s.run[1], s.at[1]]]] }),
   fight: (s) => ({ stand: [s.a, s.b], paths: [[s.a, s.awayA], [s.b, s.awayB]] }),
-  siege: () => { const S = SIEGE, up = [S.right[0], S.tntAt[1] + 0.6];
-    return { stand: [S.mine, ...S.stands, S.mount, [S.mount[0] - 0.9, S.mount[1]], [S.mount[0] + 0.9, S.mount[1]], S.tower, S.war, S.lan, S.monk,
-      S.door, S.left, S.right, S.duel, S.tntAt, S.dynTo, S.lanHit],
-      paths: [[S.mine, S.stands[0]], [S.mine, S.stands[1]], [S.left, [S.lane, S.shotY]], [S.right, S.duel], [S.right, up, S.tntAt], [S.lan, S.lanHit],
-        [S.lan, S.duel], [S.tower, [S.lane, S.shotY]]] }; },
+  siege: () => { const S = SIEGE, P = S.posts;
+    return { stand: [S.mine, ...S.stands, S.mount, [S.mount[0] - 0.9, S.mount[1]], [S.mount[0] + 0.9, S.mount[1]], S.tower, P.war, P.lan, P.monk, S.goal],
+      paths: [[S.mine, S.stands[0]], [S.mine, S.stands[1]], [[16.1, 19.7], [16.0, 15.5], S.goal], [P.lan, [15.3, 18.5]], [P.war, [16.4, 18.5]]] }; },
   haul: (s) => { const t = haulStand(s); return { stand: [s.door, s.pile, [s.pile[0] - 0.7, s.pile[1]], [s.pile[0] + 0.7, s.pile[1]], [s.pile[0], s.pile[1] - 0.6], t], paths: [[s.door, t]] }; },
   lumber: (s) => { const [tx, ty] = s.tree, cut = [tx - s.d * 0.6, ty], logs = [tx + s.d * 0.6, ty + 0.05];
     return { stand: [s.tree, cut, logs, [tx + s.d * 1.4, ty], s.pile], paths: [[cut, logs], [cut, s.pile]] }; },
@@ -9647,7 +9779,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 66;
+const APP_VERSION = 67;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
