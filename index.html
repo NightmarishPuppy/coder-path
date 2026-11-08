@@ -952,13 +952,15 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
   border: 1px solid var(--wall-edge);
   background: var(--sea);
 }
-.isle-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+/* Слои карты острова снизу вверх: холсты карты → жители сценок (z 1) → кнопки уровней (z 1, позже в разметке)
+   → бегущий рыцарь (z 1) → облака (z 2). Облака — всегда самый верхний слой: из-под них выходят и туда уходят. */
+.isle-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; z-index: 1; }
 #mapview .map-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 /* Облака — самый верхний слой карты. pointer-events: none — нажатие проходит
    сквозь облако на кнопку уровня под ним. */
 #mapview .map-clouds { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
 .mapstrip { position: absolute; left: 0; width: 100%; display: block; }
-.mapclouds { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.mapclouds { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
 .mapclouds img { position: absolute; left: 0; height: auto; opacity: 0.85; image-rendering: pixelated; will-change: transform; }
 .mapclouds img.bank { opacity: 1; animation: bank 9s ease-in-out infinite alternate; }
 @keyframes bank { from { transform: translateX(-1.5%); } to { transform: translateX(1.5%); } }
@@ -981,14 +983,14 @@ html.still .mapclouds img.bank { animation: none; }
 #mapview .isle-svg .nstars { font-family: var(--font-body); font-size: 10px; text-anchor: middle; letter-spacing: 1px; }
 #mapview .isle-svg .region { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; text-anchor: middle; }
 #mapview .isle-svg .soon { font-family: var(--font-body); font-weight: 600; font-size: 12px; text-anchor: middle; }
-.mapring { position: absolute; aspect-ratio: 1; margin: 0; box-sizing: border-box; border: 3px solid #fff3c4; border-radius: 50%; pointer-events: none;
+.mapring { position: absolute; z-index: 1; aspect-ratio: 1; margin: 0; box-sizing: border-box; border: 3px solid #fff3c4; border-radius: 50%; pointer-events: none;
   transform: translate(-50%, -50%); animation: mapring 1.6s ease-in-out infinite; will-change: transform, opacity; }
 @keyframes mapring { 0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 0.2; transform: translate(-50%, -50%) scale(1.35); } }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .mapring { animation: none; }
 /* --- Мост между островами --- */
 /* рыцарь бежит по мосту: полоска кадров «бежит», под слоем облаков — уходит в них */
-.runner { position: absolute; width: 12.2%; aspect-ratio: 1; transform: translate(-50%, -82%); background-repeat: no-repeat;
+.runner { position: absolute; z-index: 1; width: 12.2%; aspect-ratio: 1; transform: translate(-50%, -82%); background-repeat: no-repeat;
   background-size: 600% 100%; image-rendering: pixelated; pointer-events: none; animation: spr6 0.6s steps(6) infinite; }
 .runner.idle { background-size: 800% 100%; animation: spr8 1s steps(8) infinite; }
 .runner.flip { transform: translate(-50%, -82%) scaleX(-1); }
@@ -5478,12 +5480,19 @@ async function skitSiege(st0, S) {
 
   // ----- юниты -----
   const units = []; S.units = units; S.walk = (x, y) => walk(x, y);   // для проверки в браузере
+  // поставить сразу на место, без плавного переезда с того места, где юнит был раньше (погиб):
+  // переход выключен и браузер обязан применить новое место до того, как переход включится снова
+  const place = (u) => {
+    u.a.el.style.transition = "none"; u.a.at(u.x, u.y); Z(u.a, u.y, 1);
+    void u.a.el.offsetWidth;
+    u.a.show(true);
+  };
   const make = (kind, x, y, post) => {
     const T = SIEGE_UNITS[kind];
     let u = units.find((v) => v.dead && v.kind === kind && !v.post && !post);
     if (!u) { u = { kind, T, a: A(T.key, T.sc, T.foot) }; units.push(u); }
     Object.assign(u, { x, y, hp: T.hp, dead: false, post, busy: 0, next: 0, anim: "", left: x > 15.6, fuse: false });
-    u.a.el.style.transition = "none"; u.a.at(x, y); u.a.show(true);
+    place(u);
     return u;
   };
   const IDLE = { war: [0, 6, 140, "kwar"], lan: [0, 12, 110, "lidle"], monk: [0, 6, 150, "monk"], torch: [0, 7, 120], torchp: [0, 7, 120], tnt: [0, 6, 130], barrel: [0, 1, 200] };
@@ -5519,7 +5528,7 @@ async function skitSiege(st0, S) {
     after(2600, () => d.play(1, 7, 120, false).then(() => free(d)));
     if (u.post) after(8000, () => {                      // подкрепление выходит из шахты
       Object.assign(u, { x: S.mine[0], y: S.mine[1] + 0.1, hp: u.T.hp, dead: false, busy: 0, anim: "" });
-      u.a.el.style.transition = "none"; u.a.at(u.x, u.y); u.a.show(true);
+      place(u);
     });
   };
   // шаг к цели в обход препятствий: прямо, а если нельзя — чуть левее или правее
@@ -9932,7 +9941,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 68;
+const APP_VERSION = 69;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
