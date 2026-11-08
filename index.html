@@ -1007,11 +1007,15 @@ html.still .mapring { animation: none; }
   transform: translateX(calc(-50% + var(--d) * 135vw)); transition: transform 1s cubic-bezier(0.45, 0, 0.3, 1) var(--w, 0s); }
 .curtain.closed img { transform: translateX(-50%); transition-delay: 0s; }
 /* Архипелаг: все острова на одной карте */
-.isle-pick { display: inline-flex; align-items: center; gap: 7px; min-width: 0; margin: -5px 0 -5px -9px; padding: 5px 10px 5px 8px;
-  border-radius: 12px; border: 1px solid rgba(233, 212, 138, 0.28); background: rgba(233, 212, 138, 0.07); color: inherit; font: inherit; cursor: pointer; }
-.isle-pick svg { width: 28px; height: 20px; flex: none; }
-.isle-pick .eyebrow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-size: 12px; letter-spacing: 0.08em; }
-.isle-pick .isle-caret { color: var(--torch); font-size: 11px; margin-left: -2px; }
+.isle-pick { display: inline-flex; align-items: center; gap: 7px; min-width: 0; margin: -5px 0 -5px -8px; padding: 4px 9px 4px 7px;
+  border-radius: 12px; border: 1px solid rgba(233, 212, 138, 0.28); background: rgba(233, 212, 138, 0.07); color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.isle-pick svg { width: 26px; height: 19px; flex: none; }
+/* название в две строки: мелко «Остров», под ним само название — так кнопка узкая и не теснит шестерёнку */
+.isle-txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.1; }
+.isle-kind { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.isle-pick .eyebrow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-size: 13px; letter-spacing: 0.06em; }
+.isle-pick .isle-caret { color: var(--torch); font-size: 11px; }
+@media (max-width: 340px) { .isle-pick .eyebrow { font-size: 12px; letter-spacing: 0.02em; } .isle-pick svg { display: none; } }
 .isle-pick:active { transform: translateY(1px); }
 .archi { position: fixed; inset: 0; z-index: 90; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .archi-top { position: sticky; top: 0; z-index: 9999; display: flex; align-items: center; justify-content: space-between;
@@ -1144,7 +1148,7 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
 /* Кнопки музыки и звуков */
 .toprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .toprow .backbtn { margin-bottom: 0; }
-.soundbar { display: inline-flex; gap: 6px; margin-left: auto; }
+.soundbar { display: inline-flex; gap: 6px; margin-left: auto; flex: none; }   /* кнопки звука и шестерёнка не сжимаются */
 /* узкий экран: в шапке уровня у «Музыки» и «Звуков» только значки — иначе кнопки наезжают друг на друга */
 @media (max-width: 430px) {
   #levelview .snd span, #mapview .snd span { display: none; }
@@ -1353,7 +1357,7 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
       <button class="isle-pick" id="isle-pick" aria-label="Карта архипелага: все острова">
         <svg viewBox="0 0 28 20" aria-hidden="true"><ellipse cx="7" cy="14" rx="6" ry="4" fill="#e9d48a"/><ellipse cx="7" cy="13" rx="4.6" ry="2.9" fill="#6fae4c"/>
           <ellipse cx="20" cy="8" rx="6.5" ry="4.2" fill="#e9d48a"/><ellipse cx="20" cy="7" rx="5" ry="3.1" fill="#6fae4c"/><ellipse cx="22" cy="16.5" rx="3.6" ry="2.4" fill="#e9d48a"/><ellipse cx="22" cy="16" rx="2.5" ry="1.6" fill="#8fbf5a"/></svg>
-        <span class="eyebrow" id="isle-name">Остров программистов</span><span class="isle-caret" aria-hidden="true">▾</span>
+        <span class="isle-txt"><span class="isle-kind">Остров</span><span class="eyebrow" id="isle-name">программистов</span></span><span class="isle-caret" aria-hidden="true">▾</span>
       </button>
       <div class="soundbar">
         <button class="snd snd-music" aria-label="Музыка" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico" d="M9 18V6l10-2v12"/><circle class="ico-fill" cx="7" cy="18" r="2.5"/><circle class="ico-fill" cx="17" cy="16" r="2.5"/><path class="slash" d="M4 4l16 16"/></svg><span>Музыка</span></button>
@@ -5101,7 +5105,7 @@ function showIsle(n) {
   curIsle = n;
   document.querySelectorAll(".mapwrap[data-isle]").forEach((w) => (w.hidden = +w.dataset.isle !== n));
   ensureIsle(n);
-  $("isle-name").textContent = ISLE_NAMES[n];
+  $("isle-name").textContent = ISLE_NAMES[n].replace(/^Остров\s+/, "");   // «Остров» — мелко строкой выше
 }
 
 function renderMap() {
@@ -10027,7 +10031,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 71;
+const APP_VERSION = 72;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
