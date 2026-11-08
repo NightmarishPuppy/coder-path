@@ -1004,6 +1004,35 @@ html.still .mapring { animation: none; }
 .curtain img { position: absolute; left: 50%; height: auto; image-rendering: pixelated; will-change: transform;
   transform: translateX(calc(-50% + var(--d) * 135vw)); transition: transform 1s cubic-bezier(0.45, 0, 0.3, 1) var(--w, 0s); }
 .curtain.closed img { transform: translateX(-50%); transition-delay: 0s; }
+/* Архипелаг: все острова на одной карте */
+.isle-pick { display: inline-flex; align-items: center; gap: 7px; min-width: 0; margin: -5px 0 -5px -9px; padding: 5px 10px 5px 8px;
+  border-radius: 12px; border: 1px solid rgba(233, 212, 138, 0.28); background: rgba(233, 212, 138, 0.07); color: inherit; font: inherit; cursor: pointer; }
+.isle-pick svg { width: 28px; height: 20px; flex: none; }
+.isle-pick .eyebrow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-size: 12px; letter-spacing: 0.08em; }
+.isle-pick .isle-caret { color: var(--torch); font-size: 11px; margin-left: -2px; }
+.isle-pick:active { transform: translateY(1px); }
+.archi { position: fixed; inset: 0; z-index: 90; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.archi-top { position: sticky; top: 0; z-index: 9999; display: flex; align-items: center; justify-content: space-between;
+  padding: max(10px, env(safe-area-inset-top, 0px)) 16px 22px; background: linear-gradient(rgba(19, 21, 27, 0.88), rgba(19, 21, 27, 0)); pointer-events: none; }
+.archi-title { font-family: var(--font-display); font-weight: 700; font-size: 18px; letter-spacing: 0.04em; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+.archi-close { pointer-events: auto; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(19, 21, 27, 0.72); display: grid; place-items: center; cursor: pointer; }
+.archi-close svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; }
+.archi-world { position: relative; width: min(100%, 560px); margin: -76px auto 0; aspect-ratio: 360 / 2360; }
+.archi-isle { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.archi-isle canvas { display: block; width: 100%; height: auto; }
+.archi-isle:active canvas { transform: scale(0.985); }
+.archi-label { position: absolute; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; white-space: nowrap; pointer-events: none; }
+.archi-rib { font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; color: #4a2e14; text-transform: uppercase;
+  height: 22px; line-height: 21px; padding: 0 4px; border-style: solid; border-color: transparent; border-width: 0 15px; image-rendering: pixelated; }
+.archi-stars { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7); }
+.archi-stars b { color: #ffd76a; }
+.archi-lock { position: absolute; left: 50%; top: 42%; width: 22%; transform: translate(-50%, -50%); image-rendering: pixelated; pointer-events: none; }
+.archi-hero { position: absolute; width: 26%; aspect-ratio: 1; transform: translate(-50%, -78%); background-repeat: no-repeat; background-size: 800% 100%; image-rendering: pixelated; pointer-events: none;
+  animation: archihero 0.9s steps(8) infinite; }
+@keyframes archihero { to { background-position: 114.2857% 0; } }
+.archi-cloud { position: absolute; pointer-events: none; image-rendering: pixelated; animation: archicloud 14s ease-in-out infinite alternate; }
+@keyframes archicloud { from { transform: translateX(-6%); } to { transform: translateX(6%); } }
+html.still .archi-hero, html.still .archi-cloud { animation: none; }
 .float-toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 95; margin: 0;
   width: max-content; max-width: min(90vw, 420px); padding: 10px 16px; border-radius: 12px; background: #2a1f14; color: #fff3c4;
   font-weight: 600; text-align: center; box-shadow: 0 6px 20px #0008; }
@@ -1116,9 +1145,10 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
 .soundbar { display: inline-flex; gap: 6px; margin-left: auto; }
 /* узкий экран: в шапке уровня у «Музыки» и «Звуков» только значки — иначе кнопки наезжают друг на друга */
 @media (max-width: 430px) {
-  #levelview .snd span { display: none; }
-  #levelview .snd:not(.gearbtn) { padding: 5px 9px; }
+  #levelview .snd span, #mapview .snd span { display: none; }
+  #levelview .snd:not(.gearbtn), #mapview .snd:not(.gearbtn) { padding: 5px 9px; }
 }
+#mapview .toprow { flex-wrap: nowrap; }
 .snd {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 5px 10px 5px 7px;
@@ -1318,7 +1348,11 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 <div class="wrap" id="mapview">
   <header class="map-head">
     <div class="toprow">
-      <span class="eyebrow">Остров программистов</span>
+      <button class="isle-pick" id="isle-pick" aria-label="Карта архипелага: все острова">
+        <svg viewBox="0 0 28 20" aria-hidden="true"><ellipse cx="7" cy="14" rx="6" ry="4" fill="#e9d48a"/><ellipse cx="7" cy="13" rx="4.6" ry="2.9" fill="#6fae4c"/>
+          <ellipse cx="20" cy="8" rx="6.5" ry="4.2" fill="#e9d48a"/><ellipse cx="20" cy="7" rx="5" ry="3.1" fill="#6fae4c"/><ellipse cx="22" cy="16.5" rx="3.6" ry="2.4" fill="#e9d48a"/><ellipse cx="22" cy="16" rx="2.5" ry="1.6" fill="#8fbf5a"/></svg>
+        <span class="eyebrow" id="isle-name">Остров программистов</span><span class="isle-caret" aria-hidden="true">▾</span>
+      </button>
       <div class="soundbar">
         <button class="snd snd-music" aria-label="Музыка" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico" d="M9 18V6l10-2v12"/><circle class="ico-fill" cx="7" cy="18" r="2.5"/><circle class="ico-fill" cx="17" cy="16" r="2.5"/><path class="slash" d="M4 4l16 16"/></svg><span>Музыка</span></button>
         <button class="snd snd-sfx" aria-label="Звуки" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico-fill" d="M4 9h4l5-4v14l-5-4H4z"/><path class="ico" d="M16 9a4 4 0 0 1 0 6"/><path class="slash" d="M4 4l16 16"/></svg><span>Звуки</span></button>
@@ -1356,6 +1390,11 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 
 <!-- Занавес из облаков для перехода между островами и всплывающая подсказка -->
 <div class="curtain" id="curtain" hidden aria-hidden="true"><div class="cfill"></div></div>
+<div class="archi" id="archi" hidden role="dialog" aria-label="Архипелаг">
+  <div class="archi-top"><span class="archi-title">Архипелаг</span>
+    <button class="archi-close" id="archi-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="archi-world" id="archi-world"></div>
+</div>
 <div class="tunnel" id="tunnel" hidden aria-hidden="true"><canvas></canvas></div>
 <p class="float-toast" id="float-toast" role="status" hidden></p>
 
@@ -4967,7 +5006,7 @@ function mapEngine(D) {
       if (scrollRaf || document.getElementById("mapview").hidden || wrap.hidden) return;
       scrollRaf = requestAnimationFrame((t) => { scrollRaf = 0; frame(STILL ? 0 : t); });
     }, { passive: true, capture: true });
-    Promise.all([...keys].map((k) => tsImage(k).then((im) => (img[k] = im)))).then(() => {
+    return Promise.all([...keys].map((k) => tsImage(k).then((im) => (img[k] = im)))).then(() => {
       paintLand();
       frame(0, true);
       requestAnimationFrame(loop);   // при «без движения» цикл ничего не рисует, кадр стоит
@@ -5036,18 +5075,22 @@ const isleLevels = (n = curIsle) => LEVELS.map((lv, i) => [lv, i]).filter(([lv])
 const nodeOf = (i) => { const lv = LEVELS[i], k = isleLevels(isleOf(lv)).findIndex(([, j]) => j === i); return ISLE_MAPS[isleOf(lv)].nodes[k]; };
 
 // Показать карту нужного острова: карта рисуется при первом показе и дальше живёт сама
+// Запустить карту острова (один раз): движок, холсты, сценки. ready — когда всё нарисовано
+function ensureIsle(n) {
+  if (ISLE_ENG[n]) return ISLE_ENG[n];
+  const D = ISLE_MAPS[n], w = isleWrap(n);
+  w.style.aspectRatio = `360 / ${D.terr.length * 20}`;
+  isleSvg(n).setAttribute("viewBox", `0 0 360 ${D.terr.length * 20}`);
+  ISLE_ENG[n] = mapEngine(D);
+  ISLE_ENG[n].ready = ISLE_ENG[n].startMapScene(w.querySelector(".map-canvas"));
+  SKITS[n]?.(w);
+  return ISLE_ENG[n];
+}
 function showIsle(n) {
   curIsle = n;
   document.querySelectorAll(".mapwrap[data-isle]").forEach((w) => (w.hidden = +w.dataset.isle !== n));
-  const D = ISLE_MAPS[n], w = isleWrap(n);
-  if (!ISLE_ENG[n]) {
-    w.style.aspectRatio = `360 / ${D.terr.length * 20}`;
-    isleSvg(n).setAttribute("viewBox", `0 0 360 ${D.terr.length * 20}`);
-    ISLE_ENG[n] = mapEngine(D);
-    ISLE_ENG[n].startMapScene(w.querySelector(".map-canvas"));
-    SKITS[n]?.(w);
-  }
-  document.querySelector("#mapview .map-head .eyebrow").textContent = ISLE_NAMES[n];
+  ensureIsle(n);
+  $("isle-name").textContent = ISLE_NAMES[n];
 }
 
 function renderMap() {
@@ -6076,6 +6119,116 @@ async function boardSheep(st, x, y, left) {
 
 // Подсказка поверх экрана (у карты подсказка внизу, под картой, — её не видно у вершины)
 let floatTimer = 0;
+// ===== Архипелаг: все острова на одной карте, переход на любой открытый остров одним нажатием =====
+// Острова здесь — уменьшенные копии их настоящих карт: берём уже нарисованные холсты карты острова
+// (море с пеной, суша, деревья и постройки) и облачный берег. Море у всех карт одного цвета,
+// поэтому края уменьшенных карт сливаются с морем архипелага. Выше — облака: место для новых островов.
+const ARCHI = { W: 360, H: 2360, sc: 0.5, pad: 34,                 // pad — море над и под картой острова (единицы карты)
+  isles: { 1: [52, 1760], 2: [168, 1380], 3: [30, 1010] },       // левый верхний угол уменьшенной карты (без pad)
+  // облака над местами будущих островов: [картинка, x центра, y верха, ширина в единицах карты]
+  clouds: [["cloud_a", 250, 740, 170], ["cloud_c", 305, 805, 110], ["cloud_d", 195, 850, 90],
+    ["cloud_b", 100, 440, 160], ["cloud_d", 165, 505, 100], ["cloud_c", 60, 520, 80],
+    ["cloud_a", 255, 150, 170], ["cloud_c", 310, 215, 100], ["cloud_b", 190, 240, 90]] };
+const MINI = {};
+// уменьшенная карта острова: море с пеной, суша, деревья и постройки, облачный берег;
+// для закрытого острова — та же, но суша серая (море остаётся морем)
+async function isleMini(n) {
+  if (MINI[n]) return MINI[n];
+  const E = ensureIsle(n);
+  await E.ready;
+  const w = isleWrap(n), src = w.querySelector(".map-canvas"), CW = src.width, CH = src.height;
+  const k = 420 / CW, pad = ARCHI.pad / 360 * CW * k;
+  const strips = [...w.querySelectorAll("canvas.mapstrip")], landAt = strips.findIndex((c) => c.style.height === "100%");
+  const bank = await Promise.all((ISLE_MAPS[n].bank || []).map(([key]) => tsImage(key)));
+  const draw = (gray) => {
+    const out = document.createElement("canvas");
+    out.width = 420; out.height = Math.round(CH * k + 2 * pad);
+    const g = out.getContext("2d");
+    g.imageSmoothingQuality = "high";
+    g.fillStyle = TS_INFO.water; g.fillRect(0, 0, out.width, out.height);
+    strips.forEach((cv, i) => {
+      g.filter = gray && i >= landAt ? "grayscale(0.85) brightness(0.78)" : "none";
+      g.drawImage(cv, 0, pad + parseFloat(cv.style.top) / 100 * CH * k, cv.width * k, cv.height * k);
+    });
+    g.filter = "none";
+    (ISLE_MAPS[n].bank || []).forEach(([key, x, y, sc], i) => {
+      const [, iw, ih] = TS_INFO[key];
+      g.drawImage(bank[i], (x - iw * sc / 2) * k, pad + y * k, iw * sc * k, ih * sc * k);
+    });
+    return out;
+  };
+  return (MINI[n] = { open: draw(false), gray: draw(true) });
+}
+const isleOpen = (n) => n === 1 || gateOpen(n - 1, n) || isleLevels(n).some(([lv]) => save.stars[lv.name]);
+function openArchi() {
+  const world = $("archi-world"), H = ARCHI.H, pct = (v, of) => (v / of * 100).toFixed(3) + "%";
+  world.innerHTML = "";
+  for (const [k, x, y, cw] of ARCHI.clouds) {
+    const im = new Image();
+    im.src = TS[k]; im.alt = ""; im.className = "archi-cloud";
+    im.style.cssText = `left:${pct(x - cw / 2, 360)};top:${pct(y, H)};width:${pct(cw, 360)};animation-delay:${-(x + y) % 9}s`;
+    world.appendChild(im);
+  }
+  for (const n of Object.keys(ARCHI.isles).map(Number)) {
+    const [x, y0] = ARCHI.isles[n], VH = ISLE_MAPS[n].terr.length * 20, w = 360 * ARCHI.sc, pd = ARCHI.pad * ARCHI.sc;
+    const y = y0 - pd, h = VH * ARCHI.sc + 2 * pd;
+    const open = isleOpen(n), b = document.createElement("button");
+    b.className = "archi-isle" + (open ? "" : " locked") + (n === curIsle ? " cur" : "");
+    b.style.cssText = `left:${pct(x, 360)};top:${pct(y, H)};width:${pct(w, 360)};height:${pct(h, H)}`;
+    b.setAttribute("aria-label", ISLE_NAMES[n] + (open ? "" : " — закрыт"));
+    isleMini(n).then((m) => b.prepend(open ? m.open : m.gray));
+    const mine = isleLevels(n), got = mine.reduce((t, [lv]) => t + (save.stars[lv.name] || 0), 0);
+    const lab = document.createElement("div");
+    lab.className = "archi-label"; lab.style.top = `calc(100% - ${pct(pd, h)} - 12px)`;
+    lab.innerHTML = `<span class="archi-rib">${ISLE_NAMES[n]}</span>` + (mine.length ? `<span class="archi-stars">★ <b>${got}</b> из ${mine.length * 3}</span>` : "");
+    lab.firstChild.style.borderImage = `url(${TS.ui_ribbon}) 0 64 fill / 0 15px / 0 stretch`;
+    b.appendChild(lab);
+    if (!open) { const l = new Image(); l.src = TS.ui_lock; l.alt = ""; l.className = "archi-lock"; b.appendChild(l); }
+    if (n === curIsle) {                        // рыцарь — там, где он стоит на карте острова
+      const hB = isleSvg(n).querySelector(".map-hero");
+      const hx = hB ? +hB.getAttribute("x") + 2 : 180, hy = hB ? +hB.getAttribute("y") + 52 : VH / 2;
+      const kn = document.createElement("div");
+      kn.className = "archi-hero"; kn.style.backgroundImage = `url(${TS.kidle})`;
+      kn.style.left = pct(hx, 360); kn.style.top = pct(hy * ARCHI.sc + pd, h);
+      b.appendChild(kn);
+    }
+    b.addEventListener("click", () => {
+      sfx("tap");
+      if (!open) { floatToast(gateLockedText(n - 1)); return; }
+      jumpIsle(n);
+    });
+    world.appendChild(b);
+  }
+  const ar = $("archi");
+  ar.hidden = false;
+  document.documentElement.classList.add("sheet-open");
+  // сразу показать остров, где сейчас рыцарь
+  const [, cy] = ARCHI.isles[curIsle], ch = ISLE_MAPS[curIsle].terr.length * 20 * ARCHI.sc;
+  ar.style.background = TS_INFO.water;
+  const ww = world.getBoundingClientRect().width;
+  ar.scrollTop = Math.max(0, (cy + ch / 2) / 360 * ww - ar.clientHeight / 2 - 76);
+  logEv("archi");
+}
+function closeArchi() {
+  $("archi").hidden = true;
+  document.documentElement.classList.remove("sheet-open");
+}
+function jumpIsle(n) {
+  closeArchi();
+  if (n === curIsle) return;
+  arrivedFrom = 0; curIsle = n;
+  renderMap();
+  requestAnimationFrame(() => {
+    const hB = isleSvg().querySelector(".map-hero");
+    if (!hB) { scrollTo(0, 0); return; }
+    const ey = +hB.getAttribute("y") + 52, r = isleWrap().getBoundingClientRect(), VH = ISLE_MAPS[n].terr.length * 20;
+    scrollTo(0, Math.max(0, r.top + scrollY + ey * (r.height / VH) - innerHeight * 0.55));
+  });
+}
+$("isle-pick").addEventListener("click", openArchi);
+$("archi-close").addEventListener("click", closeArchi);
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("archi").hidden) closeArchi(); });
+
 function floatToast(text) {
   const el = $("float-toast");
   el.textContent = text;
@@ -9779,7 +9932,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 67;
+const APP_VERSION = 68;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
