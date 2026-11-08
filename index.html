@@ -9587,42 +9587,46 @@ function noiseSource() {
   s.loop = true;
   return s;
 }
-// Шелест: не ровный шум, а множество крошечных шорохов (5–40 мс), которые вспыхивают и стихают
-// вразнобой, — так шуршат травинки и листья. Только высокие частоты: никакого гула.
+// Шелест: ровный мягкий шум, громкость которого плавно колышется (листва на ветерке), —
+// без резких вспышек (из них выходил треск, как помехи в радио). Только высокие частоты: никакого гула.
 let rustleBuf = null;
 function rustleSource() {
   if (!rustleBuf) {
-    const sr = actx.sampleRate, len = sr * 6;
+    const sr = actx.sampleRate, len = sr * 8;
     rustleBuf = actx.createBuffer(1, len, sr);
     const d = rustleBuf.getChannelData(0);
-    let env = 0, target = 0, next = 0, peak = 0;
-    const k = 1 - Math.exp(-1 / (sr * 0.004));                // сглаживание ~4 мс
+    // медленное колыхание: случайная цель раз в 0,2–0,7 с, плавный переход ~0,25 с
+    let env = 0.5, target = 0.5, next = 0, peak = 0, w = 0;
+    const k = 1 - Math.exp(-1 / (sr * 0.25)), kw = 1 - Math.exp(-1 / (sr * 0.00008));
     for (let i = 0; i < len; i++) {
-      if (i >= next) { target = Math.random() < 0.5 ? Math.random() ** 2 : 0; next = i + sr * (0.005 + Math.random() * 0.035); }
+      if (i >= next) { target = 0.25 + Math.random() * 0.75; next = i + sr * (0.2 + Math.random() * 0.5); }
       env += (target - env) * k;
-      d[i] = (Math.random() * 2 - 1) * env;
+      w += ((Math.random() * 2 - 1) - w) * kw;                  // чуть смягчённый белый шум
+      d[i] = w * env;
       peak = Math.max(peak, Math.abs(d[i]));
     }
+    // края буфера сводим в ноль, чтобы при повторе не было щелчка
+    const fade = Math.floor(sr * 0.3);
+    for (let i = 0; i < fade; i++) { d[i] *= i / fade; d[len - 1 - i] *= i / fade; }
     for (let i = 0; i < len; i++) d[i] *= 0.9 / peak;
   }
   const s = actx.createBufferSource();
   s.buffer = rustleBuf;
   s.loop = true;
-  s.playbackRate.value = rand(0.85, 1.15);
   return s;
 }
 // шорох: нарастает и тает, полоса частот lo–hi, может пройти мимо (toX)
 function rustle(t0, { dur, peak, lo, hi, at }) {
   const s = rustleSource(), hp = actx.createBiquadFilter(), lp = actx.createBiquadFilter(), g = actx.createGain();
-  hp.type = "highpass"; hp.frequency.value = lo; hp.Q.value = 0.6;
-  lp.type = "lowpass"; lp.frequency.value = hi; lp.Q.value = 0.6;
-  g.gain.setValueAtTime(0.0001, t0);
-  g.gain.linearRampToValueAtTime(peak, t0 + dur * 0.4);
-  g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+  hp.type = "highpass"; hp.frequency.value = lo; hp.Q.value = 0.5;
+  lp.type = "lowpass"; lp.frequency.value = hi; lp.Q.value = 0.5;
+  g.gain.setValueAtTime(0, t0);
+  g.gain.setTargetAtTime(peak, t0, dur * 0.18);             // плавно нарастает
+  g.gain.setTargetAtTime(0, t0 + dur * 0.5, dur * 0.15);    // и плавно тает
   s.connect(hp).connect(lp).connect(g);
   placeAt(g, t0, { ...at, dry: true });
-  s.start(t0, Math.random() * 5);
-  s.stop(t0 + dur + 0.1);
+  s.start(t0, Math.random() * 7);
+  s.stop(t0 + dur * 1.3 + 0.1);
 }
 
 // Шумовая "волна": плавно накатывает и плавно уходит
@@ -9650,12 +9654,12 @@ const EVENTS = {
   },
   // травинки шуршат рядом, то с одной стороны, то с другой
   grass(t) {
-    rustle(t, { dur: rand(2.5, 4.5), peak: rand(0.045, 0.07), lo: 2200, hi: 6000, at: { x: rand(-2.5, 2.5), z: rand(-1.5, 1) } });
+    rustle(t, { dur: rand(2.5, 4.5), peak: rand(0.04, 0.06), lo: 1500, hi: 4500, at: { x: rand(-2.5, 2.5), z: rand(-1.5, 1) } });
   },
   // по кронам проходит лёгкий ветерок: листва шелестит с одной стороны на другую
   leaves(t, dir) {
     const fromX = dir === "r" ? -3 : dir === "l" ? 3 : pick([-3, 3]), dur = rand(4, 6.5);
-    rustle(t, { dur, peak: rand(0.05, 0.075), lo: 3000, hi: 8500, at: { x: fromX, z: -1.5, y: 1.5, toX: -fromX, move: dur } });
+    rustle(t, { dur, peak: rand(0.045, 0.065), lo: 2000, hi: 5500, at: { x: fromX, z: -1.5, y: 1.5, toX: -fromX, move: dur } });
   },
   // сверчок: трели по три коротких импульса, сидит на своём месте сбоку
   crickets(t) {
@@ -9667,7 +9671,7 @@ const EVENTS = {
     for (let c = 0; c < n; c++) {
       for (let k = 0; k < 3; k++) {
         const p = at + k * 0.028;
-        g.gain.setValueAtTime(0, p); g.gain.linearRampToValueAtTime(0.03, p + 0.004); g.gain.linearRampToValueAtTime(0, p + 0.018);
+        g.gain.setValueAtTime(0, p); g.gain.linearRampToValueAtTime(0.022, p + 0.008); g.gain.linearRampToValueAtTime(0, p + 0.024);
       }
       at += rand(0.3, 0.42);
     }
@@ -9675,23 +9679,25 @@ const EVENTS = {
     placeAt(g, t, { ...spots.cricket, dry: true });
     o.start(t); o.stop(at + 0.1);
   },
-  // кузнечик: сухое стрекотание (короткие шорохи 30 раз в секунду), две-три серии
+  // кузнечик: тихое «ззз» — чистый тон, громкость которого плавно дрожит ~30 раз в секунду, две-три серии
   hopper(t) {
-    const s = noiseSource(), f = actx.createBiquadFilter(), g = actx.createGain();
-    f.type = "bandpass"; f.frequency.value = rand(6500, 8000); f.Q.value = 2.5;
-    g.gain.setValueAtTime(0, t);
+    const o = actx.createOscillator(), lfo = actx.createOscillator(), depth = actx.createGain(), g = actx.createGain(), env = actx.createGain();
+    o.type = "sine"; o.frequency.value = rand(5200, 6200);
+    lfo.type = "sine"; lfo.frequency.value = rand(26, 34);
+    depth.gain.value = 0.5; g.gain.value = 0.5;                // громкость = 0,5 ± 0,5 — плавно, без щелчков
+    lfo.connect(depth).connect(g.gain);
+    env.gain.setValueAtTime(0, t);
     let at = t;
     const series = 2 + Math.floor(Math.random() * 2);
     for (let r = 0; r < series; r++) {
-      const len = rand(0.8, 1.6), rate = rand(26, 34);
-      for (let p = at; p < at + len; p += 1 / rate) {
-        g.gain.setValueAtTime(0, p); g.gain.linearRampToValueAtTime(0.065, p + 0.006); g.gain.linearRampToValueAtTime(0, p + 0.02);
-      }
-      at += len + rand(0.5, 1.2);
+      const len = rand(0.8, 1.5);
+      env.gain.setTargetAtTime(0.018, at, 0.06);
+      env.gain.setTargetAtTime(0, at + len, 0.08);
+      at += len + rand(0.6, 1.2);
     }
-    s.connect(f).connect(g);
-    placeAt(g, t, { ...spots.hopper, dry: true });
-    s.start(t, Math.random() * 3); s.stop(at + 0.1);
+    o.connect(g).connect(env);
+    placeAt(env, t, { ...spots.hopper, dry: true });
+    o.start(t); lfo.start(t); o.stop(at + 0.5); lfo.stop(at + 0.5);
   },
   // чайка пролетает с одной стороны на другую
   gull(t) {
@@ -10185,7 +10191,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 76;
+const APP_VERSION = 77;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
