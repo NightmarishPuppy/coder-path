@@ -739,6 +739,7 @@ html.still .tile.err { animation: none; }
 .bif > .ihead.sel::after { content: "▼"; position: absolute; top: -17px; left: 50%; translate: -50% 0;
   font-size: 13px; line-height: 1; color: #ffd54a; text-shadow: 0 1px 0 #000; animation: tile-arrow 1s ease-in-out infinite; }
 html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: none; box-shadow: 0 0 0 4px #ffd54a99; }
+.chips .chip.ifchip { border: 2px solid #5fd3a6; color: #5fd3a6; font-weight: 700; }
 #levelview.blk .chips .chip.ifchip { flex: 0 0 auto; padding: 0 10px; font-size: 15px !important; border-color: #5fd3a6; color: #5fd3a6; }
 /* палитра: крупные стрелки */
 #levelview.blk .chips .chip:not(.num) { font-family: var(--font-display); font-size: 26px; min-width: 64px; height: 56px; padding: 0 14px; border-style: solid; border-width: 2px; }
@@ -845,12 +846,14 @@ html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: n
 .chipref.h { color: var(--torch); } .chipref.v { color: var(--frost); } .chipref.a { color: var(--sword); }
 .chipref.big { font-family: var(--font-display); font-size: 1.1em; padding: 0 9px; }
 /* картинки кнопок и плиток в тексте задания — ростом со строку текста; строки чуть реже, чтобы картинки не касались соседних */
-#goal:has(.tileref, .chipref, .numref, .ifref, .toolref) { line-height: 1.85; }
+#goal:has(.tileref, .chipref, .numref, .ifref, .toolref, .ifbtnref) { line-height: 1.85; }
 #goal .tile.tileref { min-width: 0; height: 1.55em; padding: 0 0.35em 0 0.25em; gap: 2px; border-radius: 6px; font-size: 1em; line-height: 1;
   cursor: default; vertical-align: middle; }
 #goal .tile.tileref .ar { font-size: 1.1em; } #goal .tile.tileref .nn { font-size: 0.95em; min-width: 0; }
 #goal .numref { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6em; height: 1.55em; border: 1px dashed var(--wall-edge);
   border-radius: 5px; font-family: var(--font-body); font-weight: 600; line-height: 1; vertical-align: middle; }
+#goal .ifbtnref { display: inline-flex; align-items: center; height: 1.55em; padding: 0 0.5em; border: 2px solid #5fd3a6; border-radius: 6px; color: #5fd3a6;
+  font-weight: 700; font-size: 0.92em; line-height: 1; white-space: nowrap; vertical-align: middle; }
 #goal .ifref { display: inline-flex; align-items: center; gap: 4px; height: 1.55em; padding: 0 0.45em; border-radius: 6px; background: #5fd3a6; color: #10241c;
   font-weight: 700; font-size: 0.92em; line-height: 1; white-space: nowrap; vertical-align: middle; }
 .ifref .ar { font-family: var(--font-display); }
@@ -2184,6 +2187,177 @@ const LEVELS = [
       js: "moveRight(2);\nif (obstacleRight()) {\n  moveUp();\n}\nmoveRight(4);\n",
     },
   },
+  // Повторение и закрепление: каждый уровень — прошлый + одна мелочь
+  {
+    name: "Если у старта",
+    chapter: 4,
+    isle: 2,
+    after: "Ошибка в рамке",
+    goal: "Теперь «если» стоит в самом начале: препятствие может оказаться прямо перед рыцарем. Нажми на номер строки [[line:1]] (строка с <b>if</b>), а потом кнопку [[btn:moveDown]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    par: 2, good: 3,
+    maps: [
+      [
+        "#######",
+        "S######",
+        "......E",
+      ],
+      [
+        "#######",
+        "S.....E",
+        "#######",
+      ],
+    ],
+    starter: {
+      py: "if obstacle_right():\nmove_right(6)\n",
+      js: "if (obstacleRight()) {\n}\nmoveRight(6);\n",
+    },
+  },
+  {
+    name: "Три варианта",
+    chapter: 4,
+    isle: 2,
+    after: "Если у старта",
+    goal: "У поля уже <b>три</b> варианта — кнопки 1, 2, 3 в углу. Программа всё равно одна. Посмотри все три и положи под <b>if</b> нужный шаг: нажми на номер строки [[line:2]] и кнопку [[btn:moveDown]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    par: 3, good: 4,
+    maps: [
+      [
+        "#######",
+        "S..####",
+        "##....E",
+      ],
+      [
+        "#######",
+        "S.....E",
+        "#######",
+      ],
+      [
+        "##.####",
+        "S..####",
+        "##....E",
+      ],
+    ],
+    starter: {
+      py: "move_right(2)\nif obstacle_right():\nmove_right(4)\n",
+      js: "moveRight(2);\nif (obstacleRight()) {\n}\nmoveRight(4);\n",
+    },
+  },
+  {
+    name: "Сам поставь «если»",
+    chapter: 4,
+    isle: 2,
+    after: "Три варианта",
+    goal: "Новое: кнопка [[ifbtn]] — рыцарь сам ставит «если». Нажми на номер строки [[line:1]], потом [[ifbtn]] — под первой строкой появится <b>if</b>, — а потом кнопку [[btn:moveDown]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    newIf: true,
+    par: 3, good: 4,
+    maps: [
+      [
+        "#######",
+        "S..####",
+        "##....E",
+      ],
+      [
+        "#######",
+        "S.....E",
+        "#######",
+      ],
+    ],
+    starter: {
+      py: "move_right(2)\nmove_right(4)\n",
+      js: "moveRight(2);\nmoveRight(4);\n",
+    },
+  },
+  {
+    name: "Сам — и вверх",
+    chapter: 4,
+    isle: 2,
+    after: "Сам поставь «если»",
+    goal: "Ещё раз сам: здесь обходить надо сверху. Нажми на номер строки [[line:1]], потом [[ifbtn]], потом [[btn:moveUp]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 3, good: 4,
+    maps: [
+      [
+        "###...E",
+        "S...###",
+        "#######",
+      ],
+      [
+        "#######",
+        "S.....E",
+        "#######",
+      ],
+    ],
+    starter: {
+      py: "move_right(3)\nmove_right(3)\n",
+      js: "moveRight(3);\nmoveRight(3);\n",
+    },
+  },
+  {
+    name: "Лишний шаг",
+    chapter: 4,
+    isle: 2,
+    after: "Сам — и вверх",
+    goal: "Найди ошибку: под <b>if</b> рыцарь спускается на 2 клетки и упирается. Нужна 1. Нажми на номер строки [[line:3]] и цифру [[num:1]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 3, good: 4,
+    maps: [
+      [
+        "#######",
+        "S..####",
+        "##....E",
+        "#######",
+      ],
+      [
+        "#######",
+        "S.....E",
+        "#######",
+        "#######",
+      ],
+    ],
+    starter: {
+      py: "move_right(2)\nif obstacle_right():\n    move_down(2)\nmove_right(4)\n",
+      js: "moveRight(2);\nif (obstacleRight()) {\n  moveDown(2);\n}\nmoveRight(4);\n",
+    },
+  },
+  {
+    name: "Деревня: испытание",
+    chapter: 4,
+    isle: 2,
+    challenge: true,
+    goal: "Испытание: программа пустая — собери её сама. Три варианта поля. Подсказка: [[btn:moveRight]] и [[num:2]], потом [[ifbtn]] и [[btn:moveDown]] — шаг ляжет в «если», потом [[tool:done]] и [[btn:moveRight]] с [[num:4]] — этот шаг встанет уже после «если».",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 3, good: 4,
+    maps: [
+      [
+        "#######",
+        "S..####",
+        "##....E",
+      ],
+      [
+        "#######",
+        "S.....E",
+        "#######",
+      ],
+      [
+        "###.###",
+        "S..####",
+        "##....E",
+      ],
+    ],
+    starter: { py: "", js: "" },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -2197,7 +2371,8 @@ function btnRefs(html) {
     // [[tile:moveUp:1]] — плитка программы, как в рамке; [[num:2]] — кнопка цифры; [[ifhead]] — заголовок «если»
     .replace(/\[\[tile:(\w+):(\d+)\]\]/g, (m, n, k) => `<span class="tile tileref ${DIRS[n].axis}"><span class="ar">${DIRS[n].arrow}</span><span class="nn">${k}</span></span>`)
     .replace(/\[\[num:(\d+)\]\]/g, (m, k) => `<span class="numref">${k}</span>`)
-    .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ если <span class="ar">→</span> препятствие</span>`);
+    .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ если <span class="ar">→</span> препятствие</span>`)
+    .replace(/\[\[ifbtn\]\]/g, () => `<span class="ifbtnref">${uiBlocks ? "❓ если" : "? если"}</span>`);
 }
 function langify(html) {
   const body = lang === "py"
@@ -3352,7 +3527,7 @@ ISLE_MAPS[1] = {
 // @@/isle1@@
 // @@isle2@@
 ISLE_MAPS[2] = {
-  nodes: [[170, 470], [210, 450], [250, 430], [230, 390], [190, 390]],
+  nodes: [[170, 470], [210, 450], [250, 430], [230, 390], [190, 390], [150, 390], [110, 390], [70, 370], [90, 330], [130, 330], [170, 330]],
   rows: [
     "....................................",
     "....................................",
@@ -4329,7 +4504,9 @@ function boardSkits(terr, cellOv) {
   // кандидаты: стена у края поля, не вода, не в верхних углах (там кнопки вариантов и кругов)
   const cand = [];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    if (!wall(x, y) || terr[y][x] === "water") continue;
+    // не в воде и не у самой воды: вода в соседней клетке подходит вплотную, и актёр будто стоит в озере
+    const wet = (xx, yy) => terr[yy]?.[xx] === "water";
+    if (!wall(x, y) || wet(x, y) || wet(x, y + 1) || wet(x - 1, y) || wet(x + 1, y) || wet(x, y - 1)) continue;
     if (!(x === 0 || y === 0 || x === W - 1 || y === H - 1)) continue;
     if (y === 0 && (x < 3 || x > W - 3)) continue;
     // клетка ниже — без дерева: высокое дерево снизу закрыло бы актёра, будто он стоит на кроне
@@ -4773,14 +4950,17 @@ function buildChips() {
     });
   }
   if (L.ifButton) {
-    add("add-if", "new ifchip", uiBlocks ? "❓ если" : "? если", () => {
+    add("add-if", "ifchip" + (L.newIf ? " new" : ""), uiBlocks ? "❓ если" : "? если", () => {
       const c = condDisp(levelConds()[0]);
-      if (lang === "py") insertLine(`if ${c}():`);
-      else {
-        const code = codeEl.value.replace(/\s+$/, "");
-        codeEl.value = (code ? code + "\n" : "") + `if (${c}()) {\n\n}\n`;
-        onCodeChange();
-      }
+      const lines = codeEl.value.replace(/\s+$/, "").split("\n").filter((l, i, a) => a.length > 1 || l.trim());
+      const at = selLine ? Math.min(selLine, lines.length) : lines.length;   // после выбранной строки или в конец
+      const ind = at ? (lines[at - 1].match(/^ */)[0]) : "";
+      const add = lang === "py" ? [`${ind}if ${c}():`] : [`${ind}if (${c}()) {`, `${ind}}`];
+      lines.splice(at, 0, ...add);
+      codeEl.value = lines.join("\n") + "\n";
+      selLine = at + 1;                       // рамка выбрана: следующая стрелка ляжет в неё
+      onCodeChange();
+      drawCode();
     });
   }
   if (uiBlocks) { const br = document.createElement("span"); br.style.flexBasis = "100%"; chipsEl.appendChild(br); }
@@ -4935,7 +5115,9 @@ function addLineBelow() {
 function insertLine(text) {
   const code = codeEl.value.replace(/\s+$/, "");
   const lines = code ? code.split("\n") : [];
-  const loops = findFrames(code).filter((lp) => lp.end === lines.length && lp.closed);
+  // без выбранной строки кнопки кладут команду внутрь цикла, которым кончается код (так учили в Лесу);
+  // в рамку «если» — нет: туда команду кладут, выбрав рамку, а иначе она идёт после рамки
+  const loops = findFrames(code).filter((lp) => lp.end === lines.length && lp.closed && /^\s*(while|for)\b/.test(lines[lp.start - 1]));
   const lastLoop = loops.sort((a, b) => b.start - a.start)[0]; // самый внутренний
   if (lastLoop && lang === "py") {
     lines.push(" ".repeat(lastLoop.indent + 4) + text);
@@ -5371,6 +5553,12 @@ const BLOCK_GOALS = {
   "Гоблин": "Новое: <b>гоблин</b>! Он загородил тропу. Нажми <b>⚔</b>: рыцарь ударит того, кто стоит рядом. Потом иди к двери: <b>→</b> и цифра <b>5</b>. Не мешкай: если стоять рядом и не бить, гоблин ударит сам. У рыцаря три сердечка.",
   "Крепкий гоблин": "Над этим гоблином два сердечка: ему нужно <b>два удара</b>, и после первого он успеет ударить в ответ. Плитки почти готовы. Нажми на плитку <b>⚔1</b>, потом цифру <b>2</b>: получится <b>⚔2</b>.",
   "Строй гоблинов": "Гоблины стоят через клетку. Удар и два шага повторяются: положи в рамку 🔁 плитки <b>⚔</b> и <b>→2</b>. Если рядом никого нет, рыцарь просто взмахнёт мечом.",
+  "Если у старта": "Теперь рамка «если» стоит в самом начале: препятствие может оказаться прямо перед рыцарем. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
+  "Три варианта": "У поля уже <b>три</b> варианта — кнопки 1, 2, 3 в углу. Программа всё равно одна. Посмотри все три и нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
+  "Сам поставь «если»": "Новое: кнопка [[ifbtn]] — ты сам ставишь рамку «если». Нажми на плитку [[tile:moveRight:2]], потом [[ifbtn]] — рамка встанет сразу за плиткой, — а потом кнопку [[btn:moveDown]].",
+  "Сам — и вверх": "Ещё раз сам: здесь обходить надо сверху. Нажми на плитку [[tile:moveRight:3]], потом [[ifbtn]], потом [[btn:moveUp]].",
+  "Лишний шаг": "Найди ошибку: в рамке рыцарь спускается на 2 клетки и упирается, а нужна 1. Нажми на плитку [[tile:moveDown:2]] и цифру [[num:1]].",
+  "Деревня: испытание": "Испытание: программа пустая — собери её сама. Три варианта поля. Подсказка: [[btn:moveRight]] и [[num:2]], потом [[ifbtn]] и [[btn:moveDown]] — шаг ляжет в рамку, потом [[tool:done]] и [[btn:moveRight]] с [[num:4]] — этот шаг встанет уже после рамки.",
   "Обход сверху": "Всё как в прошлый раз, только обходить препятствие надо <b>сверху</b>. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveUp]].",
   "Подальше": "Теперь рыцарь сначала идёт на 3 клетки, а препятствие — дальше. Посмотри на вариант 1: где свободно, сверху или снизу? Нажми на зелёную рамку [[ifhead]] и положи в неё шаг в свободную сторону.",
   "Две клетки вниз": "В рамке лежит шаг вниз на 1 клетку, а обходить надо на 2. Нажми на плитку [[tile:moveDown:1]] и цифру [[num:2]] — получится [[tile:moveDown:2]].",
@@ -7610,7 +7798,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 51;
+const APP_VERSION = 52;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
