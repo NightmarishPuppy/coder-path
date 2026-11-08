@@ -6,8 +6,8 @@
 // (страница присылает сообщение "activate"). Старый кэш после этого удаляется.
 
 // Меняй номер версии при каждом обновлении игры (и в version.json, и APP_VERSION в index.html)
-const VERSION = "coder-path-v80";
-const FILES = ["./", "index.html", "art.js", "fonts.css", "manifest.webmanifest", "version.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "water.mp3", "leafsteps.mp3", "goblin-attack.mp3"];
+const VERSION = "coder-path-v81";
+const FILES = ["./", "index.html", "art.js", "fonts.css", "manifest.webmanifest", "version.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "water.mp3", "leafsteps.mp3", "goblin-attack.mp3", "goblin-death.mp3"];
 
 // 1. Установка: скачиваем только то, что изменилось. В version.json у каждого файла есть отпечаток;
 // если он такой же, как в кэше прошлой версии, файл берём оттуда, а не из интернета.

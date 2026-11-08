@@ -6883,7 +6883,7 @@ function buildBoard() {
         en.insertAdjacentHTML("beforeend", `<div class="hp">${"<i class=on></i>".repeat(hp)}</div>`);
         cell.appendChild(en);
         enemies.push({ x, y, hp, el: en });
-        if (hp < 5 && actx) soundBuf("goblin-attack.mp3");        // заранее, к первому замаху
+        if (hp < 5 && actx) { soundBuf("goblin-attack.mp3"); soundBuf("goblin-death.mp3"); }   // заранее
       }
       if (ch === "E") {
         exitPos = { x, y };
@@ -8558,7 +8558,7 @@ async function run() {
             sk.style.animation = "spr7 0.7s steps(7) 1";
             e.el.parentNode.appendChild(sk);
             setTimeout(() => { sk.style.animation = "none"; sk.style.backgroundPosition = "100% 0"; }, 700);
-            sfx("poof");
+            sfx("gobdie");
           }
         }
         await wait(220);
@@ -9426,6 +9426,16 @@ const SFX = {
     const s = actx.createBufferSource(), g = actx.createGain();
     s.buffer = buf; s.playbackRate.value = 0.95 + Math.random() * 0.12;   // каждый раз чуть по-разному
     g.gain.value = 0.55;
+    s.connect(g).connect(sfxBus); s.start();
+  },
+  // гоблин побеждён: предсмертный вскрик (запись, Pixabay, freesound_community — «goblin death»);
+  // пока запись не скачалась — прежнее «пуф»
+  gobdie() {
+    const buf = soundBuf("goblin-death.mp3");
+    if (!buf) return SFX.poof();
+    const s = actx.createBufferSource(), g = actx.createGain();
+    s.buffer = buf; s.playbackRate.value = 0.95 + Math.random() * 0.12;
+    g.gain.value = 0.6;
     s.connect(g).connect(sfxBus); s.start();
   },
   poof()   { note(392, { dur: 0.1, vol: 0.35, slideTo: 784 }); note(988, { dur: 0.25, vol: 0.25, at: 0.1 }); noise({ dur: 0.15, vol: 0.3, freq: 700, at: 0.02 }); },
@@ -10303,7 +10313,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 80;
+const APP_VERSION = 81;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
