@@ -1600,6 +1600,7 @@ const CHAPTERS = [
   // Второй остров (isle: 2) — условия «если»
   { name: "Деревня у причала", topic: "условия «если»", isle: 2 },
   { name: "Тропа через кусты", topic: "засады и монеты", isle: 2 },
+  { name: "Просека лесорубов", topic: "куда упадёт дерево", isle: 2 },
 ];
 
 // Уровни по порядку на карте.
@@ -2495,6 +2496,113 @@ const LEVELS = [
         "########.",
         "########E",
       ],
+    ],
+    starter: { py: "", js: "" },
+  },
+  // ========== Просека лесорубов: дерево может упасть на дорогу ==========
+  // fell — лесоруб валит дерево tree (оно стоит в лесу над дорогой), когда рыцарь наступит на at.
+  // dir — куда падает (лесоруб стоит с другой стороны). onto: true — падает на дорогу, и клетка
+  // справа снизу от дерева становится препятствием; иначе ложится в лесу. v — на каких вариантах.
+  // Поле на всех вариантах одно и то же — меняется только то, куда упадёт дерево.
+  {
+    name: "Дерево на дорогу",
+    chapter: 6,
+    isle: 2,
+    goal: "Лесоруб рубит ель у дороги. Куда она упадёт — заранее не знаешь: на дорогу или в лес. Код почти готов — нажми на номер строки [[line:2]] (строка с <b>if</b>) и кнопку [[btn:moveDown]]: если дерево на дороге — рыцарь обойдёт его снизу.",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    par: 4, good: 5,
+    events: [{ at: [1, 2], kind: "fell", tree: [3, 1], dir: 1, onto: true, v: [0] },
+      { at: [1, 2], kind: "fell", tree: [3, 1], dir: -1, v: [1] }],
+    maps: [
+      ["#########", "#########", "S........", "###......", "########E"],
+      ["#########", "#########", "S........", "###......", "########E"],
+    ],
+    starter: {
+      py: "move_right(3)\nif obstacle_right():\nmove_right(5)\nmove_down(2)\n",
+      js: "moveRight(3);\nif (obstacleRight()) {\n}\nmoveRight(5);\nmoveDown(2);\n",
+    },
+  },
+  {
+    name: "Лесоруб у дороги",
+    chapter: 6,
+    isle: 2,
+    after: "Дерево на дорогу",
+    goal: "Ещё одна ель у дороги, подальше. Поставь «если» сам: нажми на номер строки [[line:1]], потом [[ifbtn]], потом [[btn:moveDown]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 4, good: 5,
+    events: [{ at: [2, 2], kind: "fell", tree: [5, 1], dir: 1, onto: true, v: [0] },
+      { at: [2, 2], kind: "fell", tree: [5, 1], dir: -1, v: [1] }],
+    maps: [
+      ["#########", "#########", "S........", "#####....", "########E"],
+      ["#########", "#########", "S........", "#####....", "########E"],
+    ],
+    starter: {
+      py: "move_right(5)\nmove_right(3)\nmove_down(2)\n",
+      js: "moveRight(5);\nmoveRight(3);\nmoveDown(2);\n",
+    },
+  },
+  {
+    name: "Не туда от дерева",
+    chapter: 6,
+    isle: 2,
+    after: "Лесоруб у дороги",
+    goal: "Найди ошибку: под <b>if</b> рыцарь идёт вверх — а вверху лес. Нажми на номер строки [[line:3]] и кнопку [[btn:moveDown]] — команда в строке сменится.",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 4, good: 5,
+    events: [{ at: [1, 2], kind: "fell", tree: [4, 1], dir: 1, onto: true, v: [0] },
+      { at: [1, 2], kind: "fell", tree: [4, 1], dir: -1, v: [1] }],
+    maps: [
+      ["#########", "#########", "S........", "####.....", "########E"],
+      ["#########", "#########", "S........", "####.....", "########E"],
+    ],
+    starter: {
+      py: "move_right(4)\nif obstacle_right():\n    move_up()\nmove_right(4)\nmove_down(2)\n",
+      js: "moveRight(4);\nif (obstacleRight()) {\n  moveUp();\n}\nmoveRight(4);\nmoveDown(2);\n",
+    },
+  },
+  {
+    name: "Лесоруб обедает",
+    chapter: 6,
+    isle: 2,
+    after: "Не туда от дерева",
+    goal: "Три варианта: дерево падает на дорогу, падает в лес — а на третьем лесоруб ушёл обедать, и ель стоит. Программа одна на все три. Поставь «если» сам: нажми на номер строки [[line:1]], потом [[ifbtn]], потом [[btn:moveDown]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 4, good: 5,
+    events: [{ at: [1, 2], kind: "fell", tree: [2, 1], dir: 1, onto: true, v: [0] },
+      { at: [1, 2], kind: "fell", tree: [2, 1], dir: -1, v: [1] }],
+    maps: [
+      ["#########", "#########", "S........", "##.......", "########E"],
+      ["#########", "#########", "S........", "##.......", "########E"],
+      ["#########", "#########", "S........", "##.......", "########E"],
+    ],
+    starter: {
+      py: "move_right(2)\nmove_right(6)\nmove_down(2)\n",
+      js: "moveRight(2);\nmoveRight(6);\nmoveDown(2);\n",
+    },
+  },
+  {
+    name: "Просека: испытание",
+    chapter: 6,
+    isle: 2,
+    challenge: true,
+    goal: "Испытание: программа пустая, вариантов три — дерево на дороге, в лесу или стоит. Подсказка: [[btn:moveRight]] [[num:6]], потом [[ifbtn]] и [[btn:moveDown]], потом [[tool:done]], [[btn:moveRight]] [[num:2]] и [[btn:moveDown]] [[num:2]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 4, good: 5,
+    events: [{ at: [3, 2], kind: "fell", tree: [6, 1], dir: 1, onto: true, v: [0] },
+      { at: [3, 2], kind: "fell", tree: [6, 1], dir: -1, v: [2] }],
+    maps: [
+      ["#########", "#########", "S........", "######...", "########E"],
+      ["#########", "#########", "S........", "######...", "########E"],
+      ["#########", "#########", "S........", "######...", "########E"],
     ],
     starter: { py: "", js: "" },
   },
@@ -3649,8 +3757,6 @@ ISLE_MAPS[1] = {
     ["mine", 3.3, 20.75, 0.78],
     ["mine", 13.95, 20.65, 0.78],
     ["pawnpick", 14.55, 24.7, 0.8],
-    ["pawngold", 15.25, 20.55, 0.8, true],
-    ["pawngold", 2.45, 21.6, 0.8],
     ["fortress", 12.4, 5.3, 0.66],
     ["gwtower", 15.9, 5.4, 0.66],
     ["goblin", 15.95, 4.358, 0.5, true, 5.41],
@@ -3667,7 +3773,7 @@ ISLE_MAPS[1] = {
 // @@/isle1@@
 // @@isle2@@
 ISLE_MAPS[2] = {
-  nodes: [[170, 470], [210, 450], [250, 430], [230, 390], [190, 390], [150, 390], [110, 390], [70, 370], [90, 330], [130, 330], [170, 330], [210, 330], [250, 310], [230, 270], [190, 270]],
+  nodes: [[170, 470], [210, 450], [250, 430], [230, 390], [190, 390], [150, 390], [110, 390], [70, 370], [90, 330], [130, 330], [170, 330], [210, 330], [250, 310], [230, 270], [190, 270], [90, 230], [130, 210], [170, 210], [210, 210], [250, 210]],
   rows: [
     "....................................",
     "....................................",
@@ -3811,7 +3917,7 @@ ISLE_MAPS[2] = {
     ["sheep", 6.4, 11.8, 0.42, true],
     ["sheepg", 11.4, 11.7, 0.42],
   ],
-  labels: [["ДЕРЕВНЯ У ПРИЧАЛА", 180, 288], ["ТРОПА ЧЕРЕЗ КУСТЫ", 180, 236]],
+  labels: [["ДЕРЕВНЯ", 80, 486], ["КУСТЫ", 112, 266], ["ПРОСЕКА", 210, 170]],
   bank: [["cloud_b", 250, 1810, 1.1], ["cloud_a", 560, 1790, 1.3], ["cloud_c", 860, 1830, 1.0], ["cloud_d", 1080, 1820, 1.0]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm3",
@@ -4157,7 +4263,7 @@ function mapEngine(D) {
     const h = hAt(cx, cy);
     return onGround(x, y, h) ? h : -1;
   }
-  return { startMapScene, RH, RW, groundAt };
+  return { startMapScene, RH, RW, groundAt, roadAt, trees: mapTrees() };
 }
 
 function showView(v) {
@@ -4343,7 +4449,9 @@ function onMapTap(e) {
 const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1, 192], barrel: [6, 6, 128],
   archer: [8, 7, 192], arrow: [1, 2, 64], dead: [7, 2, 128],
   pidle: [8, 1, 192], paxe: [6, 1, 192], phammer: [3, 1, 192], ppick: [6, 1, 192], prunpick: [6, 1, 192],
-  monk: [6, 1, 192], heal: [11, 1, 192], healfx: [11, 1, 192], sheepb: [6, 1, 128] };
+  monk: [6, 1, 192], heal: [11, 1, 192], healfx: [11, 1, 192], sheepb: [6, 1, 128],
+  prun: [6, 1, 192], prunaxe: [6, 1, 192], prunwood: [6, 1, 192], prungold: [6, 1, 192], wspawn: [7, 1, 128], gspawn: [7, 1, 128],
+  mtree: [8, 1, 192], stump3: [1, 1, 192] };
 let SK_ACTORS = [];
 let skLast = 0;
 function skTick(t) {
@@ -4489,6 +4597,88 @@ async function skitBarrel(st, [x, y]) {
     b.frame(0, 0);
   }
 }
+// Шахтёр (или лесоруб) носит добычу: выходит из двери с ношей, кладёт её в кучку (до трёх штук рядом),
+// бегом возвращается и скрывается в двери. В кучке старая добыча со временем пропадает — её «увезли».
+async function skitHaul(st, { door, pile, res }) {
+  const carry = res === "gspawn" ? "prungold" : "prunwood";
+  const p = skActor(st, carry, 0.8);
+  const spots = [[0, 0], [-0.35, 0.12], [0.3, 0.15]].map(([dx, dy]) => [pile[0] + dx, pile[1] + dy]);
+  const heap = spots.map(() => skActor(st, res, 0.55, 0.62));
+  let n = 0;
+  const go = async (to, sheet) => {
+    p.face(to[0] < p.x); p.play(0, 6, 90, true, sheet);
+    await p.move(to[0], to[1], Math.hypot(to[0] - p.x, to[1] - p.y) * 650);
+  };
+  for (;;) {
+    await skWait(st, skRnd(3000, 7000));
+    p.at(...door); p.sheet(carry); p.show(true);              // вышел из шахты с ношей
+    await sleep(300);
+    await go(pile, carry);
+    p.play(0, 8, 130, true, "pidle");
+    const h = heap[n % 3];
+    if (n >= 3) { h.show(false); await sleep(300); }        // самое старое уже увезли
+    h.at(...spots[n % 3]); h.show(true); h.play(0, 7, 80, false);
+    n++;
+    await sleep(600);
+    await go(door, "prun");
+    p.show(false);                                          // зашёл в шахту
+    await sleep(400);
+  }
+}
+// Лесоруб на карте: рубит дерево, оно падает в сторону от него, на месте остаётся пень и брёвна.
+// Брёвна он относит в поленницу (до трёх штук), потом отдыхает; на месте пня вырастает новое дерево.
+async function skitLumber(st, { tree: [tx, ty], d, pile }) {
+  const cut = [tx - d * 0.6, ty], logs = [tx + d * 0.55, ty + 0.05];
+  const T = skActor(st, "mtree", 0.6, 170 / 192), S = skActor(st, "stump3", 0.6, 170 / 192);
+  T.el.style.transformOrigin = `50% ${170 / 192 * 100}%`;
+  T.at(tx, ty); T.show(true); T.play(0, 8, 140, true);
+  S.at(tx, ty);
+  const p = skActor(st, "pidle", 0.8), w = skActor(st, "wspawn", 0.55, 0.62);
+  const spots = [[0, 0], [0.32, 0.1], [-0.3, 0.12]].map(([dx, dy]) => [pile[0] + dx, pile[1] + dy]);
+  const heap = spots.map(() => skActor(st, "wspawn", 0.55, 0.62));
+  let n = 0;
+  const go = async (to, sheet) => {
+    p.face(to[0] < p.x); p.play(0, 6, 90, true, sheet);
+    await p.move(to[0], to[1], Math.hypot(to[0] - p.x, to[1] - p.y) * 650);
+  };
+  // поворот дерева: у актёра transform уже занят сдвигом, поэтому наклон — отдельной анимацией rotate
+  const tilt = (frames, opt) => T.el.animate(frames, opt);
+  p.at(...cut); p.face(d > 0); p.show(true); p.play(0, 8, 130, true, "pidle");
+  for (;;) {
+    await skWait(st, skRnd(3000, 7000));
+    p.face(d > 0); p.play(0, 6, 110, true, "paxe");
+    for (let k = 0; k < 5; k++) {
+      await skSleep(st, 400);
+      tilt([{ rotate: "0deg" }, { rotate: `${-d * 3}deg` }, { rotate: `${d * 1.5}deg` }, { rotate: "0deg" }], 260);
+      await skSleep(st, 260);
+    }
+    p.play(0, 8, 130, true, "pidle");
+    S.show(true);
+    T.el.style.transition = "none";
+    await tilt([{ rotate: "0deg", easing: "cubic-bezier(.55,0,1,.45)" }, { rotate: `${d * 86}deg` }], { duration: 750, fill: "forwards" }).finished;
+    await tilt([{ rotate: `${d * 86}deg`, opacity: 1 }, { rotate: `${d * 80}deg`, opacity: 1, offset: 0.3 }, { rotate: `${d * 86}deg`, opacity: 0 }],
+      { duration: 450, fill: "forwards" }).finished;
+    w.at(...logs); w.face(d < 0); w.show(true);
+    await w.play(0, 7, 80, false);
+    await skWait(st, 700);
+    await go([logs[0] - d * 0.25, cut[1]], "prunaxe");          // к брёвнам
+    w.show(false); p.play(0, 8, 130, true, "pidle");
+    await skSleep(st, 350);
+    await go(pile, "prunwood");                                  // в поленницу
+    const h = heap[n % 3];
+    if (n >= 3) { h.show(false); await skSleep(st, 300); }      // самые старые брёвна уже забрали
+    h.at(...spots[n % 3]); h.face(n % 2 === 1); h.show(true); h.frame(6, 0);
+    n++;
+    await go(cut, "prunaxe");
+    p.face(d > 0); p.play(0, 8, 130, true, "pidle");
+    await skWait(st, skRnd(10000, 18000));                       // отдыхает; дерево подрастает
+    S.show(false);
+    T.el.getAnimations().forEach((a) => a.cancel());
+    T.el.style.opacity = 1;
+    await T.el.animate([{ scale: "0.15", opacity: 0 }, { scale: "0.5", opacity: 1, offset: 0.2 }, { scale: "1", opacity: 1 }],
+      { duration: 3500, easing: "ease-out" }).finished;
+  }
+}
 // Два гоблина делят золото: спорят, машут факелами, проигравший убегает и потом возвращается
 async function skitGoldFight(st, spec) {
   const [x1, y] = spec.a, [x2] = spec.b;
@@ -4547,7 +4737,7 @@ async function skitScare(st, spec) {
 function skProblems(n, spec) {
   const E = ISLE_ENG[n], D = ISLE_MAPS[n], out = [];
   const nodes = D.nodes.map(([x, y]) => [x / 20, y / 20]);
-  const objs = D.deco.filter((d) => !d[0].startsWith("wrock") && d[0] !== "duck" && !(d[0] === "goblin" && d.length > 5));
+  const objs = [...D.deco, ...E.trees].filter((d) => !d[0].startsWith("wrock") && d[0] !== "duck" && !(d[0] === "goblin" && d.length > 5));
   const near = (x, y) => {
     for (const [nx, ny] of nodes) if (Math.abs(nx - x) < 0.95 && y > ny - 0.6 && y < ny + 1.1) return "под кнопкой уровня";
     for (const [k, ox, oy, sc] of objs) {
@@ -4598,12 +4788,17 @@ const SKIT_PLAN = {
     { name: "драка за золото", fn: "fight", a: [11.6, 22.3], b: [13.4, 22.3], awayA: [10.4, 22.3], awayB: [16.3, 22.3], ok: ["gold2"] },
     // левое плато: шахтёр у золота внизу; гоблин приходит справа по нижнему краю,
     // шахтёр убегает вверх-влево, в угол плато
+    // шахтёры выносят золото из шахт и складывают в кучку рядом, потом уходят обратно в шахту
+    { name: "золото из левой шахты", fn: "haul", door: [3.3, 21.0], pile: [2.4, 21.25], res: "gspawn", ok: ["mine"] },
+    { name: "золото из правой шахты", fn: "haul", door: [13.95, 20.35], pile: [15.4, 20.3], res: "gspawn", ok: ["mine"] },
     { name: "гоблин пугает шахтёра", fn: "scare", pawn: [3.0, 25.0], hide: [2.6, 23.3], gob: [7.5, 25.0], ok: ["goldsp4"] },
   ],
   2: [
     { name: "лучник и гоблин", fn: "archer", at: [12.3, 17.9], run: [4.4, 9.4] },
     { name: "подрывник на пляже", fn: "tnt", at: [4.8, 22.6], to: [1.6, 23.8], left: true },
-    { name: "бочка-гоблин на террасе", fn: "barrel", at: [7.2, 11.8] },
+    { name: "бочка-гоблин на террасе", fn: "barrel", at: [14.9, 8.3] },
+    // лесоруб на лугу у деревни: рубит, дерево падает от него, брёвна несёт в поленницу
+    { name: "лесоруб на лугу", fn: "lumber", tree: [5.6, 15.25], d: 1, pile: [3.9, 15.3] },
   ],
 };
 // что проверять у каждой сценки
@@ -4612,6 +4807,9 @@ const SKIT_GEOM = {
   tnt: (s) => ({ stand: [s.at], water: [s.to] }),
   archer: (s) => ({ stand: [s.at], paths: [[[s.run[0], s.at[1]], [s.run[1], s.at[1]]]] }),
   fight: (s) => ({ stand: [s.a, s.b], paths: [[s.a, s.awayA], [s.b, s.awayB]] }),
+  haul: (s) => ({ stand: [s.door, s.pile], paths: [[s.door, s.pile]] }),
+  lumber: (s) => { const [tx, ty] = s.tree, cut = [tx - s.d * 0.6, ty], logs = [tx + s.d * 0.6, ty + 0.05];
+    return { stand: [s.tree, cut, logs, [tx + s.d * 1.4, ty], s.pile], paths: [[cut, logs], [cut, s.pile]] }; },
   scare: (s) => ({ stand: [s.pawn, s.hide, s.gob], paths: [[s.gob, [s.pawn[0] + 1.1, s.pawn[1]]], [s.pawn, s.hide]] }),
 };
 const SKIT_FN = {
@@ -4620,6 +4818,8 @@ const SKIT_FN = {
   archer: (st, s) => skitArcher(st, s.at, s.run),
   fight: (st, s) => skitGoldFight(st, s),
   scare: (st, s) => skitScare(st, s),
+  haul: (st, s) => skitHaul(st, s),
+  lumber: (st, s) => skitLumber(st, s),
 };
 // Запускаются, когда карта острова показана впервые
 const SKITS = {};
@@ -4647,7 +4847,8 @@ function boardSkits(terr, cellOv) {
     // не в воде и не у самой воды: вода в соседней клетке подходит вплотную, и актёр будто стоит в озере
     const wet = (xx, yy) => terr[yy]?.[xx] === "water";
     if (!wall(x, y) || wet(x, y) || wet(x, y + 1) || wet(x - 1, y) || wet(x + 1, y) || wet(x, y - 1)) continue;
-    if ((L.events || []).some((e) => Math.abs(e.from[0] - x) <= 1 && Math.abs(e.from[1] - y) <= 1)) continue;   // рядом с кустом засады
+    if (evs().some((e) => e.from && Math.abs(e.from[0] - x) <= 1 && Math.abs(e.from[1] - y) <= 1)) continue;   // рядом с кустом засады
+    if ((L.events || []).some((e) => e.tree && Math.abs(e.tree[0] - x) <= 2 && Math.abs(e.tree[1] - y) <= 1)) continue;   // у лесоруба уровня
     if (!(x === 0 || y === 0 || x === W - 1 || y === H - 1)) continue;
     if (y === 0 && (x < 3 || x > W - 3)) continue;
     // клетка ниже — без дерева: высокое дерево снизу закрыло бы актёра, будто он стоит на кроне
@@ -4665,16 +4866,24 @@ function boardSkits(terr, cellOv) {
   let h = 3; for (const c of L.name) h = (h * 17 + c.charCodeAt(0)) % 9973;
   // лесоруб — только если рядом (слева или справа) растёт дерево: к нему он и повернётся
   const treeAt = (x, y) => /^tree/.test(cellOv[y]?.[x]?.dataset.kind || "");
-  const kinds = ["monk", "chop", "sheep"];
+  const calm = ["monk", "sheep"];
+  let chop = false;
   picks.forEach((c, i) => {
     cellOv[c.y][c.x]?.remove();                    // дерево/камень в этой клетке убираем
-    let kind = kinds[(h + i * 2) % kinds.length];
+    cellOv[c.y][c.x] = null;
+    // лесоруб — если рядом (слева или справа) растёт дерево и лесоруба на поле ещё нет
     const tree = treeAt(c.x - 1, c.y) ? -1 : treeAt(c.x + 1, c.y) ? 1 : 0;
-    if (kind === "chop" && !tree) kind = i ? "sheep" : "monk";
+    // на уровне со своим лесорубом второго в углу не ставим — запутает
+    const kind = tree && !chop && !(L.events || []).some((e) => e.kind === "fell") ? "chop" : calm[(h + i) % 2];
     const left = kind === "chop" ? tree < 0 : c.x > W / 2;   // лесоруб — к дереву, остальные — к середине поля
     if (kind === "monk") skRun(() => boardMonk(st, c.x + 0.5, c.y + 0.92, left));
     else if (kind === "sheep") skRun(() => boardSheep(st, c.x + 0.5, c.y + 0.9, left));
-    else skRun(() => boardPawn(st, c.x + 0.5 + tree * 0.12, c.y + 0.92, left, "paxe"));
+    else {
+      chop = true;
+      // куда уносить брёвна: за ближний край поля (сбоку — если стоит у бокового края)
+      const out = c.x === 0 ? [-1, 0] : c.x === W - 1 ? [1, 0] : c.y === H - 1 ? [0, 1] : [0, -1];
+      skRun(() => boardWoodcutter(st, c, tree, cellOv[c.y][c.x + tree], out));
+    }
   });
 }
 // Монах в углу иногда колдует: свечение над ним
@@ -4690,15 +4899,66 @@ async function boardMonk(st, x, y, left) {
     m.play(0, 6, 150, true, "monk");
   }
 }
-// Лесоруб рубит соседнее дерево; иногда отдыхает
-async function boardPawn(st, x, y, left, work) {
-  const p = skActor(st, "pidle", 0.75);
-  p.at(x, y); p.face(left); p.show(true); p.play(0, 8, 130, true, "pidle");
+// Пауза в сценке с точным временем (skWait проверяет экран раз в четверть секунды — для ударов топора грубо)
+const skSleep = async (st, ms) => { await sleep(ms); if (!st.alive()) throw SK_GONE; };
+// Лесоруб: рубит соседнее дерево, оно падает, остаются пень и брёвна; брёвна он уносит за край поля
+// и возвращается с топором. Через время на месте пня вырастает новое дерево — и всё сначала.
+// c — клетка лесоруба, dir — где дерево (-1 слева, 1 справа), tov — слой дерева в клетке, out — куда уносить
+async function boardWoodcutter(st, c, dir, tov, out) {
+  const kind = tov.dataset.kind, P = PROPS[kind];
+  const home = [c.x + 0.5 + dir * 0.4, c.y + 0.92];           // где стоит, когда рубит: топор достаёт до ствола
+  const pick = [c.x + 0.5 + dir * 0.95, c.y + 0.92];          // у брёвен
+  const logs = [c.x + 0.5 + dir * 1.3, c.y + 0.9];            // брёвна — за пнём, куда упало дерево
+  const gone = [home[0] + out[0] * 1.6, home[1] + out[1] * 1.6];   // за краем поля
+  const p = skActor(st, "pidle", 0.75), w = skActor(st, "wspawn", 0.6, 0.62);
+  p.at(...home); p.face(dir < 0); p.show(true); p.play(0, 8, 130, true, "pidle");
+  const stump = sprite("stump" + kind.slice(4), P.k, { bottom: P.bottom ?? 4 });
+  stump.style.opacity = 0;
+  tov.parentNode.insertBefore(stump, tov);
+  const run = async (to, sheet, cellMs = 650) => {
+    p.face(to[0] < p.x || (to[0] === p.x && dir < 0)); p.play(0, 6, 90, true, sheet);
+    await p.move(to[0], to[1], Math.hypot(to[0] - p.x, to[1] - p.y) * cellMs);
+  };
   for (;;) {
-    await skWait(st, skRnd(2500, 6000));
-    p.play(0, SK[work][0], 110, true, work);
-    await skWait(st, skRnd(3000, 6000));
+    await skWait(st, skRnd(2000, 5000));
+    // рубит: 4–6 взмахов, на каждый удар дерево вздрагивает
+    p.face(dir < 0); p.play(0, 6, 110, true, "paxe");
+    const hits = 4 + Math.floor(skRnd(0, 3));
+    for (let k = 0; k < hits; k++) {
+      await skSleep(st, 400);
+      tov.animate([{ transform: "rotate(0)" }, { transform: `rotate(${dir * 3}deg)` }, { transform: `rotate(${-dir * 1.5}deg)` }, { transform: "rotate(0)" }], 260);
+      await skSleep(st, 260);
+    }
+    // дерево падает от лесоруба, ударяется о землю и пропадает; остаются пень и брёвна
     p.play(0, 8, 130, true, "pidle");
+    stump.style.opacity = 1;
+    await tov.animate([{ transform: "rotate(0)", easing: "cubic-bezier(.55,0,1,.45)" }, { transform: `rotate(${dir * 86}deg)` }],
+      { duration: 750, fill: "forwards" }).finished;
+    await tov.animate([{ transform: `rotate(${dir * 86}deg)`, opacity: 1 }, { transform: `rotate(${dir * 80}deg)`, opacity: 1, offset: 0.3 },
+      { transform: `rotate(${dir * 86}deg)`, opacity: 0 }], { duration: 450, fill: "forwards" }).finished;
+    w.at(...logs); w.face(dir < 0); w.show(true);
+    await w.play(0, 7, 80, false);
+    await skWait(st, 700);
+    // подбирает брёвна и уносит за край поля
+    await run(pick, "prunaxe", 900);
+    w.show(false);
+    p.play(0, 8, 130, true, "pidle");
+    await skSleep(st, 350);
+    await run(home, "prunwood");
+    const fade = setTimeout(() => p.show(false), Math.hypot(gone[0] - home[0], gone[1] - home[1]) * 650 * 0.6);
+    await run(gone, "prunwood");
+    clearTimeout(fade); p.show(false);
+    await skWait(st, skRnd(4000, 8000));
+    // возвращается с топором
+    p.show(true);
+    await run(home, "prunaxe");
+    p.face(dir < 0); p.play(0, 8, 130, true, "pidle");
+    // отдыхает; тем временем на месте пня поднимается новое дерево
+    await skWait(st, skRnd(12000, 20000));
+    stump.style.opacity = 0;
+    tov.getAnimations().forEach((a) => a.cancel());
+    await tov.animate([{ transform: "scale(0.15)", opacity: 0 }, { transform: "scale(0.5)", opacity: 1, offset: 0.2 }, { transform: "scale(1)", opacity: 1 }],
+      { duration: 3500, easing: "ease-out" }).finished;
   }
 }
 // Овечка иногда радостно подпрыгивает
@@ -4874,7 +5134,13 @@ function buildBoard() {
       const cell = document.createElement("div");
       const tl = tileFor(theme, ch, rnd, lakes(x, y));
       // засада: из этой клетки выскакивает гоблин или монах — здесь всегда густой куст на земле
-      if ((L.events || []).some((e) => e.from[0] === x && e.from[1] === y)) { tl.over = "bush2"; if (tl.ground === "water") tl.ground = "grass"; }
+      if (evs().some((e) => e.from && e.from[0] === x && e.from[1] === y)) { tl.over = "bush2"; if (tl.ground === "water") tl.ground = "grass"; }
+      // дерево, которое повалит лесоруб, — невысокая ель; по бокам от неё пусто (там стоит лесоруб и падает дерево)
+      for (const e of evs().filter((e) => e.kind === "fell")) {
+        const f = fellCells(e);
+        if (f.tree[0] === x && f.tree[1] === y) { tl.over = "tree1"; tl.ground = "grass"; }
+        if ([f.cutter, f.away].some(([cx, cy]) => cx === x && cy === y)) { tl.over = null; if (tl.ground === "water") tl.ground = "grass"; }
+      }
       cell.className = "cell " + (ch === "#" ? "wall" : "floor");
       terr[y][x] = tl.ground;
       // то, что стоит на клетке (дерево, куст, камень) — отдельный слой с анимацией
@@ -5024,6 +5290,14 @@ function buildBoard() {
   }
   // мирная сценка в углу поля: монах, лесоруб, строитель или овечка
   boardSkits(terr, cellOv);
+  // лесорубы уровня: рубят «своё» дерево, пока рыцарь не подойдёт
+  fellers = evs().filter((e) => e.kind === "fell").map((e) => {
+    const f = fellCells(e), st = evStage();
+    const p = skActor(st, "pidle", 0.75);
+    p.at(f.cutter[0] + 0.5 + e.dir * 0.4, f.tree[1] + 0.92); p.face(e.dir < 0); p.show(true);
+    p.play(0, 6, 110, true, "paxe");
+    return { e, f, p, ov: cellOv[f.tree[1]][f.tree[0]] };
+  });
 }
 
 // Что нужно, чтобы открыть дверь на этом уровне
@@ -5036,7 +5310,7 @@ function drawItems(got) {
   lastGot = got;
   items.forEach((it) => it.el.classList.toggle("taken", got.taken.has(`${it.x},${it.y}`)));
   exitCell.classList.toggle("locked", doorLocked(got));
-  const hearts = enemies.length || L.events?.length;
+  const hearts = enemies.length || evs().some((e) => e.kind !== "fell");
   if (!items.length && !hearts) return;
   let html = "";
   if (hearts) {
@@ -5282,6 +5556,14 @@ function placeHero() {
   heroEl.style.transform = `translate(${hero.x * 100}%, ${hero.y * 100}%)`;
 }
 
+// События уровня (засады, монах, падающее дерево). У события может быть v: [номера вариантов] —
+// тогда оно бывает только на этих вариантах поля.
+const evs = () => (L.events || []).filter((e) => !e.v || e.v.includes(L.maps ? variant : 0));
+// Лесоруб валит дерево: стоит рядом с деревом (с той стороны, откуда рубит), дерево падает
+// в другую сторону. onto — дерево стоит над дорогой и падает на неё: клетка справа внизу
+// от дерева становится препятствием.
+const fellCells = (e) => ({ tree: e.tree, cutter: [e.tree[0] - e.dir, e.tree[1]], away: [e.tree[0] + e.dir, e.tree[1]],
+  block: e.onto ? [e.tree[0] + e.dir, e.tree[1] + 1] : null });
 function isWall(x, y) {
   if (y < 0 || y >= H || x < 0 || x >= W) return true;
   return L.map[y][x] === "#";
@@ -5515,6 +5797,8 @@ function buildPlan(code) {
   //  • рыцарь бьёт одного гоблина, а рядом стоит второй — второй успевает ударить один раз.
   let kHp = KNIGHT_HP, dead = null;
   const firedEv = new Set();   // засады, которые уже сработали
+  const fallen = new Set();    // клетки, куда упало дерево: теперь это препятствие
+  const wallAt = (x, y) => isWall(x, y) || fallen.has(x + "," + y);
   const strikes = (except, deadly) => {
     const list = [];
     for (const e of enemies) {
@@ -5589,7 +5873,7 @@ function buildPlan(code) {
       c.pre[s] = strikes(null, true); // стоял рядом с гоблином и не бил — гоблин добивает
       if (kHp <= 0) { Object.assign(dead, { cmd: i, step: s }); break; }
       const next = { x: pos.x + c.dx, y: pos.y + c.dy };
-      if (isWall(next.x, next.y)) { crash = { cmd: i, step: s, at: next, reason: "wall" }; break; }
+      if (wallAt(next.x, next.y)) { crash = { cmd: i, step: s, at: next, reason: fallen.has(next.x + "," + next.y) ? "tree" : "wall" }; break; }
       // Гоблин на пути работает как стена, пока его не победить
       if (goblinAt(next.x, next.y)) {
         const en = enemies.find((e) => e.x === next.x && e.y === next.y);
@@ -5612,8 +5896,14 @@ function buildPlan(code) {
       // Клетку засады ставить ПОСРЕДИ движения, не там, где кончается команда: там рыцарь
       // останавливается (проверка «если», пауза между командами), и выглядит, будто ждёт динамит.
       // или выходит монах и лечит (плюс сердечко). Каждая срабатывает один раз.
-      const ev = (L.events || []).find((e) => e.at[0] === pos.x && e.at[1] === pos.y && !firedEv.has(e));
-      if (ev) {
+      const ev = evs().find((e) => e.at[0] === pos.x && e.at[1] === pos.y && !firedEv.has(e));
+      if (ev?.kind === "fell") {
+        // лесоруб валит дерево; если оно падает на дорогу — там теперь препятствие
+        firedEv.add(ev);
+        const b = fellCells(ev).block;
+        if (b) fallen.add(b.join(","));
+        (c.ev ||= [])[s] = { ...ev };
+      } else if (ev) {
         firedEv.add(ev);
         kHp = ev.kind === "heal" ? Math.min(KNIGHT_HP, kHp + 1) : kHp - 1;
         (c.ev ||= [])[s] = { ...ev, hp: kHp };
@@ -5635,7 +5925,7 @@ function buildPlan(code) {
     const conds = levelConds();
     const ask = (c) => (line) => {
       const k = CONDS[c], x = pos.x + k.dx, y = pos.y + k.dy;
-      const yes = k.what === "wall" ? isWall(x, y) : goblinAt(x, y);
+      const yes = k.what === "wall" ? wallAt(x, y) : goblinAt(x, y);
       checks.push({ cond: c, yes, line, at: { ...pos }, before: commands.length });
       if (++ticks > 600) throw pyError(0, "Условие проверяется снова и снова, а рыцарь стоит на месте");
       return yes;
@@ -5713,6 +6003,11 @@ const BLOCK_GOALS = {
   "Две засады": "Здесь гоблины прячутся в двух местах, а между ними — монах. Поставь «если» сам: нажми на плитку [[tile:moveRight:3]], потом [[ifbtn]], потом [[btn:moveUp]].",
   "Не туда в кустах": "Найди ошибку: в рамке рыцарь идёт вниз, а внизу кусты. Нажми на плитку [[tile:moveDown:1]] и кнопку [[btn:moveUp]] — плитка станет [[tile:moveUp:1]].",
   "Кусты: испытание": "Испытание: программа пустая, вариантов поля три, в кустах засада и монах. Подсказка: [[btn:moveRight]] [[num:2]], потом [[ifbtn]] и [[btn:moveDown]], потом [[tool:done]], [[btn:moveRight]] [[num:6]] и [[btn:moveDown]] [[num:2]].",
+  "Дерево на дорогу": "Лесоруб рубит ель у дороги. Куда она упадёт — заранее не знаешь: на дорогу или в лес. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]]: если дерево на дороге — рыцарь обойдёт его снизу.",
+  "Лесоруб у дороги": "Ещё одна ель у дороги, подальше. Поставь «если» сам: нажми на плитку [[tile:moveRight:5]], потом [[ifbtn]], потом [[btn:moveDown]].",
+  "Не туда от дерева": "Найди ошибку: в рамке рыцарь идёт вверх, а вверху лес. Нажми на плитку [[tile:moveUp:1]] и кнопку [[btn:moveDown]] — плитка станет [[tile:moveDown:1]].",
+  "Лесоруб обедает": "Три варианта: дерево падает на дорогу, падает в лес — а на третьем лесоруб ушёл обедать, и ель стоит. Программа одна на все три. Нажми на плитку [[tile:moveRight:2]], потом [[ifbtn]], потом [[btn:moveDown]].",
+  "Просека: испытание": "Испытание: программа пустая, вариантов три — дерево на дороге, в лесу или стоит. Подсказка: [[btn:moveRight]] [[num:6]], потом [[ifbtn]] и [[btn:moveDown]], потом [[tool:done]], [[btn:moveRight]] [[num:2]] и [[btn:moveDown]] [[num:2]].",
   "Если у старта": "Теперь рамка «если» стоит в самом начале: препятствие может оказаться прямо перед рыцарем. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
   "Три варианта": "У поля уже <b>три</b> варианта — кнопки 1, 2, 3 в углу. Программа всё равно одна. Посмотри все три и нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
   "Сам поставь «если»": "Новое: кнопка [[ifbtn]] — ты сам ставишь рамку «если». Нажми на плитку [[tile:moveRight:2]], потом [[ifbtn]] — рамка встанет сразу за плиткой, — а потом кнопку [[btn:moveDown]].",
@@ -6225,6 +6520,13 @@ function refreshPlan() {
 
 function reset() {
   showProblems = false;
+  // поваленные деревья снова стоят, лесорубы снова рубят
+  for (const fl of fellers) {
+    fl.ov?.getAnimations().forEach((a) => a.cancel());
+    fl.stump?.remove(); fl.stump = null;
+    fl.p.at(fl.f.cutter[0] + 0.5 + fl.e.dir * 0.4, fl.f.tree[1] + 0.92); fl.p.face(fl.e.dir < 0); fl.p.show(true);
+    fl.p.play(0, 6, 110, true, "paxe");
+  }
   hero = { ...start };
   heroEl.classList.remove("flip", "run");
   roundTag.hidden = true;
@@ -6357,6 +6659,7 @@ async function run() {
 
   for (let i = 0; i < p.commands.length; i++) {
     const cmd = p.commands[i];
+    await shotPending;                       // дерево ещё падает — сначала пусть упадёт
     await showChecks(p, i);
     const label = `${disp(cmd.name)}(${cmd.n})`;
     drawCode(cmd.line);
@@ -6425,6 +6728,7 @@ async function run() {
       }
 
       if (p.crash && p.crash.cmd === i && p.crash.step === s) {
+        await shotPending;
         heroEl.classList.remove("bump");
         void heroEl.offsetWidth;
         heroEl.classList.add("bump");
@@ -6444,6 +6748,9 @@ async function run() {
             ? (left ? `сначала возьми ключ и собери монеты (осталось ${left})` : "сначала возьми ключ")
             : `сначала собери все монеты (осталось ${left})`;
           setStatus(`Дверь пока заперта: ${what}`, "fail");
+        } else if (p.crash.reason === "tree") {
+          setStatus(uiBlocks ? "Дерево упало прямо на дорогу! Тут поможет рамка «если»: есть препятствие — обойди"
+            : "Дерево упало прямо на дорогу! Проверь это: if obstacle_right() — и обойди", "fail");
         } else {
           const rd = cmd.loop?.round;
           setStatus(rd > 1
@@ -6467,7 +6774,10 @@ async function run() {
       drawItems(now);
       walkedTotal++;
       const ev = cmd.ev?.[s];
-      if (ev?.kind === "shot") {
+      if (ev?.kind === "fell") {
+        // лесоруб валит дерево — рыцарь идёт дальше, а перед проверкой «если» дождётся, пока оно упадёт
+        shotPending = Promise.all([shotPending, playFell(ev)]);
+      } else if (ev?.kind === "shot") {
         // засада: гоблин бросает динамит на ходу — рыцарь не останавливается
         shotPending = Promise.all([shotPending, playShot(ev)]);
         if (p.dead?.by === "ambush" && p.dead.cmd === i && p.dead.step === s) { await shotPending; await knightFalls({ ambush: true }); return finish(); }
@@ -6621,6 +6931,30 @@ async function playShot(ev) {
   drawKnightHp(ev.hp, true);
   await boom.play(0, 9, 32 * k, false);
   boom.el.remove();
+}
+// Лесоруб валит дерево: последние удары, дерево падает от него. На дорогу — остаётся лежать поперёк
+// неё (опускается в ряд дороги); в другую сторону — ложится в лесу. Лесоруб отходит передохнуть.
+let fellers = [];
+async function playFell(ev) {
+  const fl = fellers.find((x) => x.e === ev || (x.e.at + "" === ev.at + "" && x.e.tree + "" === ev.tree + ""));
+  if (!fl?.ov) return;
+  const k = SLOW / speed, d = ev.dir;
+  setStatus(ev.onto ? "Лесоруб свалил дерево — оно падает на дорогу!" : "Лесоруб свалил дерево — оно упало в лес, дорога свободна", "", "🪓");
+  sfx("bump");
+  const end = ev.onto ? `translateY(45%) rotate(${d * 88}deg)` : `rotate(${d * 86}deg)`;
+  fellStump(fl);
+  await fl.ov.animate([{ transform: "rotate(0)", easing: "cubic-bezier(.55,0,1,.45)" }, { transform: end }],
+    { duration: 600 * k, fill: "forwards" }).finished;
+  fl.ov.animate([{ transform: end }, { transform: end.replace(/rotate\(([-\d]+)deg\)/, (m, a) => `rotate(${a - d * 5}deg)`) }, { transform: end }],
+    { duration: 220 * k, composite: "replace" });
+  fl.p.play(0, 8, 130, true, "pidle");
+}
+// пень на месте поваленного дерева (до сброса поля)
+function fellStump(fl) {
+  if (fl.stump) return;
+  const P = PROPS.tree1;
+  fl.stump = sprite("stump1", P.k, { bottom: P.bottom ?? 4 });
+  fl.ov.parentNode.insertBefore(fl.stump, fl.ov);
 }
 // Монах выходит из кустов и лечит — рыцарь стоит, пока его лечат
 async function playHeal(ev) {
@@ -8022,7 +8356,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 56;
+const APP_VERSION = 57;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
