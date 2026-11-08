@@ -4940,6 +4940,7 @@ function mapEngine(D) {
 
     function paintLand() {
       const g = land.getContext("2d");
+      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, land.width, land.height);
       // 1. Низина мелкими плитками: песок, поверх трава
       g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
       tiles(g, img.flat, { block: [5, 0], v: [8, 0], h: [5, 3], one: [8, 3] }, mapLand, mapLand, MT, MAP_W, MAP_H);
@@ -5135,6 +5136,17 @@ function mapEngine(D) {
       paintLand();
       frame(0, true);
       requestAnimationFrame(loop);   // при «без движения» цикл ничего не рисует, кадр стоит
+      // Суша рисуется один раз. Телефон при нехватке памяти может очистить большой холст
+      // (море и деревья перерисовываются сами, а суша пропадала — оставались вода, деревья и кнопки).
+      // Поэтому: по событию «холст восстановлен» и раз в 3 с проверяем точку суши — пусто? рисуем заново.
+      land.addEventListener("contextrestored", () => paintLand());
+      let probe = null;
+      for (let y = Math.floor(MAP_H / 2); y < MAP_H && !probe; y++) for (let x = 0; x < MAP_W && !probe; x++)
+        if (mapLand(x, y) && mapLand(x + 1, y) && mapLand(x, y + 1)) probe = [x * MT + MT / 2, y * MT + MT / 2];
+      if (probe) setInterval(() => {
+        if (document.hidden || wrap.hidden || !land.width) return;
+        try { if (land.getContext("2d").getImageData(probe[0], probe[1], 1, 1).data[3] === 0) { paintLand(); frame(performance.now(), true); } } catch (e) { /* холст недоступен — пропустим */ }
+      }, 3000);
     });
   }
   // По какой земле можно ходить: высота яруса в точке (x, y крупных клеток) или -1 —
@@ -10092,7 +10104,8 @@ function startSplash() {
   let k = 0;
   const order = [0, 1, 2, 0, 1, 3, 4];
   const tick = setInterval(() => { if (STILL) return; lines.forEach((l) => l.classList.remove("on")); lines[order[k++ % order.length]].classList.add("on"); }, 650);
-  return () => { alive = false; clearInterval(tick); world.hidden = true; };
+  // после «Играть» освобождаем холсты островка заставки — меньше памяти телефону
+  return () => { alive = false; clearInterval(tick); world.hidden = true; world.querySelectorAll("canvas").forEach((c) => { c.width = c.height = 0; }); };
 }
 // ===== Старт: всегда с карты =====
 L = LEVELS[levelIdx];
@@ -10117,7 +10130,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 74;
+const APP_VERSION = 75;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
