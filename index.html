@@ -5967,9 +5967,13 @@ async function skitSiege(st0, S) {
 // Лесоруб на карте: рубит дерево, оно падает в сторону от него, на месте остаётся пень и брёвна.
 // Брёвна он относит в поленницу (до трёх штук), потом отдыхает; на месте пня вырастает новое дерево.
 async function skitLumber(st, { tree: [tx, ty], d, pile }) {
+  // лесоруб стоит с противоположной от падения стороны и смотрит на дерево (face(true) — влево)
   const cut = [tx - d * 0.6, ty], logs = [tx + d * 0.55, ty + 0.05];
   const T = skActor(st, "mtree", 0.6, 170 / 192), S = skActor(st, "stump3", 0.6, 170 / 192);
-  T.el.style.transformOrigin = `50% ${170 / 192 * 100}%`;
+  // поворот и рост — вокруг основания ствола. Ноги актёра (точка 50 %, 88,5 % картинки) после сдвига
+  // translate(-50%, --foot) оказываются в точке 0 0 элемента — поэтому точка поворота «0 0».
+  // (С «50% 88,5%» дерево крутилось вокруг точки на высоте картинки и падало через пол-карты.)
+  T.el.style.transformOrigin = "0 0";
   T.at(tx, ty); T.show(true); T.play(0, 8, 140, true);
   S.at(tx, ty);
   const p = skActor(st, "pidle", 0.8), w = skActor(st, "wspawn", 0.55, 0.62);
@@ -5982,10 +5986,10 @@ async function skitLumber(st, { tree: [tx, ty], d, pile }) {
   };
   // поворот дерева: у актёра transform уже занят сдвигом, поэтому наклон — отдельной анимацией rotate
   const tilt = (frames, opt) => T.el.animate(frames, opt);
-  p.at(...cut); p.face(d > 0); p.show(true); p.play(0, 8, 130, true, "pidle");
+  p.at(...cut); p.face(d < 0); p.show(true); p.play(0, 8, 130, true, "pidle");
   for (;;) {
     await skWait(st, skRnd(3000, 7000));
-    p.face(d > 0); p.play(0, 6, 110, true, "paxe");
+    p.face(d < 0); p.play(0, 6, 110, true, "paxe");
     for (let k = 0; k < 5; k++) {
       await skSleep(st, 400);
       tilt([{ rotate: "0deg" }, { rotate: `${-d * 3}deg` }, { rotate: `${d * 1.5}deg` }, { rotate: "0deg" }], 260);
@@ -6009,7 +6013,7 @@ async function skitLumber(st, { tree: [tx, ty], d, pile }) {
     h.at(...spots[n % 3]); h.face(n % 2 === 1); h.show(true); h.frame(6, 0);
     n++;
     await go(cut, "prunaxe");
-    p.face(d > 0); p.play(0, 8, 130, true, "pidle");
+    p.face(d < 0); p.play(0, 8, 130, true, "pidle");
     await skWait(st, skRnd(10000, 18000));                       // отдыхает; дерево подрастает
     S.show(false);
     T.el.getAnimations().forEach((a) => a.cancel());
@@ -10313,7 +10317,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 81;
+const APP_VERSION = 82;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
