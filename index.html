@@ -914,6 +914,7 @@ html.still .mapclouds img.bank { animation: none; }
 .skactor { position: absolute; aspect-ratio: 1; z-index: 1; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none;
   transform: translate(-50%, var(--foot)); transition: opacity 0.3s; }
 .skactor.flip { transform: translate(-50%, var(--foot)) scaleX(-1); }
+.skactor.behind { z-index: 0; }   /* выглядывает из-за куста: куст нарисован поверх */
 #mapview .isle-svg .lbl { font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-anchor: middle; dominant-baseline: central; fill: #4a2e14; }
 #mapview .isle-svg .bnum { font-family: var(--font-display); font-weight: 700; font-size: 14px; text-anchor: middle; dominant-baseline: central; fill: #fff; stroke: #1d2a3a; stroke-width: 3; paint-order: stroke; }
 #mapview .isle-svg .node { cursor: pointer; }
@@ -1598,6 +1599,7 @@ const CHAPTERS = [
   { name: "Скалы гоблинов", topic: "гоблины" },
   // Второй остров (isle: 2) — условия «если»
   { name: "Деревня у причала", topic: "условия «если»", isle: 2 },
+  { name: "Тропа через кусты", topic: "засады и монеты", isle: 2 },
 ];
 
 // Уровни по порядку на карте.
@@ -2354,6 +2356,148 @@ const LEVELS = [
         "###.###",
         "S..####",
         "##....E",
+      ],
+    ],
+    starter: { py: "", js: "" },
+  },
+  // ========== Тропа через кусты: квадратные поля, монеты, засады и монах ==========
+  // events — что случится, когда рыцарь наступит на клетку at: из куста from стреляет гоблин
+  // (shot: минус сердечко, ответить нельзя) или выходит монах и лечит (heal: плюс сердечко).
+  {
+    name: "Засада в кустах",
+    chapter: 5,
+    isle: 2,
+    goal: "Поле стало квадратным, на нём монеты, а в кустах кто-то прячется! Это не страшно: у рыцаря три сердечка. Код почти готов — нажми на номер строки [[line:2]] (строка с <b>if</b>) и кнопку [[btn:moveDown]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    par: 4, good: 5,
+    events: [{ at: [5, 2], kind: "shot", from: [3, 3] }, { at: [5, 3], kind: "heal", from: [4, 4] }],
+    maps: [
+      [
+        "######",
+        "S..###",
+        "##..C.",
+        "#####.",
+        "#####.",
+        "#####E",
+      ],
+      [
+        "######",
+        "S...C.",
+        "#####.",
+        "#####.",
+        "#####E",
+        "######",
+      ],
+    ],
+    starter: {
+      py: "move_right(2)\nif obstacle_right():\nmove_right(3)\nmove_down(3)\n",
+      js: "moveRight(2);\nif (obstacleRight()) {\n}\nmoveRight(3);\nmoveDown(3);\n",
+    },
+  },
+  {
+    name: "Две засады",
+    chapter: 5,
+    isle: 2,
+    after: "Засада в кустах",
+    goal: "Здесь гоблины прячутся в двух местах, а между ними — монах. Поставь «если» сам: нажми на номер строки [[line:1]], потом [[ifbtn]], потом [[btn:moveUp]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 4, good: 5,
+    events: [{ at: [2, 4], kind: "shot", from: [2, 5] }, { at: [3, 4], kind: "heal", from: [3, 5] }, { at: [5, 3], kind: "shot", from: [4, 1] }],
+    maps: [
+      [
+        "######",
+        "#####E",
+        "#####.",
+        "###C..",
+        "S...##",
+        "######",
+      ],
+      [
+        "######",
+        "######",
+        "#####E",
+        "#####.",
+        "S.C...",
+        "######",
+      ],
+    ],
+    starter: {
+      py: "move_right(3)\nmove_right(2)\nmove_up(2)\n",
+      js: "moveRight(3);\nmoveRight(2);\nmoveUp(2);\n",
+    },
+  },
+  {
+    name: "Не туда в кустах",
+    chapter: 5,
+    isle: 2,
+    after: "Две засады",
+    goal: "Найди ошибку: под <b>if</b> рыцарь идёт вниз, а внизу кусты. Нажми на номер строки [[line:3]] и кнопку [[btn:moveUp]] — команда в строке сменится.",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 4, good: 5,
+    events: [{ at: [1, 4], kind: "shot", from: [1, 5] }, { at: [3, 4], kind: "heal", from: [2, 3] }, { at: [5, 3], kind: "shot", from: [4, 1] }],
+    maps: [
+      [
+        "######",
+        "#####E",
+        "#####.",
+        "###C..",
+        "S...##",
+        "######",
+      ],
+      [
+        "######",
+        "######",
+        "#####E",
+        "#####.",
+        "S.C...",
+        "######",
+      ],
+    ],
+    starter: {
+      py: "move_right(3)\nif obstacle_right():\n    move_down()\nmove_right(2)\nmove_up(2)\n",
+      js: "moveRight(3);\nif (obstacleRight()) {\n  moveDown();\n}\nmoveRight(2);\nmoveUp(2);\n",
+    },
+  },
+  {
+    name: "Кусты: испытание",
+    chapter: 5,
+    isle: 2,
+    challenge: true,
+    goal: "Испытание: программа пустая, вариантов поля три, в кустах засада и монах. Подсказка: [[btn:moveRight]] [[num:2]], потом [[ifbtn]] и [[btn:moveDown]], потом [[tool:done]], [[btn:moveRight]] [[num:3]] и [[btn:moveDown]] [[num:3]].",
+    commands: ["moveRight", "moveDown", "moveUp"],
+    ifs: ["wall"],
+    ifButton: true,
+    par: 4, good: 5,
+    events: [{ at: [5, 2], kind: "shot", from: [3, 3] }, { at: [5, 3], kind: "heal", from: [4, 4] }],
+    maps: [
+      [
+        "######",
+        "S..###",
+        "##..C.",
+        "#####.",
+        "#####.",
+        "#####E",
+      ],
+      [
+        "######",
+        "S...C.",
+        "#####.",
+        "#####.",
+        "#####E",
+        "######",
+      ],
+      [
+        "######",
+        "S..###",
+        "##C...",
+        "#####.",
+        "#####.",
+        "#####E",
       ],
     ],
     starter: { py: "", js: "" },
@@ -3527,7 +3671,7 @@ ISLE_MAPS[1] = {
 // @@/isle1@@
 // @@isle2@@
 ISLE_MAPS[2] = {
-  nodes: [[170, 470], [210, 450], [250, 430], [230, 390], [190, 390], [150, 390], [110, 390], [70, 370], [90, 330], [130, 330], [170, 330]],
+  nodes: [[170, 470], [210, 450], [250, 430], [230, 390], [190, 390], [150, 390], [110, 390], [70, 370], [90, 330], [130, 330], [170, 330], [210, 330], [250, 310], [230, 270], [190, 270]],
   rows: [
     "....................................",
     "....................................",
@@ -3671,7 +3815,7 @@ ISLE_MAPS[2] = {
     ["sheep", 6.4, 11.8, 0.42, true],
     ["sheepg", 11.4, 11.7, 0.42],
   ],
-  labels: [["ДЕРЕВНЯ У ПРИЧАЛА", 180, 288]],
+  labels: [["ДЕРЕВНЯ У ПРИЧАЛА", 180, 288], ["ТРОПА ЧЕРЕЗ КУСТЫ", 180, 236]],
   bank: [["cloud_b", 250, 1810, 1.1], ["cloud_a", 560, 1790, 1.3], ["cloud_c", 860, 1830, 1.0], ["cloud_d", 1080, 1820, 1.0]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm3",
@@ -4507,6 +4651,7 @@ function boardSkits(terr, cellOv) {
     // не в воде и не у самой воды: вода в соседней клетке подходит вплотную, и актёр будто стоит в озере
     const wet = (xx, yy) => terr[yy]?.[xx] === "water";
     if (!wall(x, y) || wet(x, y) || wet(x, y + 1) || wet(x - 1, y) || wet(x + 1, y) || wet(x, y - 1)) continue;
+    if ((L.events || []).some((e) => Math.abs(e.from[0] - x) <= 1 && Math.abs(e.from[1] - y) <= 1)) continue;   // рядом с кустом засады
     if (!(x === 0 || y === 0 || x === W - 1 || y === H - 1)) continue;
     if (y === 0 && (x < 3 || x > W - 3)) continue;
     // клетка ниже — без дерева: высокое дерево снизу закрыло бы актёра, будто он стоит на кроне
@@ -4732,6 +4877,8 @@ function buildBoard() {
     [...row].forEach((ch, x) => {
       const cell = document.createElement("div");
       const tl = tileFor(theme, ch, rnd, lakes(x, y));
+      // засада: из этой клетки выскакивает гоблин или монах — здесь всегда густой куст на земле
+      if ((L.events || []).some((e) => e.from[0] === x && e.from[1] === y)) { tl.over = "bush2"; if (tl.ground === "water") tl.ground = "grass"; }
       cell.className = "cell " + (ch === "#" ? "wall" : "floor");
       terr[y][x] = tl.ground;
       // то, что стоит на клетке (дерево, куст, камень) — отдельный слой с анимацией
@@ -4893,9 +5040,10 @@ function drawItems(got) {
   lastGot = got;
   items.forEach((it) => it.el.classList.toggle("taken", got.taken.has(`${it.x},${it.y}`)));
   exitCell.classList.toggle("locked", doorLocked(got));
-  if (!items.length && !enemies.length) return;
+  const hearts = enemies.length || L.events?.length;
+  if (!items.length && !hearts) return;
   let html = "";
-  if (enemies.length) {
+  if (hearts) {
     html += `<span class="khearts${knightHp ? "" : " zero"}" aria-label="Сердечки рыцаря: ${knightHp} из ${KNIGHT_HP}">рыцарь ` +
       Array.from({ length: KNIGHT_HP }, (_, k) => `<img alt="" class="${k < knightHp ? "" : "off"}" src="${HEART_K_URL}">`).join("") + `</span>`;
   }
@@ -5370,6 +5518,7 @@ function buildPlan(code) {
   //  • рыцарь рядом и НЕ бьёт (шагает, упёрся, код кончился) — гоблин бьёт, пока рыцарь не упадёт;
   //  • рыцарь бьёт одного гоблина, а рядом стоит второй — второй успевает ударить один раз.
   let kHp = KNIGHT_HP, dead = null;
+  const firedEv = new Set();   // засады, которые уже сработали
   const strikes = (except, deadly) => {
     const list = [];
     for (const e of enemies) {
@@ -5463,6 +5612,15 @@ function buildPlan(code) {
         if (it.type === "key") got.key = true; else got.coins++;
       }
       c.got.push({ ...got }); // что собрано после этого шага — для анимации
+      // Засада: наступил на клетку — из куста стреляет гоблин (минус сердечко, ответить нельзя)
+      // или выходит монах и лечит (плюс сердечко). Каждая срабатывает один раз.
+      const ev = (L.events || []).find((e) => e.at[0] === pos.x && e.at[1] === pos.y && !firedEv.has(e));
+      if (ev) {
+        firedEv.add(ev);
+        kHp = ev.kind === "heal" ? Math.min(KNIGHT_HP, kHp + 1) : kHp - 1;
+        (c.ev ||= [])[s] = { ...ev, hp: kHp };
+        if (kHp <= 0) { dead = { by: "ambush", cmd: i, step: s, after: true }; break; }
+      }
       if (atExit) { reachedAt = { cmd: i, step: s }; break; }
     }
     c.to = { ...pos };
@@ -5553,6 +5711,10 @@ const BLOCK_GOALS = {
   "Гоблин": "Новое: <b>гоблин</b>! Он загородил тропу. Нажми <b>⚔</b>: рыцарь ударит того, кто стоит рядом. Потом иди к двери: <b>→</b> и цифра <b>5</b>. Не мешкай: если стоять рядом и не бить, гоблин ударит сам. У рыцаря три сердечка.",
   "Крепкий гоблин": "Над этим гоблином два сердечка: ему нужно <b>два удара</b>, и после первого он успеет ударить в ответ. Плитки почти готовы. Нажми на плитку <b>⚔1</b>, потом цифру <b>2</b>: получится <b>⚔2</b>.",
   "Строй гоблинов": "Гоблины стоят через клетку. Удар и два шага повторяются: положи в рамку 🔁 плитки <b>⚔</b> и <b>→2</b>. Если рядом никого нет, рыцарь просто взмахнёт мечом.",
+  "Засада в кустах": "Поле стало квадратным, на нём монеты, а в кустах кто-то прячется! Это не страшно: у рыцаря три сердечка. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
+  "Две засады": "Здесь гоблины прячутся в двух местах, а между ними — монах. Поставь «если» сам: нажми на плитку [[tile:moveRight:3]], потом [[ifbtn]], потом [[btn:moveUp]].",
+  "Не туда в кустах": "Найди ошибку: в рамке рыцарь идёт вниз, а внизу кусты. Нажми на плитку [[tile:moveDown:1]] и кнопку [[btn:moveUp]] — плитка станет [[tile:moveUp:1]].",
+  "Кусты: испытание": "Испытание: программа пустая, вариантов поля три, в кустах засада и монах. Подсказка: [[btn:moveRight]] [[num:2]], потом [[ifbtn]] и [[btn:moveDown]], потом [[tool:done]], [[btn:moveRight]] [[num:3]] и [[btn:moveDown]] [[num:3]].",
   "Если у старта": "Теперь рамка «если» стоит в самом начале: препятствие может оказаться прямо перед рыцарем. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
   "Три варианта": "У поля уже <b>три</b> варианта — кнопки 1, 2, 3 в углу. Программа всё равно одна. Посмотри все три и нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
   "Сам поставь «если»": "Новое: кнопка [[ifbtn]] — ты сам ставишь рамку «если». Нажми на плитку [[tile:moveRight:2]], потом [[ifbtn]] — рамка встанет сразу за плиткой, — а потом кнопку [[btn:moveDown]].",
@@ -6173,6 +6335,7 @@ async function knightFalls(why) {
   sfx("fall");
   await wait(900);
   const n = why?.max || 1;
+  if (why?.ambush) return setStatus("Засада оказалась сильнее: у рыцаря кончились сердечки. Найди путь, где после засады рыцаря успеет подлечить монах", "fail");
   setStatus(why?.hurt
     ? `Гоблин выдержал удар и победил рыцаря! У него ${n} ${plural(n, "сердечко", "сердечка", "сердечек")} — бей его столько раз: attack(${n})`
     : `Рыцарь стоял рядом с гоблином и не ударил — гоблин победил! Подошёл к гоблину — сразу бей: attack()`, "fail");
@@ -6303,6 +6466,12 @@ async function run() {
       if (items.length && doorLocked(before) && !doorLocked(now)) setTimeout(() => sfx("unlock"), 180);
       drawItems(now);
       walkedTotal++;
+      if (cmd.ev?.[s]) {
+        heroEl.classList.remove("run");
+        await playEvent(cmd.ev[s]);
+        if (p.dead?.by === "ambush" && p.dead.cmd === i && p.dead.step === s) { await knightFalls({ ambush: true }); return finish(); }
+        heroEl.classList.add("run");
+      }
       await wait(240);
       drawTape(p, i, s + 1);
 
@@ -6416,6 +6585,46 @@ function setVariant(k, flash = true) {
     boardEl.appendChild(f);
     setTimeout(() => f.remove(), 1400);
   }
+}
+
+// Засада из кустов: гоблин-подрывник высовывается и бросает динамит в рыцаря;
+// монах выходит из кустов и лечит. Актёры — те же, что в сценках (лист кадров), на время события.
+const evStage = () => ({ layer: boardEl, before: null, unit: 100 / W, pos: (x, y) => [x / W * 100, y / H * 100], on: () => true, alive: () => true });
+async function playEvent(ev) {
+  const st = evStage(), [bx, by] = ev.from, left = bx > hero.x;
+  const pop = (a) => { a.el.classList.add("behind"); a.at(bx + 0.5, by + 0.95); a.show(true); return a.move(bx + 0.5, by + 0.62, 260 * SLOW / speed); };
+  const hide = async (a) => { await a.move(bx + 0.5, by + 0.95, 260 * SLOW / speed); a.el.remove(); };
+  if (ev.kind === "heal") {
+    const m = skActor(st, "monk", 0.75), fx = skActor(st, "healfx", 0.75);
+    m.face(left); m.play(0, 6, 150, true, "monk");
+    setStatus("Из кустов вышел монах — он лечит рыцаря!", "", "♥ +1");
+    await pop(m);
+    fx.at(hero.x + 0.5, hero.y + 0.95); fx.show(true); fx.play(0, 11, 70 * SLOW / speed, true, "healfx");
+    sfx("unlock");
+    await m.play(0, 11, 70 * SLOW / speed, false, "heal");
+    drawKnightHp(ev.hp);
+    fx.el.remove();
+    m.play(0, 6, 150, true, "monk");
+    await wait(200);
+    await hide(m);
+    return;
+  }
+  const g = skActor(st, "tnt", 0.85), dyn = skActor(st, "dyn", 0.9, 0.5), boom = skActor(st, "boom", 0.9, 0.6);
+  g.face(left); g.play(0, 6, 120, true, "tnt");
+  setStatus("Засада! Гоблин из кустов бросает динамит — ответить ему нельзя", "", "♥ −1");
+  await pop(g);
+  await g.play(2, 7, 70 * SLOW / speed, false);
+  dyn.at(bx + 0.5, by + 0.25); dyn.show(true); dyn.play(0, 6, 60);
+  await dyn.arc(hero.x + 0.5, hero.y + 0.7, 1.2, 520 * SLOW / speed);
+  dyn.el.remove();
+  boom.at(hero.x + 0.5, hero.y + 0.9); boom.show(true);
+  sfx("ouch");
+  heroEl.classList.remove("hurt"); void heroEl.offsetWidth; heroEl.classList.add("hurt");
+  drawKnightHp(ev.hp, true);
+  g.play(0, 6, 120, true, "tnt");
+  await boom.play(0, 9, 55 * SLOW / speed, false);
+  boom.el.remove();
+  await hide(g);
 }
 
 // Проверка условия во время запуска: подсвечиваем строку «если» и говорим ответ
@@ -7798,7 +8007,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 52;
+const APP_VERSION = 53;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
