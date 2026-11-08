@@ -4759,6 +4759,7 @@ function mapEngine(D) {
     // Слои снизу вверх: море с пеной (полосы) → суша (один холст, рисуется один раз и больше
     // не меняется) → живые предметы: деревья, овцы, гоблины (полосы).
     const STRIP = 512;
+    const MAP_STEP = () => (LIGHT ? 300 : 150);   // как часто перерисовывается карта (мс)
     const makeStrips = () => {
       const list = [];
       for (let y0 = 0; y0 < canvas.height; y0 += STRIP) {
@@ -4914,7 +4915,9 @@ function mapEngine(D) {
       else { [n, fw, fh] = TS_INFO[k]; im = img[k]; ms = k.startsWith("wrock") ? 95 : k === "duck" ? 260 : k === "mine" ? 170 : k.startsWith("goldsp") ? 120 : 115; }
       if (!im) return;
       const ph = Math.floor(x * 3 + y * 5);
-      const f = n > 1 ? (Math.floor(t / ms) + ph) % n : 0;
+      // кадр меняется не чаще, чем карта перерисовывается (на слабом телефоне — раз в 300 мс): иначе кадры
+      // выхватываются вразнобой (0, 2, 5, 1…) — удар киркой «рассыпается», дёргается одна шапка
+      const f = n > 1 ? (Math.floor(t / Math.max(ms, MAP_STEP())) + ph) % n : 0;
       const w = fw * sc, h = fh * sc;
       const dx = Math.round(x * OU - w / 2), dy = Math.round(y * OU - h + foot * sc);
       if (flip) {
@@ -4936,7 +4939,7 @@ function mapEngine(D) {
       ctx.setTransform(1, 0, 0, 1, 0, -top);     // рисуем в координатах всей карты
       ctx.fillStyle = TS_INFO.water;
       ctx.fillRect(0, top, canvas.width, bh);
-      const ff = Math.floor(t / 85);
+      const ff = Math.floor(t / Math.max(85, MAP_STEP()));   // пена — тоже по порядку кадров
       ctx.imageSmoothingEnabled = true;          // пена в половину размера
       for (const [x, y, ph] of shore) {
         const py = y * MT - MT;
@@ -4998,7 +5001,7 @@ function mapEngine(D) {
     let last = 0;
     const loop = (t) => {
       requestAnimationFrame(loop);
-      if (STILL || t - last < (LIGHT ? 300 : 150) || document.hidden || document.getElementById("mapview").hidden || wrap.hidden) return;
+      if (STILL || t - last < MAP_STEP() || document.hidden || document.getElementById("mapview").hidden || wrap.hidden) return;
       last = t;
       frame(t);
     };
@@ -10024,7 +10027,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 70;
+const APP_VERSION = 71;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
