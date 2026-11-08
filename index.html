@@ -4179,7 +4179,7 @@ ISLE_MAPS[3] = {
     "....#.............",
     "....#.............",
     "....######........",
-    ".........#........",
+    "..................",
     "..................",
     "..................",
     "..................",
@@ -4187,8 +4187,7 @@ ISLE_MAPS[3] = {
   ],
   ramps: [],
   deco: [
-    ["mine", 9.5, 26.4, 0.9],
-    ["goldsp4", 6.6, 26.0, 0.55],
+    ["mine", 6.2, 25.3, 0.9],
     ["goldsp3", 12.4, 25.6, 0.5],
     ["rock2", 2.6, 22.6, 0.7],
     ["rock4", 14.4, 22.6, 0.6],
@@ -4203,6 +4202,7 @@ ISLE_MAPS[3] = {
     ["wrock3", 16.8, 25.0, 0.8],
     ["wrock2", 13.6, 29.0, 0.7],
     ["duck", 4.6, 29.0, 1.3],
+    ["goldsp4", 12.0, 25.6, 0.5],
   ],
   labels: [["СКОРО: НОВЫЕ УРОВНИ", 180, 402]],
   bank: [],
@@ -4584,8 +4584,9 @@ const ISLE_NAMES = { 1: "Остров программистов", 2: "Остр�
 // за ней подземный ход.
 const GATES = {
   1: [{ at: [290, 66], to: 2, kind: "bridge", dir: -1 }],
-  2: [{ at: [170, 516], to: 1, kind: "bridge", dir: 1 }, { at: [139, 104], to: 3, kind: "tunnel", place: "монастырь" }],
-  3: [{ at: [190, 540], to: 2, kind: "tunnel", place: "шахта" }],
+  // door — порог двери (там рыцарь входит и выходит), stand — где встать, если на острове ещё нет уровней
+  2: [{ at: [170, 516], to: 1, kind: "bridge", dir: 1 }, { at: [139, 106], door: [139, 93], to: 3, kind: "tunnel", place: "монастырь" }],
+  3: [{ at: [124, 523], door: [124, 507], stand: [176, 503], to: 2, kind: "tunnel", place: "шахта" }],
 };
 const gateTo = (from, to) => GATES[from].find((g) => g.to === to);
 const LAST_OF = (n) => LEVELS.filter((lv) => (lv.isle || 1) === n).at(-1);
@@ -4698,7 +4699,7 @@ function renderMap() {
   else {
     const g = GATES[curIsle].find((g) => g.to === arrivedFrom) || GATES[curIsle][0];
     const pts = mine.map(([, i]) => nodeOf(i)).sort((a, b) => Math.hypot(a[0] - g.at[0], a[1] - g.at[1]) - Math.hypot(b[0] - g.at[0], b[1] - g.at[1]));
-    [hx, hy] = pts[0] || [g.at[0] + 22, g.at[1] + 4];
+    [hx, hy] = pts[0] || g.stand || g.at;
   }
   add(`<use class="map-hero" href="#im-hero" x="${hx - 2}" y="${hy - 52}" width="44" height="44" aria-hidden="true"/>`);
 
@@ -5112,7 +5113,7 @@ const SKIT_PLAN = {
   ],
   // остров рудокопов: из шахт выносят золото
   3: [
-    { name: "золото из нижней шахты", fn: "haul", door: [9.5, 26.6], pile: [7.4, 26.0], res: "gspawn", ok: ["mine"] },
+    { name: "золото из нижней шахты", fn: "haul", door: [6.2, 25.5], pile: [7.9, 25.9], res: "gspawn", ok: ["mine"] },
     { name: "золото из верхней шахты", fn: "haul", door: [9.6, 2.7], pile: [11.0, 2.8], res: "gspawn", ok: ["mine"] },
   ],
 };
@@ -5416,16 +5417,16 @@ async function startIslandRun(to) {
 // экран гаснет — подземный ход: рыцарь с факелом бежит по коридору шахты; на другом острове
 // он выбегает из двери шахты (монастыря) к ближнему уровню.
 async function tunnelRun(from, to, gA, gB, hx, hy) {
-  const [dx, dy] = gA.at;
-  // 1. к двери: по дороге — сначала по горизонтали, потом вверх/вниз к двери
-  const a = await runAlong([[hx, hy], [hx, dy + 14], [dx, dy + 14], [dx, dy + 6]]);
+  const [dx, dy] = gA.door;
+  // 1. к двери — прямо по земле (от уровня у ворот или от места у шахты)
+  const a = await runAlong([[hx, hy], [dx, dy]]);
   await new Promise((r) => { const w = () => (a.run.dataset.done ? r() : setTimeout(w, 50)); w(); });
   a.run.className = "runner idle"; a.run.style.backgroundImage = `url(${TS.kidle})`;
-  // встречающий: монах у монастыря, шахтёр у шахты
-  const st = mapStage(isleWrap(from));
-  const guide = skActor(st, gA.place === "шахта" ? "pidle" : "monk", 0.75);
-  guide.at(dx / 20 + 0.75, dy / 20 + 0.35); guide.face(true); guide.show(true);
-  guide.play(0, gA.place === "шахта" ? 8 : 6, 150, true);
+  // встречающий: монах у монастыря, шахтёр у шахты — выходит из двери рядом с рыцарем
+  const st = mapStage(isleWrap(from)), monk = gA.place !== "шахта";
+  const guide = skActor(st, monk ? "monk" : "pidle", 0.75);
+  guide.at(dx / 20 + 0.55, dy / 20); guide.face(true); guide.show(true);
+  guide.play(0, monk ? 6 : 8, 150, true);
   sfx("unlock");
   await sleep(900);
   // заходят в дверь: становятся меньше и прозрачнее
@@ -5447,11 +5448,11 @@ async function tunnelRun(from, to, gA, gB, hx, hy) {
   hB.setAttribute("visibility", "hidden");
   isleSvg().querySelectorAll("[data-bridge]").forEach((b) => b.setAttribute("visibility", "hidden"));
   await tunnelScene(tn.querySelector("canvas"), to > from ? 1 : -1);
-  // 3. выход из двери на другом острове
-  const [ex, ey] = gB.at;
+  // 3. выход из двери на другом острове — с порога прямо к своему месту, по земле
+  const [ex, ey] = gB.door;
   const wrap = isleWrap(), r = wrap.getBoundingClientRect(), VH = ISLE_MAPS[to].terr.length * 20;
   scrollTo(0, Math.max(0, r.top + scrollY + ey * (r.height / VH) - innerHeight * 0.55));
-  const arrive = runAlong([[ex, ey + 6], [ex, ey + 14], [tx, ey + 14], [tx, ty]]);
+  const arrive = runAlong([[ex, ey], [tx, ty]]);
   arrive.then((b) => { b.run.style.opacity = 0; requestAnimationFrame(() => { b.run.style.transition = "opacity 0.5s"; b.run.style.opacity = 1; }); });
   await sleep(150);
   tn.classList.remove("on");
@@ -5464,74 +5465,103 @@ async function tunnelRun(from, to, gA, gB, hx, hy) {
   sfx("unlock");
 }
 
-// Коридор подземного хода на холсте: потолок и пол из камня пещеры, деревянные крепи шахты,
-// рыцарь бежит с факелом (вокруг него тёплый свет, дальше темнота), с потолка капает вода.
-// dir: 1 — бежит вправо, -1 — влево. ~3,6 с.
+// Коридор подземного хода на холсте: потолок и пол из камня пещеры, тёмная кладка, деревянные крепи
+// шахты, под перекладинами крепей висят чаши с огнём (огонь из набора). Впереди бежит монах-проводник,
+// за ним рыцарь. Светло у огней и вокруг путников, дальше темнота. Капает вода.
+// dir: 1 — бегут вправо, -1 — влево. ~3,6 с.
 function tunnelScene(cv, dir) {
   const dpr = Math.min(2, devicePixelRatio || 1), Wd = innerWidth, Hd = innerHeight;
   cv.width = Wd * dpr; cv.height = Hd * dpr;
   const c = cv.getContext("2d");
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   c.imageSmoothingEnabled = false;
-  const elev = new Image(); elev.src = TS.elev;
-  const krun = new Image(); krun.src = TS.krun;
+  const im = {};
+  for (const k of ["elev", "krun", "al_monkrun", "fx_fire"]) { im[k] = new Image(); im[k].src = TS[k]; }
+  // тень-слой: сюда рисуется темнота, из неё вырезается свет
+  const dark = document.createElement("canvas");
+  dark.width = cv.width; dark.height = cv.height;
+  const dc = dark.getContext("2d");
+  dc.setTransform(dpr, 0, 0, dpr, 0, 0);
   const T = 48;                                   // плитка камня на экране
   const band = Math.min(Hd * 0.42, 300), top = (Hd - band) / 2, floorY = top + band;
-  const kx = Wd * (dir > 0 ? 0.36 : 0.64), kh = Math.min(band * 0.75, 170);
+  const kh = Math.min(band * 0.75, 170);          // рост рыцаря (кадр 120 px)
+  const kx = Wd * (dir > 0 ? 0.36 : 0.64), mx = kx + dir * kh * 0.95;
+  const P = T * 5;                                // шаг крепей
   const drops = [];
-  const DUR = 3600;
+  const DUR = 3600, SPEED = 230;
+  const frameOf = (img, n, fw, f) => [f * fw, 0, fw, img.height];
   return new Promise((res) => {
     const t0 = performance.now();
     let lastStep = 0, lastDrip = 0;
     const frame = (t) => {
-      const e = t - t0, off = (e / 1000) * 230 * dir;   // насколько сдвинулся мир
+      const e = t - t0, off = (e / 1000) * SPEED * dir;   // насколько сдвинулся мир
       c.fillStyle = "#07080b"; c.fillRect(0, 0, Wd, Hd);
-      // стены: потолок — лицевая сторона скалы, пол — верх камня
       const sx = ((-off % T) + T) % T - T;
       for (let x = sx; x < Wd + T; x += T) {
-        for (let y = top - T * 2; y < top; y += T) c.drawImage(elev, 64, 128 + 64, 64, 64, x, y, T, T);
-        for (let y = floorY; y < floorY + T * 2; y += T) c.drawImage(elev, 64, 64, 64, 64, x, y, T, T);
+        for (let y = top - T * 2; y < top; y += T) c.drawImage(im.elev, 64, 192, 64, 64, x, y, T, T);
+        for (let y = floorY; y < floorY + T * 2; y += T) c.drawImage(im.elev, 64, 64, 64, 64, x, y, T, T);
       }
-      // задняя стена коридора — тёмная кладка
+      // задняя стена — тёмная кладка
       c.fillStyle = "#14161c"; c.fillRect(0, top, Wd, band);
       for (let x = sx; x < Wd + T; x += T) for (let y = top; y < floorY; y += T / 2) {
         c.fillStyle = (Math.floor((x - sx) / T) + Math.floor((y - top) / (T / 2))) % 2 ? "#191c24" : "#1d212a";
         c.fillRect(x + ((y - top) / (T / 2) % 2 ? T / 2 : 0), y, T - 2, T / 2 - 2);
       }
-      // деревянные крепи каждые 5 плиток
-      const P = T * 5, ps = ((-off % P) + P) % P - P;
-      for (let x = ps; x < Wd + P; x += P) {
+      // деревянные крепи; на каждой второй — огонь (лист Fire из набора, 7 кадров)
+      const ps = ((-off % P) + P) % P - P, lights = [];
+      const fireH = T * 1.8, ff = Math.floor(e / 90) % 7;
+      for (let x = ps, k = Math.floor(off / P); x < Wd + P; x += P, k++) {
         c.fillStyle = "#5a3a1e"; c.fillRect(x, top, 12, band); c.fillRect(x + T * 2, top, 12, band);
         c.fillStyle = "#7a5230"; c.fillRect(x + 2, top, 4, band); c.fillRect(x + T * 2 + 2, top, 4, band);
         c.fillStyle = "#6b4526"; c.fillRect(x - 6, top, T * 2 + 24, 14);
         c.fillStyle = "#3a2513"; c.fillRect(x - 6, top + 12, T * 2 + 24, 3);
+        // огонь в железной чаше на перекладине между стойками
+        const fx = x + T + 6, fy = top + 30;
+        c.fillStyle = "#3a2513"; c.fillRect(fx - 2, top + 14, 4, 16);           // цепь от перекладины
+        c.fillStyle = "#2b2f38"; c.fillRect(fx - 14, fy, 28, 7); c.fillRect(fx - 9, fy + 7, 18, 4);
+        if (im.fx_fire.complete) c.drawImage(im.fx_fire, ...frameOf(im.fx_fire, 7, 128, (((ff + k * 3) % 7) + 7) % 7), fx - fireH / 2, fy - fireH * 0.86, fireH, fireH);
+        lights.push([fx, fy - fireH * 0.3, band * 0.75]);
       }
       // капли с потолка
       if (t - lastDrip > 380) { lastDrip = t; drops.push({ x: Math.random() * Wd, y: top + 4, v: 0 }); }
       c.fillStyle = "#8fd3ff";
-      for (const d of drops) { d.v += 0.5; d.y += d.v; d.x -= 230 / 60 * dir; c.fillRect(d.x, d.y, 2, 5); }
+      for (const d of drops) { d.v += 0.5; d.y += d.v; d.x -= SPEED / 60 * dir; c.fillRect(d.x, d.y, 2, 5); }
       while (drops.length && drops[0].y > floorY) { drops.shift(); if (Math.random() < 0.3) sfx("drip"); }
-      // рыцарь бежит (лист krun: кадры в ряд)
-      const n = TS_INFO.krun, fw = krun.width / n, f = Math.floor(e / 80) % n;
-      c.save(); c.translate(kx, floorY - kh * 0.86);
-      if (dir < 0) c.scale(-1, 1);
-      if (krun.complete) c.drawImage(krun, f * fw, 0, fw, krun.height, -kh / 2, 0, kh, kh);
-      // факел в руке
-      const fl = 0.85 + Math.sin(e / 60) * 0.1 + Math.random() * 0.05;
-      c.fillStyle = "#6b4526"; c.fillRect(kh * 0.18, kh * 0.36, 5, kh * 0.22);
-      c.fillStyle = `rgba(255,190,80,${fl})`; c.beginPath(); c.arc(kh * 0.2, kh * 0.33, 7 * fl, 0, 7); c.fill();
-      c.fillStyle = "rgba(255,240,180,0.9)"; c.beginPath(); c.arc(kh * 0.2, kh * 0.34, 3.5, 0, 7); c.fill();
-      c.restore();
+      // монах впереди (Run, 4 кадра) и святое сияние вокруг него (Heal_Effect, 11 кадров)
+      const draw = (img, n, fw, f, cx, w, flip) => {
+        if (!img.complete) return;
+        c.save(); c.translate(cx, floorY - w * 0.86 + w * 0.05);
+        if (flip) c.scale(-1, 1);
+        c.drawImage(img, ...frameOf(img, n, fw, f), -w / 2, 0, w, w);
+        c.restore();
+      };
+      draw(im.al_monkrun, 4, 120, Math.floor(e / 100) % 4, mx, kh, dir < 0);
+      draw(im.krun, TS_INFO.krun, im.krun.width / TS_INFO.krun, Math.floor(e / 80) % TS_INFO.krun, kx, kh, dir < 0);
       if (t - lastStep > 300) { lastStep = t; sfx("step"); }
-      // свет факела: вокруг рыцаря тепло, дальше темнота
-      const lx = kx + kh * 0.2 * dir, ly = floorY - kh * 0.55, R = Math.max(Wd, Hd) * (0.38 + Math.sin(e / 90) * 0.01);
-      const g = c.createRadialGradient(lx, ly, 10, lx, ly, R);
-      g.addColorStop(0, "rgba(255,170,60,0.10)"); g.addColorStop(0.35, "rgba(0,0,0,0.25)"); g.addColorStop(1, "rgba(0,0,0,0.96)");
-      c.fillStyle = g; c.fillRect(0, 0, Wd, Hd);
+      // свет: темнота, из которой вырезаны огни на крепях и сияние монаха
+      dc.globalCompositeOperation = "source-over";
+      dc.fillStyle = "rgba(0,0,0,0.88)"; dc.fillRect(0, 0, Wd, Hd);
+      dc.globalCompositeOperation = "destination-out";
+      const hole = (x, y, R, a) => {
+        const g = dc.createRadialGradient(x, y, 0, x, y, R);
+        g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(0.55, `rgba(0,0,0,${a * 0.55})`); g.addColorStop(1, "rgba(0,0,0,0)");
+        dc.fillStyle = g; dc.fillRect(x - R, y - R, R * 2, R * 2);
+      };
+      const flick = 0.95 + Math.sin(e / 70) * 0.05;
+      for (const [x, y, R] of lights) hole(x, y + band * 0.15, R * 1.1 * flick, 0.95);
+      hole((mx + kx) / 2, floorY - kh * 0.5, band * 0.95, 1);
+      c.drawImage(dark, 0, 0, Wd, Hd);
+      // тёплый отсвет огней
+      c.globalCompositeOperation = "lighter";
+      for (const [x, y, R] of lights) {
+        const g = c.createRadialGradient(x, y, 0, x, y, R * 0.6);
+        g.addColorStop(0, "rgba(255,140,40,0.16)"); g.addColorStop(1, "rgba(255,140,40,0)");
+        c.fillStyle = g; c.fillRect(x - R, y - R, R * 2, R * 2);
+      }
+      c.globalCompositeOperation = "source-over";
       if (e < DUR) requestAnimationFrame(frame); else res();
     };
-    const go = () => requestAnimationFrame(frame);
-    Promise.all([elev, krun].map((im) => im.decode ? im.decode().catch(() => {}) : 0)).then(go);
+    Promise.all(Object.values(im).map((m) => (m.decode ? m.decode().catch(() => {}) : 0))).then(() => requestAnimationFrame(frame));
   });
 }
 
@@ -8847,7 +8877,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 60;
+const APP_VERSION = 61;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
