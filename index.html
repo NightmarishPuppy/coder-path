@@ -4552,16 +4552,16 @@ ISLE_MAPS[3] = {
     "....BBBBBBBBBB....",
     "....BBBBBBBBBB....",
     "....BBBBBBBBBB....",
-    "..AABBBBBBBBBBAA..",
-    "..AAAAAAAAAAAAAA..",
-    "..AAAAAAAAAAAAAA..",
-    "..AAAAAAAAAAAAAA..",
-    "..AAAAAAAAAAAAAA..",
-    "..AAAAAAAAAAAAAA..",
-    "..AAAAAAAAAAAAAA..",
-    "..AAAAAAAAAAAAAA..",
-    "..AAAAAAAAAAAAAA..",
-    "..AAAAAAAAAAAAAA..",
+    "..AABBBBBBBBBB....",
+    "..AAAAAAAAAAAA....",
+    "..AAAAAAAAAAAA....",
+    "..AAAAAAAAAAAA....",
+    "..AAAAAAAAAAAA....",
+    "..AAAAAAAAAAAA....",
+    "..AAAAAAAAAAAA....",
+    "..AAAAAAAAAAAA....",
+    "..AAAAAAAAAAAA....",
+    "..AAAAAAAAAAAA....",
     "..................",
     "..................",
     "..................",
@@ -4615,7 +4615,6 @@ ISLE_MAPS[3] = {
     ["rock2", 2.6, 22.6, 0.7],
     ["rock4", 14.4, 22.6, 0.6],
     ["goldsp6", 3.0, 13.6, 0.5],
-    ["goldsp3", 14.0, 11.6, 0.5],
     ["gold2", 9.0, 10.8, 0.6],
     ["rock1", 4.6, 10.6, 0.55],
     ["mine", 9.6, 2.5, 0.7],
@@ -4626,11 +4625,14 @@ ISLE_MAPS[3] = {
     ["wrock2", 13.6, 29.0, 0.7],
     ["duck", 4.6, 29.0, 1.3],
     ["goldsp4", 12.0, 25.6, 0.5],
+    ["mine", 15.2, 8.1, 0.6],
+    ["ghouse", 15.5, 19.3, 0.38],
   ],
   labels: [["ЛЕСТНИЦЫ", 268, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274]],
   bank: [],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm5",
+  clear: [[13.6, 6.0, 17.9, 19.9]],
 };
 // @@/isle3@@
 
@@ -4699,7 +4701,10 @@ function mapEngine(D) {
     // перед большими постройками (монастырь, шахта, дома) деревья не растут — иначе закрывают их;
     // убираем уже после того, как все деревья расставлены, чтобы остальные остались на своих местах
     const BIG = { monastery_y: 1.0, mine: 1.1, castle: 1.2, fortress: 1.2, house_y: 0.8, house_c: 0.8, tower_y: 0.6, build: 1.4, ghouse: 0.5 };
-    return out.filter(([, x, y]) => !MAP_DECO.some(([k, ox, oy]) => BIG[k] && Math.abs(x - ox) < BIG[k] + 0.5 && y > oy - 0.4 && y < oy + 1.7));
+    // clear — места без деревьев (ущелье, где идёт бой за золото), [x0, y0, x1, y1] в клетках
+    const CLEAR = D.clear || [];
+    return out.filter(([, x, y]) => !MAP_DECO.some(([k, ox, oy]) => BIG[k] && Math.abs(x - ox) < BIG[k] + 0.5 && y > oy - 0.4 && y < oy + 1.7)
+      && !CLEAR.some(([x0, y0, x1, y1]) => x > x0 && x < x1 && y > y0 && y < y1));
   }
 
   function startMapScene(canvas) {
@@ -5185,6 +5190,8 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   pidle: [8, 1, 192], paxe: [6, 1, 192], phammer: [3, 1, 192], ppick: [6, 1, 192], prunpick: [6, 1, 192],
   monk: [6, 1, 192], heal: [11, 1, 192], healfx: [11, 1, 192], sheepb: [6, 1, 128],
   prun: [6, 1, 192], prunaxe: [6, 1, 192], prunwood: [6, 1, 192], prungold: [6, 1, 192], wspawn: [7, 1, 128], gheaphl: [6, 1, 128], gnug: [1, 1, 128],
+  gmount: [12, 1, 320], towerb: [1, 1, 256], towerbf: [1, 1, 256], arrowd: [1, 1, 64], archb: [8, 7, 192], kwar: [6, 8, 192],
+  torchp: [7, 5, 192], lidle: [12, 1, 320], lrun: [6, 1, 320], ldatk: [3, 1, 320], lddef: [6, 1, 320],
   mtree: [8, 1, 192], stump3: [1, 1, 192] };
 let SK_ACTORS = [];
 let skLast = 0;
@@ -5361,6 +5368,156 @@ async function skitHaul(st, { door, pile }) {
     await go(door, "prun");
     p.show(false);                                            // зашёл в шахту
     await sleep(400);
+  }
+}
+// Оборона золотой шахты (Остров рудокопов, ущелье справа от каменного плато). Наверху — шахта и гора
+// золота, рабочие всё носят и носят самородки. Ниже стоят наши: лучник на синей башне, мечник,
+// копейщик и монах. Внизу ущелья — лагерь гоблинов; оттуда то и дело идут на штурм: двое с факелами,
+// подрывник с динамитом или бочка-камикадзе. Все ходят только по низине ущелья (одна высота, без воды
+// и обрывов) — это проверяет skProblems по точкам и путям из SKIT_GEOM.siege.
+// Лучник стреляет только строго вниз (стрела повёрнута на прямой угол — сетка пикселей цела),
+// поэтому всех, в кого он стреляет, ведём по «его» дорожке прямо под башней.
+const SIEGE = {
+  mine: [15.2, 8.35], mount: [15.6, 10.6], stands: [[14.85, 9.45], [16.3, 9.45]],
+  tower: [14.7, 13.2], war: [16.45, 13.0], lan: [15.25, 14.2], monk: [16.85, 11.9],
+  // дверь хижины гоблинов смотрит вниз: из неё сначала выходят вбок и только потом идут вверх по ущелью
+  door: [15.5, 19.5], left: [14.7, 19.45], right: [16.3, 19.45],
+  lane: 14.7, duel: [16.45, 13.95], tntAt: [15.3, 17.1], dynTo: [15.25, 15.0],
+  lanHit: [15.3, 16.3], shotY: 15.8, barY: 16.3,
+};
+async function skitSiege(st, S) {
+  const A = (k, sc, foot) => skActor(st, k, sc, foot);
+  // актёры в порядке глубины: кто ниже на карте — создаётся позже и рисуется поверх
+  const pawns = [A("prungold", 0.8), A("prungold", 0.8)];
+  const mount = A("gmount", 0.6, 0.875);
+  const nug = [A("gnug", 0.8, 0.585), A("gnug", 0.8, 0.585)];
+  const monk = A("monk", 0.8);
+  const tower = A("towerb", 0.75, 232 / 256), archer = A("archb", 0.75), front = A("towerbf", 0.75, 232 / 256);
+  const war = A("kwar", 0.85), lan = A("lidle", 0.8, 0.625);
+  const gR = A("torch", 0.85), gP = A("torchp", 0.85), tnt = A("tnt", 0.85), bar = A("barrel", 0.85, 0.72);
+  const arrow = A("arrowd", 0.75, 0.5), dyn = A("dyn", 1, 0.5), boom = A("boom", 0.9, 0.6);
+  const dead = [A("dead", 0.9, 0.75), A("dead", 0.9, 0.75)], healfx = A("healfx", 0.8);
+  const [tx, ty] = S.tower, archY = ty - (232 - 118) / 64 * 0.75;   // площадка башни
+  mount.at(...S.mount); mount.show(true);
+  tower.at(tx, ty); tower.show(true); front.at(tx, ty); front.show(true);
+  archer.at(tx, archY); archer.show(true); archer.play(0, 6, 150);
+  war.at(...S.war); war.face(false); war.show(true); war.play(0, 6, 140);
+  lan.at(...S.lan); lan.show(true); lan.play(0, 12, 110);
+  monk.at(...S.monk); monk.face(true); monk.show(true); monk.play(0, 6, 150);
+  const run = async (a, to, row, n, cellMs, sheet) => {
+    a.face(to[0] < a.x - 0.01 || (Math.abs(to[0] - a.x) <= 0.01 && a.el.classList.contains("flip")));
+    a.play(row, n, 90, true, sheet);
+    await a.move(to[0], to[1], Math.max(1, Math.hypot(to[0] - a.x, to[1] - a.y) * cellMs));
+  };
+  const appear = async (a, row, n) => {         // выходит из двери хижины гоблинов
+    a.at(...S.door); a.play(row, n, 130); a.el.style.transition = "opacity 0.3s"; a.show(true);
+    await skSleep(st, 350);
+  };
+  const die = async (a, i) => {                 // облачко — череп — тает
+    const d = dead[i]; a.show(false);
+    d.at(a.x, a.y); d.show(true);
+    await d.play(0, 7, 110, false);
+    skRun(async () => { await skSleep(st, 1500); await d.play(1, 7, 120, false); d.show(false); });
+  };
+  const shoot = async (toY) => {                // лучник стреляет вниз, стрела летит по дорожке под башней
+    await archer.play(6, 8, 60, false).then(() => {});
+    arrow.at(tx, archY + 0.2); arrow.show(true);
+    await arrow.move(tx, toY - 0.35, (toY - archY) * 70);
+    arrow.show(false);
+    archer.play(0, 6, 150);
+  };
+  // рабочие носят самородки из шахты на гору золота — каждый в своём ритме
+  const haul = async (p, n, stand) => {
+    for (;;) {
+      await skWait(st, skRnd(2500, 6500));
+      p.at(...S.mine); p.sheet("prungold"); p.el.style.transition = ""; p.show(true);
+      await skSleep(st, 250);
+      await run(p, stand, 0, 6, 650, "prungold");
+      const f = Math.sign(S.mount[0] - stand[0]) || 1;
+      p.face(f < 0); p.play(0, 8, 130, true, "pidle");
+      n.el.style.transition = ""; n.at(p.x + f * 0.28, p.y - 0.14); n.show(true);
+      await n.arc(S.mount[0] + (stand[0] - S.mount[0]) * 0.35, S.mount[1] - 1.05, 0.4, 360);
+      n.el.style.transition = "opacity 0.15s"; n.show(false);
+      await mount.play(0, 12, 70, false); mount.frame(0, 0);
+      await skSleep(st, 400);
+      await run(p, S.mine, 0, 6, 650, "prun");
+      p.show(false);
+    }
+  };
+  pawns.forEach((p, i) => skRun(() => haul(p, nug[i], S.stands[i])));
+  // штурмы
+  const torches = async () => {                 // двое с факелами: одного снимает лучник, второй бьётся с мечником
+    await appear(gR, 0, 7);
+    const rr = (async () => { await run(gR, S.left, 1, 6, 480); await run(gR, [S.lane, S.shotY], 1, 6, 480); })();
+    await skSleep(st, 500);
+    await appear(gP, 0, 7);
+    const rp = (async () => { await run(gP, S.right, 1, 6, 480); await run(gP, S.duel, 1, 6, 480); })();
+    await skSleep(st, Math.max(0, (S.left[1] - S.shotY) * 480 - 1100));
+    await shoot(S.shotY);
+    await rr; await die(gR, 0);
+    await rp;
+    gP.play(0, 7, 120);
+    for (let k = 0; k < 2; k++) {
+      await gP.play(4, 6, 85, false);           // гоблин бьёт вверх — мечник отражает
+      await skSleep(st, 120);
+      await war.play(4 + k, 6, 80, false);      // мечник бьёт вниз
+      war.play(0, 6, 140);
+      await skSleep(st, 200);
+    }
+    await die(gP, 1);
+    // монах подлечивает мечника
+    monk.face(S.war[0] < S.monk[0]);
+    healfx.at(...S.war); healfx.show(true);
+    healfx.play(0, 11, 90, false).then(() => healfx.show(false));
+    await monk.play(0, 11, 90, false, "heal");
+    monk.play(0, 6, 150, true, "monk");
+  };
+  const dynamite = async () => {                // подрывник бросает динамит — копейщик закрывается и гонит его
+    await appear(tnt, 0, 6);
+    await run(tnt, S.right, 1, 6, 520);
+    await run(tnt, [S.right[0], S.tntAt[1] + 0.6], 1, 6, 520);
+    await run(tnt, S.tntAt, 1, 6, 520);
+    tnt.face(false); await tnt.play(2, 7, 90, false);
+    dyn.at(S.tntAt[0] + 0.2, S.tntAt[1] - 1.0); dyn.show(true); dyn.play(0, 6, 70);
+    lan.play(0, 6, 80, false, "lddef");         // щит вниз
+    await dyn.arc(...S.dynTo, 1.2, 700);
+    dyn.show(false);
+    boom.at(...S.dynTo); boom.show(true);
+    await boom.play(0, 9, 75, false); boom.show(false);
+    tnt.play(0, 6, 130);
+    await run(lan, S.lanHit, 0, 6, 420, "lrun");
+    const flee = Math.random() < 0.5;
+    if (flee) skRun(async () => { await run(tnt, [S.right[0], S.tntAt[1] + 0.6], 1, 6, 420); await run(tnt, S.right, 1, 6, 420);
+      await run(tnt, S.door, 1, 6, 420); tnt.show(false); });
+    await lan.play(0, 3, 110, false, "ldatk");
+    if (!flee) await die(tnt, 0);
+    await skSleep(st, 300);
+    await run(lan, S.lan, 0, 6, 520, "lrun");
+    lan.face(false); lan.play(0, 12, 110, true, "lidle");
+  };
+  const barrel = async () => {                  // бочка-камикадзе крадётся к башне — лучник поджигает её раньше
+    bar.at(...S.door); bar.frame(0, 4); bar.el.style.transition = "opacity 0.3s"; bar.show(true);
+    await skSleep(st, 400);
+    bar.play(4, 3, 160);
+    await run(bar, S.left, 4, 3, 900);
+    bar.play(4, 3, 160);
+    const go = run(bar, [S.lane, S.barY], 4, 3, 900);
+    await skSleep(st, Math.max(0, (S.left[1] - S.barY) * 900 - 900));
+    await shoot(S.barY);
+    await go;
+    await bar.play(5, 3, 150, false);           // фитиль загорелся
+    bar.show(false);
+    boom.at(bar.x, bar.y); boom.show(true);
+    await boom.play(0, 9, 75, false); boom.show(false);
+  };
+  const waves = [torches, dynamite, barrel];
+  let last = -1;
+  for (;;) {
+    await skWait(st, skRnd(2500, 6000));
+    let i = Math.floor(Math.random() * waves.length);
+    if (i === last) i = (i + 1) % waves.length;
+    last = i;
+    await waves[i]();
   }
 }
 // Лесоруб на карте: рубит дерево, оно падает в сторону от него, на месте остаётся пень и брёвна.
@@ -5541,6 +5698,7 @@ const SKIT_PLAN = {
   3: [
     { name: "золото из нижней шахты", fn: "haul", door: [6.2, 25.5], pile: [7.7, 25.5], ok: ["mine"] },
     { name: "золото из верхней шахты", fn: "haul", door: [9.6, 2.7], pile: [11.1, 2.7], ok: ["mine"] },
+    { name: "оборона золотой шахты", fn: "siege", ok: ["mine", "ghouse"] },
   ],
 };
 // что проверять у каждой сценки
@@ -5549,6 +5707,11 @@ const SKIT_GEOM = {
   tnt: (s) => ({ stand: [s.at], water: [s.to] }),
   archer: (s) => ({ stand: [s.at], paths: [[[s.run[0], s.at[1]], [s.run[1], s.at[1]]]] }),
   fight: (s) => ({ stand: [s.a, s.b], paths: [[s.a, s.awayA], [s.b, s.awayB]] }),
+  siege: () => { const S = SIEGE, up = [S.right[0], S.tntAt[1] + 0.6];
+    return { stand: [S.mine, ...S.stands, S.mount, [S.mount[0] - 0.9, S.mount[1]], [S.mount[0] + 0.9, S.mount[1]], S.tower, S.war, S.lan, S.monk,
+      S.door, S.left, S.right, S.duel, S.tntAt, S.dynTo, S.lanHit],
+      paths: [[S.mine, S.stands[0]], [S.mine, S.stands[1]], [S.left, [S.lane, S.shotY]], [S.right, S.duel], [S.right, up, S.tntAt], [S.lan, S.lanHit],
+        [S.lan, S.duel], [S.tower, [S.lane, S.shotY]]] }; },
   haul: (s) => { const t = haulStand(s); return { stand: [s.door, s.pile, [s.pile[0] - 0.7, s.pile[1]], [s.pile[0] + 0.7, s.pile[1]], [s.pile[0], s.pile[1] - 0.6], t], paths: [[s.door, t]] }; },
   lumber: (s) => { const [tx, ty] = s.tree, cut = [tx - s.d * 0.6, ty], logs = [tx + s.d * 0.6, ty + 0.05];
     return { stand: [s.tree, cut, logs, [tx + s.d * 1.4, ty], s.pile], paths: [[cut, logs], [cut, s.pile]] }; },
@@ -5561,6 +5724,7 @@ const SKIT_FN = {
   fight: (st, s) => skitGoldFight(st, s),
   scare: (st, s) => skitScare(st, s),
   haul: (st, s) => skitHaul(st, s),
+  siege: (st) => skitSiege(st, SIEGE),
   lumber: (st, s) => skitLumber(st, s),
 };
 // Запускаются, когда карта острова показана впервые
@@ -9483,7 +9647,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 65;
+const APP_VERSION = 66;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
