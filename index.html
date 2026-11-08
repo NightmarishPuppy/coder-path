@@ -5184,7 +5184,7 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   archer: [8, 7, 192], arrow: [1, 2, 64], dead: [7, 2, 128],
   pidle: [8, 1, 192], paxe: [6, 1, 192], phammer: [3, 1, 192], ppick: [6, 1, 192], prunpick: [6, 1, 192],
   monk: [6, 1, 192], heal: [11, 1, 192], healfx: [11, 1, 192], sheepb: [6, 1, 128],
-  prun: [6, 1, 192], prunaxe: [6, 1, 192], prunwood: [6, 1, 192], prungold: [6, 1, 192], wspawn: [7, 1, 128], gspawn: [7, 1, 128],
+  prun: [6, 1, 192], prunaxe: [6, 1, 192], prunwood: [6, 1, 192], prungold: [6, 1, 192], wspawn: [7, 1, 128], gheaphl: [6, 1, 128], gnug: [1, 1, 128],
   mtree: [8, 1, 192], stump3: [1, 1, 192] };
 let SK_ACTORS = [];
 let skLast = 0;
@@ -5331,31 +5331,35 @@ async function skitBarrel(st, [x, y]) {
     b.frame(0, 0);
   }
 }
-// Шахтёр (или лесоруб) носит добычу: выходит из двери с ношей, кладёт её в кучку (до трёх штук рядом),
-// бегом возвращается и скрывается в двери. В кучке старая добыча со временем пропадает — её «увезли».
-async function skitHaul(st, { door, pile, res }) {
-  const carry = res === "gspawn" ? "prungold" : "prunwood";
-  const p = skActor(st, carry, 0.8);
-  const spots = [[0, 0], [-0.35, 0.12], [0.3, 0.15]].map(([dx, dy]) => [pile[0] + dx, pile[1] + dy]);
-  const heap = spots.map(() => skActor(st, res, 0.55, 0.62));
-  let n = 0;
+// Шахтёр носит золото: выходит из шахты с самородком в руках, подбегает к большой куче золота,
+// бросает самородок на неё (по куче пробегает блик), бегом возвращается и скрывается в шахте.
+// Куча стоит всегда и не растёт: она такая большая, что новые самородки в ней просто теряются.
+const haulStand = ({ door, pile }) => [pile[0] + Math.sign(door[0] - pile[0]) * 0.85, pile[1]];
+async function skitHaul(st, { door, pile }) {
+  const heap = skActor(st, "gheaphl", 0.8, 0.75);           // сначала куча — житель и самородок поверх
+  heap.at(...pile); heap.show(true);
+  const p = skActor(st, "prungold", 0.8);
+  const nug = skActor(st, "gnug", 0.8, 0.585);
+  const stand = haulStand({ door, pile }), f = Math.sign(pile[0] - stand[0]);
   const go = async (to, sheet) => {
     p.face(to[0] < p.x); p.play(0, 6, 90, true, sheet);
     await p.move(to[0], to[1], Math.hypot(to[0] - p.x, to[1] - p.y) * 650);
   };
   for (;;) {
     await skWait(st, skRnd(3000, 7000));
-    p.at(...door); p.sheet(carry); p.show(true);              // вышел из шахты с ношей
+    p.at(...door); p.sheet("prungold"); p.show(true);         // вышел из шахты с самородком
     await sleep(300);
-    await go(pile, carry);
-    p.play(0, 8, 130, true, "pidle");
-    const h = heap[n % 3];
-    if (n >= 3) { h.show(false); await sleep(300); }        // самое старое уже увезли
-    h.at(...spots[n % 3]); h.show(true); h.play(0, 7, 80, false);
-    n++;
-    await sleep(600);
+    await go(stand, "prungold");
+    p.face(f < 0); p.play(0, 8, 130, true, "pidle");          // руки пустые: самородок полетел
+    nug.el.style.transition = "";
+    nug.at(p.x + f * 0.28, p.y - 0.14); nug.show(true);
+    await nug.arc(pile[0] - f * 0.1, pile[1] - 0.7, 0.45, 380);
+    nug.el.style.transition = "opacity 0.15s"; nug.show(false);
+    await heap.play(0, 6, 90, false);                         // блик по куче
+    heap.frame(0, 0);
+    await sleep(500);
     await go(door, "prun");
-    p.show(false);                                          // зашёл в шахту
+    p.show(false);                                            // зашёл в шахту
     await sleep(400);
   }
 }
@@ -5523,8 +5527,7 @@ const SKIT_PLAN = {
     // левое плато: шахтёр у золота внизу; гоблин приходит справа по нижнему краю,
     // шахтёр убегает вверх-влево, в угол плато
     // шахтёры выносят золото из шахт и складывают в кучку рядом, потом уходят обратно в шахту
-    { name: "золото из левой шахты", fn: "haul", door: [3.3, 21.0], pile: [2.4, 21.25], res: "gspawn", ok: ["mine"] },
-    { name: "золото из правой шахты", fn: "haul", door: [13.95, 20.35], pile: [15.4, 20.3], res: "gspawn", ok: ["mine"] },
+    { name: "золото из правой шахты", fn: "haul", door: [13.95, 20.35], pile: [15.45, 20.35], ok: ["mine"] },
     { name: "гоблин пугает шахтёра", fn: "scare", pawn: [3.0, 25.0], hide: [2.6, 23.3], gob: [7.5, 25.0], ok: ["goldsp4"] },
   ],
   2: [
@@ -5536,8 +5539,8 @@ const SKIT_PLAN = {
   ],
   // остров рудокопов: из шахт выносят золото
   3: [
-    { name: "золото из нижней шахты", fn: "haul", door: [6.2, 25.5], pile: [7.9, 25.9], res: "gspawn", ok: ["mine"] },
-    { name: "золото из верхней шахты", fn: "haul", door: [9.6, 2.7], pile: [11.0, 2.8], res: "gspawn", ok: ["mine"] },
+    { name: "золото из нижней шахты", fn: "haul", door: [6.2, 25.5], pile: [7.7, 25.5], ok: ["mine"] },
+    { name: "золото из верхней шахты", fn: "haul", door: [9.6, 2.7], pile: [11.1, 2.7], ok: ["mine"] },
   ],
 };
 // что проверять у каждой сценки
@@ -5546,7 +5549,7 @@ const SKIT_GEOM = {
   tnt: (s) => ({ stand: [s.at], water: [s.to] }),
   archer: (s) => ({ stand: [s.at], paths: [[[s.run[0], s.at[1]], [s.run[1], s.at[1]]]] }),
   fight: (s) => ({ stand: [s.a, s.b], paths: [[s.a, s.awayA], [s.b, s.awayB]] }),
-  haul: (s) => ({ stand: [s.door, s.pile], paths: [[s.door, s.pile]] }),
+  haul: (s) => { const t = haulStand(s); return { stand: [s.door, s.pile, [s.pile[0] - 0.7, s.pile[1]], [s.pile[0] + 0.7, s.pile[1]], [s.pile[0], s.pile[1] - 0.6], t], paths: [[s.door, t]] }; },
   lumber: (s) => { const [tx, ty] = s.tree, cut = [tx - s.d * 0.6, ty], logs = [tx + s.d * 0.6, ty + 0.05];
     return { stand: [s.tree, cut, logs, [tx + s.d * 1.4, ty], s.pile], paths: [[cut, logs], [cut, s.pile]] }; },
   scare: (s) => ({ stand: [s.pawn, s.hide, s.gob], paths: [[s.gob, [s.pawn[0] + 1.1, s.pawn[1]]], [s.pawn, s.hide]] }),
@@ -5711,13 +5714,13 @@ async function boardWoodcutter(st, c, dir, tov, out) {
   }
 }
 // Шахтёр в углу поля (Остров рудокопов) доводит дело до конца: бьёт киркой по золотой глыбе
-// в соседней клетке, глыба рассыпается самородком, он уносит его за край поля, возвращается
+// в соседней клетке, глыба рассыпается, остаётся самородок, он уносит его за край поля, возвращается
 // с киркой и отдыхает; тем временем в стене проступает новая глыба — и снова.
 async function boardMiner(st, c, dir, gov, out) {
   const home = [c.x + 0.5 + dir * 0.35, c.y + 0.92];          // кирка достаёт до глыбы
   const pick = [c.x + 0.5 + dir * 0.85, c.y + 0.92];          // у самородка
   const gone = [home[0] + out[0] * 1.6, home[1] + out[1] * 1.6];   // за краем поля
-  const p = skActor(st, "pidle", 0.75), g = skActor(st, "gspawn", 0.55, 0.62);
+  const p = skActor(st, "pidle", 0.75), g = skActor(st, "gnug", 0.75, 0.585);
   p.at(...home); p.face(dir < 0); p.show(true); p.play(0, 8, 130, true, "pidle");
   const run = async (to, sheet, cellMs = 650) => {
     p.face(to[0] < p.x || (to[0] === p.x && dir < 0)); p.play(0, 6, 90, true, sheet);
@@ -5737,7 +5740,7 @@ async function boardMiner(st, c, dir, gov, out) {
     p.play(0, 8, 130, true, "pidle");
     await gov.animate([{ opacity: 1, scale: "1" }, { opacity: 0, scale: "0.6" }], { duration: 380, fill: "forwards" }).finished;
     g.at(c.x + dir + 0.5, c.y + 0.9); g.face(dir < 0); g.show(true);
-    await g.play(0, 7, 80, false);
+    await g.el.animate([{ scale: "0.3" }, { scale: "1.15", offset: 0.6 }, { scale: "1" }], 300).finished;   // самородок выкатился
     await skWait(st, 600);
     // подбирает и уносит за край поля
     await run(pick, "prunpick", 900);
@@ -9480,7 +9483,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 64;
+const APP_VERSION = 65;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
