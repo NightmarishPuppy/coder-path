@@ -4325,11 +4325,11 @@ ISLE_MAPS[1] = {
     ["wrock1", 9.0, 18.2, 0.7],
     ["wrock4", 0.5, 17.6, 0.7],
     ["wrock3", 8.6, 21.0, 0.6],
-    ["goldsp4", 2.5, 24.6, 0.55],
+    ["goldsp4", 2.42, 25.08, 0.55],
     ["gold2", 7.0, 21.6, 0.6],
     ["rock3", 3.0, 20.5, 0.7],
     ["mush2", 6.4, 24.7, 0.8],
-    ["goldsp6", 15.4, 24.6, 0.45],
+    ["goldsp6", 14.98, 24.78, 0.45],
     ["rock1", 14.6, 23.5, 0.7],
     ["goldsp3", 10.9, 21.6, 0.55],
     ["mush3", 15.6, 22.6, 0.7],
@@ -4346,7 +4346,6 @@ ISLE_MAPS[1] = {
     ["rock2", 16.3, 13.0, 0.6],
     ["tower", 16.45, 13.6, 0.5],
     ["gwtower", 4.2, 13.7, 0.72],
-    ["goblin", 4.25, 12.564, 0.52, false, 13.71],
     ["gwtower", 10.4, 14.7, 0.66],
     ["goblin", 10.450000000000001, 13.658, 0.52, true, 14.71],
     ["gwtower", 14.7, 14.1, 0.72],
@@ -4367,6 +4366,7 @@ ISLE_MAPS[1] = {
   bank: [["cloud_d", 170, -48, 1.1], ["cloud_b", 520, -70, 1.15], ["cloud_a", 930, -40, 1.25], ["cloud_c", 1110, -30, 1]],
   clouds: [["sc_cloud1", 17, 6, 0.1], ["sc_cloud2", 38, 4.5, 0.6]],
   tm: "sc_tm",
+  clear: [],
 };
 // @@/isle1@@
 // @@isle2@@
@@ -5022,7 +5022,13 @@ function mapEngine(D) {
     const h = hAt(cx, cy);
     return onGround(x, y, h) ? h : -1;
   }
-  return { startMapScene, RH, RW, groundAt, roadAt, trees: mapTrees() };
+  // открытая вода в точке: низина без суши (мелкая сетка) и не под обрывом — там плавают утки
+  function waterAt(x, y) {
+    const cx = Math.floor(x), cy = Math.floor(y);
+    if (cx < 0 || cy < 0 || cx >= RW || cy >= RH) return true;          // за краем карты — море
+    return !hAt(cx, cy) && !faceAt(cx, cy) && !mapLand(Math.floor(x * 2), Math.floor(y * 2));
+  }
+  return { startMapScene, RH, RW, groundAt, roadAt, waterAt, trees: mapTrees() };
 }
 
 function showView(v) {
@@ -5237,7 +5243,7 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   prun: [6, 1, 192], prunaxe: [6, 1, 192], prunwood: [6, 1, 192], prungold: [6, 1, 192], wspawn: [7, 1, 128], gheaphl: [6, 1, 128], gnug: [1, 1, 128],
   gmount: [12, 1, 320], towerb: [1, 1, 256], towerbf: [1, 1, 256], arrowd: [1, 1, 64], arrowu: [1, 1, 64], archb: [8, 7, 192], kwar: [6, 8, 192],
   torchp: [7, 5, 192], lidle: [12, 1, 320], lrun: [6, 1, 320], ldatk: [3, 1, 320], lddef: [6, 1, 320],
-  lratk: [3, 1, 320], luatk: [3, 1, 320], ldratk: [3, 1, 320], luratk: [3, 1, 320], monkrun: [4, 1, 192],
+  lratk: [3, 1, 320], luatk: [3, 1, 320], ldratk: [3, 1, 320], luratk: [3, 1, 320], monkrun: [4, 1, 192], duck: [3, 1, 32], splash: [9, 1, 192],
   mtree: [8, 1, 192], stump3: [1, 1, 192] };
 let SK_ACTORS = [];
 let skLast = 0;
@@ -5353,6 +5359,68 @@ async function skitArcher(st, [ax, ay], [gx0, gx1]) {
     await sleep(1600);
     await dead.play(1, 7, 120, false);            // череп тает
     dead.show(false);
+  }
+}
+// Подрывник на вышке (первый остров, скала гоблинов) и утки: по протоке под скалой к вышке подплывают
+// утки — с левого или правого края карты, мимо камней в воде. Толстый гоблин с динамитом швыряет в них:
+// попал — взрыв, всплеск, утка тонет; промахнулся — утка в панике уплывает обратно. Подплывают новые.
+// Утка в наборе смотрит влево, поэтому отражаем её, когда плывёт вправо.
+async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
+  const ducks = [0, 1].map(() => ({ a: skActor(st, "duck", 1.4, 0.8), state: "off" }));
+  const tnt = skActor(st, "tnt", 0.9), dyn = skActor(st, "dyn", 1, 0.5);
+  const spl = skActor(st, "splash", 0.6, 0.5), boom = skActor(st, "boom", 0.9, 0.6);
+  tnt.at(tx, ty); tnt.show(true); tnt.play(0, 6, 130); tnt.face(true);
+  const E = ISLE_ENG[1];
+  const swim = (d, x, y, speed) => {
+    d.a.face(x > d.a.x); d.a.play(0, 3, speed > 1.2 ? 120 : 220);
+    return d.a.move(x, y, Math.abs(x - d.a.x) / speed * 1000);
+  };
+  // утка подплывает и ждёт у скалы
+  const sail = async (d) => {
+    const [[sx, sy], [x0, x1]] = lanes[Math.floor(Math.random() * lanes.length)];
+    d.state = "swim"; d.from = [sx, sy];
+    d.a.el.style.transition = "none"; d.a.at(sx, sy); void d.a.el.offsetWidth; d.a.show(true);
+    await swim(d, x0 + Math.random() * (x1 - x0), sy, 0.9);
+    if (d.state === "swim") { d.state = "wait"; d.a.play(0, 3, 300); }
+  };
+  const throwAt = async (d) => {
+    d.state = "target";
+    tnt.face(d.a.x < tx);
+    await skSleep(st, skRnd(300, 900));
+    tnt.play(2, 7, 90, false);
+    await skSleep(st, 380);
+    const hit = Math.random() < 0.78;
+    let bx = d.a.x, by = d.a.y;
+    if (!hit) { const ox = bx + (Math.random() < 0.5 ? -0.8 : 0.8); if (E.waterAt(ox, by)) bx = ox; }
+    dyn.el.style.transition = "none"; dyn.at(tx + (d.a.x < tx ? -0.45 : 0.45), ty - 1.1); void dyn.el.offsetWidth;
+    dyn.show(true); dyn.play(0, 6, 70);
+    await dyn.arc(bx, by - 0.1, 1.7, 760);
+    dyn.show(false);
+    tnt.play(0, 6, 130);
+    boom.at(bx, by - 0.1); boom.show(true); boom.play(0, 9, 75, false).then(() => boom.show(false));
+    spl.at(bx, by); spl.show(true); spl.play(0, 9, 90, false).then(() => spl.show(false));
+    if (bx === d.a.x) {                                         // попал — утка тонет
+      d.a.el.style.transition = "top 0.5s ease-in, opacity 0.5s";
+      d.a.at(d.a.x, d.a.y + 0.25); d.a.show(false);
+      await skSleep(st, 600);
+    } else {                                                     // мимо — уплывает обратно
+      await swim(d, d.from[0], d.from[1], 1.8);
+      d.a.show(false);
+    }
+    d.state = "off";
+  };
+  // утки приплывают по одной, иногда две сразу; гоблин кидает в ту, что уже ждёт
+  skRun(async () => {
+    for (;;) {
+      await skWait(st, skRnd(2500, 7000));
+      const d = ducks.find((v) => v.state === "off");
+      if (d) skRun(() => sail(d));
+    }
+  });
+  for (;;) {
+    await skWait(st, 300);
+    const d = ducks.find((v) => v.state === "wait");
+    if (d) await throwAt(d);
   }
 }
 // Гоблин-подрывник на берегу швыряет динамит в море — бабах в воде
@@ -5852,6 +5920,17 @@ function skProblems(n, spec) {
       }
     }
   }
+  const rocks = D.deco.filter((d) => d[0].startsWith("wrock"));
+  for (const [[x0, y0], [x1, y1]] of spec.swim || []) {
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    for (let t = 0; t <= len; t += 0.1) {
+      const x = x0 + (x1 - x0) * t / len, y = y0 + (y1 - y0) * t / len;
+      const why = [-0.3, 0, 0.3].some((dx) => !E.waterAt(x + dx, y) || !E.waterAt(x + dx, y - 0.25)) ? "не вода"
+        : rocks.some(([, rx, ry]) => Math.hypot(rx - x, (ry - y) * 1.3) < 0.55) ? "камень в воде"
+        : [-0.35, 0, 0.35].some((dx) => E.roadAt(Math.floor(x + dx), Math.floor(y)) !== ".") ? "мост" : "";
+      if (why) { out.push(`плывёт ${x0},${y0} → ${x1},${y1}: ${why} у ${x.toFixed(1)},${y.toFixed(1)}`); break; }
+    }
+  }
   for (const [x, y] of spec.water || []) if (E.groundAt(x, y) >= 0 || D.terr[Math.floor(y)]?.[Math.floor(x)] !== ".") out.push(`не в воде: ${x},${y}`);
   return out;
 }
@@ -5864,7 +5943,9 @@ function skStart(n, w, spec, fn) {
 const SKIT_PLAN = {
   1: [
     { name: "бочка-гоблин на лугу", fn: "barrel", at: [15.6, 47.9] },
-    { name: "подрывник на скале", fn: "tnt", at: [3.6, 12.6], to: [1.0, 16.2], left: true },
+    // подрывник на вышке скалы гоблинов кидает динамит в уток, которые подплывают по протоке под скалой
+    { name: "подрывник на вышке и утки", fn: "ducks", at: [4.25, 12.56],
+      lanes: [[[-0.6, 18.3], [2.0, 4.2]], [[18.6, 17.55], [6.5, 7.6]]] },   // мост через протоку — в клетке x 5, под ним не плавают
     // правое плато у шахты: два гоблина у кучки золота; проигравший убегает к краю плато
     { name: "драка за золото", fn: "fight", a: [11.6, 22.3], b: [13.4, 22.3], awayA: [10.4, 22.3], awayB: [16.3, 22.3], ok: ["gold2"] },
     // левое плато: шахтёр у золота внизу; гоблин приходит справа по нижнему краю,
@@ -5890,6 +5971,7 @@ const SKIT_PLAN = {
 // что проверять у каждой сценки
 const SKIT_GEOM = {
   barrel: (s) => ({ stand: [s.at] }),
+  ducks: (s) => ({ swim: s.lanes.map(([[x, y], [a, b]]) => [[x, y], [Math.abs(a - x) > Math.abs(b - x) ? a : b, y]]) }),
   tnt: (s) => ({ stand: [s.at], water: [s.to] }),
   archer: (s) => ({ stand: [s.at], paths: [[[s.run[0], s.at[1]], [s.run[1], s.at[1]]]] }),
   fight: (s) => ({ stand: [s.a, s.b], paths: [[s.a, s.awayA], [s.b, s.awayB]] }),
@@ -5908,6 +5990,7 @@ const SKIT_FN = {
   fight: (st, s) => skitGoldFight(st, s),
   scare: (st, s) => skitScare(st, s),
   haul: (st, s) => skitHaul(st, s),
+  ducks: (st, s) => skitDuckHunt(st, s),
   siege: (st) => skitSiege(st, SIEGE),
   lumber: (st, s) => skitLumber(st, s),
 };
@@ -9941,7 +10024,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 69;
+const APP_VERSION = 70;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
