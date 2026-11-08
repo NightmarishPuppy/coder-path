@@ -2372,7 +2372,8 @@ const LEVELS = [
     commands: ["moveRight", "moveDown", "moveUp"],
     ifs: ["wall"],
     par: 4, good: 5,
-    events: [{ at: [2, 1], kind: "shot", from: [3, 0] }, { at: [8, 2], kind: "heal", from: [7, 3] }],
+    events: [{ at: [4, 2], kind: "shot", from: [4, 3] }, { at: [4, 1], kind: "shot", from: [4, 0] },   // вариант 1 идёт по ряду 2, вариант 2 — по ряду 1
+      { at: [8, 2], kind: "heal", from: [7, 3] }],
     maps: [
       [
         "#########",
@@ -2404,7 +2405,8 @@ const LEVELS = [
     ifs: ["wall"],
     ifButton: true,
     par: 4, good: 5,
-    events: [{ at: [1, 3], kind: "shot", from: [1, 4] }, { at: [3, 3], kind: "heal", from: [3, 4] }, { at: [8, 2], kind: "shot", from: [7, 1] }],
+    events: [{ at: [1, 3], kind: "shot", from: [1, 4] }, { at: [3, 3], kind: "heal", from: [3, 4] },
+      { at: [6, 2], kind: "shot", from: [6, 1] }, { at: [6, 3], kind: "shot", from: [6, 4] }],   // вариант 1 идёт по ряду 2, вариант 2 — по ряду 3
     maps: [
       [
         "########E",
@@ -2436,7 +2438,8 @@ const LEVELS = [
     ifs: ["wall"],
     ifButton: true,
     par: 4, good: 5,
-    events: [{ at: [2, 3], kind: "shot", from: [2, 4] }, { at: [3, 3], kind: "heal", from: [4, 4] }, { at: [8, 2], kind: "shot", from: [7, 1] }],
+    events: [{ at: [1, 3], kind: "shot", from: [1, 4] }, { at: [3, 3], kind: "heal", from: [4, 4] },
+      { at: [6, 2], kind: "shot", from: [6, 1] }, { at: [6, 3], kind: "shot", from: [6, 4] }],
     maps: [
       [
         "########E",
@@ -2468,7 +2471,8 @@ const LEVELS = [
     ifs: ["wall"],
     ifButton: true,
     par: 4, good: 5,
-    events: [{ at: [2, 1], kind: "shot", from: [3, 0] }, { at: [8, 2], kind: "heal", from: [7, 3] }],
+    events: [{ at: [4, 2], kind: "shot", from: [4, 3] }, { at: [4, 1], kind: "shot", from: [4, 0] },   // вариант 1 идёт по ряду 2, вариант 2 — по ряду 1
+      { at: [8, 2], kind: "heal", from: [7, 3] }],
     maps: [
       [
         "#########",
@@ -5604,7 +5608,9 @@ function buildPlan(code) {
         if (it.type === "key") got.key = true; else got.coins++;
       }
       c.got.push({ ...got }); // что собрано после этого шага — для анимации
-      // Засада: наступил на клетку — из куста стреляет гоблин (минус сердечко, ответить нельзя)
+      // Засада: наступил на клетку — из куста стреляет гоблин (минус сердечко, ответить нельзя).
+      // Клетку засады ставить ПОСРЕДИ движения, не там, где кончается команда: там рыцарь
+      // останавливается (проверка «если», пауза между командами), и выглядит, будто ждёт динамит.
       // или выходит монах и лечит (плюс сердечко). Каждая срабатывает один раз.
       const ev = (L.events || []).find((e) => e.at[0] === pos.x && e.at[1] === pos.y && !firedEv.has(e));
       if (ev) {
@@ -6601,19 +6607,19 @@ async function playShot(ev) {
   g.face(bx > hero.x);
   g.at(bx + 0.5, by + 0.95); g.show(true);
   setStatus("Засада! Гоблин из кустов бросил динамит — ответить ему нельзя", "", "♥ −1");
-  await g.move(bx + 0.5, by + 0.62, 90 * k);
-  await g.play(2, 7, 30 * k, false, "tnt");
+  await g.move(bx + 0.5, by + 0.62, 40 * k);
+  await g.play(2, 7, 16 * k, false, "tnt");
   // куда падает: туда, где рыцарь сейчас, чуть вперёд по ходу и с небольшим разбросом
   const tx = hero.x + 0.5 + (Math.random() - 0.5) * 0.6, ty = hero.y + 0.8 + (Math.random() - 0.5) * 0.4;
   dyn.at(bx + 0.5, by + 0.25); dyn.show(true); dyn.play(0, 6, 40);
-  g.move(bx + 0.5, by + 0.95, 120 * k).then(() => g.el.remove());     // гоблин сразу прячется
-  await dyn.arc(tx, ty, 0.9, 260 * k);
+  g.move(bx + 0.5, by + 0.95, 80 * k).then(() => g.el.remove());     // гоблин сразу прячется
+  await dyn.arc(tx, ty, 0.9, 150 * k);
   dyn.el.remove();
   boom.at(tx, ty + 0.1); boom.show(true);
   sfx("ouch");
   heroEl.classList.remove("hurt"); void heroEl.offsetWidth; heroEl.classList.add("hurt");
   drawKnightHp(ev.hp, true);
-  await boom.play(0, 9, 40 * k, false);
+  await boom.play(0, 9, 32 * k, false);
   boom.el.remove();
 }
 // Монах выходит из кустов и лечит — рыцарь стоит, пока его лечат
@@ -8016,7 +8022,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 55;
+const APP_VERSION = 56;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
