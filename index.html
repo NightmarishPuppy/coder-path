@@ -6334,8 +6334,10 @@ async function knightFalls(why) {
 }
 
 // ===== 13. Запуск =====
+let shotPending = Promise.resolve();   // динамит из засады ещё летит (рыцарь при этом идёт дальше)
 async function run() {
   if (running) return;
+  shotPending = Promise.resolve();
   logEv("run", { code: oneLine(codeEl.value) });
   winBox.hidden = true;
   reset();
@@ -6458,16 +6460,23 @@ async function run() {
       if (items.length && doorLocked(before) && !doorLocked(now)) setTimeout(() => sfx("unlock"), 180);
       drawItems(now);
       walkedTotal++;
-      if (cmd.ev?.[s]) {
+      const ev = cmd.ev?.[s];
+      if (ev?.kind === "shot") {
+        // засада: гоблин бросает динамит на ходу — рыцарь не останавливается
+        shotPending = Promise.all([shotPending, playShot(ev)]);
+        if (p.dead?.by === "ambush" && p.dead.cmd === i && p.dead.step === s) { await shotPending; await knightFalls({ ambush: true }); return finish(); }
+      } else if (ev) {
+        // монах лечит — тут рыцарь останавливается: его лечат
+        await shotPending;
         heroEl.classList.remove("run");
-        await playEvent(cmd.ev[s]);
-        if (p.dead?.by === "ambush" && p.dead.cmd === i && p.dead.step === s) { await knightFalls({ ambush: true }); return finish(); }
+        await playHeal(ev);
         heroEl.classList.add("run");
       }
       await wait(240);
       drawTape(p, i, s + 1);
 
       if (p.reachedAt && p.reachedAt.cmd === i && p.reachedAt.step === s) {
+        await shotPending;
         exitCell.classList.add("open");
         drawRoute(p, p.commands.length);
         drawTape(p, p.commands.length);
@@ -6496,6 +6505,7 @@ async function run() {
     }
     await wait(120);
   }
+  await shotPending;
   await showChecks(p, p.commands.length);
   drawRoute(p, p.commands.length);
   drawTape(p, p.commands.length);
@@ -6582,41 +6592,48 @@ function setVariant(k, flash = true) {
 // Засада из кустов: гоблин-подрывник высовывается и бросает динамит в рыцаря;
 // монах выходит из кустов и лечит. Актёры — те же, что в сценках (лист кадров), на время события.
 const evStage = () => ({ layer: boardEl, before: null, unit: 100 / W, pos: (x, y) => [x / W * 100, y / H * 100], on: () => true, alive: () => true });
-async function playEvent(ev) {
-  const st = evStage(), [bx, by] = ev.from, left = bx > hero.x;
-  const pop = (a) => { a.el.classList.add("behind"); a.at(bx + 0.5, by + 0.95); a.show(true); return a.move(bx + 0.5, by + 0.62, 260 * SLOW / speed); };
-  const hide = async (a) => { await a.move(bx + 0.5, by + 0.95, 260 * SLOW / speed); a.el.remove(); };
-  if (ev.kind === "heal") {
-    const m = skActor(st, "monk", 0.75), fx = skActor(st, "healfx", 0.75);
-    m.face(left); m.play(0, 6, 150, true, "monk");
-    setStatus("Из кустов вышел монах — он лечит рыцаря!", "", "♥ +1");
-    await pop(m);
-    fx.at(hero.x + 0.5, hero.y + 0.95); fx.show(true); fx.play(0, 11, 70 * SLOW / speed, true, "healfx");
-    sfx("unlock");
-    await m.play(0, 11, 70 * SLOW / speed, false, "heal");
-    drawKnightHp(ev.hp);
-    fx.el.remove();
-    m.play(0, 6, 150, true, "monk");
-    await wait(200);
-    await hide(m);
-    return;
-  }
-  const g = skActor(st, "tnt", 0.85), dyn = skActor(st, "dyn", 0.9, 0.5), boom = skActor(st, "boom", 0.9, 0.6);
-  g.face(left); g.play(0, 6, 120, true, "tnt");
-  setStatus("Засада! Гоблин из кустов бросает динамит — ответить ему нельзя", "", "♥ −1");
-  await pop(g);
-  await g.play(2, 7, 70 * SLOW / speed, false);
-  dyn.at(bx + 0.5, by + 0.25); dyn.show(true); dyn.play(0, 6, 60);
-  await dyn.arc(hero.x + 0.5, hero.y + 0.7, 1.2, 520 * SLOW / speed);
+// Выстрел из засады — быстро и на ходу: гоблин выскакивает, швыряет динамит туда, где рыцарь
+// окажется через миг, и прячется. Взрыв большой — задевает рыцаря, даже если упал рядом.
+async function playShot(ev) {
+  const st = evStage(), [bx, by] = ev.from, k = SLOW / speed;
+  const g = skActor(st, "tnt", 0.85), dyn = skActor(st, "dyn", 0.9, 0.5), boom = skActor(st, "boom", 1.35, 0.62);
+  g.el.classList.add("behind");
+  g.face(bx > hero.x);
+  g.at(bx + 0.5, by + 0.95); g.show(true);
+  setStatus("Засада! Гоблин из кустов бросил динамит — ответить ему нельзя", "", "♥ −1");
+  await g.move(bx + 0.5, by + 0.62, 90 * k);
+  await g.play(2, 7, 30 * k, false, "tnt");
+  // куда падает: туда, где рыцарь сейчас, чуть вперёд по ходу и с небольшим разбросом
+  const tx = hero.x + 0.5 + (Math.random() - 0.5) * 0.6, ty = hero.y + 0.8 + (Math.random() - 0.5) * 0.4;
+  dyn.at(bx + 0.5, by + 0.25); dyn.show(true); dyn.play(0, 6, 40);
+  g.move(bx + 0.5, by + 0.95, 120 * k).then(() => g.el.remove());     // гоблин сразу прячется
+  await dyn.arc(tx, ty, 0.9, 260 * k);
   dyn.el.remove();
-  boom.at(hero.x + 0.5, hero.y + 0.9); boom.show(true);
+  boom.at(tx, ty + 0.1); boom.show(true);
   sfx("ouch");
   heroEl.classList.remove("hurt"); void heroEl.offsetWidth; heroEl.classList.add("hurt");
   drawKnightHp(ev.hp, true);
-  g.play(0, 6, 120, true, "tnt");
-  await boom.play(0, 9, 55 * SLOW / speed, false);
+  await boom.play(0, 9, 40 * k, false);
   boom.el.remove();
-  await hide(g);
+}
+// Монах выходит из кустов и лечит — рыцарь стоит, пока его лечат
+async function playHeal(ev) {
+  const st = evStage(), [bx, by] = ev.from, left = bx > hero.x, k = SLOW / speed;
+  const m = skActor(st, "monk", 0.75), fx = skActor(st, "healfx", 0.75);
+  m.el.classList.add("behind");
+  m.face(left); m.play(0, 6, 150, true, "monk");
+  setStatus("Из кустов вышел монах — он лечит рыцаря!", "", "♥ +1");
+  m.at(bx + 0.5, by + 0.95); m.show(true);
+  await m.move(bx + 0.5, by + 0.62, 260 * k);
+  fx.at(hero.x + 0.5, hero.y + 0.95); fx.show(true); fx.play(0, 11, 70 * k, true, "healfx");
+  sfx("unlock");
+  await m.play(0, 11, 70 * k, false, "heal");
+  drawKnightHp(ev.hp);
+  fx.el.remove();
+  m.play(0, 6, 150, true, "monk");
+  await wait(200);
+  await m.move(bx + 0.5, by + 0.95, 260 * k);
+  m.el.remove();
 }
 
 // Проверка условия во время запуска: подсвечиваем строку «если» и говорим ответ
@@ -7999,7 +8016,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 54;
+const APP_VERSION = 55;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
