@@ -951,6 +951,11 @@ html.still .mapring { animation: none; }
 .runner.idle { background-size: 800% 100%; animation: spr8 1s steps(8) infinite; }
 .runner.flip { transform: translate(-50%, -82%) scaleX(-1); }
 .curtain { position: fixed; inset: 0; z-index: 90; overflow: hidden; pointer-events: auto; }
+/* подземный ход между островами: чёрный экран, в нём коридор шахты */
+.tunnel { position: fixed; inset: 0; z-index: 91; background: #000; opacity: 0; transition: opacity 0.45s ease; pointer-events: auto; }
+.tunnel.on { opacity: 1; }
+.tunnel[hidden] { display: none; }
+.tunnel canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
 .curtain[hidden] { display: none; }
 .curtain .cfill { position: absolute; inset: 0; background: #f6f7e6; opacity: 0; transition: opacity 0.4s ease; }
 .curtain.closed .cfill { opacity: 1; transition: opacity 0.45s ease 0.5s; }
@@ -1294,6 +1299,11 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
     <svg class="isle-svg" viewBox="0 0 360 600" role="img" aria-label="Карта Острова условий с уровнями"></svg>
     <canvas class="map-clouds" aria-hidden="true"></canvas>
   </div>
+  <div class="mapwrap" data-isle="3" hidden>
+    <canvas class="map-canvas" aria-hidden="true"></canvas>
+    <svg class="isle-svg" viewBox="0 0 360 600" role="img" aria-label="Карта Острова рудокопов"></svg>
+    <canvas class="map-clouds" aria-hidden="true"></canvas>
+  </div>
   <p class="map-toast" id="map-toast" role="status"></p>
   <div class="howto">
     <b>Уже умеешь программировать?</b>
@@ -1304,6 +1314,7 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 
 <!-- Занавес из облаков для перехода между островами и всплывающая подсказка -->
 <div class="curtain" id="curtain" hidden aria-hidden="true"><div class="cfill"></div></div>
+<div class="tunnel" id="tunnel" hidden aria-hidden="true"><canvas></canvas></div>
 <p class="float-toast" id="float-toast" role="status" hidden></p>
 
 <!-- Окно «Настройки» (шестерёнка): код игрока, установка, обновления, звук, анимация -->
@@ -4024,7 +4035,6 @@ ISLE_MAPS[2] = {
   ],
   ramps: [],
   deco: [
-    ["build", 8.5, 4.9, 0.75],
     ["wrock1", 1.0, 26.5, 0.8],
     ["wrock3", 16.6, 25.2, 0.8],
     ["wrock2", 12.2, 28.4, 0.7],
@@ -4038,6 +4048,7 @@ ISLE_MAPS[2] = {
     ["sheepg", 10.6, 24.4, 0.42, true],
     ["sheep", 6.4, 11.8, 0.42, true],
     ["sheepg", 11.4, 11.7, 0.42],
+    ["monastery_y", 6.95, 4.7, 0.7],
   ],
   labels: [["ДЕРЕВНЯ", 80, 486], ["КУСТЫ", 112, 266], ["ПРОСЕКА", 80, 176], ["СВОИ И ЧУЖИЕ", 264, 136]],
   bank: [["cloud_b", 250, 1810, 1.1], ["cloud_a", 560, 1790, 1.3], ["cloud_c", 860, 1830, 1.0], ["cloud_d", 1080, 1820, 1.0]],
@@ -4045,6 +4056,160 @@ ISLE_MAPS[2] = {
   tm: "sc_tm3",
 };
 // @@/isle2@@
+// @@isle3@@
+ISLE_MAPS[3] = {
+  nodes: [],
+  rows: [
+    "....................................",
+    "....................................",
+    "....................................",
+    "..................ssssssss..........",
+    "...............ssssggggggss.........",
+    ".............sssggggggggggs.........",
+    "........ssssssggggggggggggss........",
+    "......sssggggggggggggggggggs........",
+    "......sggggggggggggggggggggss.......",
+    ".....ssgggggggggggggggggggggs.......",
+    ".....sggggggggggggggggggggggss......",
+    "....ssgggggggggggggggggggggggs......",
+    "....sggggggggggggggggggggggggss.....",
+    "...ssgggggggggggggggggggggggggs.....",
+    "...sggggggggggggggggggggggggggss....",
+    "...sgggggggggggggggggggggggggggss...",
+    "...sggggggggggggggggggggggggggggs...",
+    "...sggggggggggggggggggggggggggggss..",
+    "..ssgggggggggggggggggggggggggggggs..",
+    "..sggggggggggggggggggggggggggggggs..",
+    "..sggggggggggggggggggggggggggggggs..",
+    "..sggggggggggggggggggggggggggggggs..",
+    "..sggggggggggggggggggggggggggggggss.",
+    "..sgggggggggggggggggggggggggggggggs.",
+    "..sgggggggggggggggggggggggggggggggs.",
+    "..sgggggggggggggggggggggggggggggggss",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    ".ssggggggggggggggggggggggggggggggggs",
+    ".sgggggggggggggggggggggggggggggggggs",
+    ".sggggggggggggggggggggggggggggggggss",
+    ".ssgggggggggggggggggggggggggggggggs.",
+    "..sgggggggggggggggggggggggggggggggs.",
+    "..sggggggggggggggggggggggggggggggss.",
+    "..sggggggggggggggggggggggggggggggs..",
+    ".ssgggggggggggggggggggggggggggggss..",
+    ".ssgggggggggggggggggggggggggggggs...",
+    "..sgggggggggggggggggggggggggggggs...",
+    "..sgggggggggggggggggggggggggggggs...",
+    "..sggggggggggggggggggggggggggggss...",
+    "..sggggggggggggggggggggggggggggs....",
+    "..ssgggggggggggggggggggggggggggs....",
+    "...sggggggggggggggggggggggggggss....",
+    "...ssggggggggggggggggggggggggss.....",
+    "....ssggggggggggggggggggggggss......",
+    ".....ssggggggggggggggggggggss.......",
+    "......sssgggggggggggggggggss........",
+    "........ssgggggggggggggggss.........",
+    ".........ssgggggggggggggss..........",
+    "..........ssgggggggggggss...........",
+    "...........sssssssssssss............",
+    "..............ssss..sss.............",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+  ],
+  terr: [
+    "..................",
+    "......CCCCCC......",
+    "......CCCCCC......",
+    "....BBCCCCCCBB....",
+    "....BBBBBBBBBB....",
+    "....BBBBBBBBBB....",
+    "....BBBBBBBBBB....",
+    "..AABBBBBBBBBBAA..",
+    "..AAAAAAAAAAAAAA..",
+    "..AAAAAAAAAAAAAA..",
+    "..AAAAAAAAAAAAAA..",
+    "..AAAAAAAAAAAAAA..",
+    "..AAAAAAAAAAAAAA..",
+    "..AAAAAAAAAAAAAA..",
+    "..AAAAAAAAAAAAAA..",
+    "..AAAAAAAAAAAAAA..",
+    "..AAAAAAAAAAAAAA..",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  road: [
+    "..................",
+    "..................",
+    "........#.........",
+    "........#.........",
+    "........#.........",
+    "........#.........",
+    "........####......",
+    "...........#......",
+    "...........#......",
+    "......######......",
+    "......#...........",
+    "......#...........",
+    "......#######.....",
+    "............#.....",
+    "............#.....",
+    ".....########.....",
+    ".....#............",
+    ".....#............",
+    ".....#########....",
+    ".............#....",
+    ".............#....",
+    "....##########....",
+    "....#.............",
+    "....#.............",
+    "....######........",
+    ".........#........",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  ramps: [],
+  deco: [
+    ["mine", 9.5, 26.4, 0.9],
+    ["goldsp4", 6.6, 26.0, 0.55],
+    ["goldsp3", 12.4, 25.6, 0.5],
+    ["rock2", 2.6, 22.6, 0.7],
+    ["rock4", 14.4, 22.6, 0.6],
+    ["goldsp6", 3.0, 13.6, 0.5],
+    ["goldsp3", 14.0, 11.6, 0.5],
+    ["gold2", 9.0, 10.8, 0.6],
+    ["rock1", 4.6, 10.6, 0.55],
+    ["mine", 9.6, 2.5, 0.7],
+    ["goldsp4", 12.4, 4.9, 0.5],
+    ["rock3", 5.3, 5.6, 0.6],
+    ["wrock1", 1.0, 27.0, 0.8],
+    ["wrock3", 16.8, 25.0, 0.8],
+    ["wrock2", 13.6, 29.0, 0.7],
+    ["duck", 4.6, 29.0, 1.3],
+  ],
+  labels: [["СКОРО: НОВЫЕ УРОВНИ", 180, 402]],
+  bank: [],
+  clouds: [["sc_cloud1", 9, 5, 0.25]],
+  tm: "sc_tm5",
+};
+// @@/isle3@@
 
 function mapEngine(D) {
   const NODE_POS = D.nodes, MAP_ROWS = D.rows, TERR = D.terr, ROAD = D.road, RAMPS = D.ramps, MAP_DECO = D.deco, MAP_LABELS = D.labels;
@@ -4108,7 +4273,10 @@ function mapEngine(D) {
         : ["tree1", "tree2", "tree3", "tree4", "tree1", "tree3", "bush1", "tree2"][Math.floor(rnd() * 8)];
       out.push([kind, x, y, (kind.startsWith("bush") ? 0.7 : 0.52) + rnd() * 0.12, rnd() < 0.5]);
     }
-    return out;
+    // перед большими постройками (монастырь, шахта, дома) деревья не растут — иначе закрывают их;
+    // убираем уже после того, как все деревья расставлены, чтобы остальные остались на своих местах
+    const BIG = { monastery_y: 1.0, mine: 1.1, castle: 1.2, fortress: 1.2, house_y: 0.8, house_c: 0.8, tower_y: 0.6, build: 1.4, ghouse: 0.5 };
+    return out.filter(([, x, y]) => !MAP_DECO.some(([k, ox, oy]) => BIG[k] && Math.abs(x - ox) < BIG[k] + 0.5 && y > oy - 0.4 && y < oy + 1.7));
   }
 
   function startMapScene(canvas) {
@@ -4410,11 +4578,24 @@ function seeded(seed) {
 // ===== Острова на карте =====
 // Каждый остров — своя карта (свой .mapwrap) со своими уровнями. Острова соединяет мост:
 // с вершины первого — вверх в облака, на втором он приходит снизу.
-const ISLE_NAMES = { 1: "Остров программистов", 2: "Остров условий" };
-// Мосты: где кнопка (единицы карты), куда ведёт, в какую сторону рыцарь уходит с карты (-1 вверх, 1 вниз)
-const BRIDGES = { 1: { at: [290, 66], to: 2, dir: -1 }, 2: { at: [170, 516], to: 1, dir: 1 } };
-const LAST_LEVEL = () => LEVELS.filter((lv) => !lv.isle).at(-1);   // «Перевал»
-const bridgeOpen = () => save.dev || (save.stars[LAST_LEVEL().name] || 0) > 0;
+const ISLE_NAMES = { 1: "Остров программистов", 2: "Остров условий", 3: "Остров рудокопов" };
+// Переходы между островами (у острова их может быть несколько): где кнопка (единицы карты), куда ведёт.
+// bridge — мост за край карты (dir: -1 вверх, 1 вниз), за облаками; tunnel — дверь (монастырь, шахта),
+// за ней подземный ход.
+const GATES = {
+  1: [{ at: [290, 66], to: 2, kind: "bridge", dir: -1 }],
+  2: [{ at: [170, 516], to: 1, kind: "bridge", dir: 1 }, { at: [139, 104], to: 3, kind: "tunnel", place: "монастырь" }],
+  3: [{ at: [190, 540], to: 2, kind: "tunnel", place: "шахта" }],
+};
+const gateTo = (from, to) => GATES[from].find((g) => g.to === to);
+const LAST_OF = (n) => LEVELS.filter((lv) => (lv.isle || 1) === n).at(-1);
+const LAST_LEVEL = () => LAST_OF(1);   // «Перевал»
+// вперёд — после испытания последней главы острова; назад — всегда
+const gateOpen = (from, to) => save.dev || to < from || (save.stars[LAST_OF(from)?.name] || 0) > 0;
+const bridgeOpen = () => gateOpen(1, 2);
+const gateLockedText = (from) => from === 1 ? `Мост откроется после испытания «${LAST_OF(1).name}» у ворот крепости`
+  : `Монастырь откроется после испытания «${LAST_OF(from).name}»`;
+let arrivedFrom = 0;   // с какого острова пришли (рыцарь появится у этих ворот)
 const isleOf = (lv) => lv?.isle || 1;
 let curIsle = isleOf(LEVELS[indexOf(save.currentName)]);
 let islandRun = false;
@@ -4495,12 +4676,13 @@ function renderMap() {
     add(`</g>`);
   });
 
-  // Кнопка на мосту: со стрелкой туда, куда мост уходит с карты
-  {
-    const br = BRIDGES[curIsle], [bx, by] = br.at, ok = curIsle !== 1 || bridgeOpen(), S = 30, H = S * 94 / 88;
-    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="Мост на ${ISLE_NAMES[br.to]}${ok ? "" : ", закрыт"}">`);
+  // Кнопки переходов: на мосту — стрелка туда, куда мост уходит с карты; у двери (монастырь, шахта) — арка входа
+  for (const br of GATES[curIsle]) {
+    const [bx, by] = br.at, ok = gateOpen(curIsle, br.to), S = 30, H = S * 94 / 88;
+    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${br.kind === "tunnel" ? "Подземный ход" : "Мост"} на ${ISLE_NAMES[br.to]}${ok ? "" : ", закрыт"}">`);
     add(`<use class="ring" href="#im-btnb" x="${bx - S / 2}" y="${by - H / 2}" width="${S}" height="${H}" ${ok ? "" : 'filter="url(#f-gray)"'}/>`);
-    const d = br.dir < 0 ? `M${bx - 6} ${by + 1}l6-7 6 7M${bx} ${by - 5}v12` : `M${bx - 6} ${by - 3}l6 7 6-7M${bx} ${by - 9}v12`;
+    const d = br.kind === "tunnel" ? `M${bx - 6} ${by + 6}v-6a6 6 0 0 1 12 0v6M${bx - 8} ${by + 6}h16`
+      : br.dir < 0 ? `M${bx - 6} ${by + 1}l6-7 6 7M${bx} ${by - 5}v12` : `M${bx - 6} ${by - 3}l6 7 6-7M${bx} ${by - 9}v12`;
     if (ok) add(`<path d="${d}" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`);
     else add(`<use href="#im-lock" x="${bx - 7}" y="${by - 9}" width="14" height="15.6"/>`);
     add(`</g>`);
@@ -4508,10 +4690,16 @@ function renderMap() {
 
   // Рыцарь стоит у последнего уровня, где играли на этом острове.
   // Если играли на другом — у моста: на первом острове у «Перевала», на втором у первого уровня.
+  // Пришли с другого острова — у ближнего к этим воротам уровня (или у самих ворот, если уровней ещё нет).
   const cur = indexOf(save.currentName);
-  const here = cur >= 0 && isleOf(LEVELS[cur]) === curIsle ? cur
-    : curIsle === 1 ? (cur >= 0 ? indexOf(LAST_LEVEL().name) : suggested()) : mine[0][1];
-  const [hx, hy] = nodeOf(here);
+  let hx, hy;
+  if (cur >= 0 && isleOf(LEVELS[cur]) === curIsle) [hx, hy] = nodeOf(cur);
+  else if (curIsle === 1) [hx, hy] = nodeOf(cur >= 0 ? indexOf(LAST_LEVEL().name) : suggested());
+  else {
+    const g = GATES[curIsle].find((g) => g.to === arrivedFrom) || GATES[curIsle][0];
+    const pts = mine.map(([, i]) => nodeOf(i)).sort((a, b) => Math.hypot(a[0] - g.at[0], a[1] - g.at[1]) - Math.hypot(b[0] - g.at[0], b[1] - g.at[1]));
+    [hx, hy] = pts[0] || [g.at[0] + 22, g.at[1] + 4];
+  }
   add(`<use class="map-hero" href="#im-hero" x="${hx - 2}" y="${hy - 52}" width="44" height="44" aria-hidden="true"/>`);
 
   const svgEl = isleSvg();
@@ -4533,7 +4721,7 @@ function renderMap() {
     svgEl.after(d);
   }
   const total = mine.reduce((s, [lv]) => s + (save.stars[lv.name] || 0), 0);
-  $("map-progress").innerHTML = `Звёзд собрано: <b>${total}</b> из ${mine.length * 3}`;
+  $("map-progress").innerHTML = mine.length ? `Звёзд собрано: <b>${total}</b> из ${mine.length * 3}` : "Уровни этого острова скоро появятся";
   const all = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
   $("sync-move").hidden = !syncOn || all > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
@@ -4544,8 +4732,8 @@ function onMapTap(e) {
   const g = e.target.closest?.(".node");
   if (!g || islandRun) return;
   if (g.dataset.bridge) {
-    if (curIsle !== 1 || bridgeOpen()) startIslandRun(+g.dataset.bridge);
-    else floatToast(`Мост откроется после испытания «${LAST_LEVEL().name}» у ворот крепости`);
+    if (gateOpen(curIsle, +g.dataset.bridge)) startIslandRun(+g.dataset.bridge);
+    else floatToast(gateLockedText(curIsle));
     return;
   }
   const i = Number(g.dataset.i);
@@ -4922,6 +5110,11 @@ const SKIT_PLAN = {
     // лесоруб на лугу у деревни: рубит, дерево падает от него, брёвна несёт в поленницу
     { name: "лесоруб на лугу", fn: "lumber", tree: [5.6, 15.25], d: 1, pile: [3.9, 15.3] },
   ],
+  // остров рудокопов: из шахт выносят золото
+  3: [
+    { name: "золото из нижней шахты", fn: "haul", door: [9.5, 26.6], pile: [7.4, 26.0], res: "gspawn", ok: ["mine"] },
+    { name: "золото из верхней шахты", fn: "haul", door: [9.6, 2.7], pile: [11.0, 2.8], res: "gspawn", ok: ["mine"] },
+  ],
 };
 // что проверять у каждой сценки
 const SKIT_GEOM = {
@@ -4945,7 +5138,7 @@ const SKIT_FN = {
 };
 // Запускаются, когда карта острова показана впервые
 const SKITS = {};
-for (const n of [1, 2]) SKITS[n] = (w) => SKIT_PLAN[n].forEach((s) => skStart(n, w, { ...s, ...SKIT_GEOM[s.fn](s) }, SKIT_FN[s.fn]));
+for (const n of [1, 2, 3]) SKITS[n] = (w) => SKIT_PLAN[n].forEach((s) => skStart(n, w, { ...s, ...SKIT_GEOM[s.fn](s) }, SKIT_FN[s.fn]));
 
 // --- Сценки на поле уровня («в углах», как в CodeCombat) ---
 // Только мирные жители — монах, лесоруб, строитель, овечка: гоблин в углу поля можно принять
@@ -5175,35 +5368,36 @@ function runAlong(pts, near) {
 async function startIslandRun(to) {
   if (islandRun) return;
   islandRun = true;
-  const from = curIsle;
+  const from = curIsle, gA = gateTo(from, to), gB = gateTo(to, from);
   logEv("island", { from, to });
   hideCoach();
   $("float-toast").hidden = true;
   try {
     if ($("mapview").hidden) showView("map");
-    if (STILL) { curIsle = to; showView("map"); return; }
+    if (STILL) { arrivedFrom = from; curIsle = to; showView("map"); return; }
     buildCurtain().hidden = false;              // прозрачный занавес ловит нажатия, пока идёт сцена
-    // 1. Уход: от уровня, где стоит рыцарь, к мосту и за край карты
     const svgEl = isleSvg(), hero = svgEl.querySelector(".map-hero");
     const hx = +hero.getAttribute("x") + 2, hy = +hero.getAttribute("y") + 52;
     hero.setAttribute("visibility", "hidden");
-    svgEl.querySelector("[data-bridge]")?.setAttribute("visibility", "hidden");   // кнопка моста не мешает бегу
-    const brA = BRIDGES[from], VH = ISLE_MAPS[from].terr.length * 20;
-    const edgeA = brA.dir < 0 ? -50 : VH + 50;
-    const a = await runAlong([[hx, hy], [brA.at[0], hy], [brA.at[0], edgeA]],
-      (y) => (brA.dir < 0 ? y < 40 : y > VH - 40));
+    svgEl.querySelectorAll("[data-bridge]").forEach((b) => b.setAttribute("visibility", "hidden"));   // кнопки переходов не мешают бегу
+    if (gA.kind === "tunnel") return await tunnelRun(from, to, gA, gB, hx, hy);
+    // 1. Уход: от уровня, где стоит рыцарь, к мосту и за край карты
+    const VH = ISLE_MAPS[from].terr.length * 20;
+    const edgeA = gA.dir < 0 ? -50 : VH + 50;
+    const a = await runAlong([[hx, hy], [gA.at[0], hy], [gA.at[0], edgeA]],
+      (y) => (gA.dir < 0 ? y < 40 : y > VH - 40));
     await curtain(true);
     a.run.remove();
     // 2. За облаками — другой остров. Рыцарь появляется на мосту у края и идёт к ближнему уровню
-    curIsle = to;
+    arrivedFrom = from; curIsle = to;
     showView("map");
-    const brB = BRIDGES[to], VHB = ISLE_MAPS[to].terr.length * 20;
+    const VHB = ISLE_MAPS[to].terr.length * 20;
     const hB = isleSvg().querySelector(".map-hero");
     const tx = +hB.getAttribute("x") + 2, ty = +hB.getAttribute("y") + 52;
     hB.setAttribute("visibility", "hidden");
-    isleSvg().querySelector("[data-bridge]")?.setAttribute("visibility", "hidden");
-    const edgeB = brB.dir < 0 ? -50 : VHB + 50;
-    const arrive = runAlong([[brB.at[0], edgeB], [brB.at[0], ty], [tx, ty]]);
+    isleSvg().querySelectorAll("[data-bridge]").forEach((b) => b.setAttribute("visibility", "hidden"));
+    const edgeB = gB.dir < 0 ? -50 : VHB + 50;
+    const arrive = runAlong([[gB.at[0], edgeB], [gB.at[0], ty], [tx, ty]]);
     await sleep(200);
     await curtain(false);
     const b = await arrive;
@@ -5216,6 +5410,129 @@ async function startIslandRun(to) {
     $("curtain").classList.remove("closed");
     $("curtain").hidden = true;
   }
+}
+
+// Переход через дверь: рыцарь бежит к монастырю (шахте), из двери выходит монах (шахтёр) и зовёт внутрь;
+// экран гаснет — подземный ход: рыцарь с факелом бежит по коридору шахты; на другом острове
+// он выбегает из двери шахты (монастыря) к ближнему уровню.
+async function tunnelRun(from, to, gA, gB, hx, hy) {
+  const [dx, dy] = gA.at;
+  // 1. к двери: по дороге — сначала по горизонтали, потом вверх/вниз к двери
+  const a = await runAlong([[hx, hy], [hx, dy + 14], [dx, dy + 14], [dx, dy + 6]]);
+  await new Promise((r) => { const w = () => (a.run.dataset.done ? r() : setTimeout(w, 50)); w(); });
+  a.run.className = "runner idle"; a.run.style.backgroundImage = `url(${TS.kidle})`;
+  // встречающий: монах у монастыря, шахтёр у шахты
+  const st = mapStage(isleWrap(from));
+  const guide = skActor(st, gA.place === "шахта" ? "pidle" : "monk", 0.75);
+  guide.at(dx / 20 + 0.75, dy / 20 + 0.35); guide.face(true); guide.show(true);
+  guide.play(0, gA.place === "шахта" ? 8 : 6, 150, true);
+  sfx("unlock");
+  await sleep(900);
+  // заходят в дверь: становятся меньше и прозрачнее
+  guide.el.style.transition = "opacity 0.5s"; guide.show(false);
+  a.run.style.transition = "opacity 0.5s, transform 0.5s";
+  a.run.style.opacity = 0; a.run.style.transform = "translate(-50%, -90%) scale(0.7)";
+  await sleep(450);
+  // 2. подземный ход
+  const tn = $("tunnel");
+  tn.hidden = false;
+  await sleep(30);
+  tn.classList.add("on");
+  await sleep(480);
+  a.run.remove(); guide.el.remove();
+  arrivedFrom = from; curIsle = to;
+  showView("map");
+  const hB = isleSvg().querySelector(".map-hero");
+  const tx = +hB.getAttribute("x") + 2, ty = +hB.getAttribute("y") + 52;
+  hB.setAttribute("visibility", "hidden");
+  isleSvg().querySelectorAll("[data-bridge]").forEach((b) => b.setAttribute("visibility", "hidden"));
+  await tunnelScene(tn.querySelector("canvas"), to > from ? 1 : -1);
+  // 3. выход из двери на другом острове
+  const [ex, ey] = gB.at;
+  const wrap = isleWrap(), r = wrap.getBoundingClientRect(), VH = ISLE_MAPS[to].terr.length * 20;
+  scrollTo(0, Math.max(0, r.top + scrollY + ey * (r.height / VH) - innerHeight * 0.55));
+  const arrive = runAlong([[ex, ey + 6], [ex, ey + 14], [tx, ey + 14], [tx, ty]]);
+  arrive.then((b) => { b.run.style.opacity = 0; requestAnimationFrame(() => { b.run.style.transition = "opacity 0.5s"; b.run.style.opacity = 1; }); });
+  await sleep(150);
+  tn.classList.remove("on");
+  await sleep(500);
+  tn.hidden = true;
+  const b = await arrive;
+  await new Promise((r) => { const w = () => (b.run.dataset.done ? r() : setTimeout(w, 50)); w(); });
+  b.run.remove();
+  renderMap();
+  sfx("unlock");
+}
+
+// Коридор подземного хода на холсте: потолок и пол из камня пещеры, деревянные крепи шахты,
+// рыцарь бежит с факелом (вокруг него тёплый свет, дальше темнота), с потолка капает вода.
+// dir: 1 — бежит вправо, -1 — влево. ~3,6 с.
+function tunnelScene(cv, dir) {
+  const dpr = Math.min(2, devicePixelRatio || 1), Wd = innerWidth, Hd = innerHeight;
+  cv.width = Wd * dpr; cv.height = Hd * dpr;
+  const c = cv.getContext("2d");
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.imageSmoothingEnabled = false;
+  const elev = new Image(); elev.src = TS.elev;
+  const krun = new Image(); krun.src = TS.krun;
+  const T = 48;                                   // плитка камня на экране
+  const band = Math.min(Hd * 0.42, 300), top = (Hd - band) / 2, floorY = top + band;
+  const kx = Wd * (dir > 0 ? 0.36 : 0.64), kh = Math.min(band * 0.75, 170);
+  const drops = [];
+  const DUR = 3600;
+  return new Promise((res) => {
+    const t0 = performance.now();
+    let lastStep = 0, lastDrip = 0;
+    const frame = (t) => {
+      const e = t - t0, off = (e / 1000) * 230 * dir;   // насколько сдвинулся мир
+      c.fillStyle = "#07080b"; c.fillRect(0, 0, Wd, Hd);
+      // стены: потолок — лицевая сторона скалы, пол — верх камня
+      const sx = ((-off % T) + T) % T - T;
+      for (let x = sx; x < Wd + T; x += T) {
+        for (let y = top - T * 2; y < top; y += T) c.drawImage(elev, 64, 128 + 64, 64, 64, x, y, T, T);
+        for (let y = floorY; y < floorY + T * 2; y += T) c.drawImage(elev, 64, 64, 64, 64, x, y, T, T);
+      }
+      // задняя стена коридора — тёмная кладка
+      c.fillStyle = "#14161c"; c.fillRect(0, top, Wd, band);
+      for (let x = sx; x < Wd + T; x += T) for (let y = top; y < floorY; y += T / 2) {
+        c.fillStyle = (Math.floor((x - sx) / T) + Math.floor((y - top) / (T / 2))) % 2 ? "#191c24" : "#1d212a";
+        c.fillRect(x + ((y - top) / (T / 2) % 2 ? T / 2 : 0), y, T - 2, T / 2 - 2);
+      }
+      // деревянные крепи каждые 5 плиток
+      const P = T * 5, ps = ((-off % P) + P) % P - P;
+      for (let x = ps; x < Wd + P; x += P) {
+        c.fillStyle = "#5a3a1e"; c.fillRect(x, top, 12, band); c.fillRect(x + T * 2, top, 12, band);
+        c.fillStyle = "#7a5230"; c.fillRect(x + 2, top, 4, band); c.fillRect(x + T * 2 + 2, top, 4, band);
+        c.fillStyle = "#6b4526"; c.fillRect(x - 6, top, T * 2 + 24, 14);
+        c.fillStyle = "#3a2513"; c.fillRect(x - 6, top + 12, T * 2 + 24, 3);
+      }
+      // капли с потолка
+      if (t - lastDrip > 380) { lastDrip = t; drops.push({ x: Math.random() * Wd, y: top + 4, v: 0 }); }
+      c.fillStyle = "#8fd3ff";
+      for (const d of drops) { d.v += 0.5; d.y += d.v; d.x -= 230 / 60 * dir; c.fillRect(d.x, d.y, 2, 5); }
+      while (drops.length && drops[0].y > floorY) { drops.shift(); if (Math.random() < 0.3) sfx("drip"); }
+      // рыцарь бежит (лист krun: кадры в ряд)
+      const n = TS_INFO.krun, fw = krun.width / n, f = Math.floor(e / 80) % n;
+      c.save(); c.translate(kx, floorY - kh * 0.86);
+      if (dir < 0) c.scale(-1, 1);
+      if (krun.complete) c.drawImage(krun, f * fw, 0, fw, krun.height, -kh / 2, 0, kh, kh);
+      // факел в руке
+      const fl = 0.85 + Math.sin(e / 60) * 0.1 + Math.random() * 0.05;
+      c.fillStyle = "#6b4526"; c.fillRect(kh * 0.18, kh * 0.36, 5, kh * 0.22);
+      c.fillStyle = `rgba(255,190,80,${fl})`; c.beginPath(); c.arc(kh * 0.2, kh * 0.33, 7 * fl, 0, 7); c.fill();
+      c.fillStyle = "rgba(255,240,180,0.9)"; c.beginPath(); c.arc(kh * 0.2, kh * 0.34, 3.5, 0, 7); c.fill();
+      c.restore();
+      if (t - lastStep > 300) { lastStep = t; sfx("step"); }
+      // свет факела: вокруг рыцаря тепло, дальше темнота
+      const lx = kx + kh * 0.2 * dir, ly = floorY - kh * 0.55, R = Math.max(Wd, Hd) * (0.38 + Math.sin(e / 90) * 0.01);
+      const g = c.createRadialGradient(lx, ly, 10, lx, ly, R);
+      g.addColorStop(0, "rgba(255,170,60,0.10)"); g.addColorStop(0.35, "rgba(0,0,0,0.25)"); g.addColorStop(1, "rgba(0,0,0,0.96)");
+      c.fillStyle = g; c.fillRect(0, 0, Wd, Hd);
+      if (e < DUR) requestAnimationFrame(frame); else res();
+    };
+    const go = () => requestAnimationFrame(frame);
+    Promise.all([elev, krun].map((im) => im.decode ? im.decode().catch(() => {}) : 0)).then(go);
+  });
 }
 
 function starsHtml(n) {
@@ -7038,8 +7355,9 @@ function win() {
   let note = `В коде ${written} ${plural(written, "команда", "команды", "команд")}.`;
   note += stars < 3 ? ` Для ★★★ нужно не больше ${L.par}.` : " Идеально!";
   const nextCh = CHAPTERS[L.chapter + 1];
-  const lastOfIsle = L.name === LAST_LEVEL().name;
-  if (lastOfIsle) note += " Ты прошёл весь остров! От крепости открылся мост к новому острову.";
+  const myIsle = L.isle || 1, lastOfIsle = L.name === LAST_OF(myIsle)?.name && !!gateTo(myIsle, myIsle + 1);
+  if (lastOfIsle) note += myIsle === 1 ? " Ты прошёл весь остров! От крепости открылся мост к новому острову."
+    : " Ты прошёл весь остров! Монастырь открыт: из него подземный ход ведёт на новый остров.";
   else if (wasChapterLocked && nextCh && chapterOpen(L.chapter + 1)) note += ` Открыта новая глава: ${nextCh.name}!`;
   else if (L.challenge && nextCh?.soon) note += ` Глава «${nextCh.name}» скоро появится.`;
   $("win-isle").hidden = !lastOfIsle;
@@ -7561,7 +7879,7 @@ document.querySelectorAll("#mapview .isle-svg").forEach((el) => {
 });
 $("to-map").addEventListener("click", () => { if (!running) showView("map"); });
 $("win-map").addEventListener("click", () => showView("map"));
-$("win-isle").addEventListener("click", () => { winBox.hidden = true; curIsle = 1; showView("map"); startIslandRun(2); });
+$("win-isle").addEventListener("click", () => { winBox.hidden = true; const n = L.isle || 1; curIsle = n; showView("map"); startIslandRun(n + 1); });
 
 // ===== 18. Музыка и звуки =====
 // Все звуки синтезируются прямо в браузере (Web Audio), файлов нет.
@@ -7704,6 +8022,7 @@ function noise({ dur = 0.05, vol = 0.5, freq = 1200, at = 0 } = {}) {
 
 let stepFoot = 0;
 const SFX = {
+  drip()   { const f = 1100 + Math.random() * 500; note(f, { dur: 0.18, vol: 0.18, type: "sine", slideTo: f * 0.55 }); },
   step()   { noise({ dur: 0.06, vol: 0.45, freq: stepFoot++ % 2 ? 900 : 700 }); note(stepFoot % 2 ? 150 : 130, { dur: 0.05, vol: 0.35 }); },
   coin()   { note(988, { dur: 0.08, type: "square", vol: 0.35 }); note(1319, { dur: 0.22, type: "square", vol: 0.35, at: 0.07 }); },
   key()    { [660, 880, 1175, 1568].forEach((f, i) => note(f, { dur: 0.14, vol: 0.5, at: i * 0.06 })); },
@@ -8528,7 +8847,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 59;
+const APP_VERSION = 60;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
