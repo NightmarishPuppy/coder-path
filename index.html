@@ -6883,6 +6883,7 @@ function buildBoard() {
         en.insertAdjacentHTML("beforeend", `<div class="hp">${"<i class=on></i>".repeat(hp)}</div>`);
         cell.appendChild(en);
         enemies.push({ x, y, hp, el: en });
+        if (hp < 5 && actx) soundBuf("goblin-attack.mp3");        // заранее, к первому замаху
       }
       if (ch === "E") {
         exitPos = { x, y };
@@ -8445,6 +8446,7 @@ async function playStrikes(list) {
     const dir = st.dy > 0 ? "down" : st.dy < 0 ? "up" : "side";
     e.el.classList.toggle("face-r", st.dx > 0);
     e.el.classList.add("atk-" + dir);
+    if (!e.el.classList.contains("big")) sfx("gobatk");          // гоблин рычит на замахе (чёрный рыцарь — нет)
     heroEl.classList.remove("run", "atk");
     heroEl.classList.add("guard");
     if (st.dx) heroEl.classList.toggle("flip", st.dx > 0); // рыцарь поворачивается к гоблину
@@ -9417,6 +9419,15 @@ const SFX = {
   // мимо: только свист воздуха
   swish()  { noise({ dur: 0.12, vol: 0.35, freq: 1800 }); },
   // гоблин исчез облачком: смешное "пуф" вверх
+  // гоблин замахивается: рычание (запись, Pixabay, daviddumaisaudio — «small monster attack»)
+  gobatk() {
+    const buf = soundBuf("goblin-attack.mp3");
+    if (!buf) return;
+    const s = actx.createBufferSource(), g = actx.createGain();
+    s.buffer = buf; s.playbackRate.value = 0.95 + Math.random() * 0.12;   // каждый раз чуть по-разному
+    g.gain.value = 0.55;
+    s.connect(g).connect(sfxBus); s.start();
+  },
   poof()   { note(392, { dur: 0.1, vol: 0.35, slideTo: 784 }); note(988, { dur: 0.25, vol: 0.25, at: 0.1 }); noise({ dur: 0.15, vol: 0.3, freq: 700, at: 0.02 }); },
 };
 
@@ -10292,7 +10303,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 79;
+const APP_VERSION = 80;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
