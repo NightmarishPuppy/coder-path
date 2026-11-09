@@ -5624,6 +5624,20 @@ function mapEngine(D) {
     }
     // Пена прибоя вокруг всего твёрдого: низины и террас
     const solid = (x, y) => fineSolid(x, y);
+    // Рябь на открытой воде (версия 94, пользователь: море шумит, а вода стоит неподвижно).
+    // Короткие светлые чёрточки-гребешки, по две одна под другой, как пиксельная волна:
+    // каждая медленно появляется, чуть сдвигается вбок и тает, у каждой своя фаза.
+    // Только на открытой воде подальше от берега (там пена прибоя). Места — с зерном, всегда одни и те же.
+    const ripples = [];
+    {
+      const rnd = seeded(23), ok = (x, y) => [[0, 0], [-0.55, 0], [0.75, 0], [0, -0.4], [0, 0.45]].every(([dx, dy]) => waterAt(x + dx, y + dy));
+      for (let k = 0; k < RW * RH * 8 && ripples.length < 700; k++) {
+        const x = 0.4 + rnd() * (RW - 0.8), y = 0.4 + rnd() * (RH - 0.8);
+        if (!ok(x, y) || ripples.some((r) => Math.abs(r.x - x) < 1.0 && Math.abs(r.y - y) < 0.5)) continue;
+        ripples.push({ x, y, len: 22 + Math.floor(rnd() * 22), ph: rnd() * 6.283, per: 2400 + rnd() * 2400, dr: rnd() < 0.5 ? -1 : 1 });
+      }
+    }
+    const RIPPLE = "#a8e2da";
     const shore = [];
     for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
       if (!solid(x, y)) continue;
@@ -5667,6 +5681,18 @@ function mapEngine(D) {
       ctx.setTransform(1, 0, 0, 1, 0, -top);     // рисуем в координатах всей карты
       ctx.fillStyle = TS_INFO.water;
       ctx.fillRect(0, top, canvas.width, bh);
+      ctx.fillStyle = RIPPLE;
+      for (const r of ripples) {
+        const py = Math.round(r.y * OU);
+        if (py < top - 10 || py > bot + 10) continue;
+        const a = Math.sin(r.ph + t / r.per * 6.283);
+        if (a <= 0.1) continue;
+        ctx.globalAlpha = Math.min(0.75, (a - 0.1) * 1.0);
+        const px = Math.round(r.x * OU + r.dr * Math.sin(r.ph + t / (r.per * 1.6)) * 9), L = r.len, s2 = Math.round(L * 0.55);
+        ctx.fillRect(px, py, L, 4);                                   // гребешок
+        ctx.fillRect(px + Math.round(L * 0.3), py + 8, s2, 4);        // и под ним короче
+      }
+      ctx.globalAlpha = 1;
       const ff = Math.floor(t / Math.max(85, MAP_STEP()));   // пена — тоже по порядку кадров
       ctx.imageSmoothingEnabled = true;          // пена в половину размера
       for (const [x, y, ph] of shore) {
@@ -11699,7 +11725,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 93;
+const APP_VERSION = 94;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
