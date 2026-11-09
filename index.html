@@ -7655,7 +7655,7 @@ function buildBoard() {
         en.insertAdjacentHTML("beforeend", `<div class="hp">${"<i class=on></i>".repeat(hp)}</div>`);
         cell.appendChild(en);
         enemies.push({ x, y, hp, el: en });
-        if (hp < 5 && actx) { soundBuf("goblin-attack.mp3"); soundBuf("goblin-death.mp3"); }   // заранее
+        if (hp < 5 && actx) { soundBuf("goblin-attack.mp3"); soundBuf("goblin-death.mp3"); soundBuf("sword-hit.mp3"); }   // заранее
       }
       if (ch === "E") {
         exitPos = { x, y };
@@ -10741,7 +10741,15 @@ const SFX = {
   // молоток по доске: мягкий деревянный «тук»
   knock()  { noise({ dur: 0.05, vol: 0.3, freq: 650 }); note(210, { dur: 0.07, vol: 0.22, slideTo: 170 }); },
   // удар мечом: свист и звонкий "дзынь" по щиту
-  hit()    { noise({ dur: 0.08, vol: 0.5, freq: 2600 }); note(740, { dur: 0.12, type: "square", vol: 0.22, at: 0.05 }); note(1110, { dur: 0.2, vol: 0.3, at: 0.06 }); },
+  // (запись, Pixabay, звук 476148 «sword slash»; пока не скачалась — прежний синтезированный «дзынь»)
+  hit()    {
+    const buf = soundBuf("sword-hit.mp3");
+    if (!buf) { noise({ dur: 0.08, vol: 0.5, freq: 2600 }); note(740, { dur: 0.12, type: "square", vol: 0.22, at: 0.05 }); note(1110, { dur: 0.2, vol: 0.3, at: 0.06 }); return; }
+    const s = actx.createBufferSource(), g = actx.createGain();
+    s.buffer = buf; s.playbackRate.value = 0.94 + Math.random() * 0.12;   // каждый удар чуть по-разному
+    g.gain.value = 0.55;
+    s.connect(g).connect(sfxBus); s.start();
+  },
   // гоблин попал по щиту рыцаря: глухой "тунк"
   ouch()   { noise({ dur: 0.07, vol: 0.55, freq: 500 }); note(196, { dur: 0.16, vol: 0.45, slideTo: 150 }); },
   // рыцарь упал: три ноты вниз, грустно, но не страшно
@@ -11643,7 +11651,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 87;
+const APP_VERSION = 88;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
