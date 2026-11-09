@@ -1769,8 +1769,13 @@ function defNames(code) {
   for (const l of code.split("\n")) { const m = l.match(DEF_LINE); if (m) out.push(m[1] || m[2]); }
   return out;
 }
-// вызов приёма (не его заголовок): stair() — но не def stair() / function stair()
-const callRe = (names, flags = "") => new RegExp(`(?<!(?:def|function)\\s+)\\b(${names.join("|")})\\s*\\(\\s*\\)`, flags);
+// Ищем имя приёма со скобками, а заголовок (def stair() / function stair()) отсекаем, глядя на текст перед ним.
+// (Раньше это делало «заглядывание назад» (?<!…) в регулярном выражении, но Safari до 16.4 его не понимает.)
+function replaceCalls(text, names, fn) {
+  return text.replace(new RegExp(`\\b(${names.join("|")})\\s*\\(\\s*\\)`, "g"),
+    (m, nm, at, all) => /(?:def|function)\s+$/.test(all.slice(0, at)) ? m : fn(nm));
+}
+function countCalls(text, names) { let n = 0; if (names.length) replaceCalls(text, names, () => (n++, "")); return n; }
 // плитки внутри приёма (только прямые, без рамок)
 function defBody(code, name) {
   const d = parseBlocks(code).find((it) => it.def === name);
@@ -3485,26 +3490,29 @@ const LEVELS = [
   },
   // ===== Остров мастеров, глава «Мастерская»: свои приёмы (функции) =====
   // funcs — на уровне есть свои приёмы: розовая рамка «🧩 приём» (def / function) и кнопка-вызов в палитре.
-  // Вызов приёма — одна команда; шаги внутри приёма считаются один раз (поэтому приём выгоднее).
+  // Версия 96: на всех полях между ступеньками есть ровная дорожка в РАЗНЫХ местах. Поэтому цикл
+  // «повторять» здесь не проходит (он упирается в стену), а приём нужен по делу: одна и та же ступенька
+  // в разных местах пути. (В версии 87 поля были ровными лестницами — их проходил цикл из двух команд.)
   {
     name: "Готовый приём",
     chapter: 13,
     isle: 4,
     funcs: true,
     newFn: true,
-    goal: "Новое: свой приём! В розовой рамке [[fnhead]] лежат два шага одной ступеньки. Розовая кнопка [[fnbtn]] делает весь приём сразу. Ступенек четыре, а приём пока позван один раз. Нажми [[fnbtn]] ещё 3 раза.",
+    codeRev: 2,
+    goal: "Нажми [[fnbtn]] 2 раза. Это свой приём: розовая кнопка делает сразу оба шага из рамки [[fnhead]] — целую ступеньку.",
     commands: ["moveRight", "moveUp"],
     par: 6, good: 7,
     map: [
+      "#########",
       "########E",
       "######.C.",
-      "####...##",
-      "##.C.####",
+      "##..C..##",
       "S..######",
     ],
     starter: {
-      py: "def stair():\n    move_right(2)\n    move_up()\n\nstair()\n",
-      js: "function stair() {\n  moveRight(2);\n  moveUp();\n}\n\nstair();\n",
+      py: "def stair():\n    move_right(2)\n    move_up()\n\nstair()\nmove_right(2)\n",
+      js: "function stair() {\n  moveRight(2);\n  moveUp();\n}\n\nstair();\nmoveRight(2);\n",
     },
   },
   {
@@ -3512,16 +3520,17 @@ const LEVELS = [
     chapter: 13,
     isle: 4,
     funcs: true,
+    codeRev: 2,
     after: "Готовый приём",
-    goal: "Приём «ступенька вниз» уже собран, но его ещё ни разу не позвали. Посчитай ступеньки и нажми розовую кнопку [[fnbtn]] столько же раз.",
+    goal: "Собери путь: [[fnbtn]] — ступенька, [[btn:moveRight]] и [[num:2]] — дорожка. Приём уже готов, а программа пустая.",
     commands: ["moveRight", "moveDown"],
     par: 6, good: 7,
     map: [
       "S..######",
       "##.C.####",
-      "####...##",
-      "######.C.",
+      "####...C.",
       "########E",
+      "#########",
     ],
     starter: {
       py: "def stair():\n    move_right(2)\n    move_down()\n",
@@ -3534,20 +3543,21 @@ const LEVELS = [
     isle: 4,
     funcs: true,
     bug: true,
+    codeRev: 2,
     after: "Вниз по приёму",
-    goal: "Найди ошибку: ступеньки широкие, в две клетки, а в приёме шаг вправо на одну. Поправь приём — и все четыре вызова станут правильными сразу. Нажми на плитку [[tile:moveRight:1]] в розовой рамке и цифру [[num:2]].",
+    goal: "Нажми на [[tile:moveRight:1]] в розовой рамке и на [[num:2]]. Ступеньки широкие, а в приёме шаг на одну клетку: поправишь приём — исправятся все три.",
     commands: ["moveRight", "moveDown"],
     par: 6, good: 7,
     map: [
       "S.C######",
-      "##...####",
-      "####.C.##",
-      "######...",
+      "##.....##",
+      "######.C.",
       "########E",
+      "#########",
     ],
     starter: {
-      py: "def stair():\n    move_right()\n    move_down()\n\nstair()\nstair()\nstair()\nstair()\n",
-      js: "function stair() {\n  moveRight();\n  moveDown();\n}\n\nstair();\nstair();\nstair();\nstair();\n",
+      py: "def stair():\n    move_right()\n    move_down()\n\nstair()\nmove_right(2)\nstair()\nstair()\n",
+      js: "function stair() {\n  moveRight();\n  moveDown();\n}\n\nstair();\nmoveRight(2);\nstair();\nstair();\n",
     },
   },
   {
@@ -3555,20 +3565,21 @@ const LEVELS = [
     chapter: 13,
     isle: 4,
     funcs: true,
+    codeRev: 2,
     after: "Кривой приём",
-    goal: "Приём позван четыре раза, но рамка приёма пустая — рыцарь не знает, что делать. Ступенька здесь узкая: шаг вправо и шаг вверх. Нажми на рамку [[fnhead]], потом кнопки [[btn:moveRight]] и [[btn:moveUp]].",
+    goal: "Нажми [[fnhead]], потом [[btn:moveRight]] и [[btn:moveUp]]. Рамка приёма пустая — рыцарь не знает, что такое ступенька.",
     commands: ["moveRight", "moveUp"],
     par: 7, good: 8,
     map: [
-      "####..C.E",
-      "###..####",
-      "##..#####",
-      "#.C######",
+      "########E",
+      "#######.C",
+      "##..C...#",
+      "#..######",
       "S.#######",
     ],
     starter: {
-      py: "def climb():\n\nclimb()\nclimb()\nclimb()\nclimb()\nmove_right(4)\n",
-      js: "function climb() {\n}\n\nclimb();\nclimb();\nclimb();\nclimb();\nmoveRight(4);\n",
+      py: "def climb():\n\nclimb()\nclimb()\nmove_right(4)\nclimb()\nclimb()\n",
+      js: "function climb() {\n}\n\nclimb();\nclimb();\nmoveRight(4);\nclimb();\nclimb();\n",
     },
   },
   {
@@ -3578,15 +3589,16 @@ const LEVELS = [
     funcs: true,
     challenge: true,
     requireFn: true,
-    goal: "Испытание: рамка приёма пустая, и позвать его тоже нужно самому. Ступенька здесь такая: сначала шаг вниз, потом два вправо. Собери приём и позови его столько раз, сколько ступенек.",
+    codeRev: 2,
+    goal: "Испытание: собери приём «ступенька» — вниз и два вправо. Потом [[tool:done]] и собери путь.",
     commands: ["moveRight", "moveDown"],
-    par: 6, good: 7,
+    par: 7, good: 8,
     map: [
       "S########",
       ".C.######",
-      "##...####",
-      "####.C.##",
-      "######..E",
+      "##.....##",
+      "######.CE",
+      "#########",
     ],
     starter: {
       py: "def stairs():\n",
@@ -7941,7 +7953,7 @@ $("undo-cmd").addEventListener("click", () => {
     const name = selText.match(DEF_LINE).slice(1).find(Boolean), fr = findFrames(codeEl.value).find((f) => f.start === selLine);
     editLines((lines) => {
       lines.splice(fr.start - 1, fr.end - fr.start + 1);
-      for (let j = lines.length - 1; j >= 0; j--) if (callRe([name]).test(lines[j]) && !DEF_LINE.test(lines[j])) lines.splice(j, 1);
+      for (let j = lines.length - 1; j >= 0; j--) if (countCalls(lines[j], [name])) lines.splice(j, 1);
       selLine = null;
     });
   } else if (selLine && lang === "py" && /^\s*(while|for|if|elif|else)\b.*:\s*$/.test(selText)) {
@@ -7986,6 +7998,9 @@ $("redo-cmd").addEventListener("click", () => {
 
 function setLastNumber(n) {
   const text = codeEl.value;
+  // последняя плитка — вызов приёма: у него числа нет. Раньше цифра молча меняла другую плитку (в приёме или выше).
+  const lastLine = text.replace(/\s+$/, "").split("\n").pop() || "";
+  if (countCalls(lastLine, defNames(text))) return;
   const re = new RegExp(`\\b(${ANY_NAME})\\s*\\(\\s*\\d*\\s*\\)`, "g");
   let last = null, m;
   while ((m = re.exec(text))) last = m;
@@ -8426,10 +8441,10 @@ function instrument(code) {
   const condRe = new RegExp(`\\b(${COND_ANY})\\s*\\(`, "g");
   // вызов своего приёма stair() → __call(5, stair): запоминаем, с какой строки позвали приём
   // (при запуске подсвечивается и плитка-вызов, и шаг внутри приёма)
-  const fns = defNames(code), fnRe = fns.length ? callRe(fns, "g") : null;
+  const fns = defNames(code);
   return code
     .split("\n")
-    .map((line, i) => (fnRe ? line.replace(fnRe, `__call(${i + 1}, $1)`) : line)
+    .map((line, i) => (fns.length ? replaceCalls(line, fns, (nm) => `__call(${i + 1}, ${nm})`) : line)
       .replace(cmdRe, `$1(${i + 1}, `)
       .replace(condRe, `$1(${i + 1}, `)
       .replace(/\b(while|for)\s*\(([^\n]*)\)\s*\{/, (m) => `${m} __loop(${i + 1});`))
@@ -8446,7 +8461,7 @@ function stripComments(code) {
 // Вызов своего приёма — тоже одна команда, а шаги внутри приёма считаются один раз
 function countWrittenCommands(code) {
   const c = stripComments(code), fns = defNames(c);
-  return (c.match(new RegExp(`\\b(${ANY_NAME})\\s*\\(`, "g")) || []).length + (fns.length ? (c.match(callRe(fns, "g")) || []).length : 0);
+  return (c.match(new RegExp(`\\b(${ANY_NAME})\\s*\\(`, "g")) || []).length + countCalls(c, fns);
 }
 
 // ===== 10. План маршрута (считаем "в уме", без анимации) =====
@@ -8684,11 +8699,11 @@ function highlightLine(line) {
 // Задания, которые в тексте ссылаются на код, для режима блоков пересказаны плитками
 const BLOCK_GOALS = {
   // Остров мастеров: свои приёмы
-  "Готовый приём": "Новое: свой приём! В розовой рамке [[fnhead]] лежат два шага одной ступеньки. Розовая кнопка [[fnbtn]] делает весь приём сразу. Ступенек четыре, а плитка-приём пока одна. Нажми [[fnbtn]] ещё 3 раза.",
-  "Вниз по приёму": "Приём «ступенька вниз» уже собран, но плиток-приёмов ещё нет. Посчитай ступеньки и нажми розовую кнопку [[fnbtn]] столько же раз.",
-  "Кривой приём": "Найди ошибку: ступеньки широкие, в две клетки, а в приёме шаг вправо на одну. Поправь приём — и все четыре плитки-приёма станут правильными сразу. Нажми на плитку [[tile:moveRight:1]] в розовой рамке и цифру [[num:2]].",
-  "Сам собери приём": "Плиток-приёмов четыре, но рамка приёма пустая — рыцарь не знает, что делать. Ступенька узкая: шаг вправо и шаг вверх. Нажми на рамку [[fnhead]], потом кнопки [[btn:moveRight]] и [[btn:moveUp]].",
-  "Мастерская: испытание": "Испытание: рамка приёма пустая, плиток-приёмов нет. Ступенька такая: сначала шаг вниз, потом два вправо. Подсказка: [[fnhead]], [[btn:moveDown]], [[btn:moveRight]], потом нажми на новую плитку [[tile:moveRight:1]] и [[num:2]], [[tool:done]] — и розовую кнопку столько раз, сколько ступенек.",
+  "Готовый приём": "Нажми [[fnbtn]] 2 раза. Это свой приём: розовая кнопка делает сразу оба шага из рамки [[fnhead]] — целую ступеньку.",
+  "Вниз по приёму": "Собери путь: [[fnbtn]] — ступенька, [[btn:moveRight]] и [[num:2]] — дорожка. Приём уже готов, а программа пустая.",
+  "Кривой приём": "Нажми на [[tile:moveRight:1]] в розовой рамке и на [[num:2]]. Ступеньки широкие, а в приёме шаг на одну клетку: поправишь приём — исправятся все три.",
+  "Сам собери приём": "Нажми [[fnhead]], потом [[btn:moveRight]] и [[btn:moveUp]]. Рамка приёма пустая — рыцарь не знает, что такое ступенька.",
+  "Мастерская: испытание": "Испытание: собери приём «ступенька» — вниз и два вправо. Потом [[tool:done]] и собери путь.",
   // Остров рудокопов: длинные карты, «если» внутри цикла
   "Ступеньки вверх": "Новое: длинная карта! Она не влезает в экран, поэтому показана частями [[pages]] — это <b>одна</b> карта, а не варианты. Полистай её кнопками или проведи пальцем по полю. В цикле 🔁 пустая рамка «если»: она проверяет на каждом круге. Нажми на неё [[ifhead]], потом кнопку [[btn:moveUp]].",
   "Ступеньки вниз": "Шахта уходит вниз. Полистай карту [[pages]], потом нажми на рамку [[ifhead]] и кнопку [[btn:moveDown]].",
@@ -10077,7 +10092,7 @@ function win() {
   // испытание главы приёмов: нужен свой приём — не пустой и позванный хотя бы раз
   if (L.requireFn) {
     const c = stripComments(codeEl.value), fns = defNames(c).filter((nm) => defBody(c, nm).length);
-    if (!fns.length || !callRe(fns).test(c)) {
+    if (!fns.length || !countCalls(c, fns)) {
       setStatus("Рыцарь дошёл, но в этом испытании нужен свой приём: собери шаги ступеньки в розовой рамке и позови приём розовой кнопкой", "fail");
       return;
     }
@@ -11736,7 +11751,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 95;
+const APP_VERSION = 96;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
