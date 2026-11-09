@@ -23,6 +23,7 @@
   --torch: #f2a541;   /* по горизонтали */
   --frost: #6fa8ff;   /* по вертикали */
   --loop: #b993f2;    /* циклы */
+  --fn: #ff6ad5;      /* свои приёмы (функции) */
   --sword: #f0907a;   /* удар */
   --num: #8fd6a4;     /* числа в коде */
   /* Карта острова */
@@ -822,13 +823,49 @@ html.still .tile.err { animation: none; }
   font-size: 13px; line-height: 1; color: #ffd54a; text-shadow: 0 1px 0 #000; animation: tile-arrow 1s ease-in-out infinite; }
 html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: none; box-shadow: 0 0 0 4px #ffd54a99; }
 .chips .chip.ifchip { border: 2px solid #5fd3a6; color: #5fd3a6; font-weight: 700; }
+/* Свой приём (функция): розовая рамка с заголовком «🧩 приём»; вызов — розовая плитка с маленькой картинкой того,
+   что внутри приёма (те же стрелки). Кнопка вызова в палитре выглядит так же, как плитка. */
+.bdef {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 6px; border: 2px solid var(--fn); border-radius: 12px; background: #ff6ad514; flex-basis: 100%;
+}
+.bdef > .dhead {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 10px;
+  border: 0; border-radius: 8px; background: var(--fn); color: #2a0d24; font-weight: 700; font-size: 15px; cursor: pointer;
+}
+.bdef.err { border-style: dashed; border-color: var(--bad); background: var(--bad-bg); }
+.bdef > .dhead.sel {
+  background: #ffd54a !important; color: #241a08 !important;
+  transform: translateY(-3px) scale(1.08); z-index: 2; animation: tile-sel 1s ease-in-out infinite;
+}
+.bdef > .dhead.sel::after { content: "▼"; position: absolute; top: -17px; left: 50%; translate: -50% 0;
+  font-size: 13px; line-height: 1; color: #ffd54a; text-shadow: 0 1px 0 #000; animation: tile-arrow 1s ease-in-out infinite; }
+html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation: none; box-shadow: 0 0 0 4px #ffd54a99; }
+.bdef .lempty.slot { display: inline-block; flex: none; width: 56px; height: 48px; padding: 0; border: 2px dashed var(--fn); border-radius: 10px; opacity: 0.75; }
+@media (max-width: 819px) { #levelview.blk .bdef .lempty.slot { height: 42px; } }
+/* плитка-вызов компактная: четыре вызова помещаются в один ряд даже на узком телефоне */
+.tile.fn { border-color: var(--fn); background: #ff6ad51c; gap: 2px; min-width: 0; padding: 0 5px; }
+.tile.fn .pz { font-size: 15px; }
+.tile.fn .fnmini { font-size: 14px; gap: 2px; }
+.fnmini { display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-display); font-size: 15px; line-height: 1; }
+.fnmini .m.h { color: var(--torch); } .fnmini .m.v { color: var(--frost); } .fnmini .m.a { color: var(--sword); }
+.tile.sel .fnmini .m { color: #241a08 !important; }
+.chips .chip.fnchip { border: 2px solid var(--fn); color: var(--fn); font-weight: 700; background: #ff6ad514; }
+#levelview.blk .chips .chip.fnchip { flex: 0 0 auto; padding: 0 10px; font-size: 20px !important; gap: 6px; display: inline-flex; align-items: center; justify-content: center; }
+#levelview.blk .chips .chip.fnchip .fnmini { font-size: 16px; }
+.tk-fn { color: var(--fn); }
+#goal .fnref { display: inline-flex; align-items: center; gap: 4px; height: 1.55em; padding: 0 0.45em; border: 2px solid var(--fn); border-radius: 6px;
+  background: #ff6ad514; color: var(--fn); font-weight: 700; font-size: 0.95em; line-height: 1; white-space: nowrap; vertical-align: middle; }
+#goal .fnref .fnmini { font-size: 0.9em; }
+#goal .fnheadref { display: inline-flex; align-items: center; height: 1.55em; padding: 0 0.5em; border-radius: 6px; background: var(--fn); color: #2a0d24;
+  font-weight: 700; font-size: 0.92em; line-height: 1; white-space: nowrap; vertical-align: middle; }
 #levelview.blk .chips .chip.ifchip { flex: 0 0 auto; padding: 0 10px; font-size: 15px !important; border-color: #5fd3a6; color: #5fd3a6; }
 /* палитра: крупные стрелки */
 #levelview.blk .chips .chip:not(.num) { font-family: var(--font-display); font-size: 26px; min-width: 64px; height: 56px; padding: 0 14px; border-style: solid; border-width: 2px; }
 #levelview.blk .chips .chip.num { height: 44px; font-size: 18px; }
 #levelview.blk .chips .chip.loopchip { font-size: 15px; }
 /* ряды кнопок ровные: стрелки и цифры делят ширину поровну, «повторять» — в ряду стрелок */
-#levelview.blk .chips .chip:not(.num):not(.loopchip):not(.ifchip) { flex: 1 1 0; min-width: 44px; padding: 0 4px; }
+#levelview.blk .chips .chip:not(.num):not(.loopchip):not(.ifchip):not(.fnchip) { flex: 1 1 0; min-width: 44px; padding: 0 4px; }
 #levelview.blk .chips .chip.loopchip { flex: 0 0 auto; padding: 0 10px; font-size: 15px !important; }
 #levelview.blk .chips .chip.num { flex: 1 1 0; min-width: 0; padding: 0; }
 @media (max-width: 819px) {
@@ -931,7 +968,7 @@ html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: n
 .chipref.h { color: var(--torch); } .chipref.v { color: var(--frost); } .chipref.a { color: var(--sword); } .chipref.g { color: #5fd3a6; } .chipref.l { color: #ff8fb3; }
 .chipref.big { font-family: var(--font-display); font-size: 1.1em; padding: 0 9px; }
 /* картинки кнопок и плиток в тексте задания — ростом со строку текста; строки чуть реже, чтобы картинки не касались соседних */
-#goal:has(.tileref, .chipref, .numref, .ifref, .toolref, .ifbtnref, .elsebtnref, .elseref) { line-height: 1.85; }
+#goal:has(.tileref, .chipref, .numref, .ifref, .toolref, .ifbtnref, .elsebtnref, .elseref, .fnref, .fnheadref) { line-height: 1.85; }
 #goal .elsebtnref { display: inline-flex; align-items: center; height: 1.55em; padding: 0 0.6em; border-radius: 999px; background: #3a3e4c; color: #e6e8f0;
   font-size: 0.92em; line-height: 1; white-space: nowrap; vertical-align: middle; }
 #goal .elseref { display: inline-flex; align-items: center; height: 1.55em; padding: 0 0.5em; border-radius: 6px; background: #2c6b55; color: #e9fff6;
@@ -1024,6 +1061,10 @@ html.still .mapclouds img.bank { animation: none; }
 html.still .mapring { animation: none; }
 /* --- Мост между островами --- */
 /* рыцарь бежит по мосту: полоска кадров «бежит», под слоем облаков — уходит в них */
+/* мост с острова 3 на остров 4: доски из набора (Bridge_All, ряд 0: начало, середина, конец) поверх карты */
+.isle-bridge i { position: absolute; background-repeat: no-repeat; background-size: 300% 400%; image-rendering: pixelated;
+  transform-origin: 100% 50%; transition: transform 0.18s ease-out; }
+.isle-bridge i.off { transform: scaleX(0); }
 .runner { position: absolute; z-index: 1; width: 12.2%; aspect-ratio: 1; transform: translate(-50%, -82%); background-repeat: no-repeat;
   background-size: 600% 100%; image-rendering: pixelated; pointer-events: none; animation: spr6 0.6s steps(6) infinite; }
 .runner.idle { background-size: 800% 100%; animation: spr8 1s steps(8) infinite; }
@@ -1423,6 +1464,11 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
     <svg class="isle-svg" viewBox="0 0 360 600" role="img" aria-label="Карта Острова рудокопов"></svg>
     <canvas class="map-clouds" aria-hidden="true"></canvas>
   </div>
+  <div class="mapwrap" data-isle="4" hidden>
+    <canvas class="map-canvas" aria-hidden="true"></canvas>
+    <svg class="isle-svg" viewBox="0 0 360 600" role="img" aria-label="Карта Острова мастеров"></svg>
+    <canvas class="map-clouds" aria-hidden="true"></canvas>
+  </div>
   <p class="map-toast" id="map-toast" role="status"></p>
   <div class="howto">
     <b>Уже умеешь программировать?</b>
@@ -1715,6 +1761,30 @@ const DIRS = {
 const ALL_COMMANDS = Object.keys(DIRS);
 const PY_NAMES = ALL_COMMANDS.map((c) => DIRS[c].py);
 const ANY_NAME = [...ALL_COMMANDS, ...PY_NAMES].join("|");      // для поиска в тексте
+// Свои приёмы (функции): def stair(): в Python, function stair() { в JavaScript.
+// Тело приёма — строки со сдвигом под ним; вызов — stair() отдельной строкой.
+const DEF_LINE = /^\s*(?:def\s+([A-Za-z_]\w*)\s*\(\s*\)\s*:|function\s+([A-Za-z_]\w*)\s*\(\s*\)\s*\{)\s*(?:#.*|\/\/.*)?$/;
+function defNames(code) {
+  const out = [];
+  for (const l of code.split("\n")) { const m = l.match(DEF_LINE); if (m) out.push(m[1] || m[2]); }
+  return out;
+}
+// вызов приёма (не его заголовок): stair() — но не def stair() / function stair()
+const callRe = (names, flags = "") => new RegExp(`(?<!(?:def|function)\\s+)\\b(${names.join("|")})\\s*\\(\\s*\\)`, flags);
+// плитки внутри приёма (только прямые, без рамок)
+function defBody(code, name) {
+  const d = parseBlocks(code).find((it) => it.def === name);
+  return d ? d.body : [];
+}
+// маленькая картинка приёма — его стрелки подряд: на плитке-вызове и на кнопке в палитре
+function fnMini(code, name) {
+  const body = defBody(code, name).filter((t) => t.name);
+  if (!body.length) return "";
+  return `<span class="fnmini" aria-hidden="true">${body.map((t) => {
+    const d = DIRS[ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name)];
+    return `<span class="m ${d.axis}">${d.arrow}${t.n > 1 ? t.n : ""}</span>`;
+  }).join("")}</span>`;
+}
 const PY_TO_JS = Object.fromEntries(ALL_COMMANDS.map((c) => [DIRS[c].py, c]));
 const MAX_STEPS = 10;
 
@@ -1763,6 +1833,8 @@ const CHAPTERS = [
   { name: "Кривые штольни", topic: "«если… иначе»", isle: 3 },
   { name: "Арена", topic: "бой по своей программе", isle: 3 },
   { name: "Битва", topic: "бой вместе с союзниками", isle: 3 },
+  // Четвёртый остров (isle: 4) — Остров мастеров, свои приёмы (функции)
+  { name: "Мастерская", topic: "свои приёмы", isle: 4 },
 ];
 
 // Уровни по порядку на карте.
@@ -3411,6 +3483,116 @@ const LEVELS = [
     map: ["S........", ".........", ".........", ".........", "........."],
     starter: { py: "", js: "" },
   },
+  // ===== Остров мастеров, глава «Мастерская»: свои приёмы (функции) =====
+  // funcs — на уровне есть свои приёмы: розовая рамка «🧩 приём» (def / function) и кнопка-вызов в палитре.
+  // Вызов приёма — одна команда; шаги внутри приёма считаются один раз (поэтому приём выгоднее).
+  {
+    name: "Готовый приём",
+    chapter: 13,
+    isle: 4,
+    funcs: true,
+    newFn: true,
+    goal: "Новое: свой приём! В розовой рамке [[fnhead]] лежат два шага одной ступеньки. Розовая кнопка [[fnbtn]] делает весь приём сразу. Ступенек четыре, а приём пока позван один раз. Нажми [[fnbtn]] ещё 3 раза.",
+    commands: ["moveRight", "moveUp"],
+    par: 6, good: 7,
+    map: [
+      "########E",
+      "######.C.",
+      "####...##",
+      "##.C.####",
+      "S..######",
+    ],
+    starter: {
+      py: "def stair():\n    move_right(2)\n    move_up()\n\nstair()\n",
+      js: "function stair() {\n  moveRight(2);\n  moveUp();\n}\n\nstair();\n",
+    },
+  },
+  {
+    name: "Вниз по приёму",
+    chapter: 13,
+    isle: 4,
+    funcs: true,
+    after: "Готовый приём",
+    goal: "Приём «ступенька вниз» уже собран, но его ещё ни разу не позвали. Посчитай ступеньки и нажми розовую кнопку [[fnbtn]] столько же раз.",
+    commands: ["moveRight", "moveDown"],
+    par: 6, good: 7,
+    map: [
+      "S..######",
+      "##.C.####",
+      "####...##",
+      "######.C.",
+      "########E",
+    ],
+    starter: {
+      py: "def stair():\n    move_right(2)\n    move_down()\n",
+      js: "function stair() {\n  moveRight(2);\n  moveDown();\n}\n",
+    },
+  },
+  {
+    name: "Кривой приём",
+    chapter: 13,
+    isle: 4,
+    funcs: true,
+    bug: true,
+    after: "Вниз по приёму",
+    goal: "Найди ошибку: ступеньки широкие, в две клетки, а в приёме шаг вправо на одну. Поправь приём — и все четыре вызова станут правильными сразу. Нажми на плитку [[tile:moveRight:1]] в розовой рамке и цифру [[num:2]].",
+    commands: ["moveRight", "moveDown"],
+    par: 6, good: 7,
+    map: [
+      "S.C######",
+      "##...####",
+      "####.C.##",
+      "######...",
+      "########E",
+    ],
+    starter: {
+      py: "def stair():\n    move_right()\n    move_down()\n\nstair()\nstair()\nstair()\nstair()\n",
+      js: "function stair() {\n  moveRight();\n  moveDown();\n}\n\nstair();\nstair();\nstair();\nstair();\n",
+    },
+  },
+  {
+    name: "Сам собери приём",
+    chapter: 13,
+    isle: 4,
+    funcs: true,
+    after: "Кривой приём",
+    goal: "Приём позван четыре раза, но рамка приёма пустая — рыцарь не знает, что делать. Ступенька здесь узкая: шаг вправо и шаг вверх. Нажми на рамку [[fnhead]], потом кнопки [[btn:moveRight]] и [[btn:moveUp]].",
+    commands: ["moveRight", "moveUp"],
+    par: 7, good: 8,
+    map: [
+      "####..C.E",
+      "###..####",
+      "##..#####",
+      "#.C######",
+      "S.#######",
+    ],
+    starter: {
+      py: "def climb():\n\nclimb()\nclimb()\nclimb()\nclimb()\nmove_right(4)\n",
+      js: "function climb() {\n}\n\nclimb();\nclimb();\nclimb();\nclimb();\nmoveRight(4);\n",
+    },
+  },
+  {
+    name: "Мастерская: испытание",
+    chapter: 13,
+    isle: 4,
+    funcs: true,
+    challenge: true,
+    requireFn: true,
+    goal: "Испытание: рамка приёма пустая, и позвать его тоже нужно самому. Ступенька здесь такая: сначала шаг вниз, потом два вправо. Собери приём и позови его столько раз, сколько ступенек.",
+    commands: ["moveRight", "moveDown"],
+    par: 6, good: 7,
+    map: [
+      "S########",
+      ".C.######",
+      "##...####",
+      "####.C.##",
+      "######..E",
+    ],
+    starter: {
+      py: "def stairs():\n",
+      js: "function stairs() {\n}\n",
+    },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -3430,7 +3612,11 @@ function btnRefs(html) {
     .replace(/\[\[ifbtn\]\]/g, () => `<span class="ifbtnref">${uiBlocks ? "❓ если" : "? если"}</span>`)
     // [[elsebtn]] — кнопка «＋ иначе» серой панели выбранной строки; [[elsehead]] — заголовок половины «иначе» в рамке
     .replace(/\[\[elsebtn\]\]/g, () => `<span class="elsebtnref">＋ иначе</span>`)
-    .replace(/\[\[elsehead\]\]/g, () => `<span class="elseref">иначе</span>`);
+    .replace(/\[\[elsehead\]\]/g, () => `<span class="elseref">иначе</span>`)
+    // [[fnbtn]] — розовая кнопка своего приёма (с картинкой того, что в нём), [[fnhead]] — заголовок рамки приёма
+    .replace(/\[\[fnbtn\]\]/g, () => { const nm = defNames(codeEl?.value || L?.starter?.[lang] || "")[0];
+      return `<span class="fnref">🧩${!nm ? "" : uiBlocks ? fnMini(codeEl.value, nm) : " " + nm + "()"}</span>`; })
+    .replace(/\[\[fnhead\]\]/g, () => `<span class="fnheadref">🧩 приём</span>`);
 }
 function langify(html) {
   const body = lang === "py"
@@ -4196,6 +4382,7 @@ function themeFor(i) {
   const t = inCh.length > 1 ? inCh.indexOf(lv) / (inCh.length - 1) : 0; // 0 — начало главы, 1 — конец
   if (lv.isle === 2) return { name: "beach", t: 0.85 };
   if (lv.isle === 3) return { name: "cave", t: 0.35 };   // Остров рудокопов — шахты
+  if (lv.isle === 4) return { name: "beach", t: 0.7 };   // Остров мастеров — луг у мастерских
   return { name: ["beach", "forest", "cave", "mountain"][lv.chapter] || "mountain", t };
 }
 // Что в клетке: ground — земля (sand, grass, mix, water, rock), over — что стоит сверху
@@ -4276,9 +4463,11 @@ function loadLevel(i) {
   variant = 0; variantsDone = new Set();
   if (L.maps) L.map = L.maps[0];
   buildBoard();
-  buildChips();
   // для JavaScript подхватываем код, сохранённый до появления Python
+  // (код ставим до кнопок: кнопки своих приёмов берутся из кода уровня)
   codeEl.value = save.code[codeKey()] ?? (lang === "js" ? save.code[L.name] : undefined) ?? L.starter[lang];
+  buildChips();
+  if (L.funcs) $("goal").innerHTML = uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(BLOCK_GOALS[L.name]) : btnRefs(langify(btnRefs(L.goal)));   // картинка приёма в задании — из кода
   winBox.hidden = true;
   reset();
   requestAnimationFrame(() => requestAnimationFrame(() => { fitText(); fitBoard(true); }));
@@ -4845,7 +5034,7 @@ ISLE_MAPS[3] = {
   road: [
     "..................",
     "..................",
-    "........#.........",
+    "......###.........",
     "........#.........",
     "........#.........",
     "........#.........",
@@ -4892,14 +5081,166 @@ ISLE_MAPS[3] = {
     ["duck", 4.6, 29.0, 1.3],
     ["goldsp4", 12.0, 25.6, 0.5],
     ["mine", 15.2, 8.1, 0.6],
+    ["wood_res", 7.55, 1.55, 0.9],
   ],
   labels: [["ЛЕСТНИЦЫ", 258, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274], ["АРЕНА", 140, 150], ["БИТВА", 92, 92]],
-  bank: [["cloud_a", 990, 1800, 1.0], ["cloud_c", 1080, 1820, 0.9]],
+  bank: [["cloud_a", 990, 1800, 1.0], ["cloud_c", 1080, 1820, 0.9], ["cloud_b", 28, 96, 0.8], ["cloud_d", 40, 24, 0.55]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm5",
   clear: [[13.6, 6.0, 17.9, 24.5]],
 };
 // @@/isle3@@
+// @@isle4@@
+ISLE_MAPS[4] = {
+  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410]],
+  rows: [
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "..................ssssssss..........",
+    "...............ssssggggggss.........",
+    "............ssssggggggggggs.........",
+    ".......ssssssgggggggggggggss........",
+    "......ssgggggggggggggggggggss.......",
+    ".....ssgggggggggggggggggggggs.......",
+    ".....sggggggggggggggggggggggss......",
+    "....ssgggggggggggggggggggggggs......",
+    "....sggggggggggggggggggggggggss.....",
+    "...ssgggggggggggggggggggggggggs.....",
+    "...sggggggggggggggggggggggggggss....",
+    "...sgggggggggggggggggggggggggggss...",
+    "...sggggggggggggggggggggggggggggs...",
+    "..ssggggggggggggggggggggggggggggss..",
+    "..sggggggggggggggggggggggggggggggs..",
+    "..sggggggggggggggggggggggggggggggs..",
+    "..sggggggggggggggggggggggggggggggs..",
+    "..sggggggggggggggggggggggggggggggss.",
+    "..sgggggggggggggggggggggggggggggggs.",
+    "..sgggggggggggggggggggggggggggggggs.",
+    "..sgggggggggggggggggggggggggggggggss",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sgggggggggggggggggggggggggggggggss",
+    "..sgggggggggggggggggggggggggggggggs.",
+    "..sgggggggggggggggggggggggggggggggs.",
+    "..sggggggggggggggggggggggggggggggss.",
+    "..sggggggggggggggggggggggggggggggs..",
+    "..sgggggggggggggggggggggggggggggss..",
+    "..sgggggggggggggggggggggggggggggs...",
+    "..sggggggggggggggggggggggggggggss...",
+    "..sggggggggggggggggggggggggggggs....",
+    "..sggggggggggggggggggggggggggggs....",
+    "..ssgggggggggggggggggggggggggggs....",
+    "...sggggggggggggggggggggggggggss....",
+    "...ssssssssssssssssssssssggggss.....",
+    "....ssssssssssssssssssssssssss......",
+    ".....ssssssssssssssssssssssss.......",
+    ".......sssssssssssssssssssss........",
+    ".........ssssssssssssssssss.........",
+    "..........sssssssssssssss...........",
+    "...........sssssssssssss............",
+    "..............ssss..sss.............",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+  ],
+  terr: [
+    "..................",
+    "..................",
+    ".....22222222.....",
+    ".....22222222.....",
+    ".....22222222.....",
+    ".....22222222.....",
+    ".....11111111.....",
+    "..11111111111111..",
+    "..11111111111111..",
+    "..11111111111111..",
+    "..11111111111111..",
+    "..11111111111111..",
+    "..11111111111111..",
+    "..11111111111111..",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  road: [
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    ".........#........",
+    ".........#........",
+    ".........#........",
+    ".........#........",
+    ".........####.....",
+    "............#.....",
+    ".....########.....",
+    ".....#............",
+    ".....#............",
+    ".....#########....",
+    ".............#....",
+    ".............#....",
+    ".............#....",
+    "....##########....",
+    "....#.............",
+    "....#.............",
+    "....#########.....",
+    "............#.....",
+    "............#.....",
+    "......#######.....",
+    "......#...........",
+    "......=...........",
+    "......=...........",
+    "......=...........",
+    "......=...........",
+    "......=...........",
+  ],
+  ramps: [],
+  deco: [
+    ["barracks_p", 3.6, 22.4, 0.55],
+    ["house_p1", 7.2, 22.3, 0.7],
+    ["house_p2", 14.8, 21.6, 0.7, true],
+    ["archery_p", 8.2, 19.5, 0.55],
+    ["tower_p", 15.4, 18.7, 0.6],
+    ["sheep", 11.2, 19.3, 0.42],
+    ["sheepg", 2.6, 19.6, 0.42, true],
+    ["castle_p", 9.0, 3.9, 0.6],
+    ["wrock1", 1.0, 26.0, 0.8],
+    ["wrock3", 16.6, 25.0, 0.8],
+    ["wrock2", 12.6, 28.4, 0.7],
+    ["duck", 15.0, 27.8, 1.3],
+  ],
+  labels: [["МАСТЕРСКАЯ", 268, 502]],
+  bank: [["cloud_b", 260, 1810, 1.1], ["cloud_a", 600, 1790, 1.3], ["cloud_c", 900, 1830, 1.0], ["cloud_d", 1090, 1820, 1.0]],
+  clouds: [["sc_cloud1", 8, 5, 0.25]],
+  tm: "sc_tm2",
+  clear: [],
+};
+// @@/isle4@@
 // Островок заставки (не остров игры): поле боя, замок на плато, мосты в облака по краям
 // @@isle0@@
 ISLE_MAPS[0] = {
@@ -5126,7 +5467,8 @@ function mapEngine(D) {
     }
     // перед большими постройками (монастырь, шахта, дома) деревья не растут — иначе закрывают их;
     // убираем уже после того, как все деревья расставлены, чтобы остальные остались на своих местах
-    const BIG = { monastery_y: 1.0, mine: 1.1, castle: 1.2, fortress: 1.2, house_y: 0.8, house_c: 0.8, tower_y: 0.6, build: 1.4, ghouse: 0.5 };
+    const BIG = { monastery_y: 1.0, mine: 1.1, castle: 1.2, fortress: 1.2, house_y: 0.8, house_c: 0.8, tower_y: 0.6, build: 1.4, ghouse: 0.5,
+      castle_p: 1.3, barracks_p: 1.0, archery_p: 1.0, house_p1: 0.7, house_p2: 0.7, tower_p: 0.6 };
     // clear — места без деревьев (ущелье, где идёт бой за золото), [x0, y0, x1, y1] в клетках
     const CLEAR = D.clear || [];
     return out.filter(([, x, y]) => !MAP_DECO.some(([k, ox, oy]) => BIG[k] && Math.abs(x - ox) < BIG[k] + 0.5 && y > oy - 0.4 && y < oy + 1.7)
@@ -5451,7 +5793,7 @@ function seeded(seed) {
 // ===== Острова на карте =====
 // Каждый остров — своя карта (свой .mapwrap) со своими уровнями. Острова соединяет мост:
 // с вершины первого — вверх в облака, на втором он приходит снизу.
-const ISLE_NAMES = { 1: "Остров программистов", 2: "Остров условий", 3: "Остров рудокопов" };
+const ISLE_NAMES = { 1: "Остров программистов", 2: "Остров условий", 3: "Остров рудокопов", 4: "Остров мастеров" };
 // Переходы между островами (у острова их может быть несколько): где кнопка (единицы карты), куда ведёт.
 // bridge — мост за край карты (dir: -1 вверх, 1 вниз), за облаками; tunnel — дверь (монастырь, шахта),
 // за ней подземный ход.
@@ -5459,7 +5801,11 @@ const GATES = {
   1: [{ at: [290, 66], to: 2, kind: "bridge", dir: -1 }],
   // door — порог двери (там рыцарь входит и выходит), stand — где встать, если на острове ещё нет уровней
   2: [{ at: [170, 516], to: 1, kind: "bridge", dir: 1 }, { at: [139, 106], door: [139, 93], to: 3, kind: "tunnel", place: "монастырь" }],
-  3: [{ at: [124, 523], door: [124, 507], stand: [176, 503], to: 2, kind: "tunnel", place: "шахта" }],
+  // build — мост, которого ещё нет: его на глазах строят рудокопы (BUILD_BRIDGE), потом он стоит всегда.
+  // Уходит влево за край карты (dir: "left"), на острове 4 приходит снизу.
+  3: [{ at: [124, 523], door: [124, 507], stand: [176, 503], to: 2, kind: "tunnel", place: "шахта" },
+    { at: [130, 50], to: 4, kind: "build", dir: "left" }],
+  4: [{ at: [130, 516], to: 3, kind: "bridge", dir: 1 }],
 };
 const gateTo = (from, to) => GATES[from].find((g) => g.to === to);
 const LAST_OF = (n) => LEVELS.filter((lv) => (lv.isle || 1) === n).at(-1);
@@ -5468,6 +5814,7 @@ const LAST_LEVEL = () => LAST_OF(1);   // «Перевал»
 const gateOpen = (from, to) => save.dev || to < from || (save.stars[LAST_OF(from)?.name] || 0) > 0;
 const bridgeOpen = () => gateOpen(1, 2);
 const gateLockedText = (from) => from === 1 ? `Мост откроется после испытания «${LAST_OF(1).name}» у ворот крепости`
+  : from === 3 ? `Рудокопы построят мост после испытания «${LAST_OF(3).name}»`
   : `Монастырь откроется после испытания «${LAST_OF(from).name}»`;
 let arrivedFrom = 0;   // с какого острова пришли (рыцарь появится у этих ворот)
 const isleOf = (lv) => lv?.isle || 1;
@@ -5479,6 +5826,9 @@ const isleSvg = (n = curIsle) => isleWrap(n).querySelector(".isle-svg");
 // уровни острова по порядку: [уровень, номер в LEVELS]; k-й из них стоит в точке nodes[k]
 const isleLevels = (n = curIsle) => LEVELS.map((lv, i) => [lv, i]).filter(([lv]) => isleOf(lv) === n);
 const nodeOf = (i) => { const lv = LEVELS[i], k = isleLevels(isleOf(lv)).findIndex(([, j]) => j === i); return ISLE_MAPS[isleOf(lv)].nodes[k]; };
+// мост с острова 3 на остров 4 (строят рудокопы): клетки досок, брёвна, где ждут рудокопы — см. buildBridgeScene
+const BUILD_BRIDGE = { row: 2, from: 6, to: -1, pile: [7.55, 1.55], wait: [[6.55, 1.6], [7.05, 1.5]] };
+const bridgeBuilt = () => !!save.built?.b34 || isleLevels(4).some(([lv]) => save.stars[lv.name]);
 
 // Показать карту нужного острова: карта рисуется при первом показе и дальше живёт сама
 // Запустить карту острова (один раз): движок, холсты, сценки. ready — когда всё нарисовано
@@ -5557,9 +5907,10 @@ function renderMap() {
   // Кнопки переходов: на мосту — стрелка туда, куда мост уходит с карты; у двери (монастырь, шахта) — арка входа
   for (const br of GATES[curIsle]) {
     const [bx, by] = br.at, ok = gateOpen(curIsle, br.to), S = 30, H = S * 94 / 88;
-    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${br.kind === "tunnel" ? "Подземный ход" : "Мост"} на ${ISLE_NAMES[br.to]}${ok ? "" : ", закрыт"}">`);
+    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${br.kind === "tunnel" ? "Подземный ход" : br.kind === "build" && !bridgeBuilt() ? "Построить мост" : "Мост"} на ${ISLE_NAMES[br.to]}${ok ? "" : ", закрыт"}">`);
     add(`<use class="ring" href="#im-btnb" x="${bx - S / 2}" y="${by - H / 2}" width="${S}" height="${H}" ${ok ? "" : 'filter="url(#f-gray)"'}/>`);
     const d = br.kind === "tunnel" ? `M${bx - 6} ${by + 6}v-6a6 6 0 0 1 12 0v6M${bx - 8} ${by + 6}h16`
+      : br.dir === "left" ? `M${bx + 1} ${by - 6}l-7 6 7 6M${bx - 5} ${by}h12`
       : br.dir < 0 ? `M${bx - 6} ${by + 1}l6-7 6 7M${bx} ${by - 5}v12` : `M${bx - 6} ${by - 3}l6 7 6-7M${bx} ${by - 9}v12`;
     if (ok) add(`<path d="${d}" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`);
     else add(`<use href="#im-lock" x="${bx - 7}" y="${by - 9}" width="14" height="15.6"/>`);
@@ -5603,6 +5954,7 @@ function renderMap() {
   const all = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
   $("sync-move").hidden = !syncOn || all > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
+  if (curIsle === 3) showBuiltBridge();
   if (!$("mapview").hidden && typeof updatePlace === "function") updatePlace();   // фон — по месту, где теперь рыцарь
 }
 
@@ -6358,7 +6710,8 @@ function skProblems(n, spec) {
     for (const [k, ox, oy, sc] of objs) {
       if (spec.ok?.includes(k)) continue;                       // это нужно сценке (золото у драки)
       if (/^(mush|tuft|stone)/.test(k)) continue;              // гриб, травинка, камешек — переступить можно
-      const r = { castle: 1.1, fortress: 1.2, mine: 1.1, house_y: 0.9, house_c: 0.9, tower_y: 0.6, tower: 0.5, ghouse: 0.5, gwtower: 0.6, build: 1.1 }[k] ?? 0.35;
+      const r = { castle: 1.1, fortress: 1.2, mine: 1.1, house_y: 0.9, house_c: 0.9, tower_y: 0.6, tower: 0.5, ghouse: 0.5, gwtower: 0.6, build: 1.1,
+        castle_p: 1.2, barracks_p: 1.0, archery_p: 1.0, house_p1: 0.7, house_p2: 0.7, tower_p: 0.5 }[k] ?? 0.35;
       if (Math.abs(ox - x) < r + 0.25 && Math.abs(oy - y) < 0.45) return "в предмете " + k;
     }
     return "";
@@ -6433,12 +6786,19 @@ const SKIT_PLAN = {
     { name: "золото из нижней шахты", fn: "haul", door: [6.2, 25.5], pile: [7.7, 25.5], ok: ["mine"] },
     { name: "золото из верхней шахты", fn: "haul", door: [9.6, 2.7], pile: [11.1, 2.7], ok: ["mine"] },
     { name: "оборона золотой шахты", fn: "siege", ok: ["mine", "ghouse"] },
+    // у края верхнего плато: рудокопы ждут у брёвен, чтобы построить мост на остров 4
+    { name: "рудокопы у брёвен", fn: "builders", a: BUILD_BRIDGE.wait[0], b: BUILD_BRIDGE.wait[1], ok: ["wood_res"] },
+  ],
+  // остров мастеров: лесоруб на лугу между дорогами рубит ель (она падает влево, от домов), брёвна несёт вправо
+  4: [
+    { name: "лесоруб у мастерской", fn: "lumber", tree: [4.6, 18.3], d: -1, pile: [6.3, 18.35] },
   ],
 };
 // что проверять у каждой сценки
 const SKIT_GEOM = {
   barrel: (s) => ({ stand: [s.at] }),
   miner: (s) => ({ stand: [s.at] }),
+  builders: (s) => ({ stand: [s.a, s.b], paths: [[BUILD_BRIDGE.pile, [BUILD_BRIDGE.from + 0.75, BUILD_BRIDGE.row + 0.55]]] }),
   ducks: (s) => ({ swim: s.lanes.map(([[x, y], [a, b]]) => [[x, y], [Math.abs(a - x) > Math.abs(b - x) ? a : b, y]]) }),
   tnt: (s) => ({ stand: [s.at], water: [s.to] }),
   archer: (s) => ({ stand: [s.at], paths: [[[s.run[0], s.at[1]], [s.run[1], s.at[1]]]] }),
@@ -6462,10 +6822,11 @@ const SKIT_FN = {
   miner: (st, s) => skitMiner(st, s),
   siege: (st) => skitSiege(st, SIEGE),
   lumber: (st, s) => skitLumber(st, s),
+  builders: (st, s) => skitBuilders(st, s),
 };
 // Запускаются, когда карта острова показана впервые
 const SKITS = {};
-for (const n of [1, 2, 3]) SKITS[n] = (w) => SKIT_PLAN[n].forEach((s) => skStart(n, w, { ...s, ...SKIT_GEOM[s.fn](s) }, SKIT_FN[s.fn]));
+for (const n of [1, 2, 3, 4]) SKITS[n] = (w) => SKIT_PLAN[n].forEach((s) => skStart(n, w, { ...s, ...SKIT_GEOM[s.fn](s) }, SKIT_FN[s.fn]));
 
 // --- Сценки на поле уровня («в углах», как в CodeCombat) ---
 // Только мирные жители — монах, лесоруб, строитель, овечка: гоблин в углу поля можно принять
@@ -6685,9 +7046,10 @@ let floatTimer = 0;
 // (море с пеной, суша, деревья и постройки) и облачный берег. Море у всех карт одного цвета,
 // поэтому края уменьшенных карт сливаются с морем архипелага. Выше — облака: место для новых островов.
 const ARCHI = { W: 360, H: 2360, sc: 0.5, pad: 34,                 // pad — море над и под картой острова (единицы карты)
-  isles: { 1: [52, 1760], 2: [168, 1380], 3: [30, 1010] },       // левый верхний угол уменьшенной карты (без pad)
+  // остров 4 — над третьим и чуть левее: мост с третьего уходит влево, на четвёртом приходит снизу слева
+  isles: { 1: [52, 1760], 2: [168, 1380], 3: [30, 1010], 4: [6, 640] },       // левый верхний угол уменьшенной карты (без pad)
   // облака над местами будущих островов: [картинка, x центра, y верха, ширина в единицах карты]
-  clouds: [["cloud_a", 250, 740, 170], ["cloud_c", 305, 805, 110], ["cloud_d", 195, 850, 90],
+  clouds: [["cloud_a", 275, 720, 150], ["cloud_c", 310, 800, 100], ["cloud_d", 262, 870, 80],
     ["cloud_b", 100, 440, 160], ["cloud_d", 165, 505, 100], ["cloud_c", 60, 520, 80],
     ["cloud_a", 255, 150, 170], ["cloud_c", 310, 215, 100], ["cloud_b", 190, 240, 90]] };
 const MINI = {};
@@ -6701,6 +7063,7 @@ async function isleMini(n) {
   const k = 420 / CW, pad = ARCHI.pad / 360 * CW * k;
   const strips = [...w.querySelectorAll("canvas.mapstrip")], landAt = strips.findIndex((c) => c.style.height === "100%");
   const bank = await Promise.all((ISLE_MAPS[n].bank || []).map(([key]) => tsImage(key)));
+  const brImg = await tsImage("bridge");
   const draw = (gray) => {
     const out = document.createElement("canvas");
     out.width = 420; out.height = Math.round(CH * k + 2 * pad);
@@ -6712,6 +7075,10 @@ async function isleMini(n) {
       g.drawImage(cv, 0, pad + parseFloat(cv.style.top) / 100 * CH * k, cv.width * k, cv.height * k);
     });
     g.filter = "none";
+    if (n === 3 && bridgeBuilt()) {                     // мост на остров 4, если его уже построили
+      const c = CW / 18 * k, B = BUILD_BRIDGE;
+      for (let x = B.from; x >= 0; x--) g.drawImage(brImg, (x === B.from ? 2 : 1) * 64, 0, 64, 64, x * c, pad + B.row * c, c, c);
+    }
     (ISLE_MAPS[n].bank || []).forEach(([key, x, y, sc], i) => {
       const [, iw, ih] = TS_INFO[key];
       g.drawImage(bank[i], (x - iw * sc / 2) * k, pad + y * k, iw * sc * k, ih * sc * k);
@@ -6852,12 +7219,120 @@ function runAlong(pts, near) {
       run.classList.toggle("flip", b[0] < a[0] - 0.01);
       scrollTo(0, camFor(y));
       if (t - lastStep > 300) { lastStep = t; sfx("step"); }
-      if (near && !fired && near(y)) { fired = true; res({ run, early: true }); }
+      if (near && !fired && near(y, x)) { fired = true; res({ run, early: true }); }
       if (t - t0 < (total / 75) * 1000) requestAnimationFrame(step);
       else { if (!fired) res({ run }); run.dataset.done = "1"; }
     };
     requestAnimationFrame(step);
   });
+}
+
+// ===== Мост, который строят рудокопы (остров 3 → остров 4) =====
+// Моста сначала нет: у брёвен на верхнем плато острова 3 ждут двое рудокопов. После испытания
+// острова рыцарь подходит к краю плато, и мост на глазах растёт влево, в облака: один рудокоп
+// подносит брёвна, другой стучит молотком — доска за доской. Потом рыцарь уходит по мосту.
+// Построенный мост остаётся навсегда (save.built.b34, а на другом устройстве — если на острове 4 есть звёзды).
+// Доски — плитки моста из набора поверх карты: x от from (конец со столбиками, на плато) до to (начало, за краем).
+function bridgePieces() {
+  const wrap = isleWrap(3);
+  let box = wrap.querySelector(".isle-bridge");
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "isle-bridge";
+    box.setAttribute("aria-hidden", "true");
+    const VH = ISLE_MAPS[3].terr.length * 20, B = BUILD_BRIDGE;
+    for (let x = B.from; x >= B.to; x--) {
+      const col = x === B.from ? 2 : x === B.to ? 0 : 1;   // конец на плато — справа, начало за краем — слева
+      const i = document.createElement("i");
+      i.dataset.x = x;
+      i.style.cssText = `left:${x * 20 / 360 * 100}%;top:${B.row * 20 / VH * 100}%;width:${20 / 360 * 100}%;height:${20 / VH * 100}%;`
+        + `background-image:url(${TS.bridge});background-position:${col * 50}% 0%`;
+      box.appendChild(i);
+    }
+    wrap.insertBefore(box, wrap.querySelector(".isle-svg"));
+  }
+  return [...box.children];
+}
+function showBuiltBridge() {
+  if (!ISLE_ENG[3]) return;
+  const built = bridgeBuilt();
+  for (const i of bridgePieces()) i.classList.toggle("off", !built);
+}
+let BUILDERS = null;   // рудокопы у брёвен (сценка острова 3), их же зовёт стройка
+// сценка: пока моста нет, двое рудокопов ждут у брёвен; второй иногда постукивает молотком по бревну
+async function skitBuilders(st, s) {
+  if (bridgeBuilt()) return;
+  const a = skActor(st, "pidle", 0.8), b = skActor(st, "pidle", 0.8);
+  a.at(...s.a); a.face(false); a.show(true); a.play(0, 8, 140);
+  b.at(...s.b); b.face(false); b.show(true); b.play(0, 8, 150);
+  BUILDERS = { a, b, st };
+  for (;;) {
+    await skWait(st, skRnd(5000, 11000));
+    if (BUILDERS?.busy || bridgeBuilt()) return;
+    await b.play(0, 3, 110, false, "phammer"); sfx("knock");
+    await b.play(0, 3, 110, false, "phammer");
+    if (BUILDERS?.busy) return;
+    b.play(0, 8, 150, true, "pidle");
+  }
+}
+async function buildBridgeScene() {
+  const B = BUILD_BRIDGE, y = B.row + 0.55, pieces = bridgePieces();
+  const piece = (x) => pieces.find((i) => +i.dataset.x === x);
+  pieces.forEach((i) => i.classList.add("off"));
+  let a, b;
+  if (BUILDERS && BUILDERS.a.el.isConnected) ({ a, b } = BUILDERS);
+  else {
+    const st = mapStage(isleWrap(3));
+    a = skActor(st, "pidle", 0.8); b = skActor(st, "pidle", 0.8);
+    a.at(...B.wait[0]); b.at(...B.wait[1]); a.show(true); b.show(true);
+  }
+  BUILDERS = { a, b, busy: true };
+  const T = (ms) => sleep(ms);
+  const hammer = async (times) => {
+    for (let k = 0; k < times; k++) { await a.play(0, 3, 95, false, "phammer"); sfx("knock"); }
+    a.play(0, 8, 140, true, "pidle");
+  };
+  const put = async (x) => { const i = piece(x); if (i) { void i.offsetWidth; i.classList.remove("off"); } await T(180); };
+  // конец моста со столбиками — на краю плато: его ставят первым
+  a.face(true);
+  a.play(0, 6, 90, true, "prun");
+  await a.move(B.from + 0.75, y, 260);
+  await hammer(2);
+  await put(B.from);
+  // три видимые доски: второй рудокоп подносит бревно, первый прибивает
+  let ax = B.from + 0.5;
+  for (let x = B.from - 1; x >= 3; x--) {
+    b.face(true); b.play(0, 6, 80, true, "prunwood");
+    await b.move(ax + 0.7, y, 300 + Math.abs(b.x - ax) * 140);
+    b.play(0, 8, 140, true, "pidle");
+    await hammer(2);
+    await put(x);
+    a.play(0, 6, 90, true, "prun");
+    ax = x + 0.5;
+    const back = b.x < B.pile[0] - 1.2 ? (b.face(false), b.play(0, 6, 80, true, "prun"), b.move(B.pile[0] - 0.6, B.pile[1] + 0.05, 260 + (B.pile[0] - b.x) * 140)) : null;
+    await a.move(ax, y, 260);
+    a.play(0, 8, 140, true, "pidle");
+    await back;
+  }
+  // дальше доски уходят в облака: рудокопы работают уже за облаком, быстрее
+  b.face(true); b.play(0, 6, 80, true, "prunwood");
+  b.move(ax + 0.8, y, 300 + Math.abs(b.x - ax) * 140);
+  for (let x = 2; x >= B.to; x--) {
+    await hammer(1);
+    await put(x);
+    a.play(0, 6, 90, true, "prun");
+    ax = x + 0.5;
+    b.move(ax + 0.8, y, 240);
+    await a.move(ax, y, 240);
+  }
+  // уходят по мосту за край — домой, на остров 4 (рудокопы его и строили)
+  a.play(0, 6, 90, true, "prun"); b.play(0, 6, 80, true, "prun");
+  a.move(-2.5, y, 600); await b.move(-2, y, 700);
+  a.show(false); b.show(false);
+  save.built = { ...(save.built || {}), b34: true };
+  writeSave();
+  delete MINI[3];
+  sfx("unlock");
 }
 
 async function startIslandRun(to) {
@@ -6869,7 +7344,11 @@ async function startIslandRun(to) {
   $("float-toast").hidden = true;
   try {
     if ($("mapview").hidden) showView("map");
-    if (STILL) { arrivedFrom = from; curIsle = to; showView("map"); return; }
+    // мост 3 → 4 ещё не построен — его построят на глазах (а с острова 4 назад мост, конечно, уже есть)
+    const needBuild = gA.kind === "build" && !bridgeBuilt();
+    const markBuilt = () => { save.built = { ...(save.built || {}), b34: true }; writeSave(); delete MINI[3]; };
+    if (from === 4 && to === 3 && !bridgeBuilt()) markBuilt();
+    if (STILL) { if (needBuild) markBuilt(); arrivedFrom = from; curIsle = to; showView("map"); return; }
     buildCurtain().hidden = false;              // прозрачный занавес ловит нажатия, пока идёт сцена
     const svgEl = isleSvg(), hero = svgEl.querySelector(".map-hero");
     const hx = +hero.getAttribute("x") + 2, hy = +hero.getAttribute("y") + 52;
@@ -6878,9 +7357,22 @@ async function startIslandRun(to) {
     if (gA.kind === "tunnel") return await tunnelRun(from, to, gA, gB, hx, hy);
     // 1. Уход: от уровня, где стоит рыцарь, к мосту и за край карты
     const VH = ISLE_MAPS[from].terr.length * 20;
-    const edgeA = gA.dir < 0 ? -50 : VH + 50;
-    const a = await runAlong([[hx, hy], [gA.at[0], hy], [gA.at[0], edgeA]],
-      (y) => (gA.dir < 0 ? y < 40 : y > VH - 40));
+    let a;
+    if (gA.kind === "build") {
+      // мост на остров 4: если его ещё нет — рудокопы строят его на глазах; потом рыцарь уходит по нему влево
+      if (needBuild) {
+        const wrap = isleWrap(from), r = wrap.getBoundingClientRect();
+        scrollTo(0, Math.max(0, r.top + scrollY - innerHeight * 0.2));
+        await buildBridgeScene();
+      }
+      showBuiltBridge();
+      const by = BUILD_BRIDGE.row * 20 + 10;
+      a = await runAlong([[hx, hy], [hx, by], [-70, by]], (y, x) => x < 30);
+    } else {
+      const edgeA = gA.dir < 0 ? -50 : VH + 50;
+      a = await runAlong([[hx, hy], [gA.at[0], hy], [gA.at[0], edgeA]],
+        (y) => (gA.dir < 0 ? y < 40 : y > VH - 40));
+    }
     await curtain(true);
     a.run.remove();
     // 2. За облаками — другой остров. Рыцарь появляется на мосту у края и идёт к ближнему уровню
@@ -6892,7 +7384,9 @@ async function startIslandRun(to) {
     hB.setAttribute("visibility", "hidden");
     isleSvg().querySelectorAll("[data-bridge]").forEach((b) => b.setAttribute("visibility", "hidden"));
     const edgeB = gB.dir < 0 ? -50 : VHB + 50;
-    const arrive = runAlong([[gB.at[0], edgeB], [gB.at[0], ty], [tx, ty]]);
+    if (gB.kind === "build") showBuiltBridge();
+    const by = BUILD_BRIDGE.row * 20 + 10;
+    const arrive = runAlong(gB.kind === "build" ? [[-70, by], [tx, by], [tx, ty]] : [[gB.at[0], edgeB], [gB.at[0], ty], [tx, ty]]);
     await sleep(200);
     await curtain(false);
     const b = await arrive;
@@ -7356,7 +7850,8 @@ function buildChips() {
   };
   L.commands.forEach((name) => {
     add("add-" + name, "mv " + DIRS[name].axis + (L.newCommands?.includes(name) ? " new" : ""), uiBlocks ? DIRS[name].arrow : `${DIRS[name].arrow} ${disp(name)}`,
-      () => selLine ? putCommandOnLine(disp(name)) : insertLine(disp(name) + (lang === "py" ? "()" : "();")));
+      () => selLine && DEF_LINE.test(codeEl.value.split("\n")[selLine - 1] ?? "") ? putIntoDef(disp(name))
+        : selLine ? putCommandOnLine(disp(name)) : insertLine(disp(name) + (lang === "py" ? "()" : "();")));
   });
   if (L.loopButton) {
     add("add-loop", "new loopchip", uiBlocks ? "🔁 повторять" : "↻ повторять", () => {
@@ -7372,7 +7867,7 @@ function buildChips() {
       const at = selLine ? Math.min(selLine, lines.length) : lines.length;   // после выбранной строки или в конец
       let ind = at ? (lines[at - 1].match(/^ */)[0]) : "";
       // после заголовка цикла или рамки (while True: / if …: / else:) рамка встаёт внутрь — с отступом
-      if (at && lang === "py" && /^\s*(while|for|if|elif|else)\b.*:\s*$/.test(lines[at - 1])) ind += " ".repeat(INDENT());
+      if (at && lang === "py" && /^\s*(while|for|if|elif|else|def)\b.*:\s*$/.test(lines[at - 1])) ind += " ".repeat(INDENT());
       const add = lang === "py" ? [`${ind}if ${c}():`] : [`${ind}if (${c}()) {`, `${ind}}`];
       lines.splice(at, 0, ...add);
       codeEl.value = lines.join("\n") + "\n";
@@ -7380,6 +7875,15 @@ function buildChips() {
       onCodeChange();
       drawCode();
     });
+  }
+  // Кнопки своих приёмов: по одной на каждый приём в коде. Нажал — вызов приёма встаёт в конец
+  // программы (или после выбранной плитки, если она не внутри приёма). На кнопке — те же стрелки,
+  // что в приёме: картинка того, что он делает.
+  if (L.funcs) for (const nm of defNames(codeEl.value)) {
+    add("add-fn-" + nm, "fnchip" + (L.newFn ? " new" : ""), "", () => insertCall(nm));
+    const b = $("add-fn-" + nm);
+    b.innerHTML = uiBlocks ? `🧩${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
+    b.setAttribute("aria-label", "Приём " + nm);
   }
   if (uiBlocks) { const br = document.createElement("span"); br.style.flexBasis = "100%"; chipsEl.appendChild(br); }
   [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
@@ -7390,11 +7894,12 @@ function buildChips() {
 // с выбранной — удаляет выбранную строку. После отмены пару секунд видна кнопка «Вернуть»:
 // нажал случайно — ничего не потерял.
 let undoPrev = null, undoTimer = null;
-const hasCommand = () => new RegExp(`\\b(${ANY_NAME})\\s*\\(`).test(codeEl.value);
+const cmdOrCallRe = () => { const f = defNames(codeEl.value); return new RegExp(`\\b(${[ANY_NAME, ...f].join("|")})\\s*\\(`); };
+const hasCommand = () => codeEl.value.split("\n").some((l) => cmdOrCallRe().test(l) && !DEF_LINE.test(l));
 function drawUndo() {
   const btn = $("undo-cmd");
   if (!btn) return;
-  const frameLine = selLine && /^\s*(while|for|if|elif|else)\b.*:\s*$/.test(codeEl.value.split("\n")[selLine - 1] ?? "");
+  const frameLine = selLine && /^\s*(while|for|if|elif|else|def)\b.*:\s*$/.test(codeEl.value.split("\n")[selLine - 1] ?? "");
   $("undo-label").textContent = selLine ? (uiBlocks ? (frameLine ? "Убрать рамку" : "Удалить плитку") : `Удалить строку ${selLine}`) : "Отменить команду";
   btn.disabled = running || (!selLine && !hasCommand());
   fitText();
@@ -7402,7 +7907,17 @@ function drawUndo() {
 $("undo-cmd").addEventListener("click", () => {
   sfx("tap");
   const before = codeEl.value;
-  if (selLine && lang === "py" && /^\s*(while|for|if|elif|else)\b.*:\s*$/.test(codeEl.value.split("\n")[selLine - 1] ?? "")) {
+  const selText = selLine ? codeEl.value.split("\n")[selLine - 1] ?? "" : "";
+  if (selLine && DEF_LINE.test(selText)) {
+    // убрать приём: исчезает и рамка с её плитками, и все плитки-вызовы этого приёма
+    // (кнопки вызова больше нет — вызывать нечего). Передумал — «Вернуть».
+    const name = selText.match(DEF_LINE).slice(1).find(Boolean), fr = findFrames(codeEl.value).find((f) => f.start === selLine);
+    editLines((lines) => {
+      lines.splice(fr.start - 1, fr.end - fr.start + 1);
+      for (let j = lines.length - 1; j >= 0; j--) if (callRe([name]).test(lines[j]) && !DEF_LINE.test(lines[j])) lines.splice(j, 1);
+      selLine = null;
+    });
+  } else if (selLine && lang === "py" && /^\s*(while|for|if|elif|else)\b.*:\s*$/.test(selText)) {
     const frames = findFrames(codeEl.value);
     const fr = frames.find((f) => f.start === selLine);
     editLines((lines) => {
@@ -7420,9 +7935,9 @@ $("undo-cmd").addEventListener("click", () => {
     });
   } else {
     const lines = codeEl.value.split("\n");
-    const re = new RegExp(`\\b(${ANY_NAME})\\s*\\(`);
+    const re = cmdOrCallRe();
     for (let i = lines.length - 1; i >= 0; i--) {
-      if (re.test(lines[i]) && !/^\s*(\/\/|#)/.test(lines[i])) { lines.splice(i, 1); break; }
+      if (re.test(lines[i]) && !DEF_LINE.test(lines[i]) && !/^\s*(\/\/|#)/.test(lines[i])) { lines.splice(i, 1); break; }
     }
     codeEl.value = lines.join("\n");
     onCodeChange();
@@ -7473,6 +7988,47 @@ function selectLine(n) {
   drawCode();
 }
 
+// Вызов своего приёма. Внутрь приёма (и внутрь его рамки) вызов не кладём — приём звал бы сам себя.
+// Выбрана плитка программы — вызов встаёт после неё, иначе — в конец программы.
+function inDefAt(lines, ln) {
+  for (let j = ln - 1; j >= 0; j--) {
+    const t = lines[j];
+    if (!t.trim()) continue;
+    if (DEF_LINE.test(t)) return true;
+    if (!/^\s/.test(t) && !/^\s*\}/.test(t)) return false;   // строка без сдвига — уже программа
+  }
+  return false;
+}
+function insertCall(nm) {
+  const call = nm + (lang === "py" ? "()" : "();");
+  const lines = codeEl.value.replace(/\s+$/, "").split("\n");
+  if (selLine && selLine <= lines.length && !inDefAt(lines, selLine) && !DEF_LINE.test(lines[selLine - 1])
+      && !/^\s*(while|for|if|elif|else)\b/.test(lines[selLine - 1])) {
+    const ind = lines[selLine - 1].match(/^ */)[0];
+    lines.splice(selLine, 0, ind + call);
+    selLine++;
+  } else {
+    lines.push(call);
+    selLine = null;
+  }
+  codeEl.value = lines.join("\n") + "\n";
+  onCodeChange();
+  drawCode();
+}
+// Выбран заголовок приёма: кнопка команды кладёт шаг в конец приёма, а заголовок остаётся выбранным —
+// можно сразу нажать следующую стрелку (приём собирается подряд: →, ↑ …)
+function putIntoDef(name) {
+  const fr = findFrames(codeEl.value).find((f) => f.start === selLine);
+  editLines((lines) => {
+    const ind = " ".repeat(lines[selLine - 1].match(/^ */)[0].length + INDENT());
+    const cmd = ind + name + (lang === "py" ? "()" : "();");
+    let at = fr ? fr.end : selLine;                        // после последней строки приёма
+    if (lang === "js" && fr) at = fr.end - 1;               // перед закрывающей }
+    while (at > selLine && lines[at - 1].trim() === "") at--;   // пустые строки в конце приёма — не тело
+    lines.splice(at, 0, cmd);
+  });
+}
+
 // Команда на выбранной строке: заменить имя (число сохраняем),
 // на пустой строке — вписать команду, на строке цикла — добавить команду внутрь
 function putCommandOnLine(name) {
@@ -7486,7 +8042,7 @@ function putCommandOnLine(name) {
     } else if (line.trim() === "") {
       lines[i] = indent + name + (lang === "py" ? "()" : "();");
     } else {
-      const inside = /^\s*(\}\s*)?(while|for|if|elif|else)\b/.test(line) ? INDENT() : 0;
+      const inside = /^\s*(\}\s*)?(while|for|if|elif|else|def|function)\b/.test(line) ? INDENT() : 0;
       lines.splice(i + 1, 0, indent + " ".repeat(inside) + name + (lang === "py" ? "()" : "();"));
       selLine = i + 2;
     }
@@ -7523,7 +8079,7 @@ function addLineBelow() {
     const i = selLine - 1;
     const line = lines[i] ?? "";
     let indent = line.match(/^ */)[0].length;
-    if (/^\s*(while|for|if|elif|else)\b/.test(line)) indent += INDENT();
+    if (/^\s*(while|for|if|elif|else|def|function)\b/.test(line)) indent += INDENT();
     lines.splice(i + 1, 0, " ".repeat(indent));
     selLine = i + 2;
   });
@@ -7704,7 +8260,7 @@ function findFrames(code) {
     const indentOf = (l) => l.replace(/\t/g, "    ").match(/^ */)[0].length;
     const out = [];
     lines.forEach((line, i) => {
-      if (!/^\s*(while|for|if|elif|else)\b.*:\s*(#.*)?$/.test(line)) return;
+      if (!/^\s*(while|for|if|elif|else|def)\b.*:\s*(#.*)?$/.test(line)) return;
       const indent = indentOf(line);
       let end = i + 1;
       for (let j = i + 1; j < lines.length; j++) {
@@ -7717,7 +8273,7 @@ function findFrames(code) {
     return out;
   }
   const out = [];
-  const re = /\b(?:(?:while|for|if)\s*\([^\n]*\)|else)\s*\{/g;
+  const re = /\b(?:(?:while|for|if)\s*\([^\n]*\)|else|function\s+[A-Za-z_]\w*\s*\(\s*\))\s*\{/g;
   const lineOf = (idx) => code.slice(0, idx).split("\n").length;
   let m;
   while ((m = re.exec(code))) {
@@ -7781,7 +8337,7 @@ function pyToJs(code) {
       stack.push(indent);
       expectIndent = 0;
     } else if (indent > stack[stack.length - 1]) {
-      throw pyError(n, "Лишний сдвиг вправо: сдвигать нужно только строки под while или if");
+      throw pyError(n, "Лишний сдвиг вправо: сдвигать нужно только строки под while, if или def");
     } else {
       while (indent < stack[stack.length - 1]) { stack.pop(); closers += "} "; }
       if (indent !== stack[stack.length - 1]) throw pyError(n, "Сдвиг не совпадает со строками выше");
@@ -7802,6 +8358,11 @@ function pyToJs(code) {
       if (!closers) throw pyError(n, "else должен стоять под своим if, без сдвига");
       js = "else {";
       expectIndent = n; expectIf = true;
+    } else if ((m = text.match(/^def\s+([A-Za-z_]\w*)\s*\(\s*\)\s*:$/))) {
+      // свой приём: def stair(): → function stair() {   (пустой приём — не ошибка, как пустая рамка «если»)
+      if (indent) throw pyError(n, "Приём (def) пишется с самого начала строки, без сдвига");
+      js = `function ${m[1]}() {`;
+      expectIndent = n; expectIf = true;
     } else if ((m = text.match(/^while\s+(.+):$/))) {
       js = `while (${m[1].replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false")}) {`;
       expectIndent = n; expectIf = false;
@@ -7810,7 +8371,7 @@ function pyToJs(code) {
       const [from, to] = args.length > 1 ? args : ["0", args[0]];
       js = `for (let ${m[1]} = ${from}; ${m[1]} < ${to}; ${m[1]}++) {`;
       expectIndent = n; expectIf = false;
-    } else if (/^(while|for|if|else|elif)\b/.test(text) && !text.endsWith(":")) {
+    } else if (/^(while|for|if|else|elif|def)\b/.test(text) && !text.endsWith(":")) {
       throw pyError(n, "В конце этой строки нужно двоеточие :");
     } else if (text.endsWith(":")) {
       throw pyError(n, "Не понимаю эту строку");
@@ -7836,9 +8397,12 @@ function pyToJs(code) {
 function instrument(code) {
   const cmdRe = new RegExp(`\\b(${ANY_NAME})\\s*\\(`, "g");
   const condRe = new RegExp(`\\b(${COND_ANY})\\s*\\(`, "g");
+  // вызов своего приёма stair() → __call(5, stair): запоминаем, с какой строки позвали приём
+  // (при запуске подсвечивается и плитка-вызов, и шаг внутри приёма)
+  const fns = defNames(code), fnRe = fns.length ? callRe(fns, "g") : null;
   return code
     .split("\n")
-    .map((line, i) => line
+    .map((line, i) => (fnRe ? line.replace(fnRe, `__call(${i + 1}, $1)`) : line)
       .replace(cmdRe, `$1(${i + 1}, `)
       .replace(condRe, `$1(${i + 1}, `)
       .replace(/\b(while|for)\s*\(([^\n]*)\)\s*\{/, (m) => `${m} __loop(${i + 1});`))
@@ -7852,8 +8416,10 @@ function stripComments(code) {
 }
 
 // Сколько команд написано в тексте — по этому числу даём звёзды
+// Вызов своего приёма — тоже одна команда, а шаги внутри приёма считаются один раз
 function countWrittenCommands(code) {
-  return (stripComments(code).match(new RegExp(`\\b(${ANY_NAME})\\s*\\(`, "g")) || []).length;
+  const c = stripComments(code), fns = defNames(c);
+  return (c.match(new RegExp(`\\b(${ANY_NAME})\\s*\\(`, "g")) || []).length + (fns.length ? (c.match(callRe(fns, "g")) || []).length : 0);
 }
 
 // ===== 10. План маршрута (считаем "в уме", без анимации) =====
@@ -7909,13 +8475,20 @@ function buildPlan(code) {
     if (++ticks > 300) throw pyError(line, "Цикл крутится, а рыцарь стоит на месте. Положи команды внутрь цикла");
   };
 
+  // вызовы своих приёмов: стопка строк, откуда позвали (приём может позвать другой приём)
+  const callStack = [];
+  const __call = (line, fn) => {
+    if (callStack.length >= 12) throw pyError(line, "Приём зовёт сам себя снова и снова. Внутри приёма не нужно звать его же");
+    callStack.push(line);
+    try { fn(); } finally { callStack.pop(); }
+  };
   const make = (name) => (line, n) => {
     if (n === undefined) n = 1;
     if (!Number.isInteger(n) || n < 1 || n > MAX_STEPS) {
       throw pyError(line, `${disp(name)}(${n}): число ${name === "attack" ? "ударов" : "шагов"} должно быть целым от 1 до ${MAX_STEPS}`);
     }
-    const lp = loopOfLine(loops, line);
-    const c = { name, n, line, ...DIRS[name], from: { ...pos }, cells: [], got: [],
+    const lp = loopOfLine(loops, line) || (callStack[0] ? loopOfLine(loops, callStack[0]) : null);   // шаг приёма, позванного из цикла
+    const c = { name, n, line, via: callStack[0] || 0, ...DIRS[name], from: { ...pos }, cells: [], got: [],
                 loop: lp ? { line: lp.start, round: rounds[lp.start] || 1 } : null };
     commands.push(c);
     const i = commands.length - 1;
@@ -8023,8 +8596,8 @@ function buildPlan(code) {
       if (++ticks > 600) throw pyError(0, "Условие проверяется снова и снова, а рыцарь стоит на месте");
       return yes;
     };
-    const program = new Function("__loop", ...names, ...conds.map(condDisp), instrument(js));
-    program(__loop, ...L.commands.map(make), ...conds.map(ask));
+    const program = new Function("__loop", "__call", ...names, ...conds.map(condDisp), instrument(js));
+    program(__loop, __call, ...L.commands.map(make), ...conds.map(ask));
   } catch (e) {
     if (e === STOP) return { commands, crash, reachedAt, hpLeft, dead, endless, checks };
     return { commands: [], error: explainError(e), errorLine: e.line };
@@ -8044,6 +8617,8 @@ function explainError(e) {
     else if (lang === "js" && PY_TO_JS[name]) msg = `В JavaScript эта команда пишется так: ${PY_TO_JS[name]}()`;
     else if (ALL_COMMANDS.includes(name) || PY_TO_JS[name]) msg = `Команда ${name}() откроется на следующих уровнях`;
     else msg = `Неизвестное слово: ${name}`;
+  } else if (e instanceof RangeError) {
+    msg = "Приём зовёт сам себя снова и снова. Внутри приёма не нужно звать его же";
   } else if (e instanceof SyntaxError) {
     msg = lang === "py" ? "Не понял код. Проверь скобки и названия команд" : "Опечатка в коде: " + msg;
   }
@@ -8058,7 +8633,7 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 const TOKEN_RE = new RegExp(
-  `\\b(${ANY_NAME})\\b|\\b(\\d+)\\b|\\b(while|for|in|range|True|False|true|false|let|pass|if|elif|else|not|and|or)\\b|([(){};:+<=!&|])|\\b(${COND_ANY})\\b`, "g");
+  `\\b(${ANY_NAME})\\b|\\b(\\d+)\\b|\\b(while|for|in|range|True|False|true|false|let|pass|if|elif|else|not|and|or|def|function)\\b|([(){};:+<=!&|])|\\b(${COND_ANY})\\b|\\b([A-Za-z_]\\w*)(?=\\s*\\()`, "g");
 const axisOf = (name) => DIRS[name]?.axis || DIRS[PY_TO_JS[name]]?.axis;
 
 function highlightLine(line) {
@@ -8069,7 +8644,7 @@ function highlightLine(line) {
   TOKEN_RE.lastIndex = 0;
   while ((m = TOKEN_RE.exec(code))) {
     html += escapeHtml(code.slice(last, m.index));
-    const cls = m[1] ? `tk-cmd-${axisOf(m[1])}` : m[2] ? "tk-num" : m[3] ? "tk-kw" : m[5] ? "tk-cond" : "tk-p";
+    const cls = m[1] ? `tk-cmd-${axisOf(m[1])}` : m[2] ? "tk-num" : m[3] ? "tk-kw" : m[5] ? "tk-cond" : m[6] ? "tk-fn" : "tk-p";
     html += `<span class="${cls}">${escapeHtml(m[0])}</span>`;
     last = m.index + m[0].length;
   }
@@ -8081,6 +8656,12 @@ function highlightLine(line) {
 // Рисуем подсветку, номера строк и полоски циклов
 // Задания, которые в тексте ссылаются на код, для режима блоков пересказаны плитками
 const BLOCK_GOALS = {
+  // Остров мастеров: свои приёмы
+  "Готовый приём": "Новое: свой приём! В розовой рамке [[fnhead]] лежат два шага одной ступеньки. Розовая кнопка [[fnbtn]] делает весь приём сразу. Ступенек четыре, а плитка-приём пока одна. Нажми [[fnbtn]] ещё 3 раза.",
+  "Вниз по приёму": "Приём «ступенька вниз» уже собран, но плиток-приёмов ещё нет. Посчитай ступеньки и нажми розовую кнопку [[fnbtn]] столько же раз.",
+  "Кривой приём": "Найди ошибку: ступеньки широкие, в две клетки, а в приёме шаг вправо на одну. Поправь приём — и все четыре плитки-приёма станут правильными сразу. Нажми на плитку [[tile:moveRight:1]] в розовой рамке и цифру [[num:2]].",
+  "Сам собери приём": "Плиток-приёмов четыре, но рамка приёма пустая — рыцарь не знает, что делать. Ступенька узкая: шаг вправо и шаг вверх. Нажми на рамку [[fnhead]], потом кнопки [[btn:moveRight]] и [[btn:moveUp]].",
+  "Мастерская: испытание": "Испытание: рамка приёма пустая, плиток-приёмов нет. Ступенька такая: сначала шаг вниз, потом два вправо. Подсказка: [[fnhead]], [[btn:moveDown]], [[btn:moveRight]], потом нажми на новую плитку [[tile:moveRight:1]] и [[num:2]], [[tool:done]] — и розовую кнопку столько раз, сколько ступенек.",
   // Остров рудокопов: длинные карты, «если» внутри цикла
   "Ступеньки вверх": "Новое: длинная карта! Она не влезает в экран, поэтому показана частями [[pages]] — это <b>одна</b> карта, а не варианты. Полистай её кнопками или проведи пальцем по полю. В цикле 🔁 пустая рамка «если»: она проверяет на каждом круге. Нажми на неё [[ifhead]], потом кнопку [[btn:moveUp]].",
   "Ступеньки вниз": "Шахта уходит вниз. Полистай карту [[pages]], потом нажми на рамку [[ifhead]] и кнопку [[btn:moveDown]].",
@@ -8160,6 +8741,7 @@ function parseBlocks(code) {
   const root = { body: [], indent: -1 };
   const stack = [root];
   let lastIf = null;
+  const fns = defNames(code), fnCall = fns.length ? new RegExp(`^\\s*(${fns.join("|")})\\s*\\(\\s*\\)\\s*;?\\s*(?:#.*|//.*)?$`) : null;
   code.split("\n").forEach((raw, k) => {
     const line = k + 1, t = raw.trim();
     if (!t || t.startsWith("#") || t.startsWith("//") || t === "}") return;
@@ -8183,6 +8765,15 @@ function parseBlocks(code) {
       stack.push(loop);
       return;
     }
+    const dm = raw.match(DEF_LINE);
+    if (dm) {
+      const node = { def: dm[1] || dm[2], line, body: [], indent };
+      parent.body.push(node);
+      stack.push(node);
+      return;
+    }
+    const cm = fnCall && raw.match(fnCall);
+    if (cm) { parent.body.push({ call: cm[1], line }); return; }
     const im = raw.match(IF_LINE);
     if (im) {
       const node = { cond: condKey(im[2]), neg: !!im[1], line, body: [], indent };
@@ -8195,9 +8786,11 @@ function parseBlocks(code) {
   });
   return root.body;
 }
+let activeVia = 0;   // при запуске: строка, откуда позвали приём (плитка-вызов тоже светится)
 function tileHtml(t, active, err) {
-  const cls = (t.line === selLine ? " sel" : "") + (t.line === active ? " now" : "") + (t.line === err ? " err" : "");
+  const cls = (t.line === selLine ? " sel" : "") + (t.line === active || (t.call && t.line === activeVia) ? " now" : "") + (t.line === err ? " err" : "");
   if (t.bad) return `<button class="tile bad${cls}" data-line="${t.line}">${esc(t.bad)}</button>`;
+  if (t.call) return `<button class="tile fn${cls}" data-line="${t.line}" aria-label="приём ${t.call}"><span class="pz">🧩</span>${fnMini(codeEl.value, t.call)}</button>`;
   const key = ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name);
   const d = DIRS[key];
   return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.n}"><span class="ar">${d.arrow}</span><span class="nn">${t.n}</span></button>`;
@@ -8208,6 +8801,11 @@ function blockHtml(it, active, err) {
   if (it.loop) {
     return `<div class="bloop${it.line === err ? " err" : ""}"><button class="lhead${it.line === selLine ? " sel" : ""}" data-line="${it.line}">🔁 ${it.times ? `повторить ${it.times}` : "повторять"}</button>`
       + body(it.body, "кнопки положат команды сюда") + `</div>`;
+  }
+  if (it.def) {
+    const st = (it.line === selLine ? " sel" : "");
+    return `<div class="bdef${it.line === err ? " err" : ""}"><button class="dhead${st}" data-line="${it.line}" aria-label="свой приём ${it.def}">🧩 приём</button>`
+      + body(it.body, "что делает приём", true) + `</div>`;
   }
   if (it.cond) {
     const k = CONDS[it.cond];
@@ -8232,7 +8830,7 @@ $("goal").addEventListener("click", () => { if (!$("goal-more").hidden) toggleGo
 $("blocks").addEventListener("click", (e) => {
   let b = e.target.closest("button[data-line]");
   // нажали на пустое место рамки — как будто на её заголовок
-  if (!b) b = e.target.closest(".bif, .bloop")?.querySelector(":scope > .ihead, :scope > .lhead");
+  if (!b) b = e.target.closest(".bif, .bloop, .bdef")?.querySelector(":scope > .ihead, :scope > .lhead, :scope > .dhead");
   if (!b || running) return;
   sfx("tap");
   const n = Number(b.dataset.line);
@@ -8309,6 +8907,7 @@ function applyUi() {
 }
 
 function drawCode(activeLine = 0) {
+  if (!activeLine) activeVia = 0;
   const text = codeEl.value;
   const lines = text.split("\n");
   const loops = findLoops(text);
@@ -8707,7 +9306,15 @@ function onCodeChange() {
   writeSave();
   winBox.hidden = true;
   if (variantsDone.size) { variantsDone.clear(); drawVariants(); }
+  if (L.funcs) refreshFnChips();
   reset();
+}
+// Кнопки приёмов показывают, что в приёме лежит: приём поправили — картинка на кнопке тоже меняется.
+// Приём убрали или добавили — палитра собирается заново.
+function refreshFnChips() {
+  const names = defNames(codeEl.value), have = [...chipsEl.querySelectorAll(".fnchip")].map((b) => b.id.slice(7));
+  if (names.join() !== have.join()) { buildChips(); return; }
+  for (const nm of names) $("add-fn-" + nm).innerHTML = uiBlocks ? `🧩${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -8805,6 +9412,7 @@ async function run() {
     await shotPending;                       // дерево ещё падает — сначала пусть упадёт
     await showChecks(p, i);
     const label = `${disp(cmd.name)}(${cmd.n})`;
+    activeVia = cmd.via || 0;
     drawCode(cmd.line);
     drawRoute(p, i);
     if (cmd.dx) heroEl.classList.toggle("flip", cmd.dx < 0);
@@ -9429,6 +10037,14 @@ function win() {
     setStatus("Рыцарь дошёл, но в этом испытании нужен цикл. Найди, какие шаги повторяются, и положи их в цикл", "fail");
     return;
   }
+  // испытание главы приёмов: нужен свой приём — не пустой и позванный хотя бы раз
+  if (L.requireFn) {
+    const c = stripComments(codeEl.value), fns = defNames(c).filter((nm) => defBody(c, nm).length);
+    if (!fns.length || !callRe(fns).test(c)) {
+      setStatus("Рыцарь дошёл, но в этом испытании нужен свой приём: собери шаги ступеньки в розовой рамке и позови приём розовой кнопкой", "fail");
+      return;
+    }
+  }
   const wasChapterLocked = L.challenge && !chapterOpen(L.chapter + 1);
   const written = countWrittenCommands(codeEl.value);
   const stars = written <= L.par ? 3 : written <= L.good ? 2 : 1;
@@ -9442,6 +10058,7 @@ function win() {
   const nextCh = CHAPTERS[L.chapter + 1];
   const myIsle = L.isle || 1, lastOfIsle = L.name === LAST_OF(myIsle)?.name && !!gateTo(myIsle, myIsle + 1);
   if (lastOfIsle) note += myIsle === 1 ? " Ты прошёл весь остров! От крепости открылся мост к новому острову."
+    : myIsle === 3 ? " Ты прошёл весь остров! Рудокопы ждут у брёвен — сейчас они построят мост на новый остров."
     : " Ты прошёл весь остров! Монастырь открыт: из него подземный ход ведёт на новый остров.";
   else if (wasChapterLocked && nextCh && chapterOpen(L.chapter + 1)) note += ` Открыта новая глава: ${nextCh.name}!`;
   else if (L.challenge && nextCh?.soon) note += ` Глава «${nextCh.name}» скоро появится.`;
@@ -9636,7 +10253,7 @@ function drawLineBar() {
     const k = CONDS[condKey(ifm[2])];
     $("lb-what").textContent = `${WHAT_RU[k.what]} ⇄ ${WHAT_RU[whats.find((w) => w !== k.what) || k.what]}`;
   }
-  $("lb-label").textContent = ifm ? ($("lb-else").hidden ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»"
+  $("lb-label").textContent = DEF_LINE.test(line) ? "Нажимай кнопки команд — шаги лягут в приём" : ifm ? ($("lb-else").hidden ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»"
       : "Кнопка команды — шаг внутрь «если»; «＋ иначе» — добавить «иначе»") : isElse ? "Рамка «иначе»: что делать, если нет"
     : uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : `Строка ${selLine}`;
   toolBtn($("lb-up"), uiBlocks ? "earlier" : "up", uiBlocks ? "Плитку раньше" : "Строку выше");
@@ -9649,7 +10266,7 @@ function drawLineBar() {
   document.querySelector(".shift-label").hidden = true;
   if (uiBlocks) {
     // показываем только то, что можно сделать с этой плиткой
-    const inside = /^ /.test(line), hasLoop = frames.length > 0, isLoopLine = /^\s*(while|for|if|elif|else)\b/.test(line);
+    const inside = /^ /.test(line), hasLoop = frames.length > 0, isLoopLine = /^\s*(while|for|if|elif|else|def|function)\b/.test(line);
     $("lb-out").hidden = !inside;
     $("lb-in").hidden = inside || !hasLoop || isLoopLine;
     document.querySelector(".shift").hidden = $("lb-out").hidden && $("lb-in").hidden;
@@ -10121,6 +10738,8 @@ const SFX = {
     [1047, 1319].forEach((f) => note(f, { dur: 0.6, vol: 0.4, at: 0.48 }));
   },
   tap()    { note(880, { dur: 0.03, vol: 0.18 }); },
+  // молоток по доске: мягкий деревянный «тук»
+  knock()  { noise({ dur: 0.05, vol: 0.3, freq: 650 }); note(210, { dur: 0.07, vol: 0.22, slideTo: 170 }); },
   // удар мечом: свист и звонкий "дзынь" по щиту
   hit()    { noise({ dur: 0.08, vol: 0.5, freq: 2600 }); note(740, { dur: 0.12, type: "square", vol: 0.22, at: 0.05 }); note(1110, { dur: 0.2, vol: 0.3, at: 0.06 }); },
   // гоблин попал по щиту рыцаря: глухой "тунк"
@@ -10200,7 +10819,7 @@ let mood = MOODS[0], musicTimer = null, musicOut = null, reverbIn = null, nextAt
 let boardTerr = [];
 const MOOD_OF_THEME = { beach: 0, forest: 1, cave: 2, mountain: 3 };
 // главы второго острова: деревня и кусты — луг, просека — лес, «Свои и чужие» — луг
-const MOOD_OF_CHAPTER = (lv) => !lv ? 0 : lv.isle === 2 ? (lv.chapter === 6 ? 1 : 0) : lv.isle === 3 ? 0 : Math.min(lv.chapter, 3);
+const MOOD_OF_CHAPTER = (lv) => !lv ? 0 : lv.isle === 2 ? (lv.chapter === 6 ? 1 : 0) : lv.isle >= 3 ? 0 : Math.min(lv.chapter, 3);
 let placeLock = null;           // подземный ход и т. п.: место задано вручную, пока не снимут
 function updatePlace() {
   if (placeLock) return setPlace(...placeLock);
@@ -11024,7 +11643,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 86;
+const APP_VERSION = 87;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
