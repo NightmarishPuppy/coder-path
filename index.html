@@ -1762,6 +1762,7 @@ const CHAPTERS = [
   { name: "Глубокая шахта", topic: "длинные карты и высокие ступени", isle: 3 },
   { name: "Кривые штольни", topic: "«если… иначе»", isle: 3 },
   { name: "Арена", topic: "бой по своей программе", isle: 3 },
+  { name: "Битва", topic: "бой вместе с союзниками", isle: 3 },
 ];
 
 // Уровни по порядку на карте.
@@ -3318,6 +3319,98 @@ const LEVELS = [
     map: ["S........", ".........", ".........", ".........", "........."],
     starter: { py: "", js: "" },
   },
+  // ===== Глава 12 «Битва» (Остров рудокопов): на арене рыцарь не один — союзники, бочки, башня =====
+  {
+    name: "Подмога",
+    chapter: 12,
+    isle: 3,
+    arena: { secs: 20, hp: 10, allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
+      waves: [[1, "l", "torch"], [1.3, "r", "torch"], [3, "l", "tnt"], [3.5, "r", "torchp"], [6, "l", "torchp"], [6.3, "r", "tnt"], [8.5, "l", "torch"], [8.8, "r", "torch"],
+        [10.5, "l", "tnt"], [11, "r", "torchp"], [13, "l", "torch"], [13.3, "r", "tnt"], [15.5, "l", "torchp"], [15.8, "r", "torch"], [17, "l", "tnt"]] },
+    goal: "Новое: подмога! Рядом с рыцарем бьются мечник и копейщик — они сами видят гоблинов и сами дерутся. Гоблинов стало больше. Когда врага рядом нет, иди к нему: goToEnemy().",
+    commands: ["attack", "goToEnemy"],
+    ifs: ["near"],
+    elseButton: true,
+    par: 2, good: 3,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n        attack()\n    else:\n",
+      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n  }\n}\n",
+    },
+  },
+  {
+    name: "Бочки",
+    chapter: 12,
+    isle: 3,
+    arena: { secs: 20, hp: 10, allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
+      waves: [[1, "l", "torch"], [1.3, "r", "torch"], [3, "l", "barrel"], [4.5, "r", "torchp"], [4.8, "l", "torch"], [6.5, "r", "barrel"], [8, "l", "torchp"], [8.3, "r", "torch"],
+        [9.5, "l", "barrel"], [11, "r", "torchp"], [11.3, "l", "torch"], [12.5, "r", "barrel"], [14, "l", "torch"], [14.3, "r", "torchp"], [15.5, "l", "barrel"], [17, "r", "torch"], [18, "l", "barrel"], [18.5, "r", "torchp"]] },
+    goal: "Новое: бочки! Гоблин в бочке подбегает и взрывается. Взрыв ранит всех рядом — и наших, и гоблинов. Когда врага рядом нет, лечись: heal().",
+    commands: ["attack", "heal"],
+    ifs: ["near"],
+    elseButton: true,
+    par: 2, good: 3,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n        attack()\n    else:\n",
+      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n  }\n}\n",
+    },
+  },
+  {
+    name: "Лучник на башне",
+    chapter: 12,
+    isle: 3,
+    arena: { secs: 20, hp: 10, tower: [6.2, 4.2], allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
+      waves: [[1, "r", "torch"], [1.3, "l", "torch"], [2.5, "r", "barrel"], [2.8, "r", "torch"], [3, "l", "barrel"], [3, "r", "torchp"], [3.6, "r", "barrel"], [3.7, "l", "torchp"], [5, "r", "torchp"], [5.3, "l", "torchp"], [9.5, "l", "barrel"], [10.5, "r", "torch"], [10.8, "l", "torchp"], [12, "r", "barrel"], [13.5, "l", "tnt"], [14, "r", "torchp"], [14.2, "l", "barrel"], [15, "l", "barrel"], [15.6, "r", "barrel"], [16, "l", "barrel"], [16.3, "l", "torch"]] },
+    goal: "Новое: башня с лучником! Он сам стреляет — первым делом по бочкам, чтобы те взрывались подальше. Обе рамки пустые: если враг рядом — бей, иначе — лечись.",
+    commands: ["attack", "heal"],
+    ifs: ["near"],
+    elseButton: true,
+    par: 2, good: 3,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n    else:\n",
+      js: "while (true) {\n  if (enemyNear()) {\n  } else {\n  }\n}\n",
+    },
+  },
+  {
+    name: "Два дела",
+    chapter: 12,
+    isle: 3,
+    arena: { secs: 20, hp: 10, tower: [6.2, 4.2], allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
+      waves: [[1, "r", "tnt"], [1.4, "l", "barrel"], [1.5, "l", "torch"], [2.5, "l", "tnt"], [3.5, "r", "barrel"], [4.5, "r", "torchp"], [5, "l", "tnt"], [6.5, "r", "tnt"], [7, "l", "barrel"], [7.9, "l", "torch"], [8.5, "r", "torch"], [9, "l", "tnt"], [9.2, "r", "barrel"], [10, "r", "barrel"], [11.5, "r", "tnt"], [11.6, "r", "torch"], [13, "l", "barrel"], [13.5, "r", "torch"], [14.5, "l", "tnt"], [15, "l", "torch"], [16, "r", "tnt"], [16.5, "l", "torchp"]] },
+    goal: "Гоблинов с динамитом много, и бросают они издалека. В «иначе» можно положить две команды. Порядок важен: сначала лечись heal(), пока никто не бьёт, потом иди к врагу goToEnemy().",
+    commands: ["attack", "heal", "goToEnemy"],
+    ifs: ["near"],
+    elseButton: true,
+    par: 3, good: 4,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n        attack()\n    else:\n        go_to_enemy()\n",
+      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n    goToEnemy();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Битва: испытание",
+    chapter: 12,
+    isle: 3,
+    challenge: true,
+    requireLoop: true,
+    loopButton: true,
+    ifButton: true,
+    elseButton: true,
+    arena: { secs: 30, hp: 14, tower: [6.2, 4.2], allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
+      waves: [[1, "l", "torch"], [1.3, "r", "torch"], [2.5, "r", "tnt"], [3.5, "l", "barrel"], [4.5, "r", "torchp"], [5, "l", "torchp"], [6, "l", "tnt"], [7, "r", "barrel"],
+        [8.5, "l", "torch"], [8.8, "r", "torch"], [9.1, "l", "torch"], [10.5, "r", "tnt"], [11.5, "l", "barrel"], [12.5, "r", "torchp"], [13, "l", "tnt"],
+        [15, "r", "barrel"], [15.5, "l", "torch"], [16, "r", "torchp"], [17.5, "l", "tnt"], [18.5, "r", "barrel"], [20, "l", "torchp"], [20.3, "r", "torch"],
+        [21.5, "r", "tnt"], [22.5, "l", "barrel"], [24, "r", "torch"], [24.3, "l", "torchp"], [25.5, "l", "tnt"], [26.5, "r", "barrel"], [27.5, "l", "torch"], [27.8, "r", "torch"]] },
+    goal: "Испытание: большая битва на 30 секунд — факелы, динамит, бочки, а рядом союзники и лучник. Программа пустая. Подсказка: цикл, в нём «если враг рядом» с ударом, а в «иначе» — лечение и путь к врагу.",
+    commands: ["attack", "heal", "goToEnemy"],
+    ifs: ["near"],
+    par: 3, good: 4,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: { py: "", js: "" },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -4654,7 +4747,7 @@ ISLE_MAPS[2] = {
 // @@/isle2@@
 // @@isle3@@
 ISLE_MAPS[3] = {
-  nodes: [[190, 490], [90, 470], [110, 430], [150, 430], [190, 430], [230, 430], [270, 410], [250, 370], [210, 370], [170, 370], [130, 370], [110, 330], [150, 310], [190, 310], [230, 310], [250, 270], [210, 250], [170, 250], [130, 230], [130, 190], [170, 190]],
+  nodes: [[190, 490], [90, 470], [110, 430], [150, 430], [190, 430], [230, 430], [270, 410], [250, 370], [210, 370], [170, 370], [130, 370], [110, 330], [150, 310], [190, 310], [230, 310], [250, 270], [210, 250], [170, 250], [130, 230], [130, 190], [170, 190], [210, 190], [230, 130], [190, 130], [170, 90], [170, 50]],
   rows: [
     "....................................",
     "....................................",
@@ -4800,7 +4893,7 @@ ISLE_MAPS[3] = {
     ["goldsp4", 12.0, 25.6, 0.5],
     ["mine", 15.2, 8.1, 0.6],
   ],
-  labels: [["ЛЕСТНИЦЫ", 258, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274], ["АРЕНА", 140, 150]],
+  labels: [["ЛЕСТНИЦЫ", 258, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274], ["АРЕНА", 140, 150], ["БИТВА", 92, 92]],
   bank: [["cloud_a", 990, 1800, 1.0], ["cloud_c", 1080, 1820, 0.9]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm5",
@@ -5921,10 +6014,11 @@ async function battle(st0, B) {
     u.hp -= dmg; flash(u);
     if (u.hp <= 0) kill(u);
   };
-  const splash = (x, y, r, dmg, side) => units.forEach((v) => !v.dead && v.T.side === side && Math.hypot(v.x - x, v.y - y) < r && hurt(v, dmg));
+  // взрыв ранит всех в небольшом круге — и наших, и гоблинов (бочка рядом тоже взрывается)
+  const splash = (x, y, r, dmg) => [...units].forEach((v) => !v.dead && Math.hypot(v.x - x, v.y - y) < r && hurt(v, dmg));
   const kill = (u) => {
     u.dead = true; u.a.show(false);
-    if (u.kind === "barrel") { boom(u.x, u.y); splash(u.x, u.y, 0.9, u.T.dmg, "us"); return; }
+    if (u.kind === "barrel") { boom(u.x, u.y); splash(u.x, u.y, 0.9, u.T.dmg); return; }
     const d = take(deads); d.at(u.x, u.y); Z(d, u.y); d.show(true);
     d.play(0, 7, 110, false);
     after(2600, () => d.play(1, 7, 120, false).then(() => free(d)));
@@ -5987,7 +6081,7 @@ async function battle(st0, B) {
     after(380, () => {
       if (u.dead) return;
       const d = take(dyns); d.el.style.transition = "none"; d.at(u.x + (u.left ? -0.3 : 0.3), u.y - 1.0); Z(d, 40); d.show(true); d.play(0, 6, 70);
-      d.arc(x1, y1, 1.1, 650).then(() => { free(d); boom(x1, y1); splash(x1, y1, 0.75, u.T.dmg, "us"); });
+      d.arc(x1, y1, 1.1, 650).then(() => { free(d); boom(x1, y1); splash(x1, y1, 0.75, u.T.dmg); });
     });
   };
   const barrelGo = (u, t) => {
@@ -8002,6 +8096,11 @@ const BLOCK_GOALS = {
   "Передышка": "Гоблины нападают толпой, между набегами — передышка. Когда врага рядом нет — лечись: нажми на [[elsehead]] и кнопку [[btn:heal]].",
   "Удар в пустоту": "Найди ошибку: когда врага рядом нет, рыцарь машет мечом в воздух и не лечится. Нажми на нижнюю плитку [[tile:attack:1]] и кнопку [[btn:heal]].",
   "Арена: испытание": "Испытание: программа пустая. С факелами гоблины идут сами, с динамитом — бросают издалека. Подсказка: «🔁 повторять», в нём «❓ если» с ⚔, потом «＋ иначе» и ➤.",
+  "Подмога": "Новое: подмога! Мечник и копейщик бьются рядом сами, а гоблинов стало больше. Когда врага рядом нет — иди к нему: нажми на [[elsehead]] и кнопку [[btn:goToEnemy]].",
+  "Бочки": "Новое: бочки! Бочка подбегает и взрывается — ранит всех рядом, и наших, и гоблинов. Когда врага рядом нет — лечись: нажми на [[elsehead]] и кнопку [[btn:heal]].",
+  "Лучник на башне": "Новое: лучник на башне — он сам стреляет, первым делом по бочкам. Обе рамки пустые: нажми на [[ifhead]] и кнопку [[btn:attack]], потом на [[elsehead]] и кнопку [[btn:heal]].",
+  "Два дела": "Гоблины с динамитом бросают издалека. В «иначе» поместятся две команды: [[btn:goToEnemy]] уже есть. Нажми на [[elsehead]] и кнопку [[btn:heal]] — лечение встанет первым: сначала лечись, потом иди к врагу.",
+  "Битва: испытание": "Испытание: большая битва на 30 секунд — факелы, динамит, бочки, рядом союзники и лучник. Подсказка: «🔁 повторять», в нём «❓ если» с ⚔, потом «＋ иначе» с ♥ и ➤.",
   "Если… иначе": "Новое: [[elsehead]] — «если нет». Рыцарь делает <b>одно из двух</b>. Нажми на [[ifhead]] и кнопку [[btn:moveUp]].",
   "Ступени разной высоты": "Ступени разной высоты. С «иначе» рыцарь каждый круг смотрит заново и поднимается, пока справа препятствие. Нажми на [[ifhead]] и кнопку [[btn:moveUp]].",
   "Вверх без конца": "Найди ошибку: в «иначе» тоже шаг вверх — рыцарь упрётся в потолок. Нажми на плитку под [[elsehead]] и кнопку [[btn:moveRight]].",
@@ -8919,33 +9018,67 @@ async function run() {
 // в ширину (x 3…15) и ряды 1,3…8, поэтому бойцы крупные.
 const ARENA = { map: 20, x0: 3, y0: 1.3, cols: 12, start: [9, 5.5], roadY: 5.5,
   reach: 1.0,                                   // «враг рядом» и удар — на столько клеток
+  dmg: 1,                                       // удар рыцаря
   spawn: { l: [-0.3, 5.5], r: [18.3, 5.5] } };
-// гоблины арены: сердечки, удар, дальность, перезарядка (с), скорость (клеток в секунду)
-const ARENA_FOES = {
-  torch:  { hp: 2, dmg: 1, reach: 0.75, cd: 1.2, speed: 1.4, key: "torch" },
-  torchp: { hp: 3, dmg: 1, reach: 0.75, cd: 1.1, speed: 1.25, key: "torchp" },
-  tnt:    { hp: 2, dmg: 1, reach: 2.6, cd: 2.4, speed: 1.2, key: "tnt" },
+// бойцы арены: side — сторона; hp — сердечки; dmg — урон; reach — дальность удара (клеток);
+// cd — перезарядка (с); speed — клеток в секунду; sight — как далеко союзник видит гоблина
+const ARENA_UNITS = {
+  torch:  { side: "gob", hp: 2, dmg: 1, reach: 0.75, cd: 1.2, speed: 1.4 },
+  torchp: { side: "gob", hp: 3, dmg: 1, reach: 0.75, cd: 1.1, speed: 1.25 },
+  tnt:    { side: "gob", hp: 2, dmg: 1, reach: 2.6, cd: 2.4, speed: 1.2 },
+  barrel: { side: "gob", hp: 2, dmg: 2, reach: 0.6, cd: 0, speed: 1.7 },
+  war:    { side: "us", hp: 6, dmg: 1, reach: 0.8, cd: 0.9, speed: 1.8, sight: 1.6 },
+  lan:    { side: "us", hp: 6, dmg: 1, reach: 1.1, cd: 1.0, speed: 1.7, sight: 1.6 },
+};
+// взрывы задевают ВСЕХ в небольшом круге — и наших, и гоблинов: r — радиус (клеток), dmg — урон
+const ARENA_BLAST = { dyn: { r: 0.8 }, barrel: { r: 1.0 } };
+const ARENA_ARCHER = { reach: 5.5, dmg: 1, cd: 1.3 };
+// как рисовать бойцов: картинка, масштаб, точка ног и полоски анимаций [ряд, кадров, мс, картинка]
+const ARENA_ART = {
+  torch:  { key: "torch", idle: [0, 7, 120], run: [1, 6, 90], atk: [2, 6, 85] },
+  torchp: { key: "torchp", idle: [0, 7, 120], run: [1, 6, 90], atk: [2, 6, 85] },
+  tnt:    { key: "tnt", idle: [0, 6, 130], run: [1, 6, 90], throw: [2, 7, 90] },
+  barrel: { key: "barrel", foot: 0.72, idle: [0, 1, 200], run: [4, 3, 160], fuse: [5, 3, 150] },
+  war:    { key: "kwar", idle: [0, 6, 140], run: [1, 6, 90], atk: [2, 6, 75] },
+  lan:    { key: "lidle", sc: 0.8, foot: 0.625, idle: [0, 12, 110, "lidle"], run: [0, 6, 90, "lrun"], atk: [0, 3, 120, "lratk"] },
 };
 let arenaEng = null;
 function arenaEngine() { return (arenaEng ||= mapEngine(ISLE_MAPS[ARENA.map])); }
 // где можно стоять: трава островка или дорога с мостами (за краем карты — тоже дорога)
 function arenaWalk(x, y) {
-  const E = arenaEngine();
+  const E = arenaEngine(), tw = L?.arena?.tower;
+  if (tw && Math.abs(x - tw[0]) < 0.62 && y > tw[1] - 0.55 && y < tw[1] + 0.15) return false;   // башня
   if (Math.abs(y - ARENA.roadY) < 0.32 && (x < 0.2 || x > 17.8 || E.roadAt(Math.floor(x), Math.floor(y)) !== ".")) return true;
   return x > 0 && x < 18 && [-0.22, 0, 0.22].every((dx) => E.groundAt(x + dx, y) === 0);
 }
 
-// Просчёт боя по программе игрока
+// Просчёт боя по программе игрока.
+// Все бойцы — в одном списке units: рыцарь (его ведёт программа), союзники (бьют ближайшего гоблина
+// и возвращаются на место) и гоблины (идут к ближайшему из наших). Динамит и бочки взрываются
+// и ранят всех, кто оказался рядом, — и своих, и чужих.
 function arenaPlan(code) {
   const A = L.arena, DT = 0.05;
-  const hero = { x: ARENA.start[0], y: ARENA.start[1], hp: A.hp, act: "idle", left: false };
-  const foes = [], frames = [], events = [];
+  let seed = 7;                                 // свой «случай»: одна и та же программа — один и тот же бой
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  const hero = { id: 0, kind: "hero", side: "us", hero: true, x: ARENA.start[0], y: ARENA.start[1], hp: A.hp, act: "idle", left: false };
+  const units = [hero], frames = [], events = [], pend = [];
   const waves = [...A.waves].sort((a, b) => a[0] - b[0]).map(([t, side, kind]) => ({ t, side, kind }));
-  let t = 0, nextFrame = 0, line = 0, ids = 0, loops = 0, endedAt = null, heals = 0, hits = 0, kills = 0, swings = 0;
+  let t = 0, nextFrame = 0, line = 0, ids = 0, loops = 0, endedAt = null, heals = 0, hits = 0, kills = 0, swings = 0, healsFailed = 0;
   const STOPA = { arena: true };
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-  const near = () => foes.filter((f) => f.hp > 0 && dist(f, hero) <= ARENA.reach).sort((a, b) => dist(a, hero) - dist(b, hero))[0];
-  const nearestAny = () => foes.filter((f) => f.hp > 0).sort((a, b) => dist(a, hero) - dist(b, hero))[0];
+  const add = (kind, x, y, extra) => { const T = ARENA_UNITS[kind];
+    const u = { id: ++ids, kind, T, side: T.side, x, y, hp: T.hp, next: t + 0.6, busy: 0, act: "idle", left: false, ...extra };
+    units.push(u); return u; };
+  for (const { kind, at, left } of A.allies || []) add(kind, at[0], at[1], { post: at, postLeft: !!left, left: !!left });
+  const tower = A.tower ? { x: A.tower[0], y: A.tower[1] - (232 - 118) / 64 * 0.75, next: 1 } : null;   // лучник на площадке башни
+  const gobs = () => units.filter((u) => u.side === "gob" && u.hp > 0);
+  const near = () => gobs().filter((f) => dist(f, hero) <= ARENA.reach).sort((a, b) => dist(a, hero) - dist(b, hero))[0];
+  const nearestAny = () => gobs().sort((a, b) => dist(a, hero) - dist(b, hero))[0];
+  const nearestOf = (u, side, ok = () => true) => {
+    let best = null, bd = Infinity;
+    for (const v of units) if (v.side === side && v.hp > 0 && ok(v)) { const d = dist(u, v); if (d < bd) { bd = d; best = v; } }
+    return best;
+  };
   const stepTo = (u, gx, gy, sp) => {
     const dx = gx - u.x, dy = gy - u.y, d = Math.hypot(dx, dy);
     if (d < 0.02) return false;
@@ -8957,50 +9090,108 @@ function arenaPlan(code) {
     return false;
   };
   const snap = () => frames.push({ t: +t.toFixed(2), line, hero: { x: hero.x, y: hero.y, hp: hero.hp, act: hero.act, left: hero.left },
-    foes: foes.filter((f) => f.shown).map((f) => ({ id: f.id, kind: f.kind, x: f.x, y: f.y, hp: f.hp, act: f.act, left: f.left, dead: f.hp <= 0 })) });
-  // мир живёт dt секунд: гоблины выходят из облаков, идут, бьют, бросают динамит
+    units: units.filter((u) => !u.hero).map((u) => ({ id: u.id, kind: u.kind, x: u.x, y: u.y, hp: u.hp, act: u.act, left: u.left, dead: u.hp <= 0 })) });
+  // ранение. Бочку можно разбить мечом или стрелой, пока фитиль не горит, — тогда взрыва нет;
+  // а от другого взрыва (by === "blast") или с горящим фитилём она взрывается
+  const hurt = (u, dmg, by) => {
+    if (u.hp <= 0) return;
+    u.hp -= dmg;
+    if (u.hero) { events.push({ t, kind: "hurt", by: by?.id }); return; }
+    if (u.hp > 0) { events.push({ t, kind: "hit", id: u.id }); return; }
+    if (u.side === "gob") kills++;
+    if (u.kind === "barrel" && (by === "blast" || u.act === "fuse")) return blowBarrel(u);
+    events.push({ t, kind: "die", id: u.id, at: [u.x, u.y] });
+  };
+  // взрыв: ранит всех в круге r — и наших, и гоблинов
+  const blast = (x, y, r, dmg) => {
+    events.push({ t, kind: "boom", at: [x, y] });
+    for (const u of [...units]) if (u.hp > 0 && Math.hypot(u.x - x, u.y - y) < r) hurt(u, dmg, "blast");
+  };
+  const blowBarrel = (u) => {
+    if (u.blown) return;
+    u.blown = true; u.hp = 0;
+    events.push({ t, kind: "die", id: u.id, at: [u.x, u.y], boom: true });
+    blast(u.x, u.y, ARENA_BLAST.barrel.r, u.T.dmg);
+  };
+  // гоблин: охотится за рыцарем, а если тот далеко — за ближайшим из наших;
+  // факел бьёт, динамит бросает, бочка поджигает фитиль
+  const gobThink = (f) => {
+    const tg = dist(f, hero) <= 5 ? hero : nearestOf(f, "us");
+    if (!tg) { f.act = "idle"; return; }
+    const d = dist(f, tg);
+    if (f.kind === "barrel") {
+      if (d > f.T.reach) { f.act = stepTo(f, tg.x, tg.y, f.T.speed) ? "run" : "idle"; return; }
+      f.act = "fuse"; f.busy = t + 99;
+      pend.push({ t: t + 0.45, fn: () => { if (f.hp > 0) blowBarrel(f); } });
+      return;
+    }
+    if (d > f.T.reach) { f.act = stepTo(f, tg.x, tg.y, f.T.speed) ? "run" : "idle"; return; }
+    f.left = tg.x < f.x;
+    if (t < f.next) { f.act = "idle"; return; }
+    f.next = t + f.T.cd;
+    if (f.kind === "tnt") {
+      f.act = "throw"; f.busy = t + 0.63;
+      const tx = tg.x, ty = tg.y, fx = f.x + (f.left ? -0.3 : 0.3), fy = f.y - 1.0;
+      events.push({ t: t + 0.38, kind: "throw", from: [fx, fy], to: [tx, ty], dur: 0.6 });
+      pend.push({ t: t + 0.98, fn: () => blast(tx, ty, ARENA_BLAST.dyn.r, f.T.dmg) });
+    } else {
+      f.act = "atk"; f.busy = t + 0.5;
+      pend.push({ t: t + 0.3, fn: () => { if (f.hp > 0 && tg.hp > 0 && dist(f, tg) < f.T.reach + 0.35) hurt(tg, f.T.dmg, f); } });
+    }
+  };
+  // союзник: ближайший гоблин недалеко от своего места — к нему и бить; никого — назад на место
+  const allyThink = (u) => {
+    const [px, py] = u.post;
+    const tg = nearestOf(u, "gob", (v) => dist(u, v) <= u.T.sight && Math.hypot(v.x - px, v.y - py) <= u.T.sight);
+    if (!tg) {
+      if (stepTo(u, px, py, u.T.speed)) u.act = "run"; else { u.act = "idle"; u.left = u.postLeft; }
+      return;
+    }
+    if (dist(u, tg) > u.T.reach) { u.act = stepTo(u, tg.x, tg.y, u.T.speed) ? "run" : "idle"; return; }
+    u.left = tg.x < u.x;
+    if (t < u.next) { u.act = "idle"; return; }
+    u.next = t + u.T.cd; u.busy = t + 0.5; u.act = "atk";
+    pend.push({ t: t + 0.3, fn: () => { if (u.hp > 0 && tg.hp > 0 && dist(u, tg) < u.T.reach + 0.35) hurt(tg, u.T.dmg, u); } });
+  };
+  // лучник на башне: сначала бочки (пусть взрываются подальше), потом ближайший гоблин
+  const archerThink = () => {
+    if (t < tower.next) return;
+    const inRange = (v) => v.x > 0.3 && v.x < 17.7 && Math.hypot(v.x - tower.x, v.y - tower.y) <= ARENA_ARCHER.reach;
+    const tg = nearestOf(tower, "gob", (v) => inRange(v) && v.kind === "barrel" && v.act !== "fuse") || nearestOf(tower, "gob", inRange);
+    if (!tg) return;
+    tower.next = t + ARENA_ARCHER.cd;
+    const from = [tower.x + (tg.x < tower.x ? -0.2 : 0.2), tower.y - 0.35], to = [tg.x, tg.y - 0.35];
+    const fly = Math.hypot(to[0] - from[0], to[1] - from[1]) * 0.075;
+    events.push({ t, kind: "aim", dx: tg.x - tower.x, dy: tg.y - tower.y });
+    events.push({ t: t + 0.3, kind: "arrow", from, to, dur: fly });
+    pend.push({ t: t + 0.3 + fly, fn: () => { if (tg.hp > 0) hurt(tg, ARENA_ARCHER.dmg); } });
+  };
+  // мир живёт dur секунд: гоблины выходят из облаков, все идут, бьют, бросают, взрываются
   const live = (dur) => {
     const end = t + dur;
     while (t < end - 1e-9) {
       t += DT;
       while (waves.length && waves[0].t <= t) {
-        const w = waves.shift(), T = ARENA_FOES[w.kind], [sx, sy] = ARENA.spawn[w.side];
-        foes.push({ id: ++ids, kind: w.kind, T, x: sx, y: sy + (Math.random() - 0.5) * 0.2, hp: T.hp, next: t + 0.6, act: "run", left: w.side === "r", shown: true });
+        const w = waves.shift(), [sx, sy] = ARENA.spawn[w.side];
+        add(w.kind, sx, sy + (rnd() - 0.5) * 0.2, { act: "run", left: w.side === "r" });
       }
-      for (const f of foes) {
-        if (f.hp <= 0 || hero.hp <= 0) continue;
-        if (f.busy > t) continue;
-        const d = dist(f, hero);
-        if (d > f.T.reach) { f.act = stepTo(f, hero.x, hero.y, f.T.speed) ? "run" : "idle"; continue; }
-        f.left = hero.x < f.x;
-        if (t < f.next) { f.act = "idle"; continue; }
-        f.next = t + f.T.cd;
-        if (f.kind === "tnt") {
-          f.act = "throw"; f.busy = t + 0.63;
-          const tx = hero.x, ty = hero.y, fx = f.x + (f.left ? -0.3 : 0.3), fy = f.y - 1.0;
-          events.push({ t: t + 0.38, kind: "throw", from: [fx, fy], to: [tx, ty], dur: 0.6 });
-          pend.push({ t: t + 0.98, fn: () => { events.push({ t, kind: "boom", at: [tx, ty] }); if (Math.hypot(hero.x - tx, hero.y - ty) < 0.8) hurtHero(f.T.dmg); } });
-        } else {
-          f.act = "atk"; f.busy = t + 0.5;
-          pend.push({ t: t + 0.3, fn: () => { if (f.hp > 0 && dist(f, hero) < f.T.reach + 0.35) hurtHero(f.T.dmg, f); } });
-        }
+      for (const u of units) {
+        if (u.hero || u.hp <= 0 || hero.hp <= 0 || u.busy > t) continue;
+        if (u.side === "gob") gobThink(u); else allyThink(u);
       }
+      if (tower) archerThink();
       for (let i = pend.length - 1; i >= 0; i--) if (pend[i].t <= t) { const p = pend[i]; pend.splice(i, 1); p.fn(); }
-      // гоблины не стоят друг в друге и не залезают в рыцаря
-      for (const a of foes) if (a.hp > 0) {
-        for (const b of foes) if (b !== a && b.hp > 0) {
-          const d = dist(a, b);
-          if (d > 0 && d < 0.45) { const k = (0.45 - d) / d * 0.5, ex = (a.x - b.x) * k, ey = (a.y - b.y) * k; if (arenaWalk(a.x + ex, a.y + ey)) { a.x += ex; a.y += ey; } }
+      // бойцы не стоят друг в друге и не залезают в рыцаря
+      for (const a of units) if (!a.hero && a.hp > 0) {
+        for (const b of units) if (b !== a && b.hp > 0) {
+          const d = dist(a, b), R = b.hero ? 0.5 : 0.45;
+          if (d > 0 && d < R) { const k = (R - d) / d * (b.hero ? 1 : 0.5), ex = (a.x - b.x) * k, ey = (a.y - b.y) * k; if (arenaWalk(a.x + ex, a.y + ey)) { a.x += ex; a.y += ey; } }
         }
-        const d = dist(a, hero);
-        if (d > 0 && d < 0.5) { const k = (0.5 - d) / d, ex = (a.x - hero.x) * k, ey = (a.y - hero.y) * k; if (arenaWalk(a.x + ex, a.y + ey)) { a.x += ex; a.y += ey; } }
       }
       if (t >= nextFrame - 1e-9) { snap(); nextFrame += 0.1; }
       if (hero.hp <= 0 || t >= A.secs) throw STOPA;
     }
   };
-  const pend = [];
-  const hurtHero = (dmg, f) => { if (hero.hp <= 0) return; hero.hp -= dmg; events.push({ t, kind: "hurt", by: f?.id }); };
   // команды рыцаря
   const attack = (ln) => {
     line = ln; swings++;
@@ -9008,11 +9199,7 @@ function arenaPlan(code) {
     hero.act = "atk"; if (f) hero.left = f.x < hero.x;
     events.push({ t, kind: "swing", hit: !!f });
     live(0.25);
-    if (f && f.hp > 0 && dist(f, hero) <= ARENA.reach + 0.3) {
-      f.hp--; hits++;
-      events.push({ t, kind: f.hp <= 0 ? "die" : "hit", id: f.id, at: [f.x, f.y] });
-      if (f.hp <= 0) kills++;
-    }
+    if (f && f.hp > 0 && dist(f, hero) <= ARENA.reach + 0.3) { hits++; hurt(f, ARENA.dmg, hero); }
     live(0.25);
     hero.act = "idle";
   };
@@ -9020,8 +9207,11 @@ function arenaPlan(code) {
     line = ln; heals++;
     hero.act = "heal";
     events.push({ t, kind: "heal" });
+    // лечение срывается, если рыцаря ударили, пока он лечился: лечиться можно только в передышку
+    const hp0 = hero.hp;
     live(0.9);
-    hero.hp = Math.min(A.hp, hero.hp + 2);
+    if (hero.hp > 0 && hero.hp >= hp0) hero.hp = Math.min(A.hp, hero.hp + 2);
+    else if (hero.hp > 0) { events.push({ t, kind: "nohealt" }); healsFailed++; }
     hero.act = "idle";
   };
   const goToEnemy = (ln) => {
@@ -9048,8 +9238,10 @@ function arenaPlan(code) {
     if (e !== STOPA) return { arena: true, commands: [], error: explainError(e), errorLine: e.line };
   }
   snap();
+  events.sort((a, b) => a.t - b.t);             // бросок записан наперёд — события по времени
   const survived = hero.hp > 0;
-  return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp };
+  const lost = units.filter((u) => u.side === "us" && !u.hero && u.hp <= 0).length;
+  return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp, lost, healsFailed };
 }
 
 // Поле арены: карта островка + слой бойцов + таймер и сердечки
@@ -9086,12 +9278,31 @@ function arenaHudDraw(hp, max, left) {
   arenaHud.classList.toggle("low", hp <= 3);
 }
 let arenaHero = null;
+// башня с лучником и союзники на своих местах (до запуска и в начале боя)
+function arenaScene(st) {
+  const A = L.arena, Z = (a, y, d = 0) => (a.el.style.zIndex = Math.round(y * 40) + d);
+  let archer = null;
+  if (A.tower) {
+    const [tx, ty] = A.tower, tw = skActor(st, "towerb", 0.75, 232 / 256), a = skActor(st, "archb", 0.75), front = skActor(st, "towerbf", 0.75, 232 / 256);
+    [[tw, 0], [a, 1], [front, 2]].forEach(([x, d]) => { Z(x, ty, d); x.show(true); });
+    tw.at(tx, ty); front.at(tx, ty); a.at(tx, ty - (232 - 118) / 64 * 0.75);
+    a.play(0, 6, 150);
+    archer = a;
+  }
+  const allies = (A.allies || []).map(({ kind, at, left }) => {
+    const R = ARENA_ART[kind], a = skActor(st, R.key, R.sc || 0.85, R.foot);
+    a.at(...at); a.face(!!left); Z(a, at[1]); a.show(true); a.play(...R.idle.slice(0, 3), true, R.idle[3] || R.key);
+    return a;
+  });
+  return { archer, allies };
+}
 function arenaReset() {
   showProblems = false;
   const st = arenaStage();
+  arenaScene(st);
   arenaHero = skActor(st, "hidle", 0.85, 0.825);
   arenaHero.at(...ARENA.start); arenaHero.show(true); arenaHero.play(0, 8, 110, true, "hidle");
-  arenaHero.el.style.zIndex = 400;
+  arenaHero.el.style.zIndex = Math.round(ARENA.start[1] * 40);
   arenaHudDraw(L.arena.hp, L.arena.hp, L.arena.secs);
   refreshPlan();
   setStatus(uiBlocks ? "Собери программу рыцаря и нажми «Запустить» — продержись " + L.arena.secs + " секунд"
@@ -9108,16 +9319,22 @@ async function runArena() {
   running = true;
   setDisabled(true);
   const st = arenaStage(), A = L.arena;
+  const scene = arenaScene(st);
   const H = skActor(st, "hidle", 0.85, 0.825); H.at(...ARENA.start); H.show(true);
   const fx = skActor(st, "healfx", 0.8);
   const pool = (k, n, sc, foot) => Array.from({ length: n }, () => skActor(st, k, sc, foot));
-  const booms = pool("boom", 3, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5), deads = pool("dead", 6, 0.9, 0.75);
-  let bi = 0, di = 0, ki = 0;
-  const actors = {}, ANIM = {
-    run: (k) => [1, 6, 90], idle: (k) => k === "tnt" ? [0, 6, 130] : [0, 7, 120], atk: () => [2, 6, 85], throw: () => [2, 7, 90] };
+  const booms = pool("boom", 5, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5), deads = pool("dead", 8, 0.9, 0.75), arrows = pool("arrow", 4, 0.75, 0.5);
+  let bi = 0, di = 0, ki = 0, ai = 0;
+  const actors = {};
+  // союзники уже стоят (arenaScene) — их актёры получают номера по порядку, как в просчёте
+  scene.allies.forEach((a, k) => { actors[k + 1] = a; a.act = "idle"; });
   const Z = (a, y) => (a.el.style.zIndex = Math.round(y * 40));
-  let heroAct = "", ev = 0;
-  const T0 = performance.now();
+  const ARCH_ROW = { up: 2, uside: 3, side: 4, dside: 5, down: 6 };
+  const dirOf = (dx, dy) => { const ax = Math.abs(dx);
+    return dy > 1.6 * ax ? "down" : -dy > 1.6 * ax ? "up" : dy > 0.55 * ax ? "dside" : -dy > 0.55 * ax ? "uside" : "side"; };
+  const flash = (a) => a?.el.animate([{ filter: "brightness(2.4) saturate(0.3)" }, { filter: "none" }], 220);
+  const quick = (ms) => Math.max(20, ms / speed);
+  let heroAct = "", ev = 0, lastBoom = 0;
   for (let i = 0; i < p.frames.length; i++) {
     const fr = p.frames[i], prev = p.frames[i - 1];
     const dur = Math.max(10, ((fr.t - (prev?.t ?? 0)) * 1000) / speed);
@@ -9125,12 +9342,25 @@ async function runArena() {
     while (ev < p.events.length && p.events[ev].t <= fr.t + 1e-6) {
       const e = p.events[ev++];
       if (e.kind === "throw") { const d = dyns[bi++ % dyns.length]; d.el.style.transition = "none"; d.at(...e.from); Z(d, 40); d.show(true); d.play(0, 6, 70); d.arc(...e.to, 1.0, e.dur * 1000 / speed).then(() => d.show(false)); }
-      if (e.kind === "boom") { const b = booms[ki++ % booms.length]; b.at(...e.at); Z(b, e.at[1] + 0.5); b.show(true); b.play(0, 9, Math.max(20, 70 / speed), false).then(() => b.show(false)); sfx("ouch"); }
+      if (e.kind === "boom") {
+        const b = booms[ki++ % booms.length]; b.at(...e.at); Z(b, e.at[1] + 0.5); b.show(true); b.play(0, 9, quick(70), false).then(() => b.show(false));
+        if (performance.now() - lastBoom > 400) { sfx("ouch"); lastBoom = performance.now(); }   // цепочка взрывов — один звук
+      }
+      if (e.kind === "aim" && scene.archer) { scene.archer.face(e.dx < -0.05); scene.archer.play(ARCH_ROW[dirOf(e.dx, e.dy)], 8, quick(55), false).then(() => scene.archer.play(0, 6, 150)); }
+      if (e.kind === "arrow") {
+        const a = arrows[ai++ % arrows.length], [sx, sy] = e.from, [ex, ey] = e.to, ax = Math.abs(ex - sx), ay = Math.abs(ey - sy);
+        a.sheet(ax >= ay ? "arrow" : ey > sy ? "arrowd" : "arrowu"); a.frame(0, 0); a.face(ax >= ay && ex < sx);
+        a.el.style.transition = "none"; a.at(sx, sy); Z(a, 200); a.show(true); void a.el.offsetWidth;
+        a.move(ex, ey, e.dur * 1000 / speed).then(() => a.show(false));
+      }
       if (e.kind === "swing") sfx(e.hit ? "hit" : "swish");
-      if (e.kind === "hurt") { H.el.animate([{ filter: "brightness(2.2) saturate(0.3)" }, { filter: "none" }], 220); if (e.by) sfx("gobatk"); }
-      if (e.kind === "hit") { const a = actors[e.id]; a?.el.animate([{ filter: "brightness(2.4) saturate(0.3)" }, { filter: "none" }], 220); }
-      if (e.kind === "die") { const a = actors[e.id]; if (a) a.show(false); const d = deads[di++ % deads.length]; d.at(...e.at); Z(d, e.at[1]); d.show(true); d.play(0, 7, Math.max(20, 110 / speed), false); sfx("gobdie"); }
-      if (e.kind === "heal") { fx.at(H.x ?? ARENA.start[0], H.y ?? ARENA.start[1]); Z(fx, 300); fx.show(true); fx.play(0, 11, Math.max(20, 80 / speed), false).then(() => fx.show(false)); }
+      if (e.kind === "hurt") { flash(H); if (e.by) sfx("gobatk"); }
+      if (e.kind === "hit") flash(actors[e.id]);
+      if (e.kind === "die") {
+        const a = actors[e.id]; if (a) { a.show(false); a.gone = true; }
+        if (!e.boom) { const d = deads[di++ % deads.length]; d.at(...e.at); Z(d, e.at[1]); d.show(true); d.play(0, 7, quick(110), false); sfx("gobdie"); }
+      }
+      if (e.kind === "heal") { fx.at(H.x ?? ARENA.start[0], H.y ?? ARENA.start[1]); Z(fx, 300); fx.show(true); fx.play(0, 11, quick(80), false).then(() => fx.show(false)); }
     }
     // рыцарь
     const h = fr.hero;
@@ -9139,17 +9369,22 @@ async function runArena() {
     if (h.act !== heroAct) {
       heroAct = h.act;
       if (h.act === "run") H.play(0, 6, 85, true, "hrun");
-      else if (h.act === "atk") H.play(0, 4, Math.max(20, 110 / speed), false, "hatk");
+      else if (h.act === "atk") H.play(0, 4, quick(110), false, "hatk");
       else H.play(0, 8, 110, true, "hidle");
     }
-    // гоблины
-    for (const f of fr.foes) {
+    // союзники и гоблины
+    for (const f of fr.units) {
+      const R = ARENA_ART[f.kind];
       let a = actors[f.id];
-      if (!a) { a = actors[f.id] = skActor(st, ARENA_FOES[f.kind].key, 0.85); a.el.style.transition = "none"; a.at(f.x, f.y); void a.el.offsetWidth; a.show(true); a.act = ""; }
-      if (f.dead) continue;
+      if (!a) { a = actors[f.id] = skActor(st, R.key, R.sc || 0.85, R.foot); a.el.style.transition = "none"; a.at(f.x, f.y); void a.el.offsetWidth; a.show(true); a.act = ""; }
+      if (f.dead || a.gone) continue;
       a.el.style.transition = `left ${dur}ms linear, top ${dur}ms linear`;
       a.at(f.x, f.y); a.face(f.left); Z(a, f.y);
-      if (f.act !== a.act) { a.act = f.act; const [r, n, ms] = ANIM[f.act](f.kind); a.play(r, n, f.act === "atk" || f.act === "throw" ? Math.max(20, ms / speed) : ms, !(f.act === "atk" || f.act === "throw")); }
+      if (f.act !== a.act) {
+        a.act = f.act;
+        const spec = R[f.act] || R.idle, once = f.act === "atk" || f.act === "throw";
+        a.play(spec[0], spec[1], once ? quick(spec[2]) : spec[2], !once, spec[3] || R.key);
+      }
     }
     arenaHudDraw(h.hp, A.hp, A.secs - fr.t);
     drawCode(fr.line);
@@ -9175,6 +9410,8 @@ async function runArena() {
     why = "Рыцарь ни разу не полечился. Когда врага рядом нет — самое время для ♥ heal()";
   else if (L.commands.includes("goToEnemy") && !p.hits)
     why = "Гоблины с динамитом бьют издалека, а рыцарь так до них и не дошёл. Когда врага рядом нет — иди к нему: ➤ go_to_enemy()";
+  else if (p.healsFailed >= 2)
+    why = `Лечение срывалось ${p.healsFailed} раз: если рыцаря бьют, пока он лечится, ♥ не прибавляется. Лечись, когда рядом никого — в «иначе», и до того, как идти к врагу`;
   else why = `Рыцарь продержался ${sec} с из ${A.secs}. Посмотри, что он делает, когда враг рядом и когда нет`;
   setStatus(why, "fail");
   finish();
@@ -10782,7 +11019,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 84;
+const APP_VERSION = 85;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
