@@ -5055,8 +5055,8 @@ ISLE_MAPS[20] = {
     ["wrock2", 3.8, 8.0, 0.6],
   ],
   labels: [],
-  bank: [["cloud_b", 150, 255, 0.55], ["cloud_d", 1010, 260, 0.6]],
-  clouds: [["sc_cloud1", 3, 1, 0.2]],
+  bank: [],
+  clouds: [],
   tm: "sc_tm5",
   clear: [[4.2, 3.2, 13.8, 7.4]],
 };
@@ -9019,7 +9019,9 @@ async function run() {
 const ARENA = { map: 20, x0: 3, y0: 1.3, cols: 12, start: [9, 5.5], roadY: 5.5,
   reach: 1.0,                                   // «враг рядом» и удар — на столько клеток
   dmg: 1,                                       // удар рыцаря
-  spawn: { l: [-0.3, 5.5], r: [18.3, 5.5] } };
+  spawn: { l: [-0.3, 5.5], r: [18.3, 5.5] },
+  // видимая часть поля по ширине: рыцарь и союзники за неё не уходят, гоблины бросают и стреляют только из неё
+  seen: [3.8, 14.2] };
 // бойцы арены: side — сторона; hp — сердечки; dmg — урон; reach — дальность удара (клеток);
 // cd — перезарядка (с); speed — клеток в секунду; sight — как далеко союзник видит гоблина
 const ARENA_UNITS = {
@@ -9085,10 +9087,12 @@ function arenaPlan(code) {
     const st = Math.min(sp * DT, d), ang = Math.atan2(dy, dx);
     for (const tt of [0, 35, -35, 70, -70]) {
       const a = ang + tt * Math.PI / 180, nx = u.x + Math.cos(a) * st, ny = u.y + Math.sin(a) * st;
+      if (u.side === "us" && (nx < ARENA.seen[0] || nx > ARENA.seen[1])) continue;    // наши остаются в кадре
       if (arenaWalk(nx, ny)) { u.x = nx; u.y = ny; if (Math.abs(Math.cos(a)) > 0.15) u.left = Math.cos(a) < 0; return true; }
     }
     return false;
   };
+  const inView = (u) => u.x > ARENA.seen[0] - 0.4 && u.x < ARENA.seen[1] + 0.4;
   const snap = () => frames.push({ t: +t.toFixed(2), line, hero: { x: hero.x, y: hero.y, hp: hero.hp, act: hero.act, left: hero.left },
     units: units.filter((u) => !u.hero).map((u) => ({ id: u.id, kind: u.kind, x: u.x, y: u.y, hp: u.hp, act: u.act, left: u.left, dead: u.hp <= 0 })) });
   // ранение. Бочку можно разбить мечом или стрелой, пока фитиль не горит, — тогда взрыва нет;
@@ -9125,7 +9129,8 @@ function arenaPlan(code) {
       pend.push({ t: t + 0.45, fn: () => { if (f.hp > 0) blowBarrel(f); } });
       return;
     }
-    if (d > f.T.reach) { f.act = stepTo(f, tg.x, tg.y, f.T.speed) ? "run" : "idle"; return; }
+    // метатель сначала выходит на видимую часть поля, потом бросает
+    if (d > f.T.reach || (f.kind === "tnt" && !inView(f))) { f.act = stepTo(f, tg.x, tg.y, f.T.speed) ? "run" : "idle"; return; }
     f.left = tg.x < f.x;
     if (t < f.next) { f.act = "idle"; return; }
     f.next = t + f.T.cd;
@@ -9156,7 +9161,7 @@ function arenaPlan(code) {
   // лучник на башне: сначала бочки (пусть взрываются подальше), потом ближайший гоблин
   const archerThink = () => {
     if (t < tower.next) return;
-    const inRange = (v) => v.x > 0.3 && v.x < 17.7 && Math.hypot(v.x - tower.x, v.y - tower.y) <= ARENA_ARCHER.reach;
+    const inRange = (v) => inView(v) && Math.hypot(v.x - tower.x, v.y - tower.y) <= ARENA_ARCHER.reach;
     const tg = nearestOf(tower, "gob", (v) => inRange(v) && v.kind === "barrel" && v.act !== "fuse") || nearestOf(tower, "gob", inRange);
     if (!tg) return;
     tower.next = t + ARENA_ARCHER.cd;
@@ -11019,7 +11024,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 85;
+const APP_VERSION = 86;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
