@@ -9764,7 +9764,12 @@ function arenaPlan(code) {
     u.left = tg.x < u.x;
     if (t < u.next) { u.act = "idle"; return; }
     u.next = t + u.T.cd; u.busy = t + 0.5; u.act = "atk";
-    pend.push({ t: t + 0.3, fn: () => { if (u.hp > 0 && tg.hp > 0 && dist(u, tg) < u.T.reach + 0.35) hurt(tg, u.T.dmg, u); } });
+    pend.push({ t: t + 0.3, fn: () => {
+      if (u.hp > 0 && tg.hp > 0 && dist(u, tg) < u.T.reach + 0.35) {
+        if (u.kind === "lan") events.push({ t, kind: "spear" });   // удар копьём — со звуком
+        hurt(tg, u.T.dmg, u);
+      }
+    } });
   };
   // лучник на башне: сначала бочки (пусть взрываются подальше), потом ближайший гоблин
   const archerThink = () => {
@@ -9894,6 +9899,7 @@ let arenaHero = null;
 // башня с лучником и союзники на своих местах (до запуска и в начале боя)
 function arenaScene(st) {
   const A = L.arena, Z = (a, y, d = 0) => (a.el.style.zIndex = Math.round(y * 40) + d);
+  if (actx) { soundBuf("sword-hit.mp3"); soundBuf("goblin-death.mp3"); soundBuf("goblin-attack.mp3"); if (A.allies?.some((a) => a.kind === "lan")) soundBuf("spear-thrust.mp3"); }   // звуки боя — заранее
   let archer = null;
   if (A.tower) {
     const [tx, ty] = A.tower, tw = skActor(st, "towerb", 0.75, 232 / 256), a = skActor(st, "archb", 0.75), front = skActor(st, "towerbf", 0.75, 232 / 256);
@@ -9947,7 +9953,7 @@ async function runArena() {
     return dy > 1.6 * ax ? "down" : -dy > 1.6 * ax ? "up" : dy > 0.55 * ax ? "dside" : -dy > 0.55 * ax ? "uside" : "side"; };
   const flash = (a) => a?.el.animate([{ filter: "brightness(2.4) saturate(0.3)" }, { filter: "none" }], 220);
   const quick = (ms) => Math.max(20, ms / speed);
-  let heroAct = "", ev = 0, lastBoom = 0;
+  let heroAct = "", ev = 0, lastBoom = 0, lastSpear = 0;
   for (let i = 0; i < p.frames.length; i++) {
     const fr = p.frames[i], prev = p.frames[i - 1];
     const dur = Math.max(10, ((fr.t - (prev?.t ?? 0)) * 1000) / speed);
@@ -9967,6 +9973,8 @@ async function runArena() {
         a.move(ex, ey, e.dur * 1000 / speed).then(() => a.show(false));
       }
       if (e.kind === "swing") sfx(e.hit ? "hit" : "swish");
+      // копейщик попал: «вжух» копья, не чаще раза в 0,4 с (на ×5 и ×10 удары идут подряд)
+      if (e.kind === "spear" && performance.now() - lastSpear > 400) { sfx("spear"); lastSpear = performance.now(); }
       if (e.kind === "hurt") { flash(H); if (e.by) sfx("gobatk"); }
       if (e.kind === "hit") flash(actors[e.id]);
       if (e.kind === "die") {
@@ -10757,6 +10765,15 @@ const SFX = {
   // мимо: только свист воздуха
   swish()  { noise({ dur: 0.12, vol: 0.35, freq: 1800 }); },
   // гоблин исчез облачком: смешное "пуф" вверх
+  // копейщик бьёт копьём (запись, Pixabay, yodguard — «spear thrust», звук 382403)
+  spear() {
+    const buf = soundBuf("spear-thrust.mp3");
+    if (!buf) return SFX.swish();
+    const s = actx.createBufferSource(), g = actx.createGain();
+    s.buffer = buf; s.playbackRate.value = 0.94 + Math.random() * 0.12;
+    g.gain.value = 0.5;
+    s.connect(g).connect(sfxBus); s.start();
+  },
   // гоблин замахивается: рычание (запись, Pixabay, daviddumaisaudio — «small monster attack»)
   gobatk() {
     const buf = soundBuf("goblin-attack.mp3");
@@ -11651,7 +11668,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 88;
+const APP_VERSION = 89;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
