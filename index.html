@@ -10828,11 +10828,11 @@ const THEMES = {
 const MOODS = [
   { // Берег и луг (и острова 2–3): лёгкий шелест травы, сверчки и кузнечики, изредка тихий накат и чайка
     root: 261.63, beat: 0.66, scale: [0, 2, 4, 5, 7, 9, 11], themes: ["a", "b"], reverb: 2.2, wet: 0.32,
-    events: { grass: [6, 14], crickets: [12, 26], hopper: [22, 45], gull: [70, 130], chimes: [40, 80], melody: [150, 260] },
+    events: { grass: [28, 55], crickets: [12, 26], hopper: [22, 45], gull: [70, 130], chimes: [40, 80], melody: [150, 260] },
   },
   { // Лес: шелест листвы, птицы, сверчки, кукушка
     root: 220, beat: 0.72, scale: [0, 2, 3, 5, 7, 9, 10], themes: ["c", "a"], reverb: 1.6, wet: 0.3,
-    events: { leaves: [7, 15], grass: [14, 26], birds: [12, 26], crickets: [18, 36], cuckoo: [70, 140], leafsteps: [45, 90], chimes: [50, 90], melody: [150, 260] },
+    events: { leaves: [30, 60], birds: [12, 26], crickets: [18, 36], cuckoo: [70, 140], leafsteps: [45, 90], chimes: [50, 90], melody: [150, 260] },
   },
   { // Пещеры: только капли и шкатулка — без гула
     root: 196, beat: 0.85, scale: [0, 1, 3, 5, 7, 8, 10], themes: ["c", "b"], reverb: 3.5, wet: 0.5,
@@ -10840,7 +10840,7 @@ const MOODS = [
   },
   { // Горы: лёгкий шелест сухой травы, кузнечик, далёкий орёл и колокольчик на козе
     root: 233.08, beat: 0.7, scale: [0, 2, 4, 7, 9, 11, 12], themes: ["a", "c"], reverb: 2.8, wet: 0.4,
-    events: { grass: [8, 16], leaves: [16, 30], hopper: [26, 50], eagle: [55, 110], bell: [40, 80], melody: [160, 280] },
+    events: { grass: [30, 60], hopper: [26, 50], eagle: [55, 110], bell: [40, 80], melody: [160, 280] },
   },
 ];
 const PENTA = [0, 2, 4, 7, 9];
@@ -11066,14 +11066,22 @@ function rustleSource() {
     const sr = actx.sampleRate, len = sr * 8;
     rustleBuf = actx.createBuffer(1, len, sr);
     const d = rustleBuf.getChannelData(0);
-    // медленное колыхание: случайная цель раз в 0,2–0,7 с, плавный переход ~0,25 с
-    let env = 0.5, target = 0.5, next = 0, peak = 0, w = 0;
-    const k = 1 - Math.exp(-1 / (sr * 0.25)), kw = 1 - Math.exp(-1 / (sr * 0.00008));
+    // Версия 92 (пользователь: шуршание похоже то ли на воду, то ли на ветер): ровное «ш-ш-ш»
+    // звучало как вода. Теперь это листва: мягкий шум без верхнего шипения, медленная волна громкости
+    // и поверх — лёгкое неровное трепетание 5–11 раз в секунду (листья задевают друг друга).
+    // Всё плавное — без резких вспышек (из них выходил треск).
+    let env = 0.5, target = 0.5, next = 0, peak = 0, w = 0, w2 = 0, ph = 0, fr = 8, fl = 0, flT = 0, flN = 0;
+    const k = 1 - Math.exp(-1 / (sr * 0.3)), kw = 1 - Math.exp(-1 / (sr / (2 * Math.PI * 3200))), kf = 1 - Math.exp(-1 / (sr * 0.04));
     for (let i = 0; i < len; i++) {
-      if (i >= next) { target = 0.25 + Math.random() * 0.75; next = i + sr * (0.2 + Math.random() * 0.5); }
+      if (i >= next) { target = 0.2 + Math.random() * 0.8; next = i + sr * (0.3 + Math.random() * 0.6); }
+      if (i >= flN) { flT = Math.random(); fr = 5 + Math.random() * 6; flN = i + sr * (0.15 + Math.random() * 0.3); }
       env += (target - env) * k;
-      w += ((Math.random() * 2 - 1) - w) * kw;                  // чуть смягчённый белый шум
-      d[i] = w * env;
+      fl += (flT - fl) * kf;
+      ph += fr / sr;
+      const flutter = 1 - 0.45 * fl * (0.5 + 0.5 * Math.sin(2 * Math.PI * ph));
+      w += ((Math.random() * 2 - 1) - w) * kw;                  // мягкий шум: срезаны верхи выше ~3 кГц
+      w2 += (w - w2) * kw;
+      d[i] = w2 * env * flutter;
       peak = Math.max(peak, Math.abs(d[i]));
     }
     // края буфера сводим в ноль, чтобы при повторе не было щелчка
@@ -11125,12 +11133,12 @@ const EVENTS = {
   },
   // травинки шуршат рядом, то с одной стороны, то с другой
   grass(t) {
-    rustle(t, { dur: rand(2.5, 4.5), peak: rand(0.04, 0.06), lo: 1500, hi: 4500, at: { x: rand(-2.5, 2.5), z: rand(-1.5, 1) } });
+    rustle(t, { dur: rand(2, 3.5), peak: rand(0.022, 0.032), lo: 1200, hi: 3800, at: { x: rand(-2.5, 2.5), z: rand(-1.5, 1) } });
   },
   // по кронам проходит лёгкий ветерок: листва шелестит с одной стороны на другую
   leaves(t, dir) {
-    const fromX = dir === "r" ? -3 : dir === "l" ? 3 : pick([-3, 3]), dur = rand(4, 6.5);
-    rustle(t, { dur, peak: rand(0.045, 0.065), lo: 2000, hi: 5500, at: { x: fromX, z: -1.5, y: 1.5, toX: -fromX, move: dur } });
+    const fromX = dir === "r" ? -3 : dir === "l" ? 3 : pick([-3, 3]), dur = rand(3, 5);
+    rustle(t, { dur, peak: rand(0.025, 0.035), lo: 1400, hi: 4200, at: { x: fromX, z: -1.5, y: 1.5, toX: -fromX, move: dur } });
   },
   // сверчок: трели по три коротких импульса, сидит на своём месте сбоку
   crickets(t) {
@@ -11283,7 +11291,8 @@ function startMusic() {
   };
   nextAt = {};
   // сразу задать атмосферу: первый звук места — через полсекунды, а не через минуту
-  const first = { 0: "grass", 1: "leaves", 2: "drips", 3: "grass" }[MOODS.indexOf(mood)];
+  // (не шелест: настроение меняется часто — на каждом уровне и при ходьбе по карте, и шелест звучал без конца)
+  const first = { 0: "crickets", 1: "birds", 2: "drips", 3: "hopper" }[MOODS.indexOf(mood)];
   if (mood.events.leafsteps) soundBuf("leafsteps.mp3");   // заранее, чтобы к первому разу была готова
   if (first) nextAt[first] = actx.currentTime + 0.5;
   if (mood.events.chimes) nextAt.chimes = actx.currentTime + rand(3, 6);
@@ -11368,7 +11377,7 @@ drawSoundButtons();
 // Время от времени по полю проходит порыв: деревья гнутся волной с той стороны,
 // откуда дует, ветер несёт песчинки (на берегу) или листья (в лесу),
 // и, если звук включён, слышен шорох ветра — с той же стороны.
-let windTimer = null;
+let windTimer = null, lastGustSound = -1e9;
 function windGust() {
   const th = boardEl.dataset.theme;
   if (th !== "beach" && th !== "forest" && th !== "mountain") return;
@@ -11393,7 +11402,11 @@ function windGust() {
   boardEl.appendChild(fx);
   setTimeout(() => fx.remove(), 4200);
 
-  if (save.music && musicTimer && actx) { try { EVENTS.gust(actx.currentTime + 0.05, dir); } catch (e) {} }
+  // порыв на поле виден часто, а слышен редко — не чаще раза в 45 с
+  if (save.music && musicTimer && actx && performance.now() - lastGustSound > 45000) {
+    lastGustSound = performance.now();
+    try { EVENTS.gust(actx.currentTime + 0.05, dir); } catch (e) {}
+  }
 }
 function scheduleWind() {
   clearTimeout(windTimer);
@@ -11681,7 +11694,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 91;
+const APP_VERSION = 92;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
