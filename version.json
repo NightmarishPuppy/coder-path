@@ -1,13 +1,13 @@
 {
- "version": 94,
+ "version": 95,
  "date": "2026-11-09",
  "notes": [
-  "На карте островов по воде бежит лёгкая рябь"
+  "Взрывы динамита и бочек звучат настоящей записью"
  ],
  "files": {
   "index.html": {
-   "size": 695796,
-   "hash": "1d862f9930b44196"
+   "size": 696496,
+   "hash": "0735fcca955a3ab2"
   },
   "art.js": {
    "size": 1764922,
@@ -22,8 +22,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 3967,
-   "hash": "e322f8db3739c39e"
+   "size": 3983,
+   "hash": "26f403d9c9ea8c16"
   },
   "icon-192.png": {
    "size": 42164,
@@ -64,6 +64,10 @@
   "arrow-swish.mp3": {
    "size": 3309,
    "hash": "71bbba73fef64d72"
+  },
+  "tnt-boom.mp3": {
+   "size": 10605,
+   "hash": "0f2f87cee2ba1966"
   }
  }
 }

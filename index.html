@@ -7586,6 +7586,7 @@ function starsHtml(n) {
 }
 
 function buildBoard() {
+  if (actx && (L.events || []).some((e) => e.kind === "shot")) soundBuf("tnt-boom.mp3");   // засада с динамитом — звук взрыва заранее
   const map = L.map;
   W = map[0].length; H = map.length;
   boardEl.innerHTML = "";
@@ -9925,7 +9926,7 @@ let arenaHero = null;
 // башня с лучником и союзники на своих местах (до запуска и в начале боя)
 function arenaScene(st) {
   const A = L.arena, Z = (a, y, d = 0) => (a.el.style.zIndex = Math.round(y * 40) + d);
-  if (actx) { soundBuf("sword-hit.mp3"); soundBuf("goblin-death.mp3"); soundBuf("goblin-attack.mp3"); if (A.allies?.some((a) => a.kind === "lan")) soundBuf("spear-thrust.mp3"); if (A.tower) soundBuf("arrow-swish.mp3"); }   // звуки боя — заранее
+  if (actx) { soundBuf("sword-hit.mp3"); soundBuf("goblin-death.mp3"); soundBuf("goblin-attack.mp3"); if (A.allies?.some((a) => a.kind === "lan")) soundBuf("spear-thrust.mp3"); if (A.tower) soundBuf("arrow-swish.mp3"); soundBuf("tnt-boom.mp3"); }   // звуки боя — заранее
   let archer = null;
   if (A.tower) {
     const [tx, ty] = A.tower, tw = skActor(st, "towerb", 0.75, 232 / 256), a = skActor(st, "archb", 0.75), front = skActor(st, "towerbf", 0.75, 232 / 256);
@@ -9989,7 +9990,7 @@ async function runArena() {
       if (e.kind === "throw") { const d = dyns[bi++ % dyns.length]; d.el.style.transition = "none"; d.at(...e.from); Z(d, 40); d.show(true); d.play(0, 6, 70); d.arc(...e.to, 1.0, e.dur * 1000 / speed).then(() => d.show(false)); }
       if (e.kind === "boom") {
         const b = booms[ki++ % booms.length]; b.at(...e.at); Z(b, e.at[1] + 0.5); b.show(true); b.play(0, 9, quick(70), false).then(() => b.show(false));
-        if (performance.now() - lastBoom > 400) { sfx("ouch"); lastBoom = performance.now(); }   // цепочка взрывов — один звук
+        if (performance.now() - lastBoom > 700) { sfx("boom"); lastBoom = performance.now(); }   // цепочка взрывов — один звук
       }
       if (e.kind === "aim" && scene.archer) { scene.archer.face(e.dx < -0.05); scene.archer.play(ARCH_ROW[dirOf(e.dx, e.dy)], 8, quick(55), false).then(() => scene.archer.play(0, 6, 150)); }
       if (e.kind === "arrow") {
@@ -10154,7 +10155,7 @@ async function playShot(ev) {
   await dyn.arc(tx, ty, 0.9, 150 * k);
   dyn.el.remove();
   boom.at(tx, ty + 0.1); boom.show(true);
-  sfx("ouch");
+  sfx("boom");
   heroEl.classList.remove("hurt"); void heroEl.offsetWidth; heroEl.classList.add("hurt");
   drawKnightHp(ev.hp, true);
   await boom.play(0, 9, 32 * k, false);
@@ -10793,6 +10794,16 @@ const SFX = {
   // мимо: только свист воздуха
   swish()  { noise({ dur: 0.12, vol: 0.35, freq: 1800 }); },
   // гоблин исчез облачком: смешное "пуф" вверх
+  // взрыв динамита или бочки (запись, Pixabay, nematoki — «tnt explosion», звук 605568);
+  // пока не скачалась — прежний глухой «тунк»
+  boom() {
+    const buf = soundBuf("tnt-boom.mp3");
+    if (!buf) return SFX.ouch();
+    const s = actx.createBufferSource(), g = actx.createGain();
+    s.buffer = buf; s.playbackRate.value = 0.92 + Math.random() * 0.14;
+    g.gain.value = 0.5;
+    s.connect(g).connect(sfxBus); s.start();
+  },
   // лучник на башне выпустил стрелу (запись, Pixabay, djartmusic — «arrow swish 03», звук 306040)
   arrow() {
     const buf = soundBuf("arrow-swish.mp3");
@@ -11725,7 +11736,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 94;
+const APP_VERSION = 95;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
