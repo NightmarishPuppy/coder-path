@@ -5805,8 +5805,8 @@ async function skitHaul(st, { door, pile }) {
 // Павших наших сменяет подкрепление из шахты. По карте все ходят только там, где можно (walk):
 // низина ущелья одной высоты (groundAt), мост, мимо горы золота, башни и кнопки уровня.
 const SIEGE = {
-  mine: [15.2, 8.35], mount: [15.6, 10.6], stands: [[14.85, 9.45], [16.3, 9.45]],
-  tower: [14.7, 13.2], goal: [15.6, 11.4], spawn: [16.5, 29.6], bridgeX: 16.5,
+  mine: [15.2, 8.35], mount: [15.85, 10.6], mountSc: 0.55, stands: [[15.1, 9.45], [16.5, 9.45]],
+  tower: [14.7, 13.2], goal: [15.8, 11.4], spawn: [16.5, 29.6], bridgeX: 16.5,
   posts: { war: [16.4, 13.4], lan: [15.3, 14.1], monk: [16.85, 11.9] },
 };
 // side — сторона; hp — сердечки; dmg — урон; reach — дальность удара (клеток); cd — перезарядка (мс);
@@ -5929,7 +5929,7 @@ async function battle(st0, B) {
     d.play(0, 7, 110, false);
     after(2600, () => d.play(1, 7, 120, false).then(() => free(d)));
     if (u.post) after(8000, () => {                      // подкрепление
-      Object.assign(u, { x: B.respawn[0], y: B.respawn[1], hp: u.T.hp, dead: false, busy: 0, anim: "", tgt: null });
+      Object.assign(u, { x: B.respawn[0], y: B.respawn[1], hp: u.T.hp, dead: false, busy: 0, anim: "", tgt: null, via: B.via ? [...B.via] : [] });
       place(u);
     });
   };
@@ -5948,6 +5948,11 @@ async function battle(st0, B) {
       }
     }
     return false;
+  };
+  // к посту; подкрепление из шахты сначала проходит точки обхода (B.via), чтобы не упереться в гору золота
+  const goPost = (u) => {
+    while (u.via?.length && Math.hypot(u.via[0][0] - u.x, u.via[0][1] - u.y) < 0.2) u.via.shift();
+    return u.via?.length ? stepTo(u, ...u.via[0]) : stepTo(u, ...u.post);
   };
   const nearest = (u, ok) => {
     let best = null, bd = Infinity;
@@ -6007,7 +6012,7 @@ async function battle(st0, B) {
         return;
       }
     }
-    if (!stepTo(u, ...u.post)) { u.left = u.postLeft; anim(u, "idle"); }
+    if (!goPost(u)) { u.left = u.postLeft; anim(u, "idle"); }
   };
   const think = (u) => {
     if (u.dead || now < u.busy) return;
@@ -6017,7 +6022,7 @@ async function battle(st0, B) {
       const t = nearest(u, (v) => Math.hypot(v.x - px, v.y - py) <= u.T.leash);
       if (t) return melee(u, t);
       u.tgt = null;
-      if (!stepTo(u, px, py)) { u.left = u.postLeft; anim(u, "idle"); }
+      if (!goPost(u)) { u.left = u.postLeft; anim(u, "idle"); }
       return;
     }
     const t = nearest(u, () => true);
@@ -6120,7 +6125,8 @@ async function battle(st0, B) {
 // Бой у золотой шахты на Острове рудокопов
 async function skitSiege(st0, S) {
   const E = ISLE_ENG[3], [tx, ty] = S.tower;
-  const blocked = (x, y) => ((x - S.mount[0]) / 1.25) ** 2 + ((y - S.mount[1] + 0.15) / 0.55) ** 2 < 1   // гора золота
+  // гора золота сдвинута к берегу: слева от неё остаётся проход из шахты к башне
+  const blocked = (x, y) => ((x - S.mount[0]) / 0.95) ** 2 + ((y - S.mount[1] + 0.15) / 0.5) ** 2 < 1   // гора золота
     || (Math.abs(x - tx) < 0.65 && y > ty - 0.55 && y < ty + 0.15)                                      // башня
     || y < 8.3                                                                                          // шахта
     || (Math.abs(x - 13.5) < 1.05 && y > 19.8 && y < 21.7);                                              // кнопка уровня
@@ -6128,7 +6134,7 @@ async function skitSiege(st0, S) {
   const walk = (x, y) => onBridge(x, y) || (x > 14.05 && y < 21.9 && !blocked(x, y)
     && E.groundAt(x, y) === 0 && E.groundAt(x - 0.22, y) === 0 && E.groundAt(x + 0.22, y) === 0);
   S.walk = walk;
-  const B = { walk, mount: { at: S.mount, sc: 0.6 }, towers: [S.tower], respawn: [S.mine[0], S.mine[1] + 0.1], spawns: [S.spawn], goal: S.goal,
+  const B = { walk, mount: { at: S.mount, sc: S.mountSc }, towers: [S.tower], respawn: [S.mine[0], S.mine[1] + 0.1], via: [[14.55, 9.7], [14.6, 11.3]], spawns: [S.spawn], goal: S.goal,
     posts: [{ kind: "war", at: S.posts.war }, { kind: "lan", at: S.posts.lan }, { kind: "monk", at: S.posts.monk, left: true }],
     haul: { mine: S.mine, stands: S.stands, dangerY: 17 },
     waves: { kinds: ["torch", "torch", "torchp", "torchp", "tnt", "barrel"], min: 2, max: 4, gap: [2500, 6000] } };
@@ -6344,7 +6350,7 @@ const SKIT_GEOM = {
   archer: (s) => ({ stand: [s.at], paths: [[[s.run[0], s.at[1]], [s.run[1], s.at[1]]]] }),
   fight: (s) => ({ stand: [s.a, s.b], paths: [[s.a, s.awayA], [s.b, s.awayB]] }),
   siege: () => { const S = SIEGE, P = S.posts;
-    return { stand: [S.mine, ...S.stands, S.mount, [S.mount[0] - 0.9, S.mount[1]], [S.mount[0] + 0.9, S.mount[1]], S.tower, P.war, P.lan, P.monk, S.goal],
+    return { stand: [S.mine, ...S.stands, S.mount, [S.mount[0] - 0.8, S.mount[1]], [S.mount[0] + 0.8, S.mount[1]], S.tower, P.war, P.lan, P.monk, S.goal],
       paths: [[S.mine, S.stands[0]], [S.mine, S.stands[1]], [[16.1, 19.7], [16.0, 15.5], S.goal], [P.lan, [15.3, 18.5]], [P.war, [16.4, 18.5]]] }; },
   haul: (s) => { const t = haulStand(s); return { stand: [s.door, s.pile, [s.pile[0] - 0.7, s.pile[1]], [s.pile[0] + 0.7, s.pile[1]], [s.pile[0], s.pile[1] - 0.6], t], paths: [[s.door, t]] }; },
   lumber: (s) => { const [tx, ty] = s.tree, cut = [tx - s.d * 0.6, ty], logs = [tx + s.d * 0.6, ty + 0.05];
@@ -10776,7 +10782,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 83;
+const APP_VERSION = 84;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
