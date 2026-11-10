@@ -901,6 +901,9 @@ html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation:
   #levelview.blk .statusslot > .linebar .lb-actions .chip { height: 32px; padding: 0 8px; font-size: 12px; }
   #levelview.blk .statusslot > .linebar .lb-actions .chip.ic { min-width: 44px; padding: 0 4px; }
   #levelview.blk .statusslot > .linebar .lb-actions .chip.ic svg { width: 32px; height: 22px; }
+  /* длинная программа прокручивается внутри своего окна — поле и «Запустить» остаются на месте (версия 98) */
+  #levelview.blk .blocks { box-sizing: border-box; align-content: flex-start; overflow-y: auto; overscroll-behavior: contain; }
+  #levelview.blk .blocks.scrolls { box-shadow: inset 0 -14px 10px -10px #000c; }
   #levelview.blk .par { display: none; }
   #levelview.blk .voicebar { position: absolute; top: 2px; left: 96px; margin: 0; }
   #levelview.blk .speak #speak-label { display: none; }
@@ -8875,10 +8878,53 @@ function renderBlocks(active = 0, err = 0) {
   const box = $("blocks");
   if (!uiBlocks || !box) return;
   const items = parseBlocks(codeEl.value);
-  if (!items.length) { box.innerHTML = `<span class="empty">Нажимай стрелки — здесь появятся шаги рыцаря</span>`; return; }
+  const lines = codeEl.value.split("\n").length, grew = lines > (box._lines || 0);
+  box._lines = lines;
+  if (!items.length) { box.innerHTML = `<span class="empty">Нажимай стрелки — здесь появятся шаги рыцаря</span>`; fitBlocks(); return; }
+  const top = box.scrollTop;
   box.innerHTML = items.map((it) => blockHtml(it, active, err)).join("");
+  box.scrollTop = top;
+  box._grew = grew;
+  fitBlocks();
 }
-const toggleGoal = () => { const g = $("goal"); g.classList.toggle("open"); $("goal-more").textContent = g.classList.contains("open") ? "свернуть ▴" : "ещё ▾"; };
+// окно программы прокручено — держим на виду выполняемую, ошибочную или выбранную плитку,
+// а если плитку только что добавили в конец — конец программы
+function showBlockTile() {
+  const box = $("blocks");
+  if (!(box.scrollHeight > box.clientHeight + 1)) return;
+  const t = box.querySelector(".now, .err, .sel");
+  if (t) {
+    const b = t.getBoundingClientRect(), c = box.getBoundingClientRect();
+    if (b.top < c.top + 14) box.scrollTop -= c.top + 14 - b.top;
+    else if (b.bottom > c.bottom - 4) box.scrollTop += b.bottom - c.bottom + 4;
+  } else if (box._grew) box.scrollTop = box.scrollHeight;
+  box._grew = false;
+}
+// Окно программы на телефоне не длиннее, чем позволяет экран: «Запустить» всегда видна.
+// Поле при этом не трогаем (его размер считается один раз в fitBoard) — длинная программа
+// просто прокручивается внутри своего окна.
+var BLK_MIN = 60;    // меньше одного ряда плиток окно не делаем
+// Подгоняем сразу и ещё раз в следующем кадре: к этому времени перерисованы и кнопки под программой
+// (подпись «Убрать рамку» бывает в две строки), и строка подсказки.
+var fitBlocksRaf = 0;
+function fitBlocks() {
+  fitBlocksNow();
+  cancelAnimationFrame(fitBlocksRaf);
+  fitBlocksRaf = requestAnimationFrame(() => { fitBlocksNow(); showBlockTile(); });
+}
+function fitBlocksNow() {
+  const box = $("blocks");
+  if (!box) return;
+  box.style.maxHeight = "";
+  if (!uiBlocks || innerWidth >= 820 || $("levelview").hidden) { box.classList.remove("scrolls"); return; }
+  const vh = (window.visualViewport?.height || innerHeight) - 6;
+  const over = $("run").getBoundingClientRect().bottom + scrollY - vh;
+  // допуск 4 px (предел и так на 6 px выше края экрана): иначе окно программы дёргалось на 2 px,
+  // когда подпись «Отменить команду» становится «Удалить плитку» и ряд кнопок чуть ниже
+  if (over > 4) box.style.maxHeight = Math.max(BLK_MIN, box.offsetHeight - over) + "px";
+  box.classList.toggle("scrolls", box.scrollHeight > box.clientHeight + 4);
+}
+const toggleGoal = () => { const g = $("goal"); g.classList.toggle("open"); $("goal-more").textContent = g.classList.contains("open") ? "свернуть ▴" : "ещё ▾"; fitBlocks(); };
 $("goal-more").addEventListener("click", toggleGoal);
 $("goal").addEventListener("click", () => { if (!$("goal-more").hidden) toggleGoal(); });
 $("blocks").addEventListener("click", (e) => {
@@ -8902,15 +8948,22 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 var fitSize = null;   // { key, px, w, h } — для какого уровня и экрана посчитано
 function fitBoard(force = false) {
   const lv = $("levelview");
-  if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); camEl.style.removeProperty("--blk-max"); return; }
+  if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); camEl.style.removeProperty("--blk-max"); fitBlocks(); return; }
   const key = `${levelIdx}|${uiBlocks}`, sw = innerWidth, sh = window.visualViewport?.height || innerHeight;
   const same = fitSize && fitSize.key === key && fitSize.w === sw && Math.abs(fitSize.h - sh) < 160;
-  if (same && !force) { boardEl.style.setProperty("--blk-max", fitSize.px + "px"); camEl.style.setProperty("--blk-max", fitSize.px + "px"); return; }
+  if (same && !force) { boardEl.style.setProperty("--blk-max", fitSize.px + "px"); camEl.style.setProperty("--blk-max", fitSize.px + "px"); fitBlocks(); return; }
   // временное — на время замера прочь (браузер не успевает это нарисовать)
   const goal = $("goal"), wasOpen = goal.classList.contains("open");
   const hide = [winBox, $("linebar")].filter((el) => !el.hidden);
   goal.classList.remove("open");
   hide.forEach((el) => (el.hidden = true));
+  // Программа на время замера — стартовая программа уровня (а не то, что игрок в ней собрал).
+  // Раньше мерили то, что сейчас в программе: игрок собрал длинное решение, открыл уровень снова —
+  // и поле сжималось (арена «Битва: испытание»: 188 → 137 px высоты на 360×740).
+  const box = $("blocks"), realHtml = box.innerHTML, realTop = box.scrollTop;
+  const starter = parseBlocks(L.starter?.py || "");
+  box.innerHTML = starter.length ? starter.map((it) => blockHtml(it, 0, 0)).join("") : `<span class="empty">Нажимай стрелки — здесь появятся шаги рыцаря</span>`;
+  box.style.maxHeight = "";
   const ratio = viewW() / H, vh = sh - 6;
   const bh = camEl.getBoundingClientRect().height;   // у длинной карты меряем окно, а не всё поле
   const runBottom = $("run").getBoundingClientRect().bottom + scrollY;
@@ -8919,10 +8972,12 @@ function fitBoard(force = false) {
   const full = camEl.parentElement.getBoundingClientRect().width;
   if (wasOpen) goal.classList.add("open");
   hide.forEach((el) => (el.hidden = false));
+  box.innerHTML = realHtml; box.scrollTop = realTop;
   const px = Math.max(full * 0.55, Math.min(full, Math.floor(w)));
   fitSize = { key, px, w: sw, h: sh };
   boardEl.style.setProperty("--blk-max", px + "px");
   camEl.style.setProperty("--blk-max", px + "px");
+  fitBlocks();
 }
 // повернули экран — считаем заново; высота «гуляет» из-за адресной строки — не трогаем
 addEventListener("resize", () => requestAnimationFrame(() => fitBoard()));
@@ -9278,6 +9333,7 @@ function setStatus(text, kind = "", pill = "") {
   statusEl.innerHTML = (pill ? `<span class="pill"></span>` : "") + `<span></span>`;
   if (pill) statusEl.firstChild.textContent = pill;
   statusEl.lastChild.textContent = text;
+  fitBlocks();
 }
 
 // Русские окончания: 1 команда, 2 команды, 5 команд
@@ -10134,6 +10190,7 @@ function win() {
   nextBtn.hidden = !(nxt < LEVELS.length && isOpen(nxt) && isleOf(LEVELS[nxt]) === isleOf(L));
   $("win-note").textContent = note;
   winBox.hidden = false;
+  fitBlocks();
 }
 
 function drawVariants() {
@@ -11778,7 +11835,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 97;
+const APP_VERSION = 98;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
