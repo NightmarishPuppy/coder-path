@@ -1390,7 +1390,26 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 .gearbtn .gear-ic { width: 24px; height: 24px; image-rendering: pixelated; display: block; }
 .gear-dot { position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); border: 2px solid var(--bg); }
 .gear-dot[hidden] { display: none; }
-#inst-sheet, #sync-sheet { z-index: 70; }   /* открываются поверх окна настроек */
+#inst-sheet, #sync-sheet, #reset-sheet { z-index: 70; }   /* открываются поверх окна настроек */
+/* Сброс прогресса (версия 99) */
+.resetzone { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--wall-edge); }
+.resetzone .linkbtn { font-size: 13px; padding: 8px 12px; }
+.resetzone .btn[hidden] { display: none; }
+.reset-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.reset-list .gone { color: var(--sword); }
+.reset-list .gone b { color: var(--fg); }
+.reset-list .keep { color: var(--ok); }
+#reset-sheet .btn.next { min-height: 52px; font-size: 18px; }
+.holdbtn {
+  position: relative; overflow: hidden; margin-top: 10px;
+  min-height: 48px; border-radius: 10px; border: 2px solid #b3262b; background: #2a1214; color: #ffb3ab;
+  font: inherit; font-weight: 600; font-size: 15px; cursor: pointer;
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.holdbtn .holdfill { position: absolute; inset: 0; width: calc(var(--p, 0) * 100%); background: #b3262b; }
+.holdbtn .holdtext { position: relative; }
+.holdbtn.done { background: #b3262b; color: #fff; }
+.reset-msg { min-height: 1.4em; text-align: center; }
 #set-sheet .apppanel { padding: 0; border: 0; background: none; }
 #set-sheet .synccard { align-self: stretch; justify-content: center; }
 .apppanel {
@@ -1564,6 +1583,30 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
       <button class="btn next upd-go">Обновить сейчас</button>
     </div>
     </section>
+    <!-- Сброс прогресса: в самом низу, неприметно; само стирание — в отдельном окне и только удержанием -->
+    <section class="resetzone" id="reset-zone">
+      <button class="btn reset" id="reset-undo" hidden></button>
+      <button class="linkbtn" id="reset-open">⟲ Начать игру заново…</button>
+    </section>
+  </div>
+</div>
+
+<!-- Окно «Начать заново»: что сотрётся и кнопка, которую надо держать 3 секунды -->
+<div class="sheet" id="reset-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="reset-h">
+  <div class="sheet-box">
+    <button class="sheet-x" id="reset-close" aria-label="Закрыть">✕</button>
+    <div>
+      <h2 id="reset-h">Начать игру заново?</h2>
+      <ul class="reset-list">
+        <li class="gone">✖ <b id="reset-stars"></b> и все программы на уровнях</li>
+        <li class="gone">✖ открытые острова и построенный мост</li>
+        <li class="keep">✓ звук, музыка, голос и скорость останутся</li>
+      </ul>
+      <p>Код игрока станет новым. Если передумаешь — в настройках появится кнопка «↶ Вернуть прогресс».</p>
+      <button class="btn next" id="reset-cancel">Нет, играть дальше</button>
+      <button class="holdbtn" id="reset-hold"><span class="holdfill"></span><span class="holdtext">Держи палец 3 секунды — сброс</span></button>
+      <p class="reset-msg" id="reset-msg" role="status"></p>
+    </div>
   </div>
 </div>
 
@@ -11835,7 +11878,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 98;
+const APP_VERSION = 99;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
@@ -12094,18 +12137,123 @@ $("rep-clear").addEventListener("click", () => {
   repMsg("Журнал очищен");
 });
 
+// --- Сброс прогресса ---
+// Защита от случайного нажатия: (1) неприметная ссылка в самом низу настроек, (2) отдельное окно,
+// где написано, что сотрётся, а большая кнопка — «Нет, играть дальше», (3) сброс — только если
+// держать красную кнопку 3 секунды: отпустил раньше — ничего не случилось.
+// Стирать звёзды под старым кодом игрока нельзя: синхронизация вернула бы их с сервера
+// (она всегда берёт лучшие звёзды). Поэтому после сброса у устройства новый код, а старый
+// прогресс остаётся и в облаке (под старым кодом), и в копии на устройстве — его можно вернуть.
+const RESET_BACKUP = "coder-path-reset-backup";
+const PROGRESS_KEYS = ["stars", "code", "codeAt", "currentName", "built", "dev"];
+const HOLD_MS = 3000;
+const starsTotal = (st) => Object.values(st || {}).reduce((a, b) => a + (b || 0), 0);
+const starsWord = (n) => `★ ${n} ${n % 10 === 1 && n % 100 !== 11 ? "звезда" : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? "звезды" : "звёзд"}`;
+function readResetBackup() { try { return JSON.parse(localStorage.getItem(RESET_BACKUP) || "null"); } catch (e) { return null; } }
+function drawResetZone() {
+  const b = readResetBackup(), u = $("reset-undo");
+  u.hidden = !b;
+  if (b) u.textContent = `↶ Вернуть прогресс (${starsWord(starsTotal(b.save?.stars))})`;
+}
+// Сохранить на сервер сразу (а не через 2 с), потом перезапустить игру с чистого листа
+async function flushAndReload() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+  try { if (cloudDoc) await cloudDoc.set({ json: JSON.stringify(save), savedAt: new Date().toISOString() }); } catch (e) {}
+  location.reload();
+}
+async function resetProgress() {
+  const backup = { at: Date.now(), player, label: playerLabel, save: {} };
+  PROGRESS_KEYS.forEach((k) => { if (save[k] !== undefined) backup.save[k] = save[k]; });
+  try { localStorage.setItem(RESET_BACKUP, JSON.stringify(backup)); } catch (e) {}
+  logEv("set", { b: `СБРОС ПРОГРЕССА (${starsTotal(save.stars)} ★, код ${player || "—"})` });
+  save.stars = {}; save.code = {}; save.codeAt = {};
+  delete save.currentName; delete save.built; delete save.dev;
+  // новый код игрока выдаст первая синхронизация после перезапуска
+  player = null; playerLabel = "";
+  try { localStorage.removeItem(PLAYER_KEY); localStorage.removeItem(LABEL_KEY); } catch (e) {}
+  await flushAndReload();
+}
+async function undoReset() {
+  const b = readResetBackup();
+  if (!b) return;
+  mergeSave(b.save);                       // звёзды — лучшие из двух, программы — правленые позже
+  if (b.save.built) save.built = { ...(save.built || {}), ...b.save.built };
+  if (b.save.currentName) save.currentName = b.save.currentName;
+  if (b.player) setPlayer(b.player, b.label || "");   // старый код: сервер вернёт и то, что было на других устройствах
+  try { localStorage.removeItem(RESET_BACKUP); } catch (e) {}
+  logEv("set", { b: "ПРОГРЕСС ВОЗВРАЩЁН" });
+  await flushAndReload();
+}
+// Кнопка-удержание: заливается слева направо за 3 с; отпустил, увёл палец, свернул окно — заливка сбрасывается
+(function holdButton() {
+  const btn = $("reset-hold"), txt = btn.querySelector(".holdtext");
+  let t0 = 0, raf = 0, fired = false;
+  const draw = (p) => btn.style.setProperty("--p", p);
+  const stop = () => { if (fired) return; cancelAnimationFrame(raf); t0 = 0; draw(0); };
+  const tick = () => {
+    const p = Math.min(1, (performance.now() - t0) / HOLD_MS);
+    draw(p);
+    if (p < 1) { raf = requestAnimationFrame(tick); return; }
+    fired = true;
+    btn.classList.add("done"); txt.textContent = "Сбрасываю…";
+    try { navigator.vibrate?.(60); } catch (e) {}
+    resetProgress();
+  };
+  const start = (e) => {
+    if (fired || t0) return;
+    e.preventDefault();
+    t0 = performance.now();
+    $("reset-msg").textContent = "";
+    raf = requestAnimationFrame(tick);
+  };
+  const early = () => { if (t0 && !fired) $("reset-msg").textContent = "Нужно держать, пока полоска не заполнится до конца"; stop(); };
+  btn.addEventListener("pointerdown", start);
+  // палец отпустили или увели с кнопки — не считается. На телефоне палец «прилипает» к кнопке,
+  // и событие ухода не приходит, поэтому проверяем, где палец, при каждом его движении.
+  document.addEventListener("pointerup", early);
+  document.addEventListener("pointercancel", early);
+  document.addEventListener("pointermove", (e) => {
+    if (!t0 || fired) return;
+    const r = btn.getBoundingClientRect();
+    if (e.clientX < r.left - 8 || e.clientX > r.right + 8 || e.clientY < r.top - 8 || e.clientY > r.bottom + 8) early();
+  });
+  btn.addEventListener("contextmenu", (e) => e.preventDefault());   // долгое нажатие на телефоне не открывает меню
+  btn.addEventListener("click", (e) => e.preventDefault());          // простое нажатие ничего не делает
+  btn.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) start(e); });
+  btn.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") stop(); });
+  document.addEventListener("visibilitychange", stop);
+  window.resetHoldStop = stop;
+})();
+function openReset() {
+  sfx("tap");
+  $("reset-stars").textContent = starsWord(starsTotal(save.stars));
+  $("reset-msg").textContent = "";
+  window.resetHoldStop();
+  $("reset-sheet").hidden = false;
+  $("reset-cancel").focus();               // по умолчанию выбрано «Нет»
+}
+const closeReset = () => { window.resetHoldStop(); $("reset-sheet").hidden = true; };
+$("reset-open").addEventListener("click", openReset);
+$("reset-cancel").addEventListener("click", () => { sfx("tap"); closeReset(); });
+$("reset-close").addEventListener("click", () => { sfx("tap"); closeReset(); });
+$("reset-sheet").addEventListener("click", (e) => { if (e.target === $("reset-sheet")) closeReset(); });
+$("reset-undo").addEventListener("click", () => { sfx("tap"); $("reset-undo").disabled = true; undoReset(); });
+drawResetZone();
+
 // --- Окно настроек (шестерёнка) ---
 document.querySelectorAll(".gear-ic").forEach((im) => (im.src = TS.ui_gear));
 const setSheet = $("set-sheet");
 document.querySelectorAll(".gearbtn").forEach((b) => b.addEventListener("click", () => {
   sfx("tap");
   appStatus("");
+  drawResetZone();
   setSheet.hidden = false;
   $("set-close").focus();
 }));
 $("set-close").addEventListener("click", () => { sfx("tap"); setSheet.hidden = true; });
 setSheet.addEventListener("click", (e) => { if (e.target === setSheet) setSheet.hidden = true; });
 addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("reset-sheet").hidden) { closeReset(); return; }
   if (e.key === "Escape" && !setSheet.hidden && $("sync-sheet").hidden && $("inst-sheet").hidden) setSheet.hidden = true;
 });
 
