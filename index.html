@@ -889,6 +889,18 @@ html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation:
   #levelview.blk .lb-info b { font-size: 13px; }
   #levelview.blk .lb-actions { flex-wrap: nowrap; gap: 4px; }
   #levelview.blk .lb-actions .chip { padding: 6px 8px; font-size: 13px; white-space: nowrap; }
+  /* Панель выбранной плитки не занимает места в раскладке: она ложится полоской поверх строки подсказки
+     (между полем и программой). Иначе всё под ней съезжало вниз и «Запустить» уходила за край экрана. */
+  .statusslot { position: relative; }
+  #levelview.blk .statusslot > .linebar { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); z-index: 6;
+    flex-direction: row; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 4px 0 10px; box-shadow: 0 2px 10px #000a; }
+  #levelview.blk .statusslot > .linebar .lb-info { flex: 1 1 0; }
+  #levelview.blk .statusslot > .linebar .lb-info b { font-size: 11.5px; line-height: 1.2; font-weight: 600;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #levelview.blk .statusslot > .linebar .lb-actions { flex: 0 0 auto; }
+  #levelview.blk .statusslot > .linebar .lb-actions .chip { height: 32px; padding: 0 8px; font-size: 12px; }
+  #levelview.blk .statusslot > .linebar .lb-actions .chip.ic { min-width: 44px; padding: 0 4px; }
+  #levelview.blk .statusslot > .linebar .lb-actions .chip.ic svg { width: 32px; height: 22px; }
   #levelview.blk .par { display: none; }
   #levelview.blk .voicebar { position: absolute; top: 2px; left: 96px; margin: 0; }
   #levelview.blk .speak #speak-label { display: none; }
@@ -1651,7 +1663,7 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
   <div class="game">
     <div class="col">
       <div class="cam" id="cam"><div class="board" id="board"></div></div>
-      <div class="status" id="status" role="status"></div>
+      <div class="statusslot" id="statusslot"><div class="status" id="status" role="status"></div></div>
       <div class="winbox" id="winbox" hidden>
         <div>
           <div class="stars" id="win-stars"></div>
@@ -8940,6 +8952,7 @@ function fitText() {
   }
 }
 addEventListener("resize", () => requestAnimationFrame(fitText));
+addEventListener("resize", () => { if (selLine && !running) drawLineBar(); });   // панель плитки: телефон ↔ широкий экран
 
 function applyUi() {
   $("levelview").classList.toggle("blk", uiBlocks);
@@ -10289,6 +10302,10 @@ function toolBtn(el, icon, label) {
 function drawLineBar() {
   drawUndo();
   const bar = $("linebar");
+  // на телефоне в блоках панель живёт в месте строки подсказки (поверх неё) и не сдвигает кнопки;
+  // на компьютере и в тексте кода — на прежнем месте, над кнопками команд
+  const slot = $("statusslot"), float = uiBlocks && innerWidth < 820;
+  if (float !== (bar.parentElement === slot)) float ? slot.append(bar) : chipsEl.before(bar);
   bar.hidden = !selLine || running;
   if (bar.hidden) return;
   const lines = codeEl.value.split("\n");
@@ -10305,9 +10322,14 @@ function drawLineBar() {
     const k = CONDS[condKey(ifm[2])];
     $("lb-what").textContent = `${WHAT_RU[k.what]} ⇄ ${WHAT_RU[whats.find((w) => w !== k.what) || k.what]}`;
   }
-  $("lb-label").textContent = DEF_LINE.test(line) ? "Нажимай кнопки команд — шаги лягут в приём" : ifm ? ($("lb-else").hidden ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»"
+  const full = DEF_LINE.test(line) ? "Нажимай кнопки команд — шаги лягут в приём" : ifm ? ($("lb-else").hidden ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»"
       : "Кнопка команды — шаг внутрь «если»; «＋ иначе» — добавить «иначе»") : isElse ? "Рамка «иначе»: что делать, если нет"
     : uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : `Строка ${selLine}`;
+  // в полоске на телефоне места мало — те же подсказки короче (полный текст остаётся в title)
+  const brief = DEF_LINE.test(line) ? "Кнопки команд — шаги в приём" : ifm ? "Кнопка команды — шаг в «если»"
+    : isElse ? "«Иначе»: что делать, если нет" : "Стрелка — куда, цифра — сколько";
+  $("lb-label").textContent = float ? brief : full;
+  $("lb-label").title = full;
   toolBtn($("lb-up"), uiBlocks ? "earlier" : "up", uiBlocks ? "Плитку раньше" : "Строку выше");
   toolBtn($("lb-down"), uiBlocks ? "later" : "down", uiBlocks ? "Плитку позже" : "Строку ниже");
   toolBtn($("lb-add"), "add", "Пустая строка ниже");
@@ -10329,6 +10351,11 @@ function drawLineBar() {
   $("lb-up").disabled = selLine === 1;
   $("lb-down").disabled = selLine === lines.length;
   $("lb-out").disabled = !/^ /.test(line);
+  // подпись не помещается в две строки (узкий экран, много кнопок) — остаются одни значки.
+  // Меряем в самом конце, когда кнопки панели уже приняли свой вид.
+  const info = bar.querySelector(".lb-info");
+  info.style.display = "";
+  if (float && $("lb-label").scrollHeight > $("lb-label").clientHeight + 1) info.style.display = "none";
 }
 
 gutterEl.addEventListener("click", (e) => {
@@ -11751,7 +11778,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 96;
+const APP_VERSION = 97;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
