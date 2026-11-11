@@ -1,17 +1,21 @@
 {
- "version": 104,
+ "version": 105,
  "date": "2026-11-11",
  "notes": [
-  "Игра обновляется сама. Что нового — внизу настроек, в строке «Версия»"
+  "Игра теперь и на английском. Язык — в настройках"
  ],
  "files": {
   "index.html": {
-   "size": 735550,
-   "hash": "1c58f67a8cc01228"
+   "size": 744225,
+   "hash": "f006931c45ac0344"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
+  },
+  "lang-en.js": {
+   "size": 62436,
+   "hash": "bcd06fa54e8903d2"
   },
   "fonts.css": {
    "size": 234903,
@@ -22,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 3984,
-   "hash": "b0ecf7d6a3fa7a40"
+   "size": 3998,
+   "hash": "7990da4df0508ec8"
   },
   "icon-192.png": {
    "size": 42164,
@@ -69,5 +73,8 @@
    "size": 10605,
    "hash": "0f2f87cee2ba1966"
   }
- }
+ },
+ "notes_en": [
+  "The game now speaks English. Change the language in Settings"
+ ]
 }

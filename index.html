@@ -815,6 +815,8 @@ html.still .tile.err { animation: none; }
   font-size: 11px; line-height: 16px; background: #13151b; color: #5fd3a6; border: 1px solid #5fd3a6; }
 .bif > .ihead.yes::before { content: "да"; }
 .bif > .ihead.no::before { content: "нет"; color: var(--muted); border-color: var(--muted); }
+:lang(en) .bif > .ihead.yes::before { content: "yes"; }
+:lang(en) .bif > .ihead.no::before { content: "no"; }
 .bif > .ihead.sel {
   background: #ffd54a !important; color: #241a08 !important;
   transform: translateY(-3px) scale(1.08); z-index: 2; animation: tile-sel 1s ease-in-out infinite;
@@ -1565,6 +1567,13 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
       <button class="btn reset" id="app-move">📲 Перенести прогресс</button>
     </div>
     <div class="app-row app-audio">
+      <label for="app-lang">🌐 Язык · Language:</label>
+      <select id="app-lang">
+        <option value="ru">Русский</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <div class="app-row app-audio">
       <label for="app-audio">🔊 Звук:</label>
       <select id="app-audio">
         <option value="auto">Авто</option>
@@ -1825,7 +1834,53 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 </button>
 
 <script src="art.js"></script>
+<script src="lang-en.js"></script>
 <script>
+// ===== 0. Язык интерфейса: русский или английский =====
+// Выбор хранится отдельно от сохранения. Если игрок ещё не выбирал:
+// у того, кто уже играл, остаётся русский; новому — язык телефона или Telegram.
+const LOC_KEY = "coder-path-ui-lang";
+const LOC = (() => {
+  try {
+    const s = localStorage.getItem(LOC_KEY);
+    if (s === "ru" || s === "en") return s;
+    if (localStorage.getItem("tropa-koda-v1")) return "ru";   // играл до перевода
+  } catch (e) { /* хранилище недоступно */ }
+  let langs = navigator.languages?.length ? [...navigator.languages] : [navigator.language || ""];
+  try {   // Telegram передаёт язык пользователя в адресе страницы
+    const data = new URLSearchParams(location.hash.slice(1)).get("tgWebAppData");
+    const code = data && JSON.parse(new URLSearchParams(data).get("user") || "{}").language_code;
+    if (code) langs = [code];
+  } catch (e) { /* не Telegram */ }
+  return langs.some((l) => /^(ru|be|kk|ky)\b/i.test(l)) ? "ru" : "en";
+})();
+const EN_ON = LOC === "en" && typeof EN === "object";
+document.documentElement.lang = EN_ON ? "en" : "ru";
+// tr("русский текст {n}", { n: 5 }) — перевод по словарю из lang-en.js; нет перевода — остаётся русский
+function tr(s, v) {
+  let r = EN_ON && EN[s] !== undefined ? EN[s] : s;
+  if (v) r = r.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
+  return r;
+}
+// Название уровня для показа (внутри игры уровни помнятся по русскому названию)
+const lvName = (name) => (EN_ON && EN_LEVELS[name]?.name) || name;
+// Статичный текст страницы: заменить по словарю текст и подписи кнопок
+function locDom(root) {
+  if (!EN_ON) return;
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n; (n = walk.nextNode());) {
+    const s = n.nodeValue, k = s.trim();
+    if (k && EN[k] !== undefined) n.nodeValue = s.replace(k, EN[k]);
+  }
+  root.querySelectorAll("[aria-label],[placeholder],[title]").forEach((el) => {
+    for (const a of ["aria-label", "placeholder", "title"]) {
+      const v = el.getAttribute(a);
+      if (v && EN[v] !== undefined) el.setAttribute(a, EN[v]);
+    }
+  });
+}
+locDom(document.body);
+
 // ===== 1. Команды и языки =====
 // Внутри игры у каждой команды одно "настоящее" имя (moveRight),
 // а игрок пишет его так, как принято в выбранном языке.
@@ -1880,18 +1935,18 @@ const MAX_STEPS = 10;
 // «Препятствие» — всё, через что не пройти: вода, деревья, камни, край поля.
 // Это не команды (рыцарь не двигается и звёзды за них не отнимаются), а вопросы к полю.
 const CONDS = {};
-for (const [d, ru] of [["Right", "справа"], ["Left", "слева"], ["Down", "снизу"], ["Up", "сверху"]]) {
+for (const [d, ru] of [["Right", tr("справа")], ["Left", tr("слева")], ["Down", tr("снизу")], ["Up", tr("сверху")]]) {
   const dir = DIRS["move" + d];
   CONDS["obstacle" + d] = { what: "wall", move: "move" + d, dx: dir.dx, dy: dir.dy, arrow: dir.arrow, ru, py: "obstacle_" + d.toLowerCase() };
   // «враг справа» — враг в поле зрения: в этой стороне по прямой, пока не мешает препятствие
   CONDS["enemy" + d] = { what: "enemy", move: "move" + d, dx: dir.dx, dy: dir.dy, arrow: dir.arrow, ru, py: "enemy_" + d.toLowerCase() };
 }
 // Арена: «враг рядом» — кто-то из врагов на расстоянии удара (в любую сторону)
-CONDS.enemyNear = { what: "near", dx: 0, dy: 0, arrow: "◎", ru: "рядом", py: "enemy_near" };
+CONDS.enemyNear = { what: "near", dx: 0, dy: 0, arrow: "◎", ru: tr("рядом"), py: "enemy_near" };
 const COND_NAMES = Object.keys(CONDS);
 const COND_ANY = [...COND_NAMES, ...COND_NAMES.map((c) => CONDS[c].py)].join("|");
 const condKey = (name) => COND_NAMES.find((c) => c === name || CONDS[c].py === name);
-const WHAT_RU = { wall: "препятствие", enemy: "враг", near: "враг рядом" };
+const WHAT_RU = { wall: tr("препятствие"), enemy: tr("враг"), near: tr("враг рядом") };
 
 let lang = "py"; // "py" или "js"
 const disp = (name) => (lang === "py" ? DIRS[name].py : name); // как команда пишется в текущем языке
@@ -1905,23 +1960,23 @@ const levelConds = () => (L?.ifs ? COND_NAMES.filter((c) => L.ifs.includes(CONDS
 // игра сама заменит moveRight на move_right.
 // Главы острова. soon — глава видна на карте, но ещё не готова.
 const CHAPTERS = [
-  { name: "Берег", topic: "движение" },
-  { name: "Лес", topic: "циклы" },
-  { name: "Пещеры и шахты", topic: "ключи и монеты" },
-  { name: "Скалы гоблинов", topic: "гоблины" },
+  { name: tr("Берег"), topic: tr("движение") },
+  { name: tr("Лес"), topic: tr("циклы") },
+  { name: tr("Пещеры и шахты"), topic: tr("ключи и монеты") },
+  { name: tr("Скалы гоблинов"), topic: tr("гоблины") },
   // Второй остров (isle: 2) — условия «если»
-  { name: "Деревня у причала", topic: "условия «если»", isle: 2 },
-  { name: "Тропа через кусты", topic: "засады и монеты", isle: 2 },
-  { name: "Просека лесорубов", topic: "куда упадёт дерево", isle: 2 },
-  { name: "Свои и чужие", topic: "враг в поле зрения", isle: 2 },
+  { name: tr("Деревня у причала"), topic: tr("условия «если»"), isle: 2 },
+  { name: tr("Тропа через кусты"), topic: tr("засады и монеты"), isle: 2 },
+  { name: tr("Просека лесорубов"), topic: tr("куда упадёт дерево"), isle: 2 },
+  { name: tr("Свои и чужие"), topic: tr("враг в поле зрения"), isle: 2 },
   // Третий остров (isle: 3) — Остров рудокопов, длинные карты
-  { name: "Лестницы шахты", topic: "«если» внутри цикла", isle: 3 },
-  { name: "Глубокая шахта", topic: "длинные карты и высокие ступени", isle: 3 },
-  { name: "Кривые штольни", topic: "«если… иначе»", isle: 3 },
-  { name: "Арена", topic: "бой по своей программе", isle: 3 },
-  { name: "Битва", topic: "бой вместе с союзниками", isle: 3 },
+  { name: tr("Лестницы шахты"), topic: tr("«если» внутри цикла"), isle: 3 },
+  { name: tr("Глубокая шахта"), topic: tr("длинные карты и высокие ступени"), isle: 3 },
+  { name: tr("Кривые штольни"), topic: tr("«если… иначе»"), isle: 3 },
+  { name: tr("Арена"), topic: tr("бой по своей программе"), isle: 3 },
+  { name: tr("Битва"), topic: tr("бой вместе с союзниками"), isle: 3 },
   // Четвёртый остров (isle: 4) — Остров мастеров, свои приёмы (функции)
-  { name: "Мастерская", topic: "свои приёмы", isle: 4 },
+  { name: tr("Мастерская"), topic: tr("свои приёмы"), isle: 4 },
 ];
 
 // Уровни по порядку на карте.
@@ -3700,26 +3755,26 @@ function btnRefs(html) {
     // [[tile:moveUp:1]] — плитка программы, как в рамке; [[num:2]] — кнопка цифры; [[ifhead]] — заголовок «если»
     .replace(/\[\[tile:(\w+):(\d+)\]\]/g, (m, n, k) => `<span class="tile tileref ${DIRS[n].axis}"><span class="ar">${DIRS[n].arrow}</span><span class="nn">${k}</span></span>`)
     .replace(/\[\[num:(\d+)\]\]/g, (m, k) => `<span class="numref">${k}</span>`)
-    .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ если <span class="ar">→</span> ${WHAT_RU[CONDS[levelConds()[0]]?.what || "wall"]}</span>`)
+    .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ ${tr("если")} <span class="ar">→</span> ${WHAT_RU[CONDS[levelConds()[0]]?.what || "wall"]}</span>`)
     // [[pages]] или [[pages:3]] — кнопки частей длинной карты, как на поле
     .replace(/\[\[pages(?::(\d))?\]\]/g, (m, k) => `<span class="pagesref">${Array.from({ length: +(k || 2) }, (_, i) => `${i ? "<i></i>" : ""}<b>${i + 1}</b>`).join("")}</span>`)
-    .replace(/\[\[ifbtn\]\]/g, () => `<span class="ifbtnref">${uiBlocks ? "❓ если" : "? если"}</span>`)
+    .replace(/\[\[ifbtn\]\]/g, () => `<span class="ifbtnref">${uiBlocks ? "❓ " : "? "}${tr("если")}</span>`)
     // [[elsebtn]] — кнопка «＋ иначе» серой панели выбранной строки; [[elsehead]] — заголовок половины «иначе» в рамке
-    .replace(/\[\[elsebtn\]\]/g, () => `<span class="elsebtnref">＋ иначе</span>`)
-    .replace(/\[\[elsehead\]\]/g, () => `<span class="elseref">иначе</span>`)
+    .replace(/\[\[elsebtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("иначе")}</span>`)
+    .replace(/\[\[elsehead\]\]/g, () => `<span class="elseref">${tr("иначе")}</span>`)
     // [[fnbtn]] — розовая кнопка своего приёма (с картинкой того, что в нём), [[fnhead]] — заголовок рамки приёма
     .replace(/\[\[fnbtn\]\]/g, () => { const nm = defNames(codeEl?.value || L?.starter?.[lang] || "")[0];
       return `<span class="fnref">🧩${!nm ? "" : uiBlocks ? fnMini(codeEl.value, nm) : " " + nm + "()"}</span>`; })
-    .replace(/\[\[fnhead\]\]/g, () => `<span class="fnheadref">🧩 приём</span>`);
+    .replace(/\[\[fnhead\]\]/g, () => `<span class="fnheadref">🧩 ${tr("приём")}</span>`);
 }
 function langify(html) {
   const body = lang === "py"
-    ? "записано под строкой <code>while True:</code> со сдвигом вправо"
-    : "лежит внутри фигурных скобок <code>{ }</code>";
+    ? tr("записано под строкой <code>while True:</code> со сдвигом вправо")
+    : tr("лежит внутри фигурных скобок <code>{ }</code>");
   html = html.replace("[[body]]", body);
   html = html.replace("[[fixhow]]", lang === "py"
-    ? "Подсказка: в Python внутри цикла только строки со сдвигом. Выбери её номер и нажми серую кнопку [[tool:indent]]."
-    : "Подсказка: внутри цикла только то, что стоит до скобки <code>}</code>. Выбери её номер и нажми серую кнопку [[tool:up]].");
+    ? tr("Подсказка: в Python внутри цикла только строки со сдвигом. Выбери её номер и нажми серую кнопку [[tool:indent]].")
+    : tr("Подсказка: внутри цикла только то, что стоит до скобки <code>}</code>. Выбери её номер и нажми серую кнопку [[tool:up]]."));
   // если/иначе: как это пишется в языке игрока
   html = html.replace("[[if]]", lang === "py" ? "<code>if obstacle_right():</code>" : "<code>if (obstacleRight()) {</code>");
   if (lang === "py") html = html.replace(new RegExp(`\\b(${ALL_COMMANDS.join("|")})\\b`, "g"), (n) => DIRS[n].py);
@@ -3749,7 +3804,7 @@ function applyMotion() {
   document.documentElement.classList.toggle("still", STILL);
   const sel = document.getElementById("app-motion"), note = document.getElementById("app-motion-note");
   if (sel) sel.value = m;
-  if (note) note.textContent = m === "auto" ? (STILL ? "сейчас выключена: телефон просит меньше движения" : "сейчас включена") : "";
+  if (note) note.textContent = m === "auto" ? tr(STILL ? "сейчас выключена: телефон просит меньше движения" : "сейчас включена") : "";
 }
 applyMotion();
 
@@ -3891,26 +3946,27 @@ async function initCloud() {
 const FS_URL = "https://firestore.googleapis.com/v1/projects/coder-path/databases/(default)/documents/players/";
 const FS_KEY = "AIzaSyC6iY7UvPjdveoBe7kH38_yo0WaKsXoYwg"; // публичный ключ проекта, не пароль
 const PLAYER_KEY = "coder-path-player";                     // код этого устройства (в браузере)
-// [картинка, слово, то же латиницей — так код хранится в базе]
+// [картинка, слово, то же латиницей — так код хранится в базе, слово по-английски]
+// Код один на все языки: CAT-MOON-427 и КОТ-ЛУНА-427 — это kot-luna-427.
 const WORDS_A = [
-  ["🐱", "кот", "kot"], ["🐶", "пёс", "pes"], ["🦊", "лис", "lis"], ["🐺", "волк", "volk"],
-  ["🐻", "мишка", "mishka"], ["🐰", "заяц", "zayac"], ["🦔", "ёж", "ezh"], ["🦉", "сова", "sova"],
-  ["🐭", "мышь", "mysh"], ["🦁", "лев", "lev"], ["🐯", "тигр", "tigr"], ["🐘", "слон", "slon"],
-  ["🦒", "жираф", "zhiraf"], ["🦓", "зебра", "zebra"], ["🐼", "панда", "panda"], ["🐨", "коала", "koala"],
-  ["🐳", "кит", "kit"], ["🐬", "дельфин", "delfin"], ["🐟", "рыба", "ryba"], ["🦀", "краб", "krab"],
-  ["🐙", "осьминог", "osminog"], ["🐢", "черепаха", "cherepaha"], ["🐸", "лягушка", "lyagushka"], ["🐧", "пингвин", "pingvin"],
-  ["🦆", "утка", "utka"], ["🦅", "орёл", "orel"], ["🦜", "попугай", "popugay"], ["🐝", "пчела", "pchela"],
-  ["🦋", "бабочка", "babochka"], ["🐌", "улитка", "ulitka"], ["🐴", "конь", "kon"], ["🐉", "дракон", "drakon"],
+  ["🐱", "кот", "kot", "cat"], ["🐶", "пёс", "pes", "dog"], ["🦊", "лис", "lis", "fox"], ["🐺", "волк", "volk", "wolf"],
+  ["🐻", "мишка", "mishka", "bear"], ["🐰", "заяц", "zayac", "rabbit"], ["🦔", "ёж", "ezh", "hedgehog"], ["🦉", "сова", "sova", "owl"],
+  ["🐭", "мышь", "mysh", "mouse"], ["🦁", "лев", "lev", "lion"], ["🐯", "тигр", "tigr", "tiger"], ["🐘", "слон", "slon", "elephant"],
+  ["🦒", "жираф", "zhiraf", "giraffe"], ["🦓", "зебра", "zebra", "zebra"], ["🐼", "панда", "panda", "panda"], ["🐨", "коала", "koala", "koala"],
+  ["🐳", "кит", "kit", "whale"], ["🐬", "дельфин", "delfin", "dolphin"], ["🐟", "рыба", "ryba", "fish"], ["🦀", "краб", "krab", "crab"],
+  ["🐙", "осьминог", "osminog", "octopus"], ["🐢", "черепаха", "cherepaha", "turtle"], ["🐸", "лягушка", "lyagushka", "frog"], ["🐧", "пингвин", "pingvin", "penguin"],
+  ["🦆", "утка", "utka", "duck"], ["🦅", "орёл", "orel", "eagle"], ["🦜", "попугай", "popugay", "parrot"], ["🐝", "пчела", "pchela", "bee"],
+  ["🦋", "бабочка", "babochka", "butterfly"], ["🐌", "улитка", "ulitka", "snail"], ["🐴", "конь", "kon", "horse"], ["🐉", "дракон", "drakon", "dragon"],
 ];
 const WORDS_B = [
-  ["🌙", "луна", "luna"], ["☀️", "солнце", "solnce"], ["⭐", "звезда", "zvezda"], ["☁️", "облако", "oblako"],
-  ["🌈", "радуга", "raduga"], ["⛰️", "гора", "gora"], ["🌋", "вулкан", "vulkan"], ["🏝️", "остров", "ostrov"],
-  ["🌊", "волна", "volna"], ["❄️", "снег", "sneg"], ["🔥", "огонь", "ogon"], ["⚡", "молния", "molniya"],
-  ["🌲", "ёлка", "elka"], ["🌵", "кактус", "kaktus"], ["🌸", "цветок", "cvetok"], ["🍄", "гриб", "grib"],
-  ["🍎", "яблоко", "yabloko"], ["🍒", "вишня", "vishnya"], ["🍉", "арбуз", "arbuz"], ["🥕", "морковь", "morkov"],
-  ["🧀", "сыр", "syr"], ["🎂", "торт", "tort"], ["⚽", "мяч", "myach"], ["🎈", "шарик", "sharik"],
-  ["🚀", "ракета", "raketa"], ["⛵", "парус", "parus"], ["🚂", "поезд", "poezd"], ["🏰", "замок", "zamok"],
-  ["🔑", "ключ", "klyuch"], ["👑", "корона", "korona"], ["🗡️", "меч", "mech"], ["🛡️", "щит", "shchit"],
+  ["🌙", "луна", "luna", "moon"], ["☀️", "солнце", "solnce", "sun"], ["⭐", "звезда", "zvezda", "star"], ["☁️", "облако", "oblako", "cloud"],
+  ["🌈", "радуга", "raduga", "rainbow"], ["⛰️", "гора", "gora", "mountain"], ["🌋", "вулкан", "vulkan", "volcano"], ["🏝️", "остров", "ostrov", "island"],
+  ["🌊", "волна", "volna", "wave"], ["❄️", "снег", "sneg", "snow"], ["🔥", "огонь", "ogon", "fire"], ["⚡", "молния", "molniya", "lightning"],
+  ["🌲", "ёлка", "elka", "tree"], ["🌵", "кактус", "kaktus", "cactus"], ["🌸", "цветок", "cvetok", "flower"], ["🍄", "гриб", "grib", "mushroom"],
+  ["🍎", "яблоко", "yabloko", "apple"], ["🍒", "вишня", "vishnya", "cherry"], ["🍉", "арбуз", "arbuz", "melon"], ["🥕", "морковь", "morkov", "carrot"],
+  ["🧀", "сыр", "syr", "cheese"], ["🎂", "торт", "tort", "cake"], ["⚽", "мяч", "myach", "ball"], ["🎈", "шарик", "sharik", "balloon"],
+  ["🚀", "ракета", "raketa", "rocket"], ["⛵", "парус", "parus", "sail"], ["🚂", "поезд", "poezd", "train"], ["🏰", "замок", "zamok", "castle"],
+  ["🔑", "ключ", "klyuch", "key"], ["👑", "корона", "korona", "crown"], ["🗡️", "меч", "mech", "sword"], ["🛡️", "щит", "shchit", "shield"],
 ];
 const pickRand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 // kot-luna-427 → части для показа (картинки и слова)
@@ -3918,13 +3974,19 @@ function codeParts(id) {
   const [a, b, n] = String(id || "").split("-");
   return { a: WORDS_A.find((w) => w[2] === a), b: WORDS_B.find((w) => w[2] === b), n };
 }
+const WI = EN_ON ? 3 : 1;   // какое слово показывать: русское или английское
 const newCode = () => `${pickRand(WORDS_A)[2]}-${pickRand(WORDS_B)[2]}-${100 + Math.floor(Math.random() * 900)}`;
 
 // Любой набранный или вставленный текст → код для базы: «Кот Торт 648» → kot-tort-648.
 // Русские буквы переводим в латиницу, пробелы и знаки — в дефис.
 const TRANSLIT = { а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "shch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya" };
-const toCodeId = (text) => String(text || "").toLowerCase().trim()
-  .replace(/[а-яё]/g, (ch) => TRANSLIT[ch]).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+const toCodeId = (text) => {
+  const id = String(text || "").toLowerCase().trim()
+    .replace(/[а-яё]/g, (ch) => TRANSLIT[ch]).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+  // CAT-MOON-427 → kot-luna-427: английские слова кода — те же, что русские
+  const [a, b, n, more] = id.split("-"), A = WORDS_A.find((w) => w[3] === a), B = WORDS_B.find((w) => w[3] === b);
+  return A && B && /^\d{3}$/.test(n) && more === undefined ? `${A[2]}-${B[2]}-${n}` : id;
+};
 const validCode = (id) => /^[a-z0-9-]{6,40}$/.test(id || "");
 
 const LABEL_KEY = "coder-path-label"; // как показывать свой придуманный код (например, по-русски)
@@ -3934,7 +3996,7 @@ if (!validCode(player)) player = null;
 // Как показать код: из слов — по-русски, свой — как его написали
 function codeLabel(id) {
   const p = codeParts(id);
-  if (p.a && p.b && /^\d{3}$/.test(p.n)) return `${p.a[1]}-${p.b[1]}-${p.n}`.toUpperCase();
+  if (p.a && p.b && /^\d{3}$/.test(p.n)) return `${p.a[WI]}-${p.b[WI]}-${p.n}`.toUpperCase();
   if (id === player && playerLabel && toCodeId(playerLabel) === id) return playerLabel.toUpperCase();
   return String(id || "").toUpperCase();
 }
@@ -4054,7 +4116,7 @@ function setSyncState(s) {
   document.getElementById("sync-code").textContent = codeLabel(player);
   document.getElementById("sync-dot").className = "sync-dot " + s;
   document.getElementById("sync-state").textContent =
-    s === "ok" ? "· сохранено" : s === "busy" ? "· сохраняю…" : s === "off" ? "· сохраню, когда будет интернет" : "";
+    tr(s === "ok" ? "· сохранено" : s === "busy" ? "· сохраняю…" : s === "off" ? "· сохраню, когда будет интернет" : "");
 }
 if (syncOn) {
   // Вернулись в игру (переключились с другого приложения) — подтягиваем свежее
@@ -4543,16 +4605,16 @@ function loadLevel(i) {
 
   const ch = CHAPTERS[L.chapter];
   const numInChapter = LEVELS.filter((lv, k) => lv.chapter === L.chapter && k <= i).length;
-  $("eyebrow").textContent = `${ch.name} · ` + (L.challenge ? "испытание" : `уровень ${numInChapter}`) + (L.bug ? " · найди ошибку" : "");
-  $("title").textContent = L.name;
+  $("eyebrow").textContent = `${ch.name} · ` + (L.challenge ? tr("испытание") : tr("уровень {n}", { n: numInChapter })) + (L.bug ? tr(" · найди ошибку") : "");
+  $("title").textContent = lvName(L.name);
   // кнопки в тексте рисуем до перевода на язык игрока (метка содержит JS-имя команды)
   $("goal").innerHTML = uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(BLOCK_GOALS[L.name]) : btnRefs(langify(btnRefs(L.goal)));
   $("goal").classList.remove("open");
   requestAnimationFrame(() => { const g = $("goal"); $("goal-more").hidden = !(uiBlocks && g.scrollHeight > g.clientHeight + 2); });
-  $("par").innerHTML = `<span class="star">★★★</span> — не больше ${L.par} ${cmdWord(L.par)} в коде, <span class="star">★★</span> — не больше ${L.good}`;
-  $("hint").innerHTML = lang === "py"
+  $("par").innerHTML = tr('<span class="star">★★★</span> — не больше {par} {cmd} в коде, <span class="star">★★</span> — не больше {good}', { par: L.par, cmd: cmdWord(L.par), good: L.good });
+  $("hint").innerHTML = tr(lang === "py"
     ? "Если код кончается циклом, кнопки ставят команду внутрь него с отступом. В Python отступ (4 пробела) и значит «внутри цикла»."
-    : "Если код кончается циклом, кнопки ставят команду внутрь фигурных скобок. Звёзды считаются по числу команд в тексте кода.";
+    : "Если код кончается циклом, кнопки ставят команду внутрь фигурных скобок. Звёзды считаются по числу команд в тексте кода.");
   applyUi();
 
   selLine = null;
@@ -4871,7 +4933,7 @@ ISLE_MAPS[1] = {
     ["rock1", 10.6, 3.9, 0.5],
     ["gold2", 12.5, 22.1, 0.55],
   ],
-  labels: [["БЕРЕГ", 300, 1032], ["ЛЕС", 70, 660], ["ПЕЩЕРЫ И ШАХТЫ", 112, 516], ["СКАЛЫ ГОБЛИНОВ", 262, 352]],
+  labels: [[tr("БЕРЕГ"), 300, 1032], [tr("ЛЕС"), 70, 660], [tr("ПЕЩЕРЫ И ШАХТЫ"), 112, 516], [tr("СКАЛЫ ГОБЛИНОВ"), 262, 352]],
   bank: [["cloud_d", 170, -48, 1.1], ["cloud_b", 520, -70, 1.15], ["cloud_a", 930, -40, 1.25], ["cloud_c", 1110, -30, 1]],
   clouds: [["sc_cloud1", 17, 6, 0.1], ["sc_cloud2", 38, 4.5, 0.6]],
   tm: "sc_tm",
@@ -5024,7 +5086,7 @@ ISLE_MAPS[2] = {
     ["sheepg", 11.4, 11.7, 0.42],
     ["monastery_y", 6.95, 4.7, 0.7],
   ],
-  labels: [["ДЕРЕВНЯ", 80, 486], ["КУСТЫ", 112, 266], ["ПРОСЕКА", 80, 176], ["СВОИ И ЧУЖИЕ", 264, 136]],
+  labels: [[tr("ДЕРЕВНЯ"), 80, 486], [tr("КУСТЫ"), 112, 266], [tr("ПРОСЕКА"), 80, 176], [tr("СВОИ И ЧУЖИЕ"), 264, 136]],
   bank: [["cloud_b", 250, 1810, 1.1], ["cloud_a", 560, 1790, 1.3], ["cloud_c", 860, 1830, 1.0], ["cloud_d", 1080, 1820, 1.0]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm3",
@@ -5179,7 +5241,7 @@ ISLE_MAPS[3] = {
     ["mine", 15.2, 8.1, 0.6],
     ["wood_res", 7.55, 1.55, 0.9],
   ],
-  labels: [["ЛЕСТНИЦЫ", 258, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274], ["АРЕНА", 140, 150], ["БИТВА", 92, 92]],
+  labels: [[tr("ЛЕСТНИЦЫ"), 258, 469], [tr("ГЛУБИНА"), 62, 400], [tr("ШТОЛЬНИ"), 150, 274], [tr("АРЕНА"), 140, 150], [tr("БИТВА"), 92, 92]],
   bank: [["cloud_a", 990, 1800, 1.0], ["cloud_c", 1080, 1820, 0.9], ["cloud_b", 28, 96, 0.8], ["cloud_d", 40, 24, 0.55]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm5",
@@ -5330,7 +5392,7 @@ ISLE_MAPS[4] = {
     ["wrock2", 12.6, 28.4, 0.7],
     ["duck", 15.0, 27.8, 1.3],
   ],
-  labels: [["МАСТЕРСКАЯ", 268, 502]],
+  labels: [[tr("МАСТЕРСКАЯ"), 268, 502]],
   bank: [["cloud_b", 260, 1810, 1.1], ["cloud_a", 600, 1790, 1.3], ["cloud_c", 900, 1830, 1.0], ["cloud_d", 1090, 1820, 1.0]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm2",
@@ -5915,7 +5977,7 @@ function seeded(seed) {
 // ===== Острова на карте =====
 // Каждый остров — своя карта (свой .mapwrap) со своими уровнями. Острова соединяет мост:
 // с вершины первого — вверх в облака, на втором он приходит снизу.
-const ISLE_NAMES = { 1: "Остров программистов", 2: "Остров условий", 3: "Остров рудокопов", 4: "Остров мастеров" };
+const ISLE_NAMES = { 1: tr("Остров программистов"), 2: tr("Остров условий"), 3: tr("Остров рудокопов"), 4: tr("Остров мастеров") };
 // Переходы между островами (у острова их может быть несколько): где кнопка (единицы карты), куда ведёт.
 // bridge — мост за край карты (dir: -1 вверх, 1 вниз), за облаками; tunnel — дверь (монастырь, шахта),
 // за ней подземный ход.
@@ -5935,9 +5997,9 @@ const LAST_LEVEL = () => LAST_OF(1);   // «Перевал»
 // вперёд — после испытания последней главы острова; назад — всегда
 const gateOpen = (from, to) => save.dev || to < from || (save.stars[LAST_OF(from)?.name] || 0) > 0;
 const bridgeOpen = () => gateOpen(1, 2);
-const gateLockedText = (from) => from === 1 ? `Мост откроется после испытания «${LAST_OF(1).name}» у ворот крепости`
-  : from === 3 ? `Рудокопы построят мост после испытания «${LAST_OF(3).name}»`
-  : `Монастырь откроется после испытания «${LAST_OF(from).name}»`;
+const gateLockedText = (from) => tr(from === 1 ? "Мост откроется после испытания «{lv}» у ворот крепости"
+  : from === 3 ? "Рудокопы построят мост после испытания «{lv}»"
+  : "Монастырь откроется после испытания «{lv}»", { lv: lvName(LAST_OF(from).name) });
 let arrivedFrom = 0;   // с какого острова пришли (рыцарь появится у этих ворот)
 const isleOf = (lv) => lv?.isle || 1;
 let curIsle = isleOf(LEVELS[indexOf(save.currentName)]);
@@ -5968,7 +6030,7 @@ function showIsle(n) {
   curIsle = n;
   document.querySelectorAll(".mapwrap[data-isle]").forEach((w) => (w.hidden = +w.dataset.isle !== n));
   ensureIsle(n);
-  $("isle-name").textContent = ISLE_NAMES[n].replace(/^Остров\s+/, "");   // «Остров» — мелко строкой выше
+  $("isle-name").textContent = ISLE_NAMES[n].replace(/^(Остров|Island)\s+/, "");   // «Остров» — мелко строкой выше
 }
 
 function renderMap() {
@@ -5992,7 +6054,7 @@ function renderMap() {
     if (!ch.soon || ch.isle) return;
     add(`<rect x="0" y="${CH_TOP[c]}" width="360" height="${CH_BOT[c] - CH_TOP[c]}" fill="var(--bg)" opacity="0.55"/>`);
     add(`<text class="region" x="180" y="${(CH_TOP[c] + CH_BOT[c]) / 2}" fill="var(--snow)" stroke="var(--bg)" stroke-width="3" paint-order="stroke">${ch.name.toUpperCase()}</text>`);
-    add(`<text class="soon" x="180" y="${(CH_TOP[c] + CH_BOT[c]) / 2 + 18}" fill="var(--snow)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" opacity="0.85">скоро · ${ch.topic}</text>`);
+    add(`<text class="soon" x="180" y="${(CH_TOP[c] + CH_BOT[c]) / 2 + 18}" fill="var(--snow)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" opacity="0.85">${tr("скоро")} · ${ch.topic}</text>`);
   });
 
   // Подписи глав на лентах из набора
@@ -6012,7 +6074,7 @@ function renderMap() {
     const open = isOpen(i), stars = save.stars[lv.name] || 0;
     const num = LEVELS.filter((l, j) => l.chapter === lv.chapter && j <= i && !l.challenge).length;
     const S = lv.challenge ? 36 : 31, H = S * 94 / 88;
-    add(`<g class="node${open ? "" : " locked"}" data-i="${i}" tabindex="0" role="button" aria-label="${lv.name}${lv.challenge ? ", испытание" : ""}${open ? "" : ", закрыт"}${stars ? `, звёзд: ${stars}` : ""}">`);
+    add(`<g class="node${open ? "" : " locked"}" data-i="${i}" tabindex="0" role="button" aria-label="${lvName(lv.name)}${lv.challenge ? tr(", испытание") : ""}${open ? "" : tr(", закрыт")}${stars ? tr(", звёзд: {n}", { n: stars }) : ""}">`);
     if (i === nextI) add(`<circle class="pulse" cx="${x}" cy="${y}" r="${S / 2 + 4}" fill="none" stroke="#fff3c4" stroke-width="3"/>`);
     add(`<use class="ring" href="#im-btn${lv.challenge ? "r" : "b"}" x="${x - S / 2}" y="${y - H / 2}" width="${S}" height="${H}" ${open ? "" : 'filter="url(#f-gray)"'}/>`);
     if (!open) add(`<use href="#im-lock" x="${x - 7}" y="${y - 9}" width="14" height="15.6"/>`);
@@ -6029,7 +6091,7 @@ function renderMap() {
   // Кнопки переходов: на мосту — стрелка туда, куда мост уходит с карты; у двери (монастырь, шахта) — арка входа
   for (const br of GATES[curIsle]) {
     const [bx, by] = br.at, ok = gateOpen(curIsle, br.to), S = 30, H = S * 94 / 88;
-    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${br.kind === "tunnel" ? "Подземный ход" : br.kind === "build" && !bridgeBuilt() ? "Построить мост" : "Мост"} на ${ISLE_NAMES[br.to]}${ok ? "" : ", закрыт"}">`);
+    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${tr(br.kind === "tunnel" ? "Подземный ход" : br.kind === "build" && !bridgeBuilt() ? "Построить мост" : "Мост")} ${tr("на")} ${ISLE_NAMES[br.to]}${ok ? "" : tr(", закрыт")}">`);
     add(`<use class="ring" href="#im-btnb" x="${bx - S / 2}" y="${by - H / 2}" width="${S}" height="${H}" ${ok ? "" : 'filter="url(#f-gray)"'}/>`);
     const d = br.kind === "tunnel" ? `M${bx - 6} ${by + 6}v-6a6 6 0 0 1 12 0v6M${bx - 8} ${by + 6}h16`
       : br.dir === "left" ? `M${bx + 1} ${by - 6}l-7 6 7 6M${bx - 5} ${by}h12`
@@ -6072,7 +6134,7 @@ function renderMap() {
     svgEl.after(d);
   }
   const total = mine.reduce((s, [lv]) => s + (save.stars[lv.name] || 0), 0);
-  $("map-progress").innerHTML = mine.length ? `Звёзд собрано: <b>${total}</b> из ${mine.length * 3}` : "Уровни этого острова скоро появятся";
+  $("map-progress").innerHTML = mine.length ? tr("Звёзд собрано: <b>{n}</b> из {m}", { n: total, m: mine.length * 3 }) : tr("Уровни этого острова скоро появятся");
   const all = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
   $("sync-move").hidden = !syncOn || all > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
@@ -6094,9 +6156,9 @@ function onMapTap(e) {
   if (isOpen(i)) { $("map-toast").textContent = ""; loadLevel(i); return; }
   if (!chapterOpen(lv.chapter)) {
     const ch = LEVELS.find((l) => l.chapter === lv.chapter - 1 && l.challenge);
-    $("map-toast").textContent = `Глава «${CHAPTERS[lv.chapter].name}» откроется после испытания «${ch.name}»`;
+    $("map-toast").textContent = tr("Глава «{ch}» откроется после испытания «{lv}»", { ch: CHAPTERS[lv.chapter].name, lv: lvName(ch.name) });
   } else {
-    $("map-toast").textContent = `Сначала пройди «${lv.after}»`;
+    $("map-toast").textContent = tr("Сначала пройди «{lv}»", { lv: lvName(lv.after) });
   }
   logEv("status", { text: $("map-toast").textContent, kind: "map" });
 }
@@ -7225,12 +7287,12 @@ function openArchi() {
     const open = isleOpen(n), b = document.createElement("button");
     b.className = "archi-isle" + (open ? "" : " locked") + (n === curIsle ? " cur" : "");
     b.style.cssText = `left:${pct(x, 360)};top:${pct(y, H)};width:${pct(w, 360)};height:${pct(h, H)}`;
-    b.setAttribute("aria-label", ISLE_NAMES[n] + (open ? "" : " — закрыт"));
+    b.setAttribute("aria-label", ISLE_NAMES[n] + (open ? "" : tr(" — закрыт")));
     isleMini(n).then((m) => b.prepend(open ? m.open : m.gray));
     const mine = isleLevels(n), got = mine.reduce((t, [lv]) => t + (save.stars[lv.name] || 0), 0);
     const lab = document.createElement("div");
     lab.className = "archi-label"; lab.style.top = `calc(100% - ${pct(pd, h)} - 12px)`;
-    lab.innerHTML = `<span class="archi-rib">${ISLE_NAMES[n]}</span>` + (mine.length ? `<span class="archi-stars">★ <b>${got}</b> из ${mine.length * 3}</span>` : "");
+    lab.innerHTML = `<span class="archi-rib">${ISLE_NAMES[n]}</span>` + (mine.length ? `<span class="archi-stars">★ <b>${got}</b> ${tr("из")} ${mine.length * 3}</span>` : "");
     lab.firstChild.style.borderImage = `url(${TS.ui_ribbon}) 0 64 fill / 0 15px / 0 stretch`;
     b.appendChild(lab);
     if (!open) { const l = new Image(); l.src = TS.ui_lock; l.alt = ""; l.className = "archi-lock"; b.appendChild(l); }
@@ -7281,7 +7343,7 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("archi").hidde
 
 function floatToast(text) {
   const el = $("float-toast");
-  el.textContent = text;
+  el.textContent = tr(text);
   el.hidden = false;
   clearTimeout(floatTimer);
   floatTimer = setTimeout(() => (el.hidden = true), 3200);
@@ -7708,7 +7770,7 @@ function buildBoard() {
   camEl.style.setProperty("--blk-max", blkMax);
   // Раскладка экрана одна для всех уровней. Высоких узких полей нет: на телефоне они
   // выглядят плохо (пустые полосы по бокам), поэтому такие уровни повёрнуты набок.
-  boardEl.setAttribute("aria-label", `Игровое поле ${W} на ${H} клеток`);
+  boardEl.setAttribute("aria-label", tr("Игровое поле {w} на {h} клеток", { w: W, h: H }));
   boardEl.classList.toggle("arena", !!L.arena);
   if (L.arena) return buildArena();               // арена: свободный бой, а не клетки
   items = [];
@@ -7857,7 +7919,7 @@ function buildBoard() {
     vb.className = "variants";
     vb.id = "variants";
     vb.setAttribute("role", "group");
-    vb.setAttribute("aria-label", "Варианты поля");
+    vb.setAttribute("aria-label", tr("Варианты поля"));
     L.maps.forEach((_, k) => {
       const b = document.createElement("button");
       b.textContent = k + 1;
@@ -7929,10 +7991,10 @@ function drawItems(got) {
   if (!items.length && !hearts) return;
   let html = "";
   if (hearts) {
-    html += `<span class="khearts${knightHp ? "" : " zero"}" aria-label="Сердечки рыцаря: ${knightHp} из ${KNIGHT_HP}">рыцарь ` +
+    html += `<span class="khearts${knightHp ? "" : " zero"}" aria-label="${tr("Сердечки рыцаря: {n} из {m}", { n: knightHp, m: KNIGHT_HP })}">${tr("рыцарь")} ` +
       Array.from({ length: KNIGHT_HP }, (_, k) => `<img alt="" class="${k < knightHp ? "" : "off"}" src="${HEART_K_URL}">`).join("") + `</span>`;
   }
-  if (needKey()) html += `<span class="${got.key ? "got" : ""}">${KEY_SVG}${got.key ? "есть" : "нет"}</span>`;
+  if (needKey()) html += `<span class="${got.key ? "got" : ""}">${KEY_SVG}${tr(got.key ? "есть" : "нет")}</span>`;
   if (coinsTotal()) html += `<span class="${got.coins === coinsTotal() ? "got" : ""}"><img alt="" src="${TS.coin}">${got.coins}/${coinsTotal()}</span>`;
   itemsTag.innerHTML = html;
 }
@@ -7977,14 +8039,14 @@ function buildChips() {
         : selLine ? putCommandOnLine(disp(name)) : insertLine(disp(name) + (lang === "py" ? "()" : "();")));
   });
   if (L.loopButton) {
-    add("add-loop", "new loopchip", uiBlocks ? "🔁 повторять" : "↻ повторять", () => {
+    add("add-loop", "new loopchip", (uiBlocks ? "🔁 " : "↻ ") + tr("повторять"), () => {
       const code = codeEl.value.replace(/\s+$/, "");
       codeEl.value = (code ? code + "\n" : "") + (lang === "py" ? "while True:\n" : "while (true) {\n\n}\n");
       onCodeChange();
     });
   }
   if (L.ifButton) {
-    add("add-if", "ifchip" + (L.newIf ? " new" : ""), uiBlocks ? "❓ если" : "? если", () => {
+    add("add-if", "ifchip" + (L.newIf ? " new" : ""), (uiBlocks ? "❓ " : "? ") + tr("если"), () => {
       const c = condDisp(levelConds()[0]);
       const lines = codeEl.value.replace(/\s+$/, "").split("\n").filter((l, i, a) => a.length > 1 || l.trim());
       const at = selLine ? Math.min(selLine, lines.length) : lines.length;   // после выбранной строки или в конец
@@ -8006,7 +8068,7 @@ function buildChips() {
     add("add-fn-" + nm, "fnchip" + (L.newFn ? " new" : ""), "", () => insertCall(nm));
     const b = $("add-fn-" + nm);
     b.innerHTML = uiBlocks ? `🧩${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
-    b.setAttribute("aria-label", "Приём " + nm);
+    b.setAttribute("aria-label", tr("Приём") + " " + nm);
   }
   if (uiBlocks) { const br = document.createElement("span"); br.style.flexBasis = "100%"; chipsEl.appendChild(br); }
   [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
@@ -8023,7 +8085,7 @@ function drawUndo() {
   const btn = $("undo-cmd");
   if (!btn) return;
   const frameLine = selLine && /^\s*(while|for|if|elif|else|def)\b.*:\s*$/.test(codeEl.value.split("\n")[selLine - 1] ?? "");
-  $("undo-label").textContent = selLine ? (uiBlocks ? (frameLine ? "Убрать рамку" : "Удалить плитку") : `Удалить строку ${selLine}`) : "Отменить команду";
+  $("undo-label").textContent = selLine ? (uiBlocks ? tr(frameLine ? "Убрать рамку" : "Удалить плитку") : tr("Удалить строку {n}", { n: selLine })) : tr("Отменить команду");
   btn.disabled = running || (!selLine && !hasCommand());
   fitText();
 }
@@ -8274,12 +8336,12 @@ function buildPages() {
   pg.className = "pages" + (L.maps ? " low" : "");
   pg.id = "pages";
   pg.setAttribute("role", "group");
-  pg.setAttribute("aria-label", "Части длинной карты");
+  pg.setAttribute("aria-label", tr("Части длинной карты"));
   for (let k = 0; k < pageCount(); k++) {
     if (k) pg.appendChild(document.createElement("i"));
     const b = document.createElement("button");
     b.textContent = k + 1;
-    b.setAttribute("aria-label", `Часть карты ${k + 1}`);
+    b.setAttribute("aria-label", tr("Часть карты {n}", { n: k + 1 }));
     b.addEventListener("click", () => { if (running || k === pageAt()) return; sfx("tap"); gotoPage(k); });
     pg.appendChild(b);
   }
@@ -8287,7 +8349,7 @@ function buildPages() {
   for (const side of ["l", "r"]) {
     const b = document.createElement("button");
     b.className = "camedge " + side;
-    b.setAttribute("aria-label", side === "r" ? "Карта дальше" : "Карта назад");
+    b.setAttribute("aria-label", tr(side === "r" ? "Карта дальше" : "Карта назад"));
     b.addEventListener("click", () => { if (running) return; sfx("tap"); gotoPage(pageAt() + (side === "r" ? 1 : -1)); });
     camEl.appendChild(b);
   }
@@ -8430,7 +8492,7 @@ function loopOfLine(loops, line) {
 //   for i in range(3): →  for (let i = 0; i < 3; i++) {
 //   конец сдвига       →  }
 function pyError(line, message) {
-  const e = new Error(message);
+  const e = new Error(tr(message));
   e.line = line;
   e.friendly = true;
   return e;
@@ -8611,7 +8673,7 @@ function buildPlan(code) {
   const make = (name) => (line, n) => {
     if (n === undefined) n = 1;
     if (!Number.isInteger(n) || n < 1 || n > MAX_STEPS) {
-      throw pyError(line, `${disp(name)}(${n}): число ${name === "attack" ? "ударов" : "шагов"} должно быть целым от 1 до ${MAX_STEPS}`);
+      throw pyError(line, `${disp(name)}(${n}): ` + tr(name === "attack" ? "число ударов должно быть целым от 1 до {max}" : "число шагов должно быть целым от 1 до {max}", { max: MAX_STEPS }));
     }
     const lp = loopOfLine(loops, line) || (callStack[0] ? loopOfLine(loops, callStack[0]) : null);   // шаг приёма, позванного из цикла
     const c = { name, n, line, via: callStack[0] || 0, ...DIRS[name], from: { ...pos }, cells: [], got: [],
@@ -8739,16 +8801,16 @@ function explainError(e) {
   let msg = e.message;
   if (e instanceof ReferenceError) {
     const name = msg.split(" ")[0];
-    if (lang === "py" && ALL_COMMANDS.includes(name)) msg = `В Python команды пишутся через подчёркивание: ${DIRS[name].py}()`;
-    else if (lang === "js" && PY_TO_JS[name]) msg = `В JavaScript эта команда пишется так: ${PY_TO_JS[name]}()`;
-    else if (ALL_COMMANDS.includes(name) || PY_TO_JS[name]) msg = `Команда ${name}() откроется на следующих уровнях`;
-    else msg = `Неизвестное слово: ${name}`;
+    if (lang === "py" && ALL_COMMANDS.includes(name)) msg = tr("В Python команды пишутся через подчёркивание: {c}()", { c: DIRS[name].py });
+    else if (lang === "js" && PY_TO_JS[name]) msg = tr("В JavaScript эта команда пишется так: {c}()", { c: PY_TO_JS[name] });
+    else if (ALL_COMMANDS.includes(name) || PY_TO_JS[name]) msg = tr("Команда {c}() откроется на следующих уровнях", { c: name });
+    else msg = tr("Неизвестное слово: {c}", { c: name });
   } else if (e instanceof RangeError) {
-    msg = "Приём зовёт сам себя снова и снова. Внутри приёма не нужно звать его же";
+    msg = tr("Приём зовёт сам себя снова и снова. Внутри приёма не нужно звать его же");
   } else if (e instanceof SyntaxError) {
-    msg = lang === "py" ? "Не понял код. Проверь скобки и названия команд" : "Опечатка в коде: " + msg;
-  }
-  if (e.line) msg = `Строка ${e.line}: ` + msg;
+    msg = lang === "py" ? tr("Не понял код. Проверь скобки и названия команд") : tr("Опечатка в коде: ") + msg;
+  } else msg = tr(msg);
+  if (e.line) msg = tr("Строка {n}: ", { n: e.line }) + msg;
   return msg;
 }
 
@@ -8854,6 +8916,16 @@ const BLOCK_GOALS = {
   "Нехватка удара": "Плитки почти правильные, но одному гоблину не хватает удара. Запусти и посмотри, какой гоблин выдержит удар: сколько у него сердечек? Нажми на нужную плитку <b>⚔</b> и поставь число.",
 };
 
+// Английская версия: задания и комментарии в стартовом коде — из lang-en.js.
+// Название уровня не меняем: по нему игра помнит звёзды (показ — через lvName).
+if (EN_ON) for (const lv of LEVELS) {
+  const en = EN_LEVELS[lv.name];
+  if (en?.goal) lv.goal = en.goal;
+  if (en?.block) BLOCK_GOALS[lv.name] = en.block;
+  for (const k of ["py", "js"]) if (lv.starter?.[k])
+    lv.starter[k] = lv.starter[k].replace(/(#|\/\/) (.+)/g, (m, c, txt) => `${c} ${tr(txt)}`);
+}
+
 // ===== Режим «Блоки» =====
 // Программа — плитки «стрелка + число» и рамка цикла. Внутри это тот же Python:
 // плитки строятся из текста кода и меняют текст, поэтому маршрут, звёзды, «Отменить»
@@ -8916,7 +8988,7 @@ let activeVia = 0;   // при запуске: строка, откуда поз
 function tileHtml(t, active, err) {
   const cls = (t.line === selLine ? " sel" : "") + (t.line === active || (t.call && t.line === activeVia) ? " now" : "") + (t.line === err ? " err" : "");
   if (t.bad) return `<button class="tile bad${cls}" data-line="${t.line}">${esc(t.bad)}</button>`;
-  if (t.call) return `<button class="tile fn${cls}" data-line="${t.line}" aria-label="приём ${t.call}"><span class="pz">🧩</span>${fnMini(codeEl.value, t.call)}</button>`;
+  if (t.call) return `<button class="tile fn${cls}" data-line="${t.line}" aria-label="${tr("приём")} ${t.call}"><span class="pz">🧩</span>${fnMini(codeEl.value, t.call)}</button>`;
   const key = ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name);
   const d = DIRS[key];
   return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.n}"><span class="ar">${d.arrow}</span><span class="nn">${t.n}</span></button>`;
@@ -8925,21 +8997,21 @@ function blockHtml(it, active, err) {
   const body = (list, empty, slot) => list.length ? list.map((x) => blockHtml(x, active, err)).join("")
     : slot ? `<span class="lempty slot" role="img" aria-label="${empty}"></span>` : `<span class="lempty">${empty}</span>`;
   if (it.loop) {
-    return `<div class="bloop${it.line === err ? " err" : ""}"><button class="lhead${it.line === selLine ? " sel" : ""}" data-line="${it.line}">🔁 ${it.times ? `повторить ${it.times}` : "повторять"}</button>`
-      + body(it.body, "кнопки положат команды сюда") + `</div>`;
+    return `<div class="bloop${it.line === err ? " err" : ""}"><button class="lhead${it.line === selLine ? " sel" : ""}" data-line="${it.line}">🔁 ${it.times ? tr("повторить {n}", { n: it.times }) : tr("повторять")}</button>`
+      + body(it.body, tr("кнопки положат команды сюда")) + `</div>`;
   }
   if (it.def) {
     const st = (it.line === selLine ? " sel" : "");
-    return `<div class="bdef${it.line === err ? " err" : ""}"><button class="dhead${st}" data-line="${it.line}" aria-label="свой приём ${it.def}">🧩 приём</button>`
-      + body(it.body, "что делает приём", true) + `</div>`;
+    return `<div class="bdef${it.line === err ? " err" : ""}"><button class="dhead${st}" data-line="${it.line}" aria-label="${tr("свой приём")} ${it.def}">🧩 ${tr("приём")}</button>`
+      + body(it.body, tr("что делает приём"), true) + `</div>`;
   }
   if (it.cond) {
     const k = CONDS[it.cond];
     const st = (line) => (line === selLine ? " sel" : "") + (line === active ? " now" : "")
       + (curCheck && curCheck.line === line ? (curCheck.yes ? " yes" : " no") : "");
-    const head = `<button class="ihead${st(it.line)}" data-line="${it.line}" aria-label="если ${it.neg ? "не " : ""}${k.ru} ${WHAT_RU[k.what]}">❓ если ${it.neg ? "не " : ""}<span class="ar">${k.arrow}</span>${WHAT_RU[k.what]}</button>`;
-    const els = it.els ? `<span class="brk"></span><button class="ihead else${st(it.els.line)}" data-line="${it.els.line}">иначе</button>` + body(it.els.body, "что делать, если нет", true) : "";
-    return `<div class="bif${it.line === err ? " err" : ""}">${head}${body(it.body, "что делать, если да", true)}${els}</div>`;
+    const head = `<button class="ihead${st(it.line)}" data-line="${it.line}" aria-label="${tr("если")} ${it.neg ? tr("не ") : ""}${EN_ON ? WHAT_RU[k.what] + " " + k.ru : k.ru + " " + WHAT_RU[k.what]}">❓ ${tr("если")} ${it.neg ? tr("не ") : ""}<span class="ar">${k.arrow}</span>${WHAT_RU[k.what]}</button>`;
+    const els = it.els ? `<span class="brk"></span><button class="ihead else${st(it.els.line)}" data-line="${it.els.line}">${tr("иначе")}</button>` + body(it.els.body, tr("что делать, если нет"), true) : "";
+    return `<div class="bif${it.line === err ? " err" : ""}">${head}${body(it.body, tr("что делать, если да"), true)}${els}</div>`;
   }
   return tileHtml(it, active, err);
 }
@@ -8949,7 +9021,7 @@ function renderBlocks(active = 0, err = 0) {
   const items = parseBlocks(codeEl.value);
   const lines = codeEl.value.split("\n").length, grew = lines > (box._lines || 0);
   box._lines = lines;
-  if (!items.length) { box.innerHTML = `<span class="empty">Нажимай стрелки — здесь появятся шаги рыцаря</span>`; fitBlocks(); return; }
+  if (!items.length) { box.innerHTML = `<span class="empty">${tr("Нажимай стрелки — здесь появятся шаги рыцаря")}</span>`; fitBlocks(); return; }
   const top = box.scrollTop;
   box.innerHTML = items.map((it) => blockHtml(it, active, err)).join("");
   box.scrollTop = top;
@@ -8993,7 +9065,7 @@ function fitBlocksNow() {
   if (over > 4) box.style.maxHeight = Math.max(BLK_MIN, box.offsetHeight - over) + "px";
   box.classList.toggle("scrolls", box.scrollHeight > box.clientHeight + 4);
 }
-const toggleGoal = () => { const g = $("goal"); g.classList.toggle("open"); $("goal-more").textContent = g.classList.contains("open") ? "свернуть ▴" : "ещё ▾"; fitBlocks(); };
+const toggleGoal = () => { const g = $("goal"); g.classList.toggle("open"); $("goal-more").textContent = tr(g.classList.contains("open") ? "свернуть ▴" : "ещё ▾"); fitBlocks(); };
 $("goal-more").addEventListener("click", toggleGoal);
 $("goal").addEventListener("click", () => { if (!$("goal-more").hidden) toggleGoal(); });
 $("blocks").addEventListener("click", (e) => {
@@ -9031,7 +9103,7 @@ function fitBoard(force = false) {
   // и поле сжималось (арена «Битва: испытание»: 188 → 137 px высоты на 360×740).
   const box = $("blocks"), realHtml = box.innerHTML, realTop = box.scrollTop;
   const starter = parseBlocks(L.starter?.py || "");
-  box.innerHTML = starter.length ? starter.map((it) => blockHtml(it, 0, 0)).join("") : `<span class="empty">Нажимай стрелки — здесь появятся шаги рыцаря</span>`;
+  box.innerHTML = starter.length ? starter.map((it) => blockHtml(it, 0, 0)).join("") : `<span class="empty">${tr("Нажимай стрелки — здесь появятся шаги рыцаря")}</span>`;
   box.style.maxHeight = "";
   const ratio = viewW() / H, vh = sh - 6;
   const bh = camEl.getBoundingClientRect().height;   // у длинной карты меряем окно, а не всё поле
@@ -9080,8 +9152,8 @@ addEventListener("resize", () => { if (selLine && !running) drawLineBar(); });  
 
 function applyUi() {
   $("levelview").classList.toggle("blk", uiBlocks);
-  $("reset").textContent = uiBlocks ? "↺" : "Сначала";
-  $("reset").setAttribute("aria-label", "Сначала: рыцарь на старт");
+  $("reset").textContent = uiBlocks ? "↺" : tr("Сначала");
+  $("reset").setAttribute("aria-label", tr("Сначала: рыцарь на старт"));
   document.querySelectorAll(".langs button").forEach((b) => b.setAttribute("aria-pressed", String(uiBlocks ? b.dataset.lang === "blocks" : b.dataset.lang === lang)));
 }
 
@@ -9102,7 +9174,7 @@ function drawCode(activeLine = 0) {
     hl += `<span class="ln ${cls}"><span class="t">${highlightLine(line) || " "}</span></span>`;
     const inLoop = loops.some((lp) => n >= lp.start && n <= lp.end) ? "inloop" : "";
     // Номер строки — это кнопка: нажал и правишь эту строку
-    gut += `<div class="lnb ${inLoop} ${cls}"><button type="button" data-line="${n}" aria-pressed="${n === sel}" aria-label="Выбрать строку ${n}">${n}</button></div>`;
+    gut += `<div class="lnb ${inLoop} ${cls}"><button type="button" data-line="${n}" aria-pressed="${n === sel}" aria-label="${tr("Выбрать строку {n}", { n })}">${n}</button></div>`;
   });
   hlEl.innerHTML = hl;
   drawLineBar();
@@ -9356,12 +9428,12 @@ function drawTape(p, activeIdx = -1, walked = 0) {
   if (p.error) {
     const s = document.createElement("span");
     s.className = "err";
-    s.textContent = "Подсказка · " + p.error;
+    s.textContent = tr("Подсказка · ") + p.error;
     tapeEl.appendChild(s);
     return;
   }
   if (!p.commands.length) {
-    tapeEl.innerHTML = `<span class="empty">Пока нет команд</span>`;
+    tapeEl.innerHTML = `<span class="empty">${tr("Пока нет команд")}</span>`;
     return;
   }
   // Команды из цикла собираем в рамки "круг 1", "круг 2"...
@@ -9373,7 +9445,7 @@ function drawTape(p, activeIdx = -1, walked = 0) {
       if (cmd.loop) {
         group = document.createElement("span");
         group.className = "round";
-        group.innerHTML = `<span class="rl">круг ${cmd.loop.round}</span>`;
+        group.innerHTML = `<span class="rl">${tr("круг {n}", { n: cmd.loop.round })}</span>`;
         tapeEl.appendChild(group);
       } else group = null;
     }
@@ -9397,7 +9469,8 @@ function setStatus(text, kind = "", pill = "") {
   // в журнал — без шума: строка «move_right(3)» во время запуска не нужна
   if (text !== lastStatusLogged && !/^Напиши код|^Цифры на поле/.test(text) && !/^[A-Za-z_]+\(\d*\)$/.test(text)) { lastStatusLogged = text; logEv("status", { text: text.slice(0, 200), kind }); }
   if (/^Напиши код|^Цифры на поле/.test(text)) lastStatusLogged = "";
-  if (kind === "fail" && L?.maps) text = `Вариант ${variant + 1}: ${text}`;
+  text = tr(text); pill = tr(pill);   // готовые фразы переводим здесь; фразы с числами — tr(…, {…}) там, где их собирают
+  if (kind === "fail" && L?.maps) text = tr("Вариант {n}: ", { n: variant + 1 }) + text;
   statusEl.className = "status " + kind;
   statusEl.innerHTML = (pill ? `<span class="pill"></span>` : "") + `<span></span>`;
   if (pill) statusEl.firstChild.textContent = pill;
@@ -9407,6 +9480,7 @@ function setStatus(text, kind = "", pill = "") {
 
 // Русские окончания: 1 команда, 2 команды, 5 команд
 function plural(n, one, few, many) {
+  if (EN_ON && EN_PL[one]) return EN_PL[one][n === 1 ? 0 : 1];   // по-английски: 1 cell, 2 cells
   const m10 = n % 10, m100 = n % 100;
   if (m10 === 1 && m100 !== 11) return one;
   if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
@@ -9420,7 +9494,7 @@ function refreshPlan() {
     plan = arenaPlan(codeEl.value);
     drawCode();
     const written = countWrittenCommands(codeEl.value);
-    countEl.textContent = `в коде ${written} ${plural(written, "команда", "команды", "команд")}`;
+    countEl.textContent = tr("в коде {n} {w}", { n: written, w: plural(written, "команда", "команды", "команд") });
     return;
   }
   plan = buildPlan(codeEl.value);
@@ -9428,7 +9502,7 @@ function refreshPlan() {
   drawTape(plan);
   drawCode();
   const written = countWrittenCommands(codeEl.value);
-  countEl.textContent = `в коде ${written} ${plural(written, "команда", "команды", "команд")}`;
+  countEl.textContent = tr("в коде {n} {w}", { n: written, w: plural(written, "команда", "команды", "команд") });
 }
 
 function reset() {
@@ -9456,8 +9530,8 @@ function reset() {
   drawItems(noneGot());
   drawEnemies(fullHp());
   refreshPlan();
-  const todo = uiBlocks ? "Нажимай стрелки, потом «Запустить»" : "Напиши код и нажми «Запустить»";
-  setStatus(showSteps() && L.chapter === 0 ? "Цифры на поле — сколько шагов до клетки. " + todo : todo);
+  const todo = tr(uiBlocks ? "Нажимай стрелки, потом «Запустить»" : "Напиши код и нажми «Запустить»");
+  setStatus(showSteps() && L.chapter === 0 ? tr("Цифры на поле — сколько шагов до клетки. ") + todo : todo);
 }
 
 // Пока игрок пишет код, мы не показываем, где он ошибся: только маршрут.
@@ -9473,7 +9547,7 @@ function drawLoopView(p) {
   loopViewBtn.hidden = running || !(rounds > 1 || (p?.endless && rounds));
   const n = p?.endless ? "∞" : rounds;
   loopViewBtn.classList.toggle("on", showAll);
-  loopViewBtn.setAttribute("aria-label", showAll ? `Показаны все круги цикла (${n}). Показать один круг` : "Показан один круг цикла. Показать все круги");
+  loopViewBtn.setAttribute("aria-label", showAll ? tr("Показаны все круги цикла ({n}). Показать один круг", { n }) : tr("Показан один круг цикла. Показать все круги"));
   loopViewBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON_REPEAT}"/>${showAll ? "" : `<path d="${ICON_ONE}"/>`}</svg>` +
     (showAll ? `<span>${n}</span>` : "");
 }
@@ -9564,7 +9638,7 @@ async function knightFalls(why) {
   if (n >= 5) return setStatus("Чёрный рыцарь слишком силён — с ним не справиться. Не подходи к нему: если он впереди, обойди подальше", "fail");
   if (why?.ambush) return setStatus("Засада оказалась сильнее: у рыцаря кончились сердечки. Найди путь, где после засады рыцаря успеет подлечить монах", "fail");
   setStatus(why?.hurt
-    ? `Гоблин выдержал удар и победил рыцаря! У него ${n} ${plural(n, "сердечко", "сердечка", "сердечек")} — бей его столько раз: attack(${n})`
+    ? tr("Гоблин выдержал удар и победил рыцаря! У него {n} {w} — бей его столько раз: attack({n})", { n, w: plural(n, "сердечко", "сердечка", "сердечек") })
     : `Рыцарь стоял рядом с гоблином и не ударил — гоблин победил! Подошёл к гоблину — сразу бей: attack()`, "fail");
 }
 
@@ -9598,7 +9672,7 @@ async function run() {
     if (cmd.dx) heroEl.classList.toggle("flip", cmd.dx < 0);
     heroEl.classList.add("run"); // рыцарь бежит, пока выполняются команды
     roundTag.hidden = !cmd.loop;
-    if (cmd.loop) roundTag.textContent = `↻ круг ${cmd.loop.round}`;
+    if (cmd.loop) roundTag.textContent = "↻ " + tr("круг {n}", { n: cmd.loop.round });
 
     if (cmd.name === "attack") {
       heroEl.classList.remove("run");
@@ -9607,8 +9681,8 @@ async function run() {
         drawTape(p, i, s);
         await playStrikes(h.pre);
         if (p.dead && !p.dead.after && p.dead.cmd === i && p.dead.step === s) { await knightFalls(p.dead); return finish(); }
-        const where = cmd.loop ? `круг ${cmd.loop.round}` : `${i + 1}/${p.commands.length}`;
-        setStatus(label, "", `${where} · удар ${s + 1}/${cmd.n}`);
+        const where = cmd.loop ? tr("круг {n}", { n: cmd.loop.round }) : `${i + 1}/${p.commands.length}`;
+        setStatus(label, "", `${where} · ${tr("удар")} ${s + 1}/${cmd.n}`);
         if (h.face.dx) heroEl.classList.toggle("flip", h.face.dx < 0);
         heroEl.classList.add("atk");
         sfx(h.target ? "hit" : "swish");
@@ -9621,9 +9695,9 @@ async function run() {
           heroEl.classList.remove("atk");
           showProblems = true;
           drawRoute(p, i);
-          const who = al?.a.kind === "archer" ? "лучник" : "крестьянин";
-          setStatus(uiBlocks ? `Ой! Рядом не враг, а свой — ${who}. Бить можно только когда враг рядом: положи ⚔ в рамку «если → враг»`
-            : `Ой! Рядом не враг, а свой — ${who}. Бей, только если враг рядом: attack() — под if enemy_right()`, "fail");
+          const who = tr(al?.a.kind === "archer" ? "лучник" : "крестьянин");
+          setStatus(tr(uiBlocks ? "Ой! Рядом не враг, а свой — {who}. Бить можно только когда враг рядом: положи ⚔ в рамку «если → враг»"
+            : "Ой! Рядом не враг, а свой — {who}. Бей, только если враг рядом: attack() — под if enemy_right()", { who }), "fail");
           return finish();
         }
         if (h.target) {
@@ -9662,8 +9736,8 @@ async function run() {
 
     for (let s = 0; s < cmd.n; s++) {
       drawTape(p, i, s);
-      const where = cmd.loop ? `круг ${cmd.loop.round}` : `${i + 1}/${p.commands.length}`;
-      setStatus(label, "", `${where} · шаг ${s + 1}/${cmd.n}`);
+      const where = cmd.loop ? tr("круг {n}", { n: cmd.loop.round }) : `${i + 1}/${p.commands.length}`;
+      setStatus(label, "", `${where} · ${tr("шаг")} ${s + 1}/${cmd.n}`);
       if (cmd.pre?.[s]?.length) {
         heroEl.classList.remove("run");
         await playStrikes(cmd.pre[s]);
@@ -9686,24 +9760,24 @@ async function run() {
           const { hp, max } = p.crash;
           const more = `${hp} ${plural(hp, "удар", "удара", "ударов")}`;
           setStatus(hp < max
-            ? `Гоблин ещё держится! Ему нужно ещё ${more}. Поставь число в attack(): у него было ${max} ${plural(max, "сердечко", "сердечка", "сердечек")}`
-            : `Гоблин не пускает! Сначала ударь его: attack(${hp > 1 ? hp : ""})`, "fail");
+            ? tr("Гоблин ещё держится! Ему нужно ещё {more}. Поставь число в attack(): у него было {max} {w}", { more, max, w: plural(max, "сердечко", "сердечка", "сердечек") })
+            : tr("Гоблин не пускает! Сначала ударь его: attack({n})", { n: hp > 1 ? hp : "" }), "fail");
         } else if (p.crash.reason === "locked") {
           const g = p.crash.got, left = coinsTotal() - g.coins;
           const what = needKey() && !g.key
-            ? (left ? `сначала возьми ключ и собери монеты (осталось ${left})` : "сначала возьми ключ")
-            : `сначала собери все монеты (осталось ${left})`;
-          setStatus(`Дверь пока заперта: ${what}`, "fail");
+            ? (left ? tr("сначала возьми ключ и собери монеты (осталось {n})", { n: left }) : tr("сначала возьми ключ"))
+            : tr("сначала собери все монеты (осталось {n})", { n: left });
+          setStatus(tr("Дверь пока заперта: {what}", { what }), "fail");
         } else if (p.crash.reason === "tree") {
           setStatus(uiBlocks ? "Дерево упало прямо на дорогу! Тут поможет рамка «если»: есть препятствие — обойди"
             : "Дерево упало прямо на дорогу! Проверь это: if obstacle_right() — и обойди", "fail");
         } else {
           const rd = cmd.loop?.round;
           setStatus(rd > 1
-            ? `Ой, стена (✕)! ${rd - 1} ${plural(rd - 1, "круг прошёл", "круга прошли", "кругов прошли")} хорошо, а на круге ${rd} рыцарь упёрся. Значит, цикл должен вести не только сюда — посмотри, какие шаги нужны дальше, и добавь их в цикл`
+            ? tr("Ой, стена (✕)! {n} {w} хорошо, а на круге {rd} рыцарь упёрся. Значит, цикл должен вести не только сюда — посмотри, какие шаги нужны дальше, и добавь их в цикл", { n: rd - 1, w: plural(rd - 1, "круг прошёл", "круга прошли", "кругов прошли"), rd })
             : uiBlocks
               ? "Ой, тут стена (✕)! Плитка подсвечена — нажми на неё, поправь число или стрелку и попробуй ещё раз"
-              : `Ой, тут стена (✕)! Строка ${cmd.line} подсвечена — поправь её и попробуй ещё раз`, "fail");
+              : tr("Ой, тут стена (✕)! Строка {n} подсвечена — поправь её и попробуй ещё раз", { n: cmd.line }), "fail");
         }
         return finish();
       }
@@ -9749,7 +9823,7 @@ async function run() {
           variantsDone.add(variant);
           const nextV = L.maps.findIndex((_, k) => !variantsDone.has(k));
           if (nextV >= 0) {
-            setStatus(`Вариант ${variant + 1} пройден! Теперь тот же код — на варианте ${nextV + 1}`, "win");
+            setStatus(tr("Вариант {n} пройден! Теперь тот же код — на варианте {m}", { n: variant + 1, m: nextV + 1 }), "win");
             sfx("unlock");
             finish();
             drawVariants();
@@ -9760,8 +9834,8 @@ async function run() {
             await wait(900);
             return run();
           }
-          setStatus(`Победа! Одна программа прошла ${L.maps.length} ${plural(L.maps.length, "вариант", "варианта", "вариантов")} поля`, "win");
-        } else setStatus(`Победа! ${walkedTotal} ${cellsWord(walkedTotal)} пройдено`, "win");
+          setStatus(tr("Победа! Одна программа прошла {n} {w} поля", { n: L.maps.length, w: plural(L.maps.length, "вариант", "варианта", "вариантов") }), "win");
+        } else setStatus(tr("Победа! {n} {w} пройдено", { n: walkedTotal, w: cellsWord(walkedTotal) }), "win");
         sfx("win");
         finish();
         return win();
@@ -9787,7 +9861,7 @@ async function run() {
       ? "Цикл пустой: рыцарь стоит на месте. Положи в цикл шаги"
       : uiBlocks
         ? "Цикл ходит по кругу: рыцарь снова пришёл туда, где начал круг (знак ∞), и так будет без конца. Поменяй плитки в рамке 🔁"
-        : `Цикл ходит по кругу: рыцарь снова пришёл туда, где начал круг (знак ∞), и так будет без конца. Поменяй команды в цикле (строка ${p.endless.line})`, "fail");
+        : tr("Цикл ходит по кругу: рыцарь снова пришёл туда, где начал круг (знак ∞), и так будет без конца. Поменяй команды в цикле (строка {n})", { n: p.endless.line }), "fail");
     sfx("almost");
     return finish();
   }
@@ -10072,7 +10146,7 @@ function arenaStage() {
 }
 function arenaHudDraw(hp, max, left) {
   arenaHud.querySelector(".ahp").innerHTML = `<b>♥</b> ${Math.max(0, hp)}<i>/${max}</i>`;
-  arenaHud.querySelector(".atime").textContent = `⏱ ${Math.max(0, Math.ceil(left))} с`;
+  arenaHud.querySelector(".atime").textContent = `⏱ ${Math.max(0, Math.ceil(left))} ${tr("с")}`;
   arenaHud.classList.toggle("low", hp <= 3);
 }
 let arenaHero = null;
@@ -10104,8 +10178,8 @@ function arenaReset() {
   arenaHero.el.style.zIndex = Math.round(ARENA.start[1] * 40);
   arenaHudDraw(L.arena.hp, L.arena.hp, L.arena.secs);
   refreshPlan();
-  setStatus(uiBlocks ? "Собери программу рыцаря и нажми «Запустить» — продержись " + L.arena.secs + " секунд"
-    : "Напиши программу рыцаря и нажми «Запустить» — продержись " + L.arena.secs + " секунд");
+  setStatus(tr(uiBlocks ? "Собери программу рыцаря и нажми «Запустить» — продержись {n} секунд"
+    : "Напиши программу рыцаря и нажми «Запустить» — продержись {n} секунд", { n: L.arena.secs }));
 }
 // Проигрывание просчитанного боя
 async function runArena() {
@@ -10196,7 +10270,7 @@ async function runArena() {
   }
   drawCode(0);
   if (p.survived) {
-    setStatus(`Победа! Рыцарь продержался ${A.secs} секунд — побеждено гоблинов: ${p.kills}`, "win");
+    setStatus(tr("Победа! Рыцарь продержался {n} секунд — побеждено гоблинов: {k}", { n: A.secs, k: p.kills }), "win");
     sfx("win");
     finish();
     return win();
@@ -10208,14 +10282,14 @@ async function runArena() {
   const sec = Math.floor(p.t);
   let why;
   if (p.endedAt !== null && p.endedAt < A.secs - 0.5)
-    why = `Программа кончилась на ${Math.max(1, Math.round(p.endedAt))}-й секунде, и дальше рыцарь просто стоял. Положи команды в цикл 🔁 — он крутится весь бой`;
+    why = tr("Программа кончилась на {n}-й секунде, и дальше рыцарь просто стоял. Положи команды в цикл 🔁 — он крутится весь бой", { n: Math.max(1, Math.round(p.endedAt)) });
   else if (L.commands.includes("heal") && !p.heals)
     why = "Рыцарь ни разу не полечился. Когда врага рядом нет — самое время для ♥ heal()";
   else if (L.commands.includes("goToEnemy") && !p.hits)
     why = "Гоблины с динамитом бьют издалека, а рыцарь так до них и не дошёл. Когда врага рядом нет — иди к нему: ➤ go_to_enemy()";
   else if (p.healsFailed >= 2)
-    why = `Лечение срывалось ${p.healsFailed} раз: если рыцаря бьют, пока он лечится, ♥ не прибавляется. Лечись, когда рядом никого — в «иначе», и до того, как идти к врагу`;
-  else why = `Рыцарь продержался ${sec} с из ${A.secs}. Посмотри, что он делает, когда враг рядом и когда нет`;
+    why = tr("Лечение срывалось {n} раз: если рыцаря бьют, пока он лечится, ♥ не прибавляется. Лечись, когда рядом никого — в «иначе», и до того, как идти к врагу", { n: p.healsFailed });
+  else why = tr("Рыцарь продержался {n} с из {m}. Посмотри, что он делает, когда враг рядом и когда нет", { n: sec, m: A.secs });
   setStatus(why, "fail");
   finish();
 }
@@ -10243,15 +10317,15 @@ function win() {
   logEv("win", { stars, written });
 
   $("win-stars").innerHTML = starsHtml(stars);
-  let note = `В коде ${written} ${plural(written, "команда", "команды", "команд")}.`;
-  note += stars < 3 ? ` Для ★★★ нужно не больше ${L.par}.` : " Идеально!";
+  let note = tr("В коде {n} {w}.", { n: written, w: plural(written, "команда", "команды", "команд") });
+  note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: L.par }) : tr(" Идеально!");
   const nextCh = CHAPTERS[L.chapter + 1];
   const myIsle = L.isle || 1, lastOfIsle = L.name === LAST_OF(myIsle)?.name && !!gateTo(myIsle, myIsle + 1);
-  if (lastOfIsle) note += myIsle === 1 ? " Ты прошёл весь остров! От крепости открылся мост к новому острову."
+  if (lastOfIsle) note += tr(myIsle === 1 ? " Ты прошёл весь остров! От крепости открылся мост к новому острову."
     : myIsle === 3 ? " Ты прошёл весь остров! Рудокопы ждут у брёвен — сейчас они построят мост на новый остров."
-    : " Ты прошёл весь остров! Монастырь открыт: из него подземный ход ведёт на новый остров.";
-  else if (wasChapterLocked && nextCh && chapterOpen(L.chapter + 1)) note += ` Открыта новая глава: ${nextCh.name}!`;
-  else if (L.challenge && nextCh?.soon) note += ` Глава «${nextCh.name}» скоро появится.`;
+    : " Ты прошёл весь остров! Монастырь открыт: из него подземный ход ведёт на новый остров.");
+  else if (wasChapterLocked && nextCh && chapterOpen(L.chapter + 1)) note += tr(" Открыта новая глава: {ch}!", { ch: nextCh.name });
+  else if (L.challenge && nextCh?.soon) note += tr(" Глава «{ch}» скоро появится.", { ch: nextCh.name });
   $("win-isle").hidden = !lastOfIsle;
 
   // "Дальше" ведёт к следующему уровню по порядку, если он открыт
@@ -10269,7 +10343,7 @@ function drawVariants() {
     b.classList.toggle("on", k === variant);
     b.classList.toggle("done", variantsDone.has(k));
     b.disabled = running;
-    b.setAttribute("aria-label", `Вариант ${k + 1}${variantsDone.has(k) ? ", пройден" : ""}`);
+    b.setAttribute("aria-label", tr("Вариант {n}", { n: k + 1 }) + (variantsDone.has(k) ? tr(", пройден") : ""));
   });
 }
 // Показать другой вариант поля: поле строится заново, код тот же
@@ -10282,7 +10356,7 @@ function setVariant(k, flash = true) {
   if (flash) {
     const f = document.createElement("div");
     f.className = "varflash";
-    f.textContent = `Вариант ${k + 1}`;
+    f.textContent = tr("Вариант {n}", { n: k + 1 });
     camHost().appendChild(f);
     setTimeout(() => f.remove(), 1400);
   }
@@ -10365,7 +10439,8 @@ async function showChecks(p, before) {
     curCheck = ch;
     drawCode(ch.line);
     const k = CONDS[ch.cond];
-    setStatus(`${k.ru[0].toUpperCase() + k.ru.slice(1)} ${WHAT_RU[k.what]}? — ${ch.yes ? "да" : "нет"}`, "", "если");
+    const q = EN_ON ? `${WHAT_RU[k.what]} ${k.ru}` : `${k.ru} ${WHAT_RU[k.what]}`;
+    setStatus(`${q[0].toUpperCase() + q.slice(1)}? — ${tr(ch.yes ? "да" : "нет")}`, "", "если");
     heroEl.classList.remove("run");
     await wait(650);
     curCheck = null;
@@ -10420,6 +10495,7 @@ const TOOL_ICONS = {
 // кнопка-значок: картинка + подсказка для экранного диктора и при наведении
 function toolBtn(el, icon, label) {
   el.innerHTML = TOOL_ICONS[icon];
+  label = tr(label);
   el.setAttribute("aria-label", label);
   el.title = label;
   el.classList.add("ic");
@@ -10448,12 +10524,12 @@ function drawLineBar() {
     const k = CONDS[condKey(ifm[2])];
     $("lb-what").textContent = `${WHAT_RU[k.what]} ⇄ ${WHAT_RU[whats.find((w) => w !== k.what) || k.what]}`;
   }
-  const full = DEF_LINE.test(line) ? "Нажимай кнопки команд — шаги лягут в приём" : ifm ? ($("lb-else").hidden ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»"
+  const full = tr(DEF_LINE.test(line) ? "Нажимай кнопки команд — шаги лягут в приём" : ifm ? ($("lb-else").hidden ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»"
       : "Кнопка команды — шаг внутрь «если»; «＋ иначе» — добавить «иначе»") : isElse ? "Рамка «иначе»: что делать, если нет"
-    : uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : `Строка ${selLine}`;
+    : uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : "Строка {n}", { n: selLine });
   // в полоске на телефоне места мало — те же подсказки короче (полный текст остаётся в title)
-  const brief = DEF_LINE.test(line) ? "Кнопки команд — шаги в приём" : ifm ? "Кнопка команды — шаг в «если»"
-    : isElse ? "«Иначе»: что делать, если нет" : "Стрелка — куда, цифра — сколько";
+  const brief = tr(DEF_LINE.test(line) ? "Кнопки команд — шаги в приём" : ifm ? "Кнопка команды — шаг в «если»"
+    : isElse ? "«Иначе»: что делать, если нет" : "Стрелка — куда, цифра — сколько");
   $("lb-label").textContent = float ? brief : full;
   $("lb-label").title = full;
   toolBtn($("lb-up"), uiBlocks ? "earlier" : "up", uiBlocks ? "Плитку раньше" : "Строку выше");
@@ -10473,7 +10549,7 @@ function drawLineBar() {
   } else {
     $("lb-out").hidden = $("lb-in").hidden = document.querySelector(".shift").hidden = false;
   }
-  $("lb-text").textContent = line.trim() || "пустая";
+  $("lb-text").textContent = line.trim() || tr("пустая");
   $("lb-up").disabled = selLine === 1;
   $("lb-down").disabled = selLine === lines.length;
   $("lb-out").disabled = !/^ /.test(line);
@@ -10630,7 +10706,7 @@ function placeCoach() {
   $("coach-hand").style.left = cx - 18 + "px";
   $("coach-hand").style.top = cy + 6 + "px";
   const bubble = $("coach-text");
-  bubble.textContent = t[1];
+  bubble.textContent = tr(t[1]);
   coachEl.hidden = false;
   // пузырь рядом с рукой, но не за краем экрана
   const bw = bubble.offsetWidth;
@@ -10654,7 +10730,7 @@ function showCoach() {
   // Кнопка за краем экрана: страницу не трогаем, только мягкий значок у края.
   // Сами прокручиваем, лишь если игрок долго ничего не делает.
   edgeEl.dataset.dir = dir;
-  $("coach-edge-text").textContent = dir === "down" ? "Подсказка ниже" : "Подсказка выше";
+  $("coach-edge-text").textContent = tr(dir === "down" ? "Подсказка ниже" : "Подсказка выше");
   edgeEl.hidden = false;
   clearTimeout(scrollTimer);
   scrollTimer = setTimeout(scrollToTarget, COACH_SCROLL);
@@ -10694,7 +10770,8 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ===== 17. Прочитать задание вслух =====
-const SAY = { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар" };
+const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack" }
+  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар" };
 function speakGoal() {
   try {
     let t = $("title").textContent + ". " + $("goal").textContent;
@@ -10702,10 +10779,10 @@ function speakGoal() {
       const word = SAY[name] || SAY[PY_TO_JS[name]];
       return "«" + word + (n ? " " + n : "") + "»";
     });
-    t = t.replace(/while True:|while \(true\)/g, "цикл").replace(/★★★/g, "три звезды").replace(/[{}]/g, "");
+    t = t.replace(/while True:|while \(true\)/g, tr("цикл")).replace(/★★★/g, tr("три звезды")).replace(/[{}]/g, "");
     stopSpeech();
     const u = new SpeechSynthesisUtterance(t);
-    u.lang = "ru-RU";
+    u.lang = EN_ON ? "en-US" : "ru-RU";
     // чуть медленнее и чуть выше обычного — звучит мягче
     u.rate = 0.88;
     u.pitch = 1.08;
@@ -10723,13 +10800,13 @@ function stopSpeech() {
 }
 function setSpeaking(on) {
   $("speak").classList.toggle("on", on);
-  $("speak-label").textContent = on ? "Остановить" : "Прочитать вслух";
+  $("speak-label").textContent = tr(on ? "Остановить" : "Прочитать вслух");
 }
 
 // Выбор голоса. Голоса берутся из самого телефона или компьютера.
 // Сначала пробуем "улучшенные" версии и мягкие женские голоса, потом любой русский.
 const ruVoices = () => {
-  try { return speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith("ru")); }
+  try { return speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith(EN_ON ? "en" : "ru")); }
   catch (e) { return []; }
 };
 function voiceScore(v) {
@@ -10738,6 +10815,8 @@ function voiceScore(v) {
   if (/enhanced|premium|улучш|neural|natural/.test(n)) s += 10;
   if (/milena|милена|katya|катя|alena|алёна|алена|irina|ирина|svetlana|светлана|dariya|дарья|google/.test(n)) s += 3;
   if (/yuri|юрий|maxim|максим|pavel|павел/.test(n)) s -= 2;
+  if (/samantha|karen|moira|tessa|serena|aria|jenny|zira|google us/.test(n)) s += 3;   // английские голоса
+  if (/en[-_]us/i.test(v.lang)) s += 1;
   return s;
 }
 function pickVoice() {
@@ -10854,7 +10933,7 @@ function applyAudioMode() {
   if (note) {
     const auto = (save.audioMode || "auto") === "auto";
     note.textContent = auto
-      ? (bench === null ? `сейчас ${LIGHT ? "лёгкий" : "полный"} (замер ещё идёт)` : `выбран ${LIGHT ? "лёгкий" : "полный"} · замер ${bench}`)
+      ? (bench === null ? tr(LIGHT ? "сейчас лёгкий (замер ещё идёт)" : "сейчас полный (замер ещё идёт)") : tr(LIGHT ? "выбран лёгкий · замер {n}" : "выбран полный · замер {n}", { n: bench }))
       : "";
   }
   if (was !== LIGHT && typeof musicTimer !== "undefined" && musicTimer) { stopMusic(); startMusic(); }
@@ -11581,6 +11660,14 @@ document.getElementById("app-motion").addEventListener("change", (e) => {
 });
 applyMotion();
 matchMedia("(prefers-reduced-motion: reduce)").addEventListener?.("change", applyMotion);            // замер сразу, пока звук ещё не играет
+// Язык интерфейса: запоминаем и перезапускаем игру — так все надписи сразу на новом языке
+$("app-lang").value = LOC;
+$("app-lang").addEventListener("change", (e) => {
+  try { localStorage.setItem(LOC_KEY, e.target.value); } catch (er) { return; }
+  logEv("set", { b: "язык " + e.target.value });
+  writeSave();
+  location.reload();
+});
 
 // Кнопки музыки и звуков есть и на карте, и на уровне — держим их в одном состоянии
 function drawSoundButtons() {
@@ -11687,7 +11774,7 @@ function showMyCode() {
   const words = p.a && p.b && /^\d{3}$/.test(p.n);
   $("sync-big").classList.toggle("one", !words);
   $("sync-big").innerHTML = !player ? partHtml("⏳", "…")
-    : words ? partHtml(p.a[0], p.a[1].toUpperCase()) + partHtml(p.b[0], p.b[1].toUpperCase()) + partHtml("🔢", p.n)
+    : words ? partHtml(p.a[0], p.a[WI].toUpperCase()) + partHtml(p.b[0], p.b[WI].toUpperCase()) + partHtml("🔢", p.n)
     : partHtml("🔑", codeLabel(player));
   $("sync-msg").textContent = "";
 }
@@ -11713,18 +11800,18 @@ const pickStep = () => (!entry.a ? 0 : !entry.b ? 1 : 2);
 function renderPick() {
   const step = pickStep();
   $("pick-slots").innerHTML =
-    (entry.a ? partHtml(entry.a[0], entry.a[1].toUpperCase()) : partHtml("❔", "слово", "empty" + (step === 0 ? " now" : ""))) +
-    (entry.b ? partHtml(entry.b[0], entry.b[1].toUpperCase()) : partHtml("❔", "слово", "empty" + (step === 1 ? " now" : ""))) +
+    (entry.a ? partHtml(entry.a[0], entry.a[WI].toUpperCase()) : partHtml("❔", tr("слово"), "empty" + (step === 0 ? " now" : ""))) +
+    (entry.b ? partHtml(entry.b[0], entry.b[WI].toUpperCase()) : partHtml("❔", tr("слово"), "empty" + (step === 1 ? " now" : ""))) +
     (entry.n.length === 3 ? partHtml("🔢", entry.n) : partHtml("🔢", (entry.n + "___").slice(0, 3), "empty" + (step === 2 ? " now" : "")));
-  $("pick-ask").textContent = ["Нажми первое слово кода", "Теперь второе слово", "И три цифры"][step];
+  $("pick-ask").textContent = tr(["Нажми первое слово кода", "Теперь второе слово", "И три цифры"][step]);
   const grid = $("pick-grid");
   grid.classList.toggle("num", step === 2);
   if (step < 2) {
     const list = step === 0 ? WORDS_A : WORDS_B;
-    grid.innerHTML = list.map((w, i) => `<button class="pick" data-i="${i}"><span class="em">${w[0]}</span>${w[1]}</button>`).join("");
+    grid.innerHTML = list.map((w, i) => `<button class="pick" data-i="${i}"><span class="em">${w[0]}</span>${w[WI]}</button>`).join("");
   } else {
     const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
-    grid.innerHTML = keys.map((d) => d ? `<button class="pick digit" data-d="${d}" ${d === "⌫" ? 'aria-label="Стереть цифру"' : ""}>${d}</button>` : "<span></span>").join("");
+    grid.innerHTML = keys.map((d) => d ? `<button class="pick digit" data-d="${d}" ${d === "⌫" ? `aria-label="${tr("Стереть цифру")}"` : ""}>${d}</button>` : "<span></span>").join("");
   }
   $("pick-done").hidden = entry.n.length !== 3;
 }
@@ -11754,13 +11841,13 @@ $("pick-done").addEventListener("click", async () => {
   const id = `${entry.a[2]}-${entry.b[2]}-${entry.n}`;
   const btn = $("pick-done");
   btn.disabled = true;
-  $("pick-msg").textContent = "Ищу сохранение…";
+  $("pick-msg").textContent = tr("Ищу сохранение…");
   const res = await usePlayerCode(id);
   btn.disabled = false;
   if (res === "ok") return loadedOk();
-  $("pick-msg").textContent = res === "notfound"
+  $("pick-msg").textContent = tr(res === "notfound"
     ? "Такого кода пока нет. Проверь слова и цифры"
-    : "Нет связи с интернетом. Попробуй чуть позже";
+    : "Нет связи с интернетом. Попробуй чуть позже");
 });
 $("sync-open").addEventListener("click", () => { sfx("tap"); openSheet(); });
 $("sync-close").addEventListener("click", () => { sfx("tap"); closeSheet(); });
@@ -11779,7 +11866,7 @@ $("app-move").addEventListener("click", () => { sfx("tap"); openSheet("in"); });
 function loadedOk() {
   sheetEl.hidden = true;
   const n = Object.values(save.stars).reduce((a, b) => a + (b || 0), 0);
-  $("map-toast").textContent = `Прогресс загружен! Звёзд: ${n}`;
+  $("map-toast").textContent = tr("Прогресс загружен! Звёзд: {n}", { n });
   setTimeout(() => ($("map-toast").textContent = ""), 5000);
   renderMap();
 }
@@ -11792,11 +11879,11 @@ const CODE_ERR = {
 async function loadFromInput() {
   const btn = $("in-load");
   btn.disabled = true;
-  $("in-msg").textContent = "Ищу сохранение…";
+  $("in-msg").textContent = tr("Ищу сохранение…");
   const res = await usePlayerCode($("in-code").value);
   btn.disabled = false;
   if (res === "ok") { $("in-code").value = ""; return loadedOk(); }
-  $("in-msg").textContent = CODE_ERR[res];
+  $("in-msg").textContent = tr(CODE_ERR[res]);
 }
 $("in-load").addEventListener("click", () => { sfx("tap"); loadFromInput(); });
 $("in-code").addEventListener("keydown", (e) => { if (e.key === "Enter") loadFromInput(); });
@@ -11807,7 +11894,7 @@ $("in-paste").addEventListener("click", async () => {
     if (t) { $("in-code").value = t.trim().slice(0, 80); return loadFromInput(); }
   } catch (e) {}
   $("in-code").focus(); // браузер не дал прочитать — вставь пальцем: долгое нажатие → «Вставить»
-  $("in-msg").textContent = "Нажми на поле и подержи палец → «Вставить»";
+  $("in-msg").textContent = tr("Нажми на поле и подержи палец → «Вставить»");
 });
 
 // Свой код
@@ -11815,11 +11902,11 @@ $("own-save").addEventListener("click", async () => {
   sfx("tap");
   const btn = $("own-save");
   btn.disabled = true;
-  $("own-msg").textContent = "Проверяю…";
+  $("own-msg").textContent = tr("Проверяю…");
   const res = await claimCode($("own-code").value);
   btn.disabled = false;
-  if (res === "ok") { setSyncState("ok"); syncTab("show"); $("sync-msg").textContent = "Готово! Теперь это твой код"; return; }
-  $("own-msg").textContent = CODE_ERR[res];
+  if (res === "ok") { setSyncState("ok"); syncTab("show"); $("sync-msg").textContent = tr("Готово! Теперь это твой код"); return; }
+  $("own-msg").textContent = tr(CODE_ERR[res]);
 });
 
 // Скопировать код одним нажатием и отправить себе ссылку
@@ -11835,17 +11922,17 @@ async function copyText(t) {
 $("sync-copy").addEventListener("click", async () => {
   sfx("tap");
   if (!player) return;
-  $("sync-msg").textContent = (await copyText(codeLabel(player))) ? `Скопировано: ${codeLabel(player)}` : "Не получилось скопировать — запиши код";
+  $("sync-msg").textContent = (await copyText(codeLabel(player))) ? tr("Скопировано: {c}", { c: codeLabel(player) }) : tr("Не получилось скопировать — запиши код");
 });
 $("sync-share").addEventListener("click", async () => {
   sfx("tap");
   if (!player) return;
-  const text = `Мой код в Coder Path: ${codeLabel(player)}. Открой ссылку на другом устройстве — прогресс подтянется сам`;
+  const text = tr("Мой код в Coder Path: {c}. Открой ссылку на другом устройстве — прогресс подтянется сам", { c: codeLabel(player) });
   if (navigator.share) {
     try { await navigator.share({ title: "Coder Path", text, url: shareUrl() }); return; }
     catch (e) { if (e.name === "AbortError") return; }
   }
-  $("sync-msg").textContent = (await copyText(`${text}: ${shareUrl()}`)) ? "Ссылка скопирована — отправь её себе" : "Не получилось скопировать";
+  $("sync-msg").textContent = (await copyText(`${text}: ${shareUrl()}`)) ? tr("Ссылка скопирована — отправь её себе") : tr("Не получилось скопировать");
 });
 
 // Открыли ссылку с кодом (?code=…) — сразу подтягиваем прогресс
@@ -11935,18 +12022,22 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 104;
-// Что нового — для игроков, простыми словами (показывается в Telegram: строка «Версия» внизу настроек
+const APP_VERSION = 105;
+// Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
-  { v: 104, date: "11 ноября", big: true, text: "Игра обновляется сама. Что нового — внизу настроек, в строке «Версия»." },
-  { v: 103, date: "11 ноября", big: true, text: "Звук возвращается сам после паузы и Bluetooth-наушников — достаточно коснуться экрана." },
-  { v: 102, date: "11 ноября", text: "Игра открывается во весь экран на телефоне и планшете." },
-  { v: 101, date: "11 ноября", text: "Настройки стали проще." },
-  { v: 100, date: "11 ноября", text: "Игра появилась в Telegram." },
+  { v: 105, date: "2026-11-11", big: true, text: "Игра теперь и на английском. Язык — в настройках.", en: "The game now speaks English. Change the language in Settings." },
+  { v: 104, date: "2026-11-11", big: true, text: "Игра обновляется сама. Что нового — внизу настроек, в строке «Версия».", en: "The game updates itself. See what's new at the bottom of Settings, in the «Version» line." },
+  { v: 103, date: "2026-11-11", big: true, text: "Звук возвращается сам после паузы и Bluetooth-наушников — достаточно коснуться экрана.", en: "Sound comes back by itself after a pause or Bluetooth headphones — just tap the screen." },
+  { v: 102, date: "2026-11-11", text: "Игра открывается во весь экран на телефоне и планшете.", en: "The game opens full screen on phones and tablets." },
+  { v: 101, date: "2026-11-11", text: "Настройки стали проще.", en: "Simpler settings." },
+  { v: 100, date: "2026-11-11", text: "Игра появилась в Telegram.", en: "The game arrived in Telegram." },
 ];
+// текст и дата выпуска на языке игрока: «11 ноября» или «November 11»
+const chText = (c) => (EN_ON && c.en) || c.text;
+const chDate = (c) => new Date(c.date + "T12:00").toLocaleDateString(EN_ON ? "en-US" : "ru-RU", { day: "numeric", month: "long" });
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
-const appStatus = (t) => ($("app-status").textContent = t);
+const appStatus = (t) => ($("app-status").textContent = tr(t));
 
 // --- Установка ---
 // Chrome, Edge, Яндекс и Samsung на Android и компьютере умеют показать своё окно
@@ -11970,24 +12061,24 @@ function detectDevice() {
   const inapp = /Telegram|Instagram|FBAN|FBAV|VKClient|Line\//.test(ua) || (ios && !/Safari/.test(ua));
   return { ios, iPad, android, desktop: !ios && !android, browser, inapp };
 }
-const BR_NAME = { chrome: "Chrome", safari: "Safari", edge: "Edge", firefox: "Firefox", yandex: "Яндекс Браузер", samsung: "Samsung Internet", opera: "Opera", other: "браузер" };
+const BR_NAME = { chrome: "Chrome", safari: "Safari", edge: "Edge", firefox: "Firefox", yandex: tr("Яндекс Браузер"), samsung: "Samsung Internet", opera: "Opera", other: tr("браузер") };
 
 // Шаги для этого устройства: { dev: что за устройство, steps: [...], note }
 function installGuide(d) {
-  const where = d.ios ? (d.iPad ? "iPad" : "iPhone") : d.android ? "Android" : "компьютер";
+  const where = d.ios ? (d.iPad ? "iPad" : "iPhone") : d.android ? "Android" : tr("компьютер");
   const dev = `${where}, ${BR_NAME[d.browser]}`;
-  const sep = "На iPhone и iPad установленная игра хранит прогресс отдельно от браузера. Чтобы звёзды переехали, открой там «Код игрока» и введи свой код.";
-  if (d.inapp) return { dev: `${where}, браузер внутри приложения`, steps: [
+  const sep = tr("На iPhone и iPad установленная игра хранит прогресс отдельно от браузера. Чтобы звёзды переехали, открой там «Код игрока» и введи свой код.");
+  if (d.inapp) return { dev: `${where}, ${tr("браузер внутри приложения")}`, steps: [
     "Ты открыл игру внутри другого приложения (например, Telegram или ВКонтакте). Отсюда установить нельзя.",
-    `Нажми меню <b>•••</b> или <b>⋮</b> и выбери <b>«Открыть в ${d.ios ? "Safari" : "браузере"}»</b>.`,
+    d.ios ? "Нажми меню <b>•••</b> или <b>⋮</b> и выбери <b>«Открыть в Safari»</b>." : "Нажми меню <b>•••</b> или <b>⋮</b> и выбери <b>«Открыть в браузере»</b>.",
     "Там снова нажми «Установить игру» — появится инструкция.",
   ] };
   if (d.ios) {
     const share = d.browser === "safari"
-      ? `Нажми кнопку <b>«Поделиться»</b> <b>⬆</b> — ${d.iPad ? "справа вверху, рядом с адресом" : "внизу экрана"}. Если её не видно, сначала нажми <b>•••</b> рядом с адресом.`
-      : `Нажми <b>«Поделиться»</b> <b>⬆</b> — в ${BR_NAME[d.browser]} она в адресной строке или в меню <b>•••</b>.`;
+      ? tr("Нажми кнопку <b>«Поделиться»</b> <b>⬆</b> — {where}. Если её не видно, сначала нажми <b>•••</b> рядом с адресом.", { where: tr(d.iPad ? "справа вверху, рядом с адресом" : "внизу экрана") })
+      : tr("Нажми <b>«Поделиться»</b> <b>⬆</b> — в {br} она в адресной строке или в меню <b>•••</b>.", { br: BR_NAME[d.browser] });
     return { dev, steps: [share, "Пролистай список вниз и выбери <b>«На экран „Домой“»</b>.", "Нажми <b>«Добавить»</b>. На экране появится иконка с рыцарем."],
-      note: (d.browser === "safari" ? "" : "Если такого пункта нет — открой игру в Safari и установи оттуда. ") + sep };
+      note: (d.browser === "safari" ? "" : tr("Если такого пункта нет — открой игру в Safari и установи оттуда. ")) + sep };
   }
   if (d.android) {
     const menu = {
@@ -12021,10 +12112,10 @@ const OTHER_GUIDES = [
 ];
 function openInstallGuide() {
   const g = installGuide(detectDevice());
-  $("inst-dev").textContent = "Твоё устройство: " + g.dev;
-  $("inst-steps").innerHTML = g.steps.map((s) => `<li>${s}</li>`).join("");
-  $("inst-note").textContent = g.note || "Установленная игра открывается с иконки, как обычное приложение, и работает без интернета.";
-  $("inst-other").innerHTML = OTHER_GUIDES.map(([h, t]) => `<span><b>${h}:</b> ${t}</span>`).join("");
+  $("inst-dev").textContent = tr("Твоё устройство: ") + g.dev;
+  $("inst-steps").innerHTML = g.steps.map((s) => `<li>${tr(s)}</li>`).join("");
+  $("inst-note").textContent = g.note || tr("Установленная игра открывается с иконки, как обычное приложение, и работает без интернета.");
+  $("inst-other").innerHTML = OTHER_GUIDES.map(([h, t]) => `<span><b>${tr(h)}:</b> ${tr(t)}</span>`).join("");
   $("inst-sheet").hidden = false;
   $("inst-close").focus();
 }
@@ -12052,7 +12143,7 @@ addEventListener("keydown", (e) => { if (e.key === "Escape") $("inst-sheet").hid
 // На сайте лежит version.json: номер версии, что нового, размер и отпечаток каждого файла.
 // Сравниваем со своим (он лежит в кэше этой версии) — так узнаём, что и сколько скачивать.
 let swReg = null, updating = false;
-const fmtSize = (b) => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} КБ` : `${(b / 1048576).toFixed(1).replace(".", ",")} МБ`;
+const fmtSize = (b) => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} ${tr("КБ")}` : `${(b / 1048576).toFixed(1).replace(".", EN_ON ? "." : ",")} ${tr("МБ")}`;
 async function getReg() { if (!swReg && swOk) swReg = await navigator.serviceWorker.getRegistration(); return swReg; }
 async function installedInfo() {
   try {
@@ -12062,8 +12153,8 @@ async function installedInfo() {
 }
 function showUpdate(info, size, ready) {
   const s = fmtSize(size);
-  $("app-update-text").textContent = `Вышла новая версия (${info.version}). ${ready ? `Уже загружена, ${s}.` : `Загрузка: ${s}.`}`;
-  $("app-update-notes").innerHTML = (info.notes || []).map((n) => `<li>${n}</li>`).join("");
+  $("app-update-text").textContent = tr("Вышла новая версия ({v}). ", { v: info.version }) + tr(ready ? "Уже загружена, {s}." : "Загрузка: {s}.", { s });
+  $("app-update-notes").innerHTML = ((EN_ON && info.notes_en) || info.notes || []).map((n) => `<li>${n}</li>`).join("");
   $("app-update").hidden = false;
   // точка на шестерёнке: есть обновление
   document.querySelectorAll(".gear-dot").forEach((d) => (d.hidden = false));
@@ -12085,7 +12176,7 @@ async function checkUpdate(manual) {
     hideUpdate();
     // Страница уже новая, а помощник в фоне ещё старый — тихо включаем новый
     if (reg?.waiting) reg.waiting.postMessage("activate");
-    return manual && appStatus(`У тебя последняя версия игры (${APP_VERSION})`);
+    return manual && appStatus(tr("У тебя последняя версия игры ({v})", { v: APP_VERSION }));
   }
   const old = await installedInfo();
   let size = 0;
@@ -12132,10 +12223,10 @@ async function syncByHand(msg) {
   msg("Синхронизирую…");
   await syncNow();
   while (syncBusy) await new Promise((r) => setTimeout(r, 200));
-  msg(syncState === "ok" ? `Готово! Прогресс сохранён под кодом ${codeLabel(player)}` : "Нет связи с интернетом. Сохраню сам, когда она появится");
+  msg(syncState === "ok" ? tr("Готово! Прогресс сохранён под кодом {c}", { c: codeLabel(player) }) : "Нет связи с интернетом. Сохраню сам, когда она появится");
 }
 $("app-sync").addEventListener("click", () => { sfx("tap"); syncByHand(appStatus); });
-$("sync-now").addEventListener("click", () => { sfx("tap"); syncByHand((t) => ($("sync-msg").textContent = t)); });
+$("sync-now").addEventListener("click", () => { sfx("tap"); syncByHand((t) => ($("sync-msg").textContent = tr(t))); });
 
 // --- Отчёт для разработчика: текст из журнала ---
 function buildReport() {
@@ -12186,10 +12277,10 @@ function buildReport() {
   }
   return out.join("\n");
 }
-const repMsg = (t) => ($("rep-msg").textContent = t);
+const repMsg = (t) => ($("rep-msg").textContent = tr(t));
 $("rep-copy").addEventListener("click", async () => {
   const ok = await copyText(buildReport());
-  repMsg(ok ? `Отчёт скопирован (${gameLog.length} событий). Вставь его в сообщение и отправь` : "Не получилось скопировать — попробуй «Отправить»");
+  repMsg(ok ? tr("Отчёт скопирован ({n} событий). Вставь его в сообщение и отправь", { n: gameLog.length }) : "Не получилось скопировать — попробуй «Отправить»");
 });
 $("rep-share").addEventListener("click", async () => {
   const text = buildReport();
@@ -12216,12 +12307,12 @@ const RESET_BACKUP = "coder-path-reset-backup";
 const PROGRESS_KEYS = ["stars", "code", "codeAt", "currentName", "built", "dev"];
 const HOLD_MS = 3000;
 const starsTotal = (st) => Object.values(st || {}).reduce((a, b) => a + (b || 0), 0);
-const starsWord = (n) => `★ ${n} ${n % 10 === 1 && n % 100 !== 11 ? "звезда" : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? "звезды" : "звёзд"}`;
+const starsWord = (n) => `★ ${n} ${plural(n, "звезда", "звезды", "звёзд")}`;
 function readResetBackup() { try { return JSON.parse(localStorage.getItem(RESET_BACKUP) || "null"); } catch (e) { return null; } }
 function drawResetZone() {
   const b = readResetBackup(), u = $("reset-undo");
   u.hidden = !b;
-  if (b) u.textContent = `↶ Вернуть прогресс (${starsWord(starsTotal(b.save?.stars))})`;
+  if (b) u.textContent = tr("↶ Вернуть прогресс ({s})", { s: starsWord(starsTotal(b.save?.stars)) });
 }
 // Сохранить на сервер сразу (а не через 2 с), потом перезапустить игру с чистого листа
 async function flushAndReload() {
@@ -12264,7 +12355,7 @@ async function undoReset() {
     draw(p);
     if (p < 1) { raf = requestAnimationFrame(tick); return; }
     fired = true;
-    btn.classList.add("done"); txt.textContent = "Сбрасываю…";
+    btn.classList.add("done"); txt.textContent = tr("Сбрасываю…");
     try { navigator.vibrate?.(60); } catch (e) {}
     resetProgress();
   };
@@ -12275,7 +12366,7 @@ async function undoReset() {
     $("reset-msg").textContent = "";
     raf = requestAnimationFrame(tick);
   };
-  const early = () => { if (t0 && !fired) $("reset-msg").textContent = "Нужно держать, пока полоска не заполнится до конца"; stop(); };
+  const early = () => { if (t0 && !fired) $("reset-msg").textContent = tr("Нужно держать, пока полоска не заполнится до конца"); stop(); };
   btn.addEventListener("pointerdown", start);
   // палец отпустили или увели с кнопки — не считается. На телефоне палец «прилипает» к кнопке,
   // и событие ухода не приходит, поэтому проверяем, где палец, при каждом его движении.
@@ -12341,7 +12432,7 @@ document.querySelectorAll(".sheet").forEach((sh) => {
   const x = sh.querySelector(".sheet-x");
   const done = document.createElement("button");
   done.className = "sheet-done";
-  done.textContent = "Закрыть";
+  done.textContent = tr("Закрыть");
   done.addEventListener("click", () => x.click());
   sh.querySelector(".sheet-box").appendChild(done);
   new MutationObserver(() => {
@@ -12419,8 +12510,8 @@ function tgWhatsNew() {
   if (!seen || seen >= APP_VERSION || !tgOk("6.2")) return;
   const news = CHANGES.filter((c) => c.v > seen && c.v <= APP_VERSION && c.big).slice(0, 3);
   if (!news.length) return;
-  const message = news.map((c) => (news.length > 1 ? "• " : "") + c.text).join("\n").slice(0, 250);
-  setTimeout(() => { try { tg.showPopup({ title: "Игра обновилась", message, buttons: [{ type: "ok" }] }); } catch (e) {} }, 1500);
+  const message = news.map((c) => (news.length > 1 ? "• " : "") + chText(c)).join("\n").slice(0, 250);
+  setTimeout(() => { try { tg.showPopup({ title: tr("Игра обновилась"), message, buttons: [{ type: "ok" }] }); } catch (e) {} }, 1500);
 }
 // Обновления в Telegram — сами. На iPhone/iPad сервис-воркера в Telegram нет: игра и так каждый раз
 // свежая с сайта. На Android он есть и держит версию в кэше: новую скачиваем в фоне и включаем,
@@ -12472,17 +12563,17 @@ function tgArrangeSettings() {
   const site = location.origin + location.pathname;
   const cloud = document.createElement("p");
   cloud.className = "tg-cloud";
-  cloud.innerHTML = `<span class="sync-dot ok" id="tg-cloud-dot"></span><span>☁ Прогресс сохраняется в твоём Telegram</span>`;
+  cloud.innerHTML = `<span class="sync-dot ok" id="tg-cloud-dot"></span><span>${tr("☁ Прогресс сохраняется в твоём Telegram")}</span>`;
   $("set-h").after(cloud);
   const more = document.createElement("details");
   more.className = "tg-more";
   more.id = "tg-more";
-  more.innerHTML = `<summary>🌐 Играть вне Telegram · код игрока</summary>
+  more.innerHTML = `<summary>${tr("🌐 Играть вне Telegram · код игрока")}</summary>
     <div class="tg-more-body">
-      <p>Игру можно открыть и без Telegram — в браузере на телефоне или компьютере (там её можно установить как приложение):
+      <p>${tr("Игру можно открыть и без Telegram — в браузере на телефоне или компьютере (там её можно установить как приложение):")}
         <b>${site.replace(/^https:\/\//, "")}</b></p>
-      <div class="app-row"><button class="btn reset" id="tg-open-site">🌐 Открыть в браузере</button></div>
-      <p>Чтобы прогресс был общим, в браузере нажми «📲 Перенести прогресс» и введи код игрока отсюда (или наоборот: код из браузера — здесь).</p>
+      <div class="app-row"><button class="btn reset" id="tg-open-site">${tr("🌐 Открыть в браузере")}</button></div>
+      <p>${tr("Чтобы прогресс был общим, в браузере нажми «📲 Перенести прогресс» и введи код игрока отсюда (или наоборот: код из браузера — здесь).")}</p>
     </div>`;
   const body = more.querySelector(".tg-more-body");
   const syncRow = document.createElement("div");
@@ -12497,8 +12588,8 @@ function tgArrangeSettings() {
   const ver = document.createElement("details");
   ver.className = "tg-ver";
   const cur = CHANGES.find((c) => c.v === APP_VERSION);
-  ver.innerHTML = `<summary>Версия ${APP_VERSION}${cur ? " · " + cur.date : ""}</summary><ul>` +
-    CHANGES.slice(0, 3).map((c) => `<li><b>${c.v}</b> · ${c.date} — ${c.text}</li>`).join("") + "</ul>";
+  ver.innerHTML = `<summary>${tr("Версия")} ${APP_VERSION}${cur ? " · " + chDate(cur) : ""}</summary><ul>` +
+    CHANGES.slice(0, 3).map((c) => `<li><b>${c.v}</b> · ${chDate(c)} — ${chText(c)}</li>`).join("") + "</ul>";
   box.querySelector(".sheet-done").before(ver);
   // «Установить игру» (PWA) в Telegram не работает — вместо неё значок Telegram (tgInstall), если он есть
   $("app-installed").hidden = true;
@@ -12512,8 +12603,8 @@ function tgArrangeSettings() {
 // «Установить» внутри Telegram — значок игры на экране телефона (Telegram 8.0+)
 function tgInstall() {
   const btn = $("app-install"), done = $("app-installed");
-  btn.textContent = "📲 Значок игры на экран";
-  done.textContent = "✓ Значок игры на экране";
+  btn.textContent = tr("📲 Значок игры на экран");
+  done.textContent = tr("✓ Значок игры на экране");
   btn.addEventListener("click", (e) => { e.stopImmediatePropagation(); sfx("tap"); try { tg.addToHomeScreen(); } catch (er) {} }, true);
   const check = () => { try { tg.checkHomeScreenStatus((st) => { btn.hidden = st === "added" || st === "unsupported"; done.hidden = st !== "added"; }); } catch (e) {} };
   try { tg.onEvent("homeScreenAdded", check); } catch (e) {}
@@ -12563,7 +12654,7 @@ async function tgSync() {
     const mine = cloudPayload();
     if (!remote || JSON.stringify(remote) !== JSON.stringify(mine)) await tgWrite(mine);
     const note = $("cloud-note");
-    note.textContent = "☁ Прогресс сохраняется в твоём Telegram";
+    note.textContent = tr("☁ Прогресс сохраняется в твоём Telegram");
     note.hidden = false;
     $("tg-cloud-dot")?.setAttribute("class", "sync-dot ok");
   } catch (e) {
