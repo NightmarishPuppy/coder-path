@@ -1390,7 +1390,13 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 .gearbtn .gear-ic { width: 24px; height: 24px; image-rendering: pixelated; display: block; }
 .gear-dot { position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); border: 2px solid var(--bg); }
 .gear-dot[hidden] { display: none; }
-#inst-sheet, #sync-sheet, #reset-sheet { z-index: 70; }   /* открываются поверх окна настроек */
+#inst-sheet, #sync-sheet, #reset-sheet { z-index: 70; }
+/* Внутри Telegram (мини-приложение @Coderpath_bot, версия 100): в режиме «Fullscreen» кнопки Telegram
+   и вырез экрана лежат поверх игры — отодвигаем всё на --tgt сверху и --tgb снизу (их считает initTelegram) */
+html.tg body { padding-top: var(--tgt, 0px); padding-bottom: var(--tgb, 0px); }
+html.tg .splash { padding-top: calc(20px + var(--tgt, 0px)); padding-bottom: calc(20px + var(--tgb, 0px)); }
+html.tg .sheet { padding-top: calc(16px + var(--tgt, 0px)); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--tgb, 0px)); }
+html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) + var(--tgt, 0px)); }   /* открываются поверх окна настроек */
 /* Сброс прогресса (версия 99) */
 .resetzone { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--wall-edge); }
 .resetzone .linkbtn { font-size: 13px; padding: 8px 12px; }
@@ -3793,6 +3799,8 @@ function writeSave() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   scheduleCloudSave();
   scheduleSync();
+  // модуль Telegram — в другом блоке <script>, ниже; при первом запуске его ещё нет
+  if (typeof scheduleTgSync === "function") scheduleTgSync();
 }
 
 // ===== Сохранение в аккаунте Claude =====
@@ -8960,7 +8968,7 @@ function fitBlocksNow() {
   if (!box) return;
   box.style.maxHeight = "";
   if (!uiBlocks || innerWidth >= 820 || $("levelview").hidden) { box.classList.remove("scrolls"); return; }
-  const vh = (window.visualViewport?.height || innerHeight) - 6;
+  const vh = (window.visualViewport?.height || innerHeight) - (window.tgBottom || 0) - 6;
   const over = $("run").getBoundingClientRect().bottom + scrollY - vh;
   // допуск 4 px (предел и так на 6 px выше края экрана): иначе окно программы дёргалось на 2 px,
   // когда подпись «Отменить команду» становится «Удалить плитку» и ряд кнопок чуть ниже
@@ -8992,7 +9000,7 @@ var fitSize = null;   // { key, px, w, h } — для какого уровня 
 function fitBoard(force = false) {
   const lv = $("levelview");
   if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); camEl.style.removeProperty("--blk-max"); fitBlocks(); return; }
-  const key = `${levelIdx}|${uiBlocks}`, sw = innerWidth, sh = window.visualViewport?.height || innerHeight;
+  const key = `${levelIdx}|${uiBlocks}`, sw = innerWidth, sh = (window.visualViewport?.height || innerHeight) - (window.tgBottom || 0);
   const same = fitSize && fitSize.key === key && fitSize.w === sw && Math.abs(fitSize.h - sh) < 160;
   if (same && !force) { boardEl.style.setProperty("--blk-max", fitSize.px + "px"); camEl.style.setProperty("--blk-max", fitSize.px + "px"); fitBlocks(); return; }
   // временное — на время замера прочь (браузер не успевает это нарисовать)
@@ -11878,7 +11886,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 99;
+const APP_VERSION = 100;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
@@ -12159,6 +12167,7 @@ function drawResetZone() {
 async function flushAndReload() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   try { if (cloudDoc) await cloudDoc.set({ json: JSON.stringify(save), savedAt: new Date().toISOString() }); } catch (e) {}
+  try { if (typeof tgCloudOn === "function" && tgCloudOn()) await tgWrite(cloudPayload()); } catch (e) {}
   location.reload();
 }
 async function resetProgress() {
@@ -12281,6 +12290,136 @@ document.querySelectorAll(".sheet").forEach((sh) => {
     if (!sh.hidden) { sizeSheets(); sh.scrollTop = 0; }
   }).observe(sh, { attributes: true, attributeFilter: ["hidden"] });
 });
+
+// ===== Telegram: игра как мини-приложение бота @Coderpath_bot (версия 100) =====
+// Скрипт Telegram грузим, только если игра открыта внутри Telegram (по адресу видно: #tgWebAppData…),
+// и без ожидания: если telegram.org тормозит или закрыт — игра запускается как обычно, просто без этих удобств.
+var tg = null, tgTop = 0, tgBottom = 0, tgSet = "", tgSyncTimer = null, tgSyncBusy = false, tgSyncAgain = false;
+function inTelegram() {
+  if (/tgWebApp/.test(location.hash) || window.TelegramWebviewProxy) return true;
+  try { return !!sessionStorage.getItem("__telegram__initParams"); } catch (e) { return false; }
+}
+const tgOk = (ver) => { try { return !!tg && tg.isVersionAtLeast(ver); } catch (e) { return false; } };
+const tgCloudOn = () => tgOk("6.9");
+function loadTelegram() {
+  if (!inTelegram()) return;
+  document.documentElement.classList.add("tg");
+  const sc = document.createElement("script");
+  sc.src = "https://telegram.org/js/telegram-web-app.js";
+  sc.async = true;
+  sc.onload = initTelegram;
+  document.head.appendChild(sc);
+}
+function initTelegram() {
+  const w = window.Telegram?.WebApp;
+  if (!w || !w.platform || w.platform === "unknown") return;
+  tg = w;
+  try { tg.ready(); tg.expand(); } catch (e) {}
+  // свайп вниз по игре не должен сворачивать приложение (по полю листают длинные карты, окна прокручиваются)
+  try { if (tgOk("7.7")) tg.disableVerticalSwipes(); } catch (e) {}
+  try { if (tgOk("6.1")) { tg.setHeaderColor("#13151b"); tg.setBackgroundColor("#13151b"); } if (tgOk("7.10")) tg.setBottomBarColor("#13151b"); } catch (e) {}
+  tgInsets();
+  ["safeAreaChanged", "contentSafeAreaChanged", "fullscreenChanged", "viewportChanged"].forEach((ev) => { try { tg.onEvent(ev, tgInsets); } catch (e) {} });
+  if (tgOk("6.1")) {
+    tg.BackButton.onClick(tgBack);
+    const mo = new MutationObserver(tgBackSync);
+    [$("levelview"), $("archi"), ...document.querySelectorAll(".sheet")].forEach((el) => mo.observe(el, { attributes: true, attributeFilter: ["hidden"] }));
+    tgBackSync();
+  }
+  if (tgCloudOn()) {
+    tgSync();
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) scheduleTgSync(500); });
+  }
+  if (tgOk("8.0")) tgInstall();
+  logEv("set", { b: `Telegram ${tg.platform} ${tg.version}` });
+}
+// Отступы: в «Fullscreen» сверху вырез экрана и кнопки Telegram (закрыть, «⋯»), снизу — полоска жестов
+function tgInsets() {
+  const a = tg.safeAreaInset || {}, c = tg.contentSafeAreaInset || {};
+  const top = (a.top || 0) + (c.top || 0), bottom = (a.bottom || 0) + (c.bottom || 0);
+  if (top === tgTop && bottom === tgBottom) return;
+  tgTop = top; tgBottom = bottom;
+  document.documentElement.style.setProperty("--tgt", top + "px");
+  document.documentElement.style.setProperty("--tgb", bottom + "px");
+  if (!$("levelview").hidden) { fitBoard(true); fitText(); }
+}
+// Кнопка «Назад» Telegram: закрыть верхнее окно → закрыть архипелаг → с уровня на карту.
+// На карте её нет — там у Telegram своя кнопка «Закрыть».
+function tgBack() {
+  const open = [...document.querySelectorAll(".sheet")].filter((sh) => !sh.hidden)
+    .sort((x, y) => (+getComputedStyle(y).zIndex || 0) - (+getComputedStyle(x).zIndex || 0));
+  if (open.length) { open[0].querySelector(".sheet-x")?.click(); return; }
+  if (!$("archi").hidden) { closeArchi(); return; }
+  if (!$("levelview").hidden) $("to-map").click();
+}
+function tgBackSync() {
+  const need = [...document.querySelectorAll(".sheet")].some((sh) => !sh.hidden) || !$("archi").hidden || !$("levelview").hidden;
+  try { need ? tg.BackButton.show() : tg.BackButton.hide(); } catch (e) {}
+}
+// «Установить» внутри Telegram — значок игры на экране телефона (Telegram 8.0+)
+function tgInstall() {
+  const btn = $("app-install"), done = $("app-installed");
+  btn.addEventListener("click", (e) => { e.stopImmediatePropagation(); sfx("tap"); try { tg.addToHomeScreen(); } catch (er) {} }, true);
+  const check = () => { try { tg.checkHomeScreenStatus((st) => { btn.hidden = st === "added" || st === "unsupported"; done.hidden = st !== "added"; }); } catch (e) {} };
+  try { tg.onEvent("homeScreenAdded", check); } catch (e) {}
+  check();
+}
+// --- Прогресс в облаке Telegram: привязан к аккаунту, код игрока не нужен, Google не нужен ---
+// Хранилище — «ключ: строка», строка до 4096 знаков. Прогресс (звёзды и код уровней) длиннее, поэтому
+// режем его на куски: a0, a1… или b0, b1…, а в ключе «p» пишем, какой набор сейчас настоящий («a:5»).
+// Новый прогресс пишем в другой набор и только потом переключаем «p» — если запись оборвётся на середине,
+// останется целый старый, а не смесь кусков.
+const TG_CHUNK = 3000;
+function tgCall(method, ...args) {
+  return new Promise((res, rej) => {
+    try { tg.CloudStorage[method](...args, (err, val) => (err ? rej(err) : res(val))); } catch (e) { rej(e); }
+  });
+}
+async function tgRead() {
+  const ptr = await tgCall("getItem", "p");
+  if (!ptr) return null;
+  const [set, n] = ptr.split(":");
+  tgSet = set;
+  const keys = Array.from({ length: +n || 0 }, (_, i) => set + i);
+  if (!keys.length) return null;
+  const vals = await tgCall("getItems", keys);
+  try { return JSON.parse(keys.map((k) => vals[k] || "").join("")); } catch (e) { return null; }
+}
+async function tgWrite(payload) {
+  const set = tgSet === "a" ? "b" : "a";
+  // только латиница: тогда кусок нигде не разрежет букву пополам и длина в знаках = длине в байтах
+  const txt = JSON.stringify(payload).replace(/[\u007f-\uffff]/g, (ch) => "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0"));
+  const n = Math.ceil(txt.length / TG_CHUNK);
+  for (let i = 0; i < n; i++) await tgCall("setItem", set + i, txt.slice(i * TG_CHUNK, (i + 1) * TG_CHUNK));
+  await tgCall("setItem", "p", `${set}:${n}`);
+  tgSet = set;
+}
+// Как и с кодом игрока: прочитать, объединить (звёзды — лучшие, код уровня — правленый позже), записать
+async function tgSync() {
+  if (!tgCloudOn()) return;
+  if (tgSyncBusy) { tgSyncAgain = true; return; }
+  tgSyncBusy = true;
+  try {
+    const remote = await tgRead();
+    if (remote && mergeSave(remote)) {
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+      refreshAfterSync();
+    }
+    const mine = cloudPayload();
+    if (!remote || JSON.stringify(remote) !== JSON.stringify(mine)) await tgWrite(mine);
+    const note = $("cloud-note");
+    note.textContent = "☁ Прогресс сохраняется в твоём Telegram";
+    note.hidden = false;
+  } catch (e) { /* облако Telegram сейчас недоступно — прогресс остаётся на устройстве, попробуем позже */ }
+  tgSyncBusy = false;
+  if (tgSyncAgain) { tgSyncAgain = false; tgSync(); }
+}
+function scheduleTgSync(delay = 2000) {
+  if (!tgCloudOn()) return;
+  clearTimeout(tgSyncTimer);
+  tgSyncTimer = setTimeout(tgSync, delay);
+}
+loadTelegram();
 
 // --- Запуск ---
 if (!window.claude?.use) {
