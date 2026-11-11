@@ -1301,8 +1301,8 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 @media (min-width: 600px) { .sheet-box { margin-bottom: auto; } }
 .sheet-done { min-height: 44px; border-radius: 10px; border: 1px solid var(--wall-edge); background: var(--panel); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; }
 .sheet-box {
-  position: relative;
-  width: 100%; max-width: 440px;
+  position: relative; box-sizing: border-box;   /* без этого окно было на 34 px шире места и уезжало за левый край (Telegram на компьютере) */
+  width: 100%; max-width: 440px; min-width: 0;
   display: flex; flex-direction: column; gap: 12px;
   padding: 20px 16px 16px;
   border-radius: 14px;
@@ -1396,7 +1396,19 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 html.tg body { padding-top: var(--tgt, 0px); padding-bottom: var(--tgb, 0px); }
 html.tg .splash { padding-top: calc(20px + var(--tgt, 0px)); padding-bottom: calc(20px + var(--tgb, 0px)); }
 html.tg .sheet { padding-top: calc(16px + var(--tgt, 0px)); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--tgb, 0px)); }
-html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) + var(--tgt, 0px)); }   /* открываются поверх окна настроек */
+html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) + var(--tgt, 0px)); }
+/* Настройки в Telegram (версия 101): на виду — только то, что нужно игроку в Telegram;
+   браузер, код игрока, перенос, обновления и отчёт — под одной раскрывашкой */
+.tg-cloud { display: flex; align-items: center; gap: 8px; color: var(--fg) !important; font-size: 15px !important; }
+.tg-cloud .sync-dot { flex: none; }
+.tg-more { border: 1px solid var(--wall-edge); border-radius: 10px; background: var(--panel); }
+.tg-more > summary { list-style: none; cursor: pointer; padding: 12px 14px; font-weight: 600; font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.tg-more > summary::-webkit-details-marker { display: none; }
+.tg-more > summary::after { content: "▾"; margin-left: auto; }
+.tg-more[open] > summary::after { content: "▴"; }
+.tg-more-body { display: flex; flex-direction: column; gap: 10px; padding: 0 14px 14px; }
+.tg-more-body .synccard { align-self: stretch; justify-content: center; margin-top: 0; }
+.tg-more-body .app-report { border-bottom: 0; padding-bottom: 0; }   /* открываются поверх окна настроек */
 /* Сброс прогресса (версия 99) */
 .resetzone { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--wall-edge); }
 .resetzone .linkbtn { font-size: 13px; padding: 8px 12px; }
@@ -11886,7 +11898,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 100;
+const APP_VERSION = 101;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
@@ -11971,6 +11983,7 @@ function openInstallGuide() {
   $("inst-close").focus();
 }
 function drawInstall() {
+  if (window.tg) return;   // в Telegram кнопкой управляет tgInstall (значок на экран), PWA-установки там нет
   const done = isInstalled();
   $("app-install").hidden = done;
   $("app-installed").hidden = !done;
@@ -12330,7 +12343,8 @@ function initTelegram() {
     tgSync();
     document.addEventListener("visibilitychange", () => { if (!document.hidden) scheduleTgSync(500); });
   }
-  if (tgOk("8.0")) tgInstall();
+  if (tgOk("8.0")) tgInstall(); else $("app-install").hidden = true;
+  if (tgCloudOn()) tgArrangeSettings();
   logEv("set", { b: `Telegram ${tg.platform} ${tg.version}` });
 }
 // Отступы: в «Fullscreen» сверху вырез экрана и кнопки Telegram (закрыть, «⋯»), снизу — полоска жестов
@@ -12356,9 +12370,48 @@ function tgBackSync() {
   const need = [...document.querySelectorAll(".sheet")].some((sh) => !sh.hidden) || !$("archi").hidden || !$("levelview").hidden;
   try { need ? tg.BackButton.show() : tg.BackButton.hide(); } catch (e) {}
 }
+// Настройки внутри Telegram. Обычному игроку в Telegram не нужны «код игрока», «установить игру»,
+// синхронизация и перенос — прогресс и так в облаке Telegram. На виду оставляем: где хранится прогресс,
+// значок на экран, звук, анимацию, цифры шагов, «Начать заново». Всё для игры вне Telegram
+// (как открыть в браузере, код игрока, синхронизация, перенос, обновления, отчёт для тестирования)
+// переносим под одну раскрывашку. Элементы переносятся целиком — их кнопки работают как раньше.
+function tgArrangeSettings() {
+  const box = document.querySelector("#set-sheet .sheet-box"), panel = $("app-panel");
+  const site = location.origin + location.pathname;
+  const cloud = document.createElement("p");
+  cloud.className = "tg-cloud";
+  cloud.innerHTML = `<span class="sync-dot ok" id="tg-cloud-dot"></span><span>☁ Прогресс сохраняется в твоём Telegram</span>`;
+  $("set-h").after(cloud);
+  const more = document.createElement("details");
+  more.className = "tg-more";
+  more.id = "tg-more";
+  more.innerHTML = `<summary>🌐 Играть вне Telegram · код игрока · обновления</summary>
+    <div class="tg-more-body">
+      <p>Игру можно открыть и без Telegram — в браузере на телефоне или компьютере (там её можно установить как приложение):
+        <b>${site.replace(/^https:\/\//, "")}</b></p>
+      <div class="app-row"><button class="btn reset" id="tg-open-site">🌐 Открыть в браузере</button></div>
+      <p>Чтобы прогресс был общим, в браузере нажми «📲 Перенести прогресс» и введи код игрока отсюда (или наоборот: код из браузера — здесь).</p>
+    </div>`;
+  const body = more.querySelector(".tg-more-body");
+  const syncRow = document.createElement("div");
+  syncRow.className = "app-row";
+  syncRow.append($("app-sync"), $("app-move"), $("app-check"));
+  body.append($("sync-open"), syncRow, panel.querySelector(".app-report"));
+  $("reset-zone").before(more);
+  // «Установить игру» (PWA) в Telegram не работает — вместо неё значок Telegram (tgInstall), если он есть
+  $("app-installed").hidden = true;
+  panel.querySelector(":scope > b").hidden = true;
+  $("tg-open-site").addEventListener("click", () => { sfx("tap"); try { tg.openLink(site); } catch (e) { open(site, "_blank"); } });
+  // на карте у новых игроков была кнопка «Уже играл на другом устройстве?» — в Telegram она сбивает с толку
+  const mv = $("sync-move");
+  new MutationObserver(() => { if (!mv.hidden) mv.hidden = true; }).observe(mv, { attributes: true, attributeFilter: ["hidden"] });
+  mv.hidden = true;
+}
 // «Установить» внутри Telegram — значок игры на экране телефона (Telegram 8.0+)
 function tgInstall() {
   const btn = $("app-install"), done = $("app-installed");
+  btn.textContent = "📲 Значок игры на экран";
+  done.textContent = "✓ Значок игры на экране";
   btn.addEventListener("click", (e) => { e.stopImmediatePropagation(); sfx("tap"); try { tg.addToHomeScreen(); } catch (er) {} }, true);
   const check = () => { try { tg.checkHomeScreenStatus((st) => { btn.hidden = st === "added" || st === "unsupported"; done.hidden = st !== "added"; }); } catch (e) {} };
   try { tg.onEvent("homeScreenAdded", check); } catch (e) {}
@@ -12410,7 +12463,12 @@ async function tgSync() {
     const note = $("cloud-note");
     note.textContent = "☁ Прогресс сохраняется в твоём Telegram";
     note.hidden = false;
-  } catch (e) { /* облако Telegram сейчас недоступно — прогресс остаётся на устройстве, попробуем позже */ }
+    $("tg-cloud-dot")?.setAttribute("class", "sync-dot ok");
+  } catch (e) {
+    // облако Telegram сейчас недоступно — прогресс остаётся на устройстве, попробуем позже
+    $("tg-cloud-dot")?.setAttribute("class", "sync-dot off");
+    scheduleTgSync(30000);
+  }
   tgSyncBusy = false;
   if (tgSyncAgain) { tgSyncAgain = false; tgSync(); }
 }
