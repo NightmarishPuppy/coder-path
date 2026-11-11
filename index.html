@@ -11898,7 +11898,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 101;
+const APP_VERSION = 102;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
@@ -12331,6 +12331,7 @@ function initTelegram() {
   // свайп вниз по игре не должен сворачивать приложение (по полю листают длинные карты, окна прокручиваются)
   try { if (tgOk("7.7")) tg.disableVerticalSwipes(); } catch (e) {}
   try { if (tgOk("6.1")) { tg.setHeaderColor("#13151b"); tg.setBackgroundColor("#13151b"); } if (tgOk("7.10")) tg.setBottomBarColor("#13151b"); } catch (e) {}
+  tgFullscreen();
   tgInsets();
   ["safeAreaChanged", "contentSafeAreaChanged", "fullscreenChanged", "viewportChanged"].forEach((ev) => { try { tg.onEvent(ev, tgInsets); } catch (e) {} });
   if (tgOk("6.1")) {
@@ -12346,6 +12347,17 @@ function initTelegram() {
   if (tgOk("8.0")) tgInstall(); else $("app-install").hidden = true;
   if (tgCloudOn()) tgArrangeSettings();
   logEv("set", { b: `Telegram ${tg.platform} ${tg.version}` });
+}
+// Во весь экран на телефонах и планшетах. Настройка «Fullscreen» в BotFather действует не везде:
+// на iPad Telegram открывал игру окошком размером с телефон. Поэтому просим сами (Telegram 8.0+),
+// сразу и ещё раз по «Играть» (на случай, если Telegram ждёт нажатия). На компьютере не просим —
+// там игра развернулась бы на весь монитор.
+function tgFullscreen() {
+  if (!tgOk("8.0") || !/^(ios|android)/.test(tg.platform)) return;
+  const ask = () => { try { if (!tg.isFullscreen) tg.requestFullscreen(); } catch (e) {} };
+  try { tg.onEvent("fullscreenFailed", (e) => logEv("set", { b: `Telegram: во весь экран нельзя (${e?.error || "?"})` })); } catch (e) {}
+  ask();
+  $("start-game").addEventListener("click", ask);
 }
 // Отступы: в «Fullscreen» сверху вырез экрана и кнопки Telegram (закрыть, «⋯»), снизу — полоска жестов
 function tgInsets() {
