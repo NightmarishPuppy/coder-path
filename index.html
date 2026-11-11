@@ -1408,7 +1408,13 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 .tg-more[open] > summary::after { content: "▴"; }
 .tg-more-body { display: flex; flex-direction: column; gap: 10px; padding: 0 14px 14px; }
 .tg-more-body .synccard { align-self: stretch; justify-content: center; margin-top: 0; }
-.tg-more-body .app-report { border-bottom: 0; padding-bottom: 0; }   /* открываются поверх окна настроек */
+.tg-more-body .app-report { border-bottom: 0; padding-bottom: 0; }
+.tg-ver > summary { list-style: none; cursor: pointer; text-align: center; font-size: 12px; color: var(--muted); padding: 6px; }
+.tg-ver > summary::-webkit-details-marker { display: none; }
+.tg-ver > summary::after { content: " ›"; }
+.tg-ver[open] > summary::after { content: " ⌄"; }
+.tg-ver ul { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--muted); }
+.tg-ver li b { color: var(--fg); font-weight: 600; }   /* открываются поверх окна настроек */
 /* Сброс прогресса (версия 99) */
 .resetzone { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--wall-edge); }
 .resetzone .linkbtn { font-size: 13px; padding: 8px 12px; }
@@ -11929,7 +11935,16 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 103;
+const APP_VERSION = 104;
+// Что нового — для игроков, простыми словами (показывается в Telegram: строка «Версия» внизу настроек
+// и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
+const CHANGES = [
+  { v: 104, date: "11 ноября", big: true, text: "Игра обновляется сама. Что нового — внизу настроек, в строке «Версия»." },
+  { v: 103, date: "11 ноября", big: true, text: "Звук возвращается сам после паузы и Bluetooth-наушников — достаточно коснуться экрана." },
+  { v: 102, date: "11 ноября", text: "Игра открывается во весь экран на телефоне и планшете." },
+  { v: 101, date: "11 ноября", text: "Настройки стали проще." },
+  { v: 100, date: "11 ноября", text: "Игра появилась в Telegram." },
+];
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
@@ -12056,6 +12071,7 @@ function showUpdate(info, size, ready) {
 function hideUpdate() { $("app-update").hidden = true; document.querySelectorAll(".gear-dot").forEach((d) => (d.hidden = true)); }
 
 async function checkUpdate(manual) {
+  if (!manual && document.documentElement.classList.contains("tg")) return typeof tgAutoUpdate === "function" && tgAutoUpdate();
   if (!swOk) return manual && appStatus("Этот браузер не умеет обновлять игру сам — просто обнови страницу");
   if (manual) appStatus("Проверяю…");
   let info;
@@ -12377,6 +12393,9 @@ function initTelegram() {
   }
   if (tgOk("8.0")) tgInstall(); else $("app-install").hidden = true;
   if (tgCloudOn()) tgArrangeSettings();
+  if ($("splash").hidden || $("splash").classList.contains("gone")) tgWhatsNew();
+  else $("start-game").addEventListener("click", tgWhatsNew, { once: true });
+  tgAutoUpdate();
   logEv("set", { b: `Telegram ${tg.platform} ${tg.version}` });
 }
 // Во весь экран на телефонах и планшетах. Настройка «Fullscreen» в BotFather действует не везде:
@@ -12389,6 +12408,36 @@ function tgFullscreen() {
   try { tg.onEvent("fullscreenFailed", (e) => logEv("set", { b: `Telegram: во весь экран нельзя (${e?.error || "?"})` })); } catch (e) {}
   ask();
   $("start-game").addEventListener("click", ask);
+}
+// «Игра обновилась» — один раз после обновления, родным окошком Telegram, только про заметное (big)
+const SEEN_KEY = "coder-path-seen-version";
+function tgWhatsNew() {
+  let seen = 0;
+  try { seen = +localStorage.getItem(SEEN_KEY) || 0; localStorage.setItem(SEEN_KEY, APP_VERSION); } catch (e) { return; }
+  // игрок с прогрессом, но ещё без отметки — он играл до версии 104, где отметка появилась
+  if (!seen && Object.keys(save.stars).length) seen = 103;
+  if (!seen || seen >= APP_VERSION || !tgOk("6.2")) return;
+  const news = CHANGES.filter((c) => c.v > seen && c.v <= APP_VERSION && c.big).slice(0, 3);
+  if (!news.length) return;
+  const message = news.map((c) => (news.length > 1 ? "• " : "") + c.text).join("\n").slice(0, 250);
+  setTimeout(() => { try { tg.showPopup({ title: "Игра обновилась", message, buttons: [{ type: "ok" }] }); } catch (e) {} }, 1500);
+}
+// Обновления в Telegram — сами. На iPhone/iPad сервис-воркера в Telegram нет: игра и так каждый раз
+// свежая с сайта. На Android он есть и держит версию в кэше: новую скачиваем в фоне и включаем,
+// пока на экране заставка (до «Играть»); если игрок уже играет — она включится при следующем открытии.
+var tgUpdBusy = false;
+async function tgAutoUpdate() {
+  // самое первое открытие: игра ещё не в кэше, обновлять нечего (иначе лишняя перезагрузка)
+  if (!swOk || tgUpdBusy || !navigator.serviceWorker.controller) return;
+  tgUpdBusy = true;
+  try {
+    const reg = await getReg();
+    if (!reg) return;
+    let w = reg.waiting;
+    if (!w) { const p = waitInstalled(reg, 15000); reg.update().catch(() => {}); w = await p; }
+    const onSplash = !$("splash").hidden && !$("splash").classList.contains("gone");
+    if (w && onSplash) { logEv("set", { b: "Telegram: обновление ставится само" }); updating = true; w.postMessage("activate"); }
+  } catch (e) {} finally { tgUpdBusy = false; }
 }
 // Отступы: в «Fullscreen» сверху вырез экрана и кнопки Telegram (закрыть, «⋯»), снизу — полоска жестов
 function tgInsets() {
@@ -12428,7 +12477,7 @@ function tgArrangeSettings() {
   const more = document.createElement("details");
   more.className = "tg-more";
   more.id = "tg-more";
-  more.innerHTML = `<summary>🌐 Играть вне Telegram · код игрока · обновления</summary>
+  more.innerHTML = `<summary>🌐 Играть вне Telegram · код игрока</summary>
     <div class="tg-more-body">
       <p>Игру можно открыть и без Telegram — в браузере на телефоне или компьютере (там её можно установить как приложение):
         <b>${site.replace(/^https:\/\//, "")}</b></p>
@@ -12438,9 +12487,19 @@ function tgArrangeSettings() {
   const body = more.querySelector(".tg-more-body");
   const syncRow = document.createElement("div");
   syncRow.className = "app-row";
-  syncRow.append($("app-sync"), $("app-move"), $("app-check"));
+  syncRow.append($("app-sync"), $("app-move"));
+  // обновления в Telegram ставятся сами (tgAutoUpdate) — кнопки и окна обновления не нужны
+  $("app-check").hidden = true;
+  $("app-update").hidden = true;
   body.append($("sync-open"), syncRow, panel.querySelector(".app-report"));
   $("reset-zone").before(more);
+  // в самом низу — серая строка «Версия 104 · 11 ноября ›», по нажатию — что нового за последние версии
+  const ver = document.createElement("details");
+  ver.className = "tg-ver";
+  const cur = CHANGES.find((c) => c.v === APP_VERSION);
+  ver.innerHTML = `<summary>Версия ${APP_VERSION}${cur ? " · " + cur.date : ""}</summary><ul>` +
+    CHANGES.slice(0, 3).map((c) => `<li><b>${c.v}</b> · ${c.date} — ${c.text}</li>`).join("") + "</ul>";
+  box.querySelector(".sheet-done").before(ver);
   // «Установить игру» (PWA) в Telegram не работает — вместо неё значок Telegram (tgInstall), если он есть
   $("app-installed").hidden = true;
   panel.querySelector(":scope > b").hidden = true;
