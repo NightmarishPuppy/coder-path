@@ -10879,9 +10879,40 @@ function audio() {
     sfxBus = actx.createGain();
     sfxBus.gain.value = 0.32;
     sfxBus.connect(master);
+    // звук «прервали» (наушники отключились, устройство уснуло) — пробуем вернуть, пока игра на экране
+    actx.onstatechange = () => { if (actx && !document.hidden && actx.state !== "running" && actx.state !== "closed") actx.resume().catch(() => {}); };
   }
-  if (actx.state === "suspended") actx.resume().catch(() => {});
+  // «interrupted» — так iPhone/iPad помечают звук после Bluetooth-наушников, звонка, сна;
+  // раньше будили только из «suspended», и после перерыва звук пропадал до перезапуска игры
+  if (actx.state === "suspended" || actx.state === "interrupted") actx.resume().catch(() => {});
   return actx;
+}
+// ===== Звук после перерыва (версия 103) =====
+// При каждом касании и при возврате в игру: разбудить звук; а если он считается включённым,
+// но его часы стоят (так бывает на iPhone/iPad после смены наушников) — собрать звук заново.
+function audioRevive() {
+  if (!actx || document.hidden) return;
+  const st = actx.state;
+  if (st === "suspended" || st === "interrupted") { actx.resume().catch(() => {}); return; }
+  if (st !== "running" || audioRevive.checking) return;
+  audioRevive.checking = true;
+  const t = actx.currentTime;
+  setTimeout(() => {
+    audioRevive.checking = false;
+    if (actx && actx.state === "running" && actx.currentTime === t && !document.hidden) audioRebuild();
+  }, 500);
+}
+function audioRebuild() {
+  const music = !!musicTimer;
+  try { stopMusic(); } catch (e) {}
+  try { waterSrc?.stop(); } catch (e) {}
+  waterSrc = null; waterGain = null;
+  const old = actx;
+  actx = null;
+  try { old.close(); } catch (e) {}
+  audio();   // новый движок; готовые записи (вода, шаги, удары) переиспользуются
+  if (music) startMusic();
+  logEv("set", { b: "звук перезапущен (часы звука стояли)" });
 }
 
 // Одна нота: частота, длительность, форма волны, громкость, сдвиг по времени
@@ -11564,10 +11595,10 @@ document.querySelectorAll(".snd-sfx").forEach((b) => b.addEventListener("click",
 }));
 
 // Браузер разрешает звук только после первого касания — тогда и включаем музыку
-document.addEventListener("pointerdown", () => { if (save.music) startMusic(); }, { capture: true });
-// Ушли с вкладки — музыку на паузу
+document.addEventListener("pointerdown", () => { audioRevive(); if (save.music) startMusic(); }, { capture: true });
+// Ушли с вкладки — музыку на паузу; вернулись — разбудить звук и снова включить фон
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) stopMusic(); else if (actx && save.music) startMusic();
+  if (document.hidden) stopMusic(); else if (actx) { audioRevive(); if (save.music) startMusic(); }
 });
 if (save.music === undefined) save.music = true;
 if (save.sfx === undefined) save.sfx = true;
@@ -11898,7 +11929,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 102;
+const APP_VERSION = 103;
 const swOk = "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost");
 const appStatus = (t) => ($("app-status").textContent = t);
 
