@@ -1,21 +1,21 @@
 {
- "version": 105,
+ "version": 106,
  "date": "2026-11-11",
  "notes": [
-  "Игра теперь и на английском. Язык — в настройках"
+  "Остров условий — тоже на английском"
  ],
  "files": {
   "index.html": {
-   "size": 744225,
-   "hash": "f006931c45ac0344"
+   "size": 744384,
+   "hash": "6b197a38be55b476"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 62436,
-   "hash": "bcd06fa54e8903d2"
+   "size": 74428,
+   "hash": "6add4e9d73d7b115"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "7990da4df0508ec8"
+   "hash": "de4d1b94337e9d33"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The game now speaks English. Change the language in Settings"
+  "The Island of Ifs is now in English too"
  ]
 }
