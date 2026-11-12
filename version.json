@@ -1,13 +1,13 @@
 {
- "version": 110,
+ "version": 111,
  "date": "2026-11-12",
  "notes": [
-  "Поле уровня на телефоне больше, программа не обрезается"
+  "Мелкие исправления"
  ],
  "files": {
   "index.html": {
-   "size": 750031,
-   "hash": "1bbfcb8721d2c981"
+   "size": 750313,
+   "hash": "cbf3aa5ec2da9a82"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "e1ab7f86f456b044"
+   "hash": "9282bf510fa4dad2"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Bigger level board on phones, the program is never cut off"
+  "Small fixes"
  ]
 }
