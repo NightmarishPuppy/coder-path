@@ -9,7 +9,7 @@ var EN = {
   "Бой у замка: рыцарь, мечники, копейщики и лучники на башнях отбивают гоблинов, над бойцами — строчки кода": "Battle at the castle: a knight, swordsmen, spearmen and archers on towers fight off goblins, with lines of code above them",
   "Пиши код — веди рыцаря в бой": "Write code — lead the knight into battle",
   "Играть": "Play",
-  "Лучше в наушниках": "Best with headphones",
+  "🎧 Звук объёмный — лучше в наушниках": "🎧 3D sound — best with headphones",
   "Карта архипелага: все острова": "Archipelago map: all islands",
   "Остров": "Island",
   "программистов": "of Coders",

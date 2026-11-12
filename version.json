@@ -1,21 +1,21 @@
 {
- "version": 116,
+ "version": 117,
  "date": "2026-11-12",
  "notes": [
-  "Мелкие исправления"
+  "В Telegram на компьютере игра открывается обычным окном, а не на весь экран"
  ],
  "files": {
   "index.html": {
-   "size": 768588,
-   "hash": "41d1d5da75e01bc9"
+   "size": 769347,
+   "hash": "0440e17b6527fb67"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 87258,
-   "hash": "b44bbb118192aed5"
+   "size": 87311,
+   "hash": "cb18d1dee93cd4ac"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "f63eaa2bd25f70d9"
+   "hash": "1ae0d0971c15ab4c"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Small fixes"
+  "In Telegram on a computer, the game opens in a normal window instead of full screen"
  ]
 }
