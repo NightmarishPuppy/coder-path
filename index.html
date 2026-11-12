@@ -1416,7 +1416,9 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 .tg-ver > summary::after { content: " ›"; }
 .tg-ver[open] > summary::after { content: " ⌄"; }
 .tg-ver ul { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--muted); }
-.tg-ver li b { color: var(--fg); font-weight: 600; }   /* открываются поверх окна настроек */
+.tg-ver li b { color: var(--fg); font-weight: 600; }
+.tg-ver .app-row { justify-content: center; margin-top: 10px; }
+.tg-upd-msg { margin: 6px 0 0; min-height: 1em; text-align: center; font-size: 13px; color: var(--muted); }   /* открываются поверх окна настроек */
 /* Сброс прогресса (версия 99) */
 .resetzone { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--wall-edge); }
 .resetzone .linkbtn { font-size: 13px; padding: 8px 12px; }
@@ -12022,10 +12024,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 107;
+const APP_VERSION = 108;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 108, date: "2026-11-12", text: "В Telegram игра обновляется и после сворачивания, а в строке «Версия» есть кнопка «Проверить обновление».", en: "In Telegram the game also updates after being minimized, and the “Version” line has a “Check for updates” button." },
   { v: 107, date: "2026-11-12", big: true, text: "Вся игра теперь и на английском — все четыре острова. Язык — в настройках.", en: "The whole game is now in English — all four islands. Change the language in Settings." },
   { v: 106, date: "2026-11-11", text: "Остров условий — тоже на английском.", en: "The Island of Ifs is now in English too." },
   { v: 105, date: "2026-11-11", big: true, text: "Игра теперь и на английском. Язык — в настройках.", en: "The game now speaks English. Change the language in Settings." },
@@ -12489,6 +12492,12 @@ function initTelegram() {
   if ($("splash").hidden || $("splash").classList.contains("gone")) tgWhatsNew();
   else $("start-game").addEventListener("click", tgWhatsNew, { once: true });
   tgAutoUpdate();
+  // Свёрнутая и снова открытая игра не перезапускается — проверяем обновление при возвращении (не чаще раза в минуту)
+  let tgHiddenAt = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) tgHiddenAt = Date.now();
+    else if (tgHiddenAt && Date.now() - tgHiddenAt > 60000) tgAutoUpdate("back");
+  });
   logEv("set", { b: `Telegram ${tg.platform} ${tg.version}` });
 }
 // Во весь экран на телефонах и планшетах. Настройка «Fullscreen» в BotFather действует не везде:
@@ -12519,17 +12528,30 @@ function tgWhatsNew() {
 // свежая с сайта. На Android он есть и держит версию в кэше: новую скачиваем в фоне и включаем,
 // пока на экране заставка (до «Играть»); если игрок уже играет — она включится при следующем открытии.
 var tgUpdBusy = false;
-async function tgAutoUpdate() {
+// how: "start" — при запуске, ставим, пока игрок на заставке;
+//      "back"  — игрок вернулся в свёрнутую игру (Android держит мини-приложение свёрнутым, заставки нет): ставим, если он на карте;
+//      "hand"  — кнопка «Проверить обновление»: ставим сразу и пишем, что происходит.
+async function tgAutoUpdate(how = "start") {
+  const say = (t) => { const el = $("tg-upd-msg"); if (el && how === "hand") el.textContent = tr(t); };
   // самое первое открытие: игра ещё не в кэше, обновлять нечего (иначе лишняя перезагрузка)
-  if (!swOk || tgUpdBusy || !navigator.serviceWorker.controller) return;
+  if (!swOk || !navigator.serviceWorker.controller) return say("Этот браузер не умеет обновлять игру сам — просто обнови страницу");
+  if (tgUpdBusy) return;
   tgUpdBusy = true;
   try {
     const reg = await getReg();
     if (!reg) return;
+    say("Проверяю…");
     let w = reg.waiting;
-    if (!w) { const p = waitInstalled(reg, 15000); reg.update().catch(() => {}); w = await p; }
+    if (!w) { const p = waitInstalled(reg, how === "hand" ? 40000 : 15000); reg.update().catch(() => {}); w = await p; }
+    if (!w) return say(navigator.onLine === false ? "Нет связи с интернетом. Проверь чуть позже" : tr("У тебя последняя версия игры ({v})", { v: APP_VERSION }));
     const onSplash = !$("splash").hidden && !$("splash").classList.contains("gone");
-    if (w && onSplash) { logEv("set", { b: "Telegram: обновление ставится само" }); updating = true; w.postMessage("activate"); }
+    const onMap = $("levelview").hidden && $("archi").hidden && ![...document.querySelectorAll(".sheet")].some((sh) => !sh.hidden);
+    if (how === "hand" || (how === "start" && onSplash) || (how === "back" && (onSplash || onMap))) {
+      say("Загружаю обновление…");
+      logEv("set", { b: `Telegram: обновление ставится само (${how})` });
+      writeSave();
+      updating = true; w.postMessage("activate");
+    }
   } catch (e) {} finally { tgUpdBusy = false; }
 }
 // Отступы: в «Fullscreen» сверху вырез экрана и кнопки Telegram (закрыть, «⋯»), снизу — полоска жестов
@@ -12591,8 +12613,10 @@ function tgArrangeSettings() {
   ver.className = "tg-ver";
   const cur = CHANGES.find((c) => c.v === APP_VERSION);
   ver.innerHTML = `<summary>${tr("Версия")} ${APP_VERSION}${cur ? " · " + chDate(cur) : ""}</summary><ul>` +
-    CHANGES.slice(0, 3).map((c) => `<li><b>${c.v}</b> · ${chDate(c)} — ${chText(c)}</li>`).join("") + "</ul>";
+    CHANGES.slice(0, 3).map((c) => `<li><b>${c.v}</b> · ${chDate(c)} — ${chText(c)}</li>`).join("") + "</ul>" +
+    `<div class="app-row"><button class="btn reset" id="tg-upd">${tr("⟳ Проверить обновление")}</button></div><p class="tg-upd-msg" id="tg-upd-msg" aria-live="polite"></p>`;
   box.querySelector(".sheet-done").before(ver);
+  $("tg-upd").addEventListener("click", () => { sfx("tap"); tgAutoUpdate("hand"); });
   // «Установить игру» (PWA) в Telegram не работает — вместо неё значок Telegram (tgInstall), если он есть
   $("app-installed").hidden = true;
   panel.querySelector(":scope > b").hidden = true;

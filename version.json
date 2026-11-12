@@ -1,21 +1,21 @@
 {
- "version": 107,
+ "version": 108,
  "date": "2026-11-12",
  "notes": [
-  "Вся игра теперь и на английском — все четыре острова. Язык — в настройках"
+  "В Telegram: кнопка «Проверить обновление» в строке «Версия»"
  ],
  "files": {
   "index.html": {
-   "size": 744669,
-   "hash": "36d0928d4637515f"
+   "size": 747221,
+   "hash": "94ac7f6614c4d5f3"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 86011,
-   "hash": "376e3ef5d3c2e607"
+   "size": 86085,
+   "hash": "9d8376a110ba5716"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "53836353a278f0f6"
+   "hash": "cd6ae33406e4f646"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The whole game is now in English — all four islands. Change the language in Settings"
+  "In Telegram: a «Check for updates» button in the «Version» line"
  ]
 }

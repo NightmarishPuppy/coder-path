@@ -399,6 +399,7 @@ var EN = {
   "Загружаю обновление…": "Downloading the update…",
   "Не получилось загрузить. Проверь интернет и попробуй ещё раз": "Couldn't download. Check your internet and try again",
   "Игра обновилась": "The game was updated",
+  "⟳ Проверить обновление": "⟳ Check for updates",
 
   // --- код игрока и синхронизация ---
   "Код игрока": "Player code",
