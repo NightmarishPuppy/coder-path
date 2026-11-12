@@ -1247,6 +1247,16 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
   #levelview .snd:not(.gearbtn), #mapview .snd:not(.gearbtn) { padding: 5px 9px; }
 }
 #mapview .toprow { flex-wrap: nowrap; }
+/* Telegram: сверху место занимают кнопки самого Telegram, и полю остаётся меньше. «← Карта» там не нужна —
+   у Telegram своя кнопка «Назад», — а кнопки звука и настроек встают справа от названия уровня, без отдельной строки. */
+html.tg #levelview #to-map { display: none; }
+html.tg #levelview header { position: relative; }
+html.tg #levelview header > .toprow { position: absolute; top: 0; right: 0; }
+html.tg #levelview #eyebrow { padding-right: 184px; min-height: 34px; box-sizing: border-box; }
+@media (max-width: 819px) {   /* в блоках на телефоне строки «глава · уровень» нет — кнопки рядом с названием */
+  html.tg #levelview.blk #title { padding-right: 184px; min-height: 34px; box-sizing: border-box; }
+  html.tg #levelview.blk .voicebar { left: auto; right: 138px; }
+}
 .snd {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 5px 10px 5px 7px;
@@ -12024,10 +12034,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 108;
+const APP_VERSION = 109;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 109, date: "2026-11-12", text: "В Telegram поле уровня стало больше.", en: "In Telegram the level board is bigger." },
   { v: 108, date: "2026-11-12", text: "В Telegram игра обновляется и после сворачивания, а в строке «Версия» есть кнопка «Проверить обновление».", en: "In Telegram the game also updates after being minimized, and the “Version” line has a “Check for updates” button." },
   { v: 107, date: "2026-11-12", big: true, text: "Вся игра теперь и на английском — все четыре острова. Язык — в настройках.", en: "The whole game is now in English — all four islands. Change the language in Settings." },
   { v: 106, date: "2026-11-11", text: "Остров условий — тоже на английском.", en: "The Island of Ifs is now in English too." },

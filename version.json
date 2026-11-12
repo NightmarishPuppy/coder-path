@@ -1,13 +1,13 @@
 {
- "version": 108,
+ "version": 109,
  "date": "2026-11-12",
  "notes": [
-  "В Telegram: кнопка «Проверить обновление» в строке «Версия»"
+  "В Telegram поле уровня стало больше"
  ],
  "files": {
   "index.html": {
-   "size": 747225,
-   "hash": "e35f1b9db53031f9"
+   "size": 748375,
+   "hash": "11e323e2c6a6f1ec"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "cd6ae33406e4f646"
+   "hash": "741a430cd8bbaef7"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "In Telegram: a «Check for updates» button in the «Version» line"
+  "In Telegram the level board is bigger"
  ]
 }
