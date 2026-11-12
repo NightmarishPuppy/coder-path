@@ -1309,6 +1309,22 @@ html.tg #levelview #eyebrow { padding-right: 184px; min-height: 34px; box-sizing
 }
 .sheet[hidden] { display: none; }
 html.sheet-open, html.sheet-open body { overflow: hidden; }
+.stats-open { display: block; margin: 10px auto 0; }
+.stats-box { max-width: 720px; }
+.st-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin: 10px 0 14px; }
+.st-card { background: #1d2029; border: 1px solid #2c3040; border-radius: 10px; padding: 8px 10px; }
+.st-card b { display: block; font-size: 22px; color: #ffd54a; }
+.st-card span { font-size: 12px; color: #a8adbd; }
+.st-h { margin: 16px 0 6px; font-size: 15px; color: #e8e6e1; }
+.st-bar { display: grid; grid-template-columns: 9em 1fr 3.2em; gap: 6px; align-items: center; font-size: 13px; margin: 3px 0; }
+.st-bar i { display: block; height: 10px; border-radius: 5px; background: #f0a63a; min-width: 2px; }
+.st-bar em { font-style: normal; text-align: right; color: #a8adbd; }
+.st-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.st-tbl th, .st-tbl td { padding: 4px 5px; border-bottom: 1px solid #262a36; text-align: right; }
+.st-tbl th:first-child, .st-tbl td:first-child { text-align: left; }
+.st-tbl tr.isle td { background: #1a1d26; color: #ffd54a; font-weight: 600; text-align: left; }
+.st-tbl td.low { color: #ff8a6a; font-weight: 600; }
+.st-note { font-size: 12px; color: #8d93a5; }
 .sheet-box { margin-top: auto; flex: none; }
 @media (min-width: 600px) { .sheet-box { margin-bottom: auto; } }
 .sheet-done { min-height: 44px; border-radius: 10px; border: 1px solid var(--wall-edge); background: var(--panel); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; }
@@ -1519,6 +1535,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
     <p class="map-progress" id="map-progress"></p>
     <button class="btn reset movebtn" id="sync-move" hidden>📲 Уже играл на другом устройстве? Перенести прогресс</button>
     <p class="map-note" id="cloud-note" hidden>Прогресс сохраняется в твоём аккаунте Claude</p>
+    <button class="btn stats-open" id="stats-open" hidden>📊 Статистика игроков</button>
     <p class="map-note dev" id="dev-note" hidden>Режим проверки: все уровни открыты. Пять раз нажми на название Coder Path, чтобы выключить.</p>
   </header>
   <div class="mapwrap" data-isle="1">
@@ -1651,6 +1668,17 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
       <button class="btn next" id="reset-cancel">Нет, играть дальше</button>
       <button class="holdbtn" id="reset-hold"><span class="holdfill"></span><span class="holdtext">Держи палец 3 секунды — сброс</span></button>
       <p class="reset-msg" id="reset-msg" role="status"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Окно «Статистика игроков» (только в режиме для взрослых): анонимные отметки из базы, коллекция stats -->
+<div class="sheet" id="stats-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="stats-h">
+  <div class="sheet-box stats-box">
+    <button class="sheet-x" id="stats-close" aria-label="Закрыть">✕</button>
+    <div>
+      <h2 id="stats-h">Статистика игроков</h2>
+      <div id="stats-body"></div>
     </div>
   </div>
 </div>
@@ -6182,6 +6210,7 @@ function renderMap() {
   const all = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
   $("sync-move").hidden = !syncOn || all > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
+  $("stats-open").hidden = !save.dev;
   if (curIsle === 3) showBuiltBridge();
   if (!$("mapview").hidden && typeof updatePlace === "function") updatePlace();   // фон — по месту, где теперь рыцарь
 }
@@ -10421,6 +10450,7 @@ function win() {
   const wasChapterLocked = L.challenge && !chapterOpen(L.chapter + 1);
   const written = countWrittenCommands(codeEl.value);
   const stars = written <= L.par ? 3 : written <= L.good ? 2 : 1;
+  if (typeof statWin === "function") statWin(L.name);
   save.stars[L.name] = Math.max(save.stars[L.name] || 0, stars);
   writeSave();
   logEv("win", { stars, written });
@@ -10732,7 +10762,7 @@ function showBoard() {
   const vh = (window.visualViewport?.height || innerHeight) - (window.tgBottom || 0);
   if (r.top < top || r.bottom > vh) scrollTo({ top: Math.max(0, scrollY + r.top - top), behavior: STILL ? "auto" : "smooth" });
 }
-runBtn.addEventListener("click", () => { if (!running) showBoard(); run(); });
+runBtn.addEventListener("click", () => { if (!running) { showBoard(); if (typeof statRun === "function") statRun(L.name); } run(); });
 resetBtn.addEventListener("click", () => { if (!running) { winBox.hidden = true; reset(); } });
 nextBtn.addEventListener("click", () => loadLevel(levelIdx + 1));
 $("restore").addEventListener("click", () => {
@@ -12137,10 +12167,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 115;
+const APP_VERSION = 116;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 116, date: "2026-11-12", text: "Мелкие исправления.", en: "Small fixes." },
   { v: 115, date: "2026-11-12", text: "Несколько уровней стали честнее: их не пройти в обход того, чему они учат. На арене удар мимо и лишний шаг к врагу отнимают время.", en: "Some levels are fairer now: you can’t skip what they teach. In the arena, a missed swing or an extra step toward an enemy costs time." },
   { v: 114, date: "2026-11-12", text: "Мелкие исправления.", en: "Small fixes." },
   { v: 113, date: "2026-11-12", text: "Понятные подсказки, если свой приём назван как команда или позван раньше, чем описан.", en: "Clear hints when your function has a command’s name or is called before it’s defined." },
@@ -12566,6 +12597,121 @@ document.querySelectorAll(".sheet").forEach((sh) => {
     if (!sh.hidden) { sizeSheets(); sh.scrollTop = 0; }
   }).observe(sh, { attributes: true, attributeFilter: ["hidden"] });
 });
+
+// ===== Статистика игроков (версия 116) =====
+// Анонимная отметка в базе (коллекция stats): случайный номер устройства (не код игрока и не Telegram),
+// где играют (Telegram / браузер / установленное приложение), система, телефон или планшет, язык, версия,
+// прогресс и по каждому уровню — сколько раз нажимали «Запустить» и прошли ли. Имён и личных данных нет.
+// Пишем при запуске игры, после победы и когда игру сворачивают. Только с сайта игры (github.io), не в режиме
+// для взрослых и не в приложении Claude. Смотреть — экран «📊 Статистика игроков» в режиме для взрослых.
+const STAT_KEY = "coder-path-stat", FS_STATS = FS_URL.replace(/players\/$/, "stats/");
+var stat = (() => { try { return JSON.parse(localStorage.getItem(STAT_KEY)); } catch (e) { return null; } })();
+if (!stat || !/^[a-z0-9]{16}$/.test(stat.id || "")) {
+  let id = "";
+  const a = new Uint8Array(16); crypto.getRandomValues(a);
+  for (const b of a) id += "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36];
+  stat = { id, first: new Date().toISOString(), opens: 0, lv: {} };
+}
+stat.opens = (stat.opens || 0) + 1;
+const statSave = () => { try { localStorage.setItem(STAT_KEY, JSON.stringify(stat)); } catch (e) {} };
+statSave();
+const statOn = () => /\.github\.io$/.test(location.hostname) && !window.claude && !save.dev;
+// по уровню: [сколько раз нажимали «Запустить», прошёл ли (0/1), с какой попытки прошёл впервые]
+function statRun(name) { const r = (stat.lv[name] ||= [0, 0, 0]); r[0]++; statSave(); }
+function statWin(name) { const r = (stat.lv[name] ||= [0, 0, 0]); if (!r[1]) { r[1] = 1; r[2] = r[0]; } statSave(); statSoon(3000); }
+function statDoc() {
+  const ua = navigator.userAgent, touch = navigator.maxTouchPoints > 0;
+  const os = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && touch) ? "ios" : /Android/.test(ua) ? "android"
+    : /Windows/.test(ua) ? "windows" : /Macintosh/.test(ua) ? "mac" : /Linux|CrOS/.test(ua) ? "linux" : "other";
+  const m = Math.min(screen.width, screen.height);
+  const won = LEVELS.filter((l) => save.stars[l.name] > 0);
+  return {
+    v: APP_VERSION, first: stat.first, last: new Date().toISOString(), opens: stat.opens,
+    where: document.documentElement.classList.contains("tg") ? "tg" : (matchMedia("(display-mode: standalone)").matches || navigator.standalone) ? "app" : "web",
+    os, form: touch ? (m < 600 ? "phone" : "tablet") : "desktop", lang: LOC,
+    stars: LEVELS.reduce((s, l) => s + (save.stars[l.name] || 0), 0), won: won.length,
+    isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
+  };
+}
+let statTimer = null, statLast = 0;
+function statSoon(ms) { clearTimeout(statTimer); statTimer = setTimeout(() => statSend(false), ms); }
+async function statSend(keep) {
+  if (!statOn()) return;
+  statLast = Date.now();
+  try {
+    await fetch(FS_STATS + stat.id + "?key=" + FS_KEY, {
+      method: "PATCH", keepalive: keep, headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: { json: { stringValue: JSON.stringify(statDoc()) }, savedAt: { stringValue: new Date().toISOString() } } }),
+    });
+  } catch (e) {}
+}
+statSoon(5000);
+document.addEventListener("visibilitychange", () => { if (document.hidden && Date.now() - statLast > 20000) statSend(true); });
+
+// --- Экран статистики: читаем все отметки, считаем и рисуем ---
+async function statLoadAll() {
+  const out = [];
+  let token = "";
+  for (let page = 0; page < 40; page++) {
+    const r = await fetch(FS_STATS.replace(/\/$/, "") + "?pageSize=300&key=" + FS_KEY + (token ? "&pageToken=" + encodeURIComponent(token) : ""));
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    for (const d of j.documents || []) { try { out.push(JSON.parse(d.fields.json.stringValue)); } catch (e) {} }
+    if (!j.nextPageToken) break;
+    token = j.nextPageToken;
+  }
+  return out;
+}
+function statHtml(all) {
+  const now = Date.now(), day = 864e5, esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const ago = (d) => (now - Date.parse(d.last || 0)) / day;
+  const card = (n, t) => `<div class="st-card"><b>${n}</b><span>${t}</span></div>`;
+  const bars = (title, key, names) => {
+    const c = {};
+    for (const d of all) c[d[key] ?? "?"] = (c[d[key] ?? "?"] || 0) + 1;
+    const max = Math.max(1, ...Object.values(c));
+    return `<h3 class="st-h">${title}</h3>` + Object.entries(c).sort((a, b) => b[1] - a[1]).map(([k, n]) =>
+      `<div class="st-bar"><span>${esc(names[k] || k)}</span><i style="width:${(n / max * 100).toFixed(1)}%"></i><em>${n}</em></div>`).join("");
+  };
+  let h = `<div class="st-cards">${card(all.length, "устройств всего")}${card(all.filter((d) => ago(d) < 1).length, "играли за сутки")}`
+    + `${card(all.filter((d) => ago(d) < 7).length, "за неделю")}${card(all.filter((d) => (now - Date.parse(d.first || 0)) / day < 7).length, "новых за неделю")}`
+    + `${card(all.filter((d) => d.won > 0).length, "прошли хоть уровень")}</div>`;
+  h += bars("Где играют", "where", { tg: "Telegram", web: "Браузер", app: "Приложение (значок)" });
+  h += bars("Система", "os", { ios: "iPhone / iPad", android: "Android", windows: "Windows", mac: "Mac", linux: "Linux", other: "Другое" });
+  h += bars("Устройство", "form", { phone: "Телефон", tablet: "Планшет", desktop: "Компьютер" });
+  h += bars("Язык", "lang", { ru: "Русский", en: "English" });
+  h += bars("Дальше всего дошли", "isle", ISLE_NAMES);
+  h += bars("Версия игры", "v", {});
+  // уровни: сколько пробовали, прошли, сколько попыток; где застревают — пробовали, но не прошли
+  h += `<h3 class="st-h">Уровни</h3><p class="st-note">Пробовали — нажимали «Запустить». Прошли — % от пробовавших (красным — меньше 60 %). Попыток — в среднем до первой победы. Бросили — пробовали, не прошли и потом не играли 3+ дня.</p>`;
+  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th></tr>`;
+  let isle = 0;
+  LEVELS.forEach((lv) => {
+    const n = lv.isle || 1;
+    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="5">${esc(ISLE_NAMES[n])}</td></tr>`; }
+    let tried = 0, won = 0, tries = 0, quit = 0;
+    for (const d of all) {
+      const r = d.lv?.[lv.name];
+      if (!r || !r[0]) continue;
+      tried++;
+      if (r[1]) { won++; tries += r[2] || r[0]; } else if (ago(d) > 3) quit++;
+    }
+    const pct = tried ? Math.round(won / tried * 100) : null;
+    h += `<tr><td>${esc(lvName(lv.name))}</td><td>${tried || ""}</td><td class="${pct !== null && pct < 60 && tried >= 3 ? "low" : ""}">${pct === null ? "" : pct + " %"}</td>`
+      + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td></tr>`;
+  });
+  return h + `</table><p class="st-note">Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
+}
+async function openStats() {
+  sfx("tap");
+  $("stats-sheet").hidden = false;
+  $("stats-body").innerHTML = `<p class="st-note">Загружаю…</p>`;
+  try { $("stats-body").innerHTML = statHtml(await statLoadAll()); }
+  catch (e) { $("stats-body").innerHTML = `<p class="st-note">Не удалось загрузить статистику (${String(e.message).replace(/</g, "&lt;")}). Нет связи с Google или в базе ещё не открыто чтение (правила Firebase).</p>`; }
+}
+$("stats-open").addEventListener("click", openStats);
+$("stats-close").addEventListener("click", () => { sfx("tap"); $("stats-sheet").hidden = true; });
+$("stats-sheet").addEventListener("click", (e) => { if (e.target === $("stats-sheet")) $("stats-sheet").hidden = true; });
 
 // ===== Telegram: игра как мини-приложение бота @Coderpath_bot (версия 100) =====
 // Скрипт Telegram грузим, только если игра открыта внутри Telegram (по адресу видно: #tgWebAppData…),

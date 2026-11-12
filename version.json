@@ -1,14 +1,13 @@
 {
- "version": 115,
+ "version": 116,
  "date": "2026-11-12",
  "notes": [
-  "Несколько уровней стали честнее: их не пройти в обход того, чему они учат",
-  "На арене удар мимо и лишний шаг к врагу отнимают время"
+  "Мелкие исправления"
  ],
  "files": {
   "index.html": {
-   "size": 757765,
-   "hash": "43c35387a29214a7"
+   "size": 768588,
+   "hash": "41d1d5da75e01bc9"
   },
   "art.js": {
    "size": 1764922,
@@ -28,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "faeb99ca1b0ac889"
+   "hash": "f63eaa2bd25f70d9"
   },
   "icon-192.png": {
    "size": 42164,
@@ -76,7 +75,6 @@
   }
  },
  "notes_en": [
-  "Some levels are fairer now: you can’t skip what they teach",
-  "In the arena, a missed swing or an extra step toward an enemy costs time"
+  "Small fixes"
  ]
 }
