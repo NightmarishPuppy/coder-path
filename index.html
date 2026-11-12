@@ -9057,6 +9057,10 @@ function showBlockTile() {
 // Поле при этом не трогаем (его размер считается один раз в fitBoard) — длинная программа
 // просто прокручивается внутри своего окна.
 var BLK_MIN = 60;    // меньше одного ряда плиток окно не делаем
+// Экран уровня может быть длиннее экрана телефона — до полутора экранов: лучше прокрутить,
+// чем крошечное поле или обрезанная программа. Поле — не ниже 45 % высоты экрана
+// (если по ширине помещается), окно программы растёт, пока «Запустить» не дальше 1,5 экрана.
+var PAGE_MAX = 1.5, BOARD_MIN_H = 0.45;
 // Подгоняем сразу и ещё раз в следующем кадре: к этому времени перерисованы и кнопки под программой
 // (подпись «Убрать рамку» бывает в две строки), и строка подсказки.
 var fitBlocksRaf = 0;
@@ -9071,7 +9075,7 @@ function fitBlocksNow() {
   box.style.maxHeight = "";
   if (!uiBlocks || innerWidth >= 820 || $("levelview").hidden) { box.classList.remove("scrolls"); return; }
   const vh = (window.visualViewport?.height || innerHeight) - (window.tgBottom || 0) - 6;
-  const over = $("run").getBoundingClientRect().bottom + scrollY - vh;
+  const over = $("run").getBoundingClientRect().bottom + scrollY - vh * PAGE_MAX;
   // допуск 4 px (предел и так на 6 px выше края экрана): иначе окно программы дёргалось на 2 px,
   // когда подпись «Отменить команду» становится «Удалить плитку» и ряд кнопок чуть ниже
   if (over > 4) box.style.maxHeight = Math.max(BLK_MIN, box.offsetHeight - over) + "px";
@@ -9126,7 +9130,9 @@ function fitBoard(force = false) {
   if (wasOpen) goal.classList.add("open");
   hide.forEach((el) => (el.hidden = false));
   box.innerHTML = realHtml; box.scrollTop = realTop;
-  const px = Math.max(full * 0.55, Math.min(full, Math.floor(w)));
+  // поле не меньше BOARD_MIN_H высоты экрана: если с ним не всё влезает — страница прокрутится
+  const minPx = Math.min(full, vh * BOARD_MIN_H * ratio);
+  const px = Math.max(full * 0.55, minPx, Math.min(full, Math.floor(w)));
   fitSize = { key, px, w: sw, h: sh };
   boardEl.style.setProperty("--blk-max", px + "px");
   camEl.style.setProperty("--blk-max", px + "px");
@@ -10629,7 +10635,13 @@ codeEl.addEventListener("input", () => {
   typedTimer = setTimeout(() => logEv("typed", { code: oneLine(codeEl.value) }), 1500);
 });
 codeEl.addEventListener("scroll", syncScroll);
-runBtn.addEventListener("click", run);
+// Перед запуском поле — на экран целиком (если страница прокручена к кнопкам)
+function showBoard() {
+  const r = camEl.getBoundingClientRect(), top = (window.tgTop || 0) + 6;
+  const vh = (window.visualViewport?.height || innerHeight) - (window.tgBottom || 0);
+  if (r.top < top || r.bottom > vh) scrollTo({ top: Math.max(0, scrollY + r.top - top), behavior: STILL ? "auto" : "smooth" });
+}
+runBtn.addEventListener("click", () => { if (!running) showBoard(); run(); });
 resetBtn.addEventListener("click", () => { if (!running) { winBox.hidden = true; reset(); } });
 nextBtn.addEventListener("click", () => loadLevel(levelIdx + 1));
 $("restore").addEventListener("click", () => {
@@ -12034,10 +12046,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 109;
+const APP_VERSION = 110;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 110, date: "2026-11-12", text: "Поле уровня на телефоне больше, а программа не обрезается — экран можно прокрутить. При запуске поле само встаёт на экран.", en: "The level board is bigger on phones and the program is never cut off — just scroll. When you press Run, the board scrolls into view." },
   { v: 109, date: "2026-11-12", text: "В Telegram поле уровня стало больше.", en: "In Telegram the level board is bigger." },
   { v: 108, date: "2026-11-12", text: "В Telegram игра обновляется и после сворачивания, а в строке «Версия» есть кнопка «Проверить обновление».", en: "In Telegram the game also updates after being minimized, and the “Version” line has a “Check for updates” button." },
   { v: 107, date: "2026-11-12", big: true, text: "Вся игра теперь и на английском — все четыре острова. Язык — в настройках.", en: "The whole game is now in English — all four islands. Change the language in Settings." },

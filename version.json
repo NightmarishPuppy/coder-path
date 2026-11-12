@@ -1,13 +1,13 @@
 {
- "version": 109,
+ "version": 110,
  "date": "2026-11-12",
  "notes": [
-  "В Telegram поле уровня стало больше"
+  "Поле уровня на телефоне больше, программа не обрезается"
  ],
  "files": {
   "index.html": {
-   "size": 748375,
-   "hash": "11e323e2c6a6f1ec"
+   "size": 750031,
+   "hash": "1bbfcb8721d2c981"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "741a430cd8bbaef7"
+   "hash": "e1ab7f86f456b044"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "In Telegram the level board is bigger"
+  "Bigger level board on phones, the program is never cut off"
  ]
 }
