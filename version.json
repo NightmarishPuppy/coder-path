@@ -1,13 +1,13 @@
 {
- "version": 113,
+ "version": 114,
  "date": "2026-11-12",
  "notes": [
-  "Понятные подсказки, если свой приём назван как команда или позван раньше, чем описан"
+  "Мелкие исправления"
  ],
  "files": {
   "index.html": {
-   "size": 755750,
-   "hash": "c013193002f04dda"
+   "size": 756198,
+   "hash": "8b11badf592b5c35"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "eca264b15b817bed"
+   "hash": "d0ba6e371770ec4f"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Clear hints when your function has a command’s name or is called before it’s defined"
+  "Small fixes"
  ]
 }

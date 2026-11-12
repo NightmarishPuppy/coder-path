@@ -9926,10 +9926,14 @@ async function run() {
             finish();
             drawVariants();
             setDisabled(true);
+            // за время паузы игрок мог уйти на карту или открыть другой уровень — тогда дальше не идём
+            const here = levelIdx, stay = () => levelIdx === here && !$("levelview").hidden && !running;
             await wait(1500);
             setDisabled(false);
+            if (!stay()) return;
             setVariant(nextV);
             await wait(900);
+            if (!stay()) return;
             return run();
           }
           setStatus(tr("Победа! Одна программа прошла {n} {w} поля", { n: L.maps.length, w: plural(L.maps.length, "вариант", "варианта", "вариантов") }), "win");
@@ -12127,10 +12131,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 113;
+const APP_VERSION = 114;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 114, date: "2026-11-12", text: "Мелкие исправления.", en: "Small fixes." },
   { v: 113, date: "2026-11-12", text: "Понятные подсказки, если свой приём назван как команда или позван раньше, чем описан.", en: "Clear hints when your function has a command’s name or is called before it’s defined." },
   { v: 112, date: "2026-11-12", text: "Между островами рыцарь бежит по дороге и мостам, а не по воде, — и быстро.", en: "Between islands the knight now runs along roads and bridges, not over water — and fast." },
   { v: 111, date: "2026-11-12", text: "Мелкие исправления.", en: "Small fixes." },
