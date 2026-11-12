@@ -258,6 +258,7 @@ var EN = {
   "Рыцарь продержался {n} с из {m}. Посмотри, что он делает, когда враг рядом и когда нет": "The knight held out {n} s of {m}. Look at what he does when an enemy is near and when not",
   "Рыцарь дошёл, но в этом испытании нужен цикл. Найди, какие шаги повторяются, и положи их в цикл": "The knight made it, but this challenge needs a loop. Find which steps repeat and put them in a loop",
   "Рыцарь дошёл, но в этом испытании нужен свой приём: собери шаги ступеньки в розовой рамке и позови приём розовой кнопкой": "The knight made it, but this challenge needs your own function: put the steps of a stair in the pink frame and call the function with the pink button",
+  "Рыцарь дошёл, но здесь учимся приёмам: позови приём розовой кнопкой там, где ступенька, вместо отдельных стрелок": "The knight made it, but here we’re learning functions: press the pink function button where there’s a step, instead of separate arrows",
   "В коде {n} {w}.": "{n} {w} in the code.",
   " Для ★★★ нужно не больше {n}.": " For ★★★ you need no more than {n}.",
   " Идеально!": " Perfect!",

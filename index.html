@@ -2935,7 +2935,7 @@ const LEVELS = [
       { at: [1, 2], kind: "fell", tree: [3, 1], dir: -1, v: [1] }],
     maps: [
       ["#########", "#########", "S........", "###......", "########E"],
-      ["#########", "#########", "S........", "###......", "########E"],
+      ["#########", "#########", "S........", "###...#..", "########E"],
     ],
     starter: {
       py: "move_right(3)\nif obstacle_right():\nmove_right(5)\nmove_down(2)\n",
@@ -2956,7 +2956,7 @@ const LEVELS = [
       { at: [2, 2], kind: "fell", tree: [5, 1], dir: -1, v: [1] }],
     maps: [
       ["#########", "#########", "S........", "#####....", "########E"],
-      ["#########", "#########", "S........", "#####....", "########E"],
+      ["#########", "#########", "S........", "#####..#.", "########E"],
     ],
     starter: {
       py: "move_right(5)\nmove_right(3)\nmove_down(2)\n",
@@ -2977,7 +2977,7 @@ const LEVELS = [
       { at: [1, 2], kind: "fell", tree: [4, 1], dir: -1, v: [1] }],
     maps: [
       ["#########", "#########", "S........", "####.....", "########E"],
-      ["#########", "#########", "S........", "####.....", "########E"],
+      ["#########", "#########", "S........", "####..#..", "########E"],
     ],
     starter: {
       py: "move_right(4)\nif obstacle_right():\n    move_up()\nmove_right(4)\nmove_down(2)\n",
@@ -2998,8 +2998,8 @@ const LEVELS = [
       { at: [1, 2], kind: "fell", tree: [2, 1], dir: -1, v: [1] }],
     maps: [
       ["#########", "#########", "S........", "##.......", "########E"],
-      ["#########", "#########", "S........", "##.......", "########E"],
-      ["#########", "#########", "S........", "##.......", "########E"],
+      ["#########", "#########", "S........", "##...#...", "########E"],
+      ["#########", "#########", "S........", "##...#...", "########E"],
     ],
     starter: {
       py: "move_right(2)\nmove_right(6)\nmove_down(2)\n",
@@ -3020,8 +3020,8 @@ const LEVELS = [
       { at: [3, 2], kind: "fell", tree: [6, 1], dir: -1, v: [2] }],
     maps: [
       ["#########", "#########", "S........", "######...", "########E"],
-      ["#########", "#########", "S........", "######...", "########E"],
-      ["#########", "#########", "S........", "######...", "########E"],
+      ["#########", "#########", "S........", "######.#.", "########E"],
+      ["#########", "#########", "S........", "######.#.", "########E"],
     ],
     starter: { py: "", js: "" },
   },
@@ -3101,7 +3101,7 @@ const LEVELS = [
     allies: [{ at: [7, 1], kind: "archer" }, { at: [2, 3], kind: "pawn", v: [1] }],
     maps: [
       ["#########", "#########", "S....W...", "##.......", "##......E"],
-      ["#########", "#########", "S........", "###......", "##......E"],
+      ["#########", "#########", "S........", "########.", "##......E"],
     ],
     starter: {
       py: "move_right(2)\nif enemy_right():\n    move_down()\nmove_right(6)\nmove_down(2)\n",
@@ -3296,9 +3296,9 @@ const LEVELS = [
     ifButton: true,
     par: 2, good: 3,
     map: [
-      "S..C...###########",
-      "######.###########",
-      "######...C...#####",
+      "S..C..############",
+      "#####.############",
+      "#####....C...#####",
       "############.#####",
       "############...C.E",
     ],
@@ -3496,7 +3496,7 @@ const LEVELS = [
     name: "Арена",
     chapter: 11,
     isle: 3,
-    arena: { secs: 20, hp: 10, waves: [[1.5, "l", "torch"], [3, "r", "torch"], [6, "l", "torch"], [8, "r", "torch"], [11, "l", "torch"], [12.5, "r", "torch"], [15, "l", "torch"], [16, "r", "torch"]] },
+    arena: { secs: 20, hp: 9, waves: [[1.5, "l", "torch"], [3, "r", "torch"], [6, "l", "torch"], [8, "r", "torch"], [11, "l", "torch"], [12.5, "r", "torch"], [15, "l", "torch"], [16, "r", "torch"]] },
     goal: "Новое: арена! Здесь не клетки, а настоящий бой: гоблины идут с двух сторон, а рыцарь делает то, что написано в программе, снова и снова. Продержись 20 секунд. Если враг рядом — бей: attack().",
     commands: ["attack"],
     newCommands: [],
@@ -3512,7 +3512,7 @@ const LEVELS = [
     name: "Иди навстречу",
     chapter: 11,
     isle: 3,
-    arena: { secs: 20, hp: 10, waves: [[1, "l", "tnt"], [4, "r", "tnt"], [7, "l", "torch"], [9, "r", "tnt"], [12, "l", "tnt"], [14, "r", "torch"], [16, "l", "tnt"]] },
+    arena: { secs: 20, hp: 8, waves: [[0.8, "r", "tnt"], [1.8, "l", "torch"], [2.1, "l", "tnt"], [2.8, "l", "torch"], [4.3, "r", "tnt"], [4.6, "l", "tnt"], [10.3, "l", "tnt"], [10.6, "r", "torch"], [16.6, "l", "tnt"]] },
     goal: "Гоблины с динамитом не подходят близко — бросают издалека. Когда врага рядом нет, иди к нему: goToEnemy().",
     commands: ["attack", "goToEnemy"],
     newCommands: ["goToEnemy"],
@@ -3568,7 +3568,7 @@ const LEVELS = [
     loopButton: true,
     ifButton: true,
     elseButton: true,
-    arena: { secs: 20, hp: 10, waves: [[1, "l", "torch"], [2, "r", "tnt"], [4.5, "l", "tnt"], [6, "r", "torchp"], [8, "l", "torch"], [9.5, "r", "tnt"], [12, "l", "torchp"], [13, "r", "torch"], [15, "l", "tnt"], [16.5, "r", "torch"]] },
+    arena: { secs: 20, hp: 8, waves: [[1, "l", "torch"], [2, "r", "tnt"], [4.5, "l", "tnt"], [6, "r", "torchp"], [8, "l", "torch"], [9.5, "r", "tnt"], [12, "l", "torchp"], [13, "r", "torch"], [15, "l", "tnt"], [16.5, "r", "torch"]] },
     goal: "Испытание: программа пустая. Гоблины с факелами идут к рыцарю сами, а с динамитом — бросают издалека. Подсказка: цикл, в нём «если враг рядом» с ударом и «иначе» — к врагу.",
     commands: ["attack", "goToEnemy", "heal"],
     ifs: ["near"],
@@ -3581,7 +3581,7 @@ const LEVELS = [
     name: "Подмога",
     chapter: 12,
     isle: 3,
-    arena: { secs: 20, hp: 10, allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
+    arena: { secs: 20, hp: 8, allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
       waves: [[1, "l", "torch"], [1.3, "r", "torch"], [3, "l", "tnt"], [3.5, "r", "torchp"], [6, "l", "torchp"], [6.3, "r", "tnt"], [8.5, "l", "torch"], [8.8, "r", "torch"],
         [10.5, "l", "tnt"], [11, "r", "torchp"], [13, "l", "torch"], [13.3, "r", "tnt"], [15.5, "l", "torchp"], [15.8, "r", "torch"], [17, "l", "tnt"]] },
     goal: "Новое: подмога! Рядом с рыцарем бьются мечник и копейщик — они сами видят гоблинов и сами дерутся. Гоблинов стало больше. Когда врага рядом нет, иди к нему: goToEnemy().",
@@ -3599,7 +3599,7 @@ const LEVELS = [
     name: "Бочки",
     chapter: 12,
     isle: 3,
-    arena: { secs: 20, hp: 10, allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
+    arena: { secs: 20, hp: 8, allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
       waves: [[1, "l", "torch"], [1.3, "r", "torch"], [3, "l", "barrel"], [4.5, "r", "torchp"], [4.8, "l", "torch"], [6.5, "r", "barrel"], [8, "l", "torchp"], [8.3, "r", "torch"],
         [9.5, "l", "barrel"], [11, "r", "torchp"], [11.3, "l", "torch"], [12.5, "r", "barrel"], [14, "l", "torch"], [14.3, "r", "torchp"], [15.5, "l", "barrel"], [17, "r", "torch"], [18, "l", "barrel"], [18.5, "r", "torchp"]] },
     goal: "Новое: бочки! Гоблин в бочке подбегает и взрывается. Взрыв ранит всех рядом — и наших, и гоблинов. Когда врага рядом нет, лечись: heal().",
@@ -3617,7 +3617,7 @@ const LEVELS = [
     name: "Лучник на башне",
     chapter: 12,
     isle: 3,
-    arena: { secs: 20, hp: 10, tower: [6.2, 4.2], allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
+    arena: { secs: 20, hp: 8, tower: [6.2, 4.2], allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
       waves: [[1, "r", "torch"], [1.3, "l", "torch"], [2.5, "r", "barrel"], [2.8, "r", "torch"], [3, "l", "barrel"], [3, "r", "torchp"], [3.6, "r", "barrel"], [3.7, "l", "torchp"], [5, "r", "torchp"], [5.3, "l", "torchp"], [9.5, "l", "barrel"], [10.5, "r", "torch"], [10.8, "l", "torchp"], [12, "r", "barrel"], [13.5, "l", "tnt"], [14, "r", "torchp"], [14.2, "l", "barrel"], [15, "l", "barrel"], [15.6, "r", "barrel"], [16, "l", "barrel"], [16.3, "l", "torch"]] },
     goal: "Новое: башня с лучником! Он сам стреляет — первым делом по бочкам, чтобы те взрывались подальше. Обе рамки пустые: если враг рядом — бей, иначе — лечись.",
     commands: ["attack", "heal"],
@@ -3656,7 +3656,7 @@ const LEVELS = [
     loopButton: true,
     ifButton: true,
     elseButton: true,
-    arena: { secs: 30, hp: 14, tower: [6.2, 4.2], allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
+    arena: { secs: 30, hp: 10, tower: [6.2, 4.2], allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
       waves: [[1, "l", "torch"], [1.3, "r", "torch"], [2.5, "r", "tnt"], [3.5, "l", "barrel"], [4.5, "r", "torchp"], [5, "l", "torchp"], [6, "l", "tnt"], [7, "r", "barrel"],
         [8.5, "l", "torch"], [8.8, "r", "torch"], [9.1, "l", "torch"], [10.5, "r", "tnt"], [11.5, "l", "barrel"], [12.5, "r", "torchp"], [13, "l", "tnt"],
         [15, "r", "barrel"], [15.5, "l", "torch"], [16, "r", "torchp"], [17.5, "l", "tnt"], [18.5, "r", "barrel"], [20, "l", "torchp"], [20.3, "r", "torch"],
@@ -3677,7 +3677,7 @@ const LEVELS = [
     name: "Готовый приём",
     chapter: 13,
     isle: 4,
-    funcs: true,
+    funcs: true, requireFn: true,
     newFn: true,
     codeRev: 2,
     goal: "Нажми [[fnbtn]] 2 раза. Это свой приём: розовая кнопка делает сразу оба шага из рамки [[fnhead]] — целую ступеньку.",
@@ -3699,7 +3699,7 @@ const LEVELS = [
     name: "Вниз по приёму",
     chapter: 13,
     isle: 4,
-    funcs: true,
+    funcs: true, requireFn: true,
     codeRev: 2,
     after: "Готовый приём",
     goal: "Собери путь: [[fnbtn]] — ступенька, [[btn:moveRight]] и [[num:2]] — дорожка. Приём уже готов, а программа пустая.",
@@ -3721,7 +3721,7 @@ const LEVELS = [
     name: "Кривой приём",
     chapter: 13,
     isle: 4,
-    funcs: true,
+    funcs: true, requireFn: true,
     bug: true,
     codeRev: 2,
     after: "Вниз по приёму",
@@ -10022,6 +10022,9 @@ function arenaWalk(x, y) {
 // Все бойцы — в одном списке units: рыцарь (его ведёт программа), союзники (бьют ближайшего гоблина
 // и возвращаются на место) и гоблины (идут к ближайшему из наших). Динамит и бочки взрываются
 // и ранят всех, кто оказался рядом, — и своих, и чужих.
+// Время, потерянное зря: удар, когда рядом никого (рыцарь проваливается за мечом), и «к врагу», когда враг уже рядом.
+// Поэтому «бить всё время» или «всегда сначала к врагу» хуже, чем «если враг рядом — бей, иначе — …».
+var ARENA_MISS = { whiff: 0.9, step: 0.6 };
 function arenaPlan(code) {
   const A = L.arena, DT = 0.05;
   let seed = 7;                                 // свой «случай»: одна и та же программа — один и тот же бой
@@ -10175,6 +10178,7 @@ function arenaPlan(code) {
     live(0.25);
     if (f && f.hp > 0 && dist(f, hero) <= ARENA.reach + 0.3) { hits++; hurt(f, ARENA.dmg, hero); }
     live(0.25);
+    if (!f) live(ARENA_MISS.whiff);               // удар мимо: рыцарь проваливается за мечом и не сразу встаёт в стойку
     hero.act = "idle";
   };
   const heal = (ln) => {
@@ -10193,6 +10197,7 @@ function arenaPlan(code) {
     const f = nearestAny();
     if (!f) { hero.act = "idle"; live(0.3); return; }
     hero.act = "run";
+    if (dist(f, hero) <= ARENA.reach * 0.8) { live(ARENA_MISS.step); hero.act = "idle"; return; }   // враг уже рядом: шаг навстречу всё равно занимает время
     let left = 1.4;
     while (left > 0 && f.hp > 0 && dist(f, hero) > ARENA.reach * 0.8) { stepTo(hero, f.x, f.y, 2.4); live(DT); left -= DT; }
     hero.act = "idle";
@@ -10408,7 +10413,8 @@ function win() {
   if (L.requireFn) {
     const c = stripComments(codeEl.value), fns = defNames(c).filter((nm) => defBody(c, nm).length);
     if (!fns.length || !countCalls(c, fns)) {
-      setStatus("Рыцарь дошёл, но в этом испытании нужен свой приём: собери шаги ступеньки в розовой рамке и позови приём розовой кнопкой", "fail");
+      setStatus(L.challenge ? "Рыцарь дошёл, но в этом испытании нужен свой приём: собери шаги ступеньки в розовой рамке и позови приём розовой кнопкой"
+        : "Рыцарь дошёл, но здесь учимся приёмам: позови приём розовой кнопкой там, где ступенька, вместо отдельных стрелок", "fail");
       return;
     }
   }
@@ -12131,10 +12137,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 114;
+const APP_VERSION = 115;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 115, date: "2026-11-12", text: "Несколько уровней стали честнее: их не пройти в обход того, чему они учат. На арене удар мимо и лишний шаг к врагу отнимают время.", en: "Some levels are fairer now: you can’t skip what they teach. In the arena, a missed swing or an extra step toward an enemy costs time." },
   { v: 114, date: "2026-11-12", text: "Мелкие исправления.", en: "Small fixes." },
   { v: 113, date: "2026-11-12", text: "Понятные подсказки, если свой приём назван как команда или позван раньше, чем описан.", en: "Clear hints when your function has a command’s name or is called before it’s defined." },
   { v: 112, date: "2026-11-12", text: "Между островами рыцарь бежит по дороге и мостам, а не по воде, — и быстро.", en: "Between islands the knight now runs along roads and bridges, not over water — and fast." },
