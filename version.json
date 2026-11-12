@@ -1,21 +1,21 @@
 {
- "version": 117,
+ "version": 118,
  "date": "2026-11-12",
  "notes": [
-  "В Telegram на компьютере игра открывается обычным окном, а не на весь экран"
+  "В настройках появилась связь с разработчиком: можно написать или отправить отчёт, если что-то не получается"
  ],
  "files": {
   "index.html": {
-   "size": 769347,
-   "hash": "0440e17b6527fb67"
+   "size": 771978,
+   "hash": "780a57f7b67ec4d6"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 87311,
-   "hash": "cb18d1dee93cd4ac"
+   "size": 89042,
+   "hash": "f5b79b4e96f29525"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "1ae0d0971c15ab4c"
+   "hash": "2fae1155bfe51eea"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "In Telegram on a computer, the game opens in a normal window instead of full screen"
+  "Settings now have a way to contact the developer: send a message or a report if something isn’t working"
  ]
 }
