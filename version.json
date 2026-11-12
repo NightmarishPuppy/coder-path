@@ -1,13 +1,13 @@
 {
- "version": 118,
+ "version": 119,
  "date": "2026-11-12",
  "notes": [
-  "В настройках появилась связь с разработчиком: можно написать или отправить отчёт, если что-то не получается"
+  "Мелкие исправления"
  ],
  "files": {
   "index.html": {
-   "size": 771978,
-   "hash": "780a57f7b67ec4d6"
+   "size": 772233,
+   "hash": "5dd81346f4d00bf0"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "2fae1155bfe51eea"
+   "hash": "bf961ca00e032b73"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Settings now have a way to contact the developer: send a message or a report if something isn’t working"
+  "Small fixes"
  ]
 }
