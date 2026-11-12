@@ -1,13 +1,13 @@
 {
- "version": 111,
+ "version": 112,
  "date": "2026-11-12",
  "notes": [
-  "Мелкие исправления"
+  "Между островами рыцарь бежит по дороге и мостам, а не по воде, — и быстро"
  ],
  "files": {
   "index.html": {
-   "size": 750313,
-   "hash": "cbf3aa5ec2da9a82"
+   "size": 753216,
+   "hash": "aade2a470fdb005a"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "9282bf510fa4dad2"
+   "hash": "e5635402a38475c3"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Small fixes"
+  "Between islands the knight now runs along roads and bridges, not over water — and fast"
  ]
 }
