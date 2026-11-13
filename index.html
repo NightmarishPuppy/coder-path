@@ -1505,6 +1505,9 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
   .wrap { max-width: min(1680px, 94vw); }
   .mapwrap { max-width: min(760px, 100%); border-radius: 0; border: 0;
     box-shadow: 0 0 0 100vmax #47aba9; clip-path: inset(0 -100vmax); }
+  #mapview .mapwrap, #mapview .mapclouds { overflow: visible; }   /* облака и море — через весь экран */
+  .oceanside { position: absolute; display: block; image-rendering: pixelated; pointer-events: none; }
+  html, body { overflow-x: clip; }   /* облака за краем окна не дают прокрутки вбок */
   .credits { max-width: 760px; }
 }
 </style>
@@ -5888,6 +5891,13 @@ function mapEngine(D) {
     }
     // медленные облака: [картинка, ряд, скорость, где начинают]
     const clouds = D.clouds.map(([k, row, v, x0]) => ({ k, y: row * OU, v, x0 }));
+    // Широкий экран (v121): по морю вокруг острова плывут ещё облака — по одному на ~7 клеток высоты карты
+    // (на телефоне их не видно — wide: true).
+    if (wrap.closest("#mapview")) {
+      const rnd = seeded(71);
+      for (let y = 2 + rnd() * 3; y < MAP_H * MT / OU - 2; y += 6 + rnd() * 3)
+        clouds.push({ k: rnd() < 0.5 ? "sc_cloud1" : "sc_cloud2", y: y * OU, v: 3 + rnd() * 3.5, x0: rnd(), wide: true });
+    }
 
     function drawObj(o, t) {
       const [k, x, y, sc = 1, flip] = o;
@@ -5965,6 +5975,114 @@ function mapEngine(D) {
         + `width:${(w * sc / canvas.width * 100).toFixed(2)}%;animation-delay:${-i * 2.3}s`;
       cloudLayer.appendChild(im);
     });
+    // ===== Море вокруг острова на широком экране (компьютер, версия 121) =====
+    // Отдельный холст под картой во всю ширину окна, но высотой только в видимую часть карты (так он маленький
+    // и быстро рисуется). На нём та же вода, что на карте: рябь, камни в пене, утки поближе к острову.
+    // Где что стоит — не список, а «кубик» по номеру клетки (hsh): море бесконечное, а картинка всегда одна и та же.
+    const isWide = () => innerWidth >= 1200 && !!wrap.closest("#mapview");
+    let ocean = null, oc = null;
+    if (wrap.closest("#mapview")) {
+      ocean = document.createElement("canvas");
+      ocean.className = "oceanside"; ocean.setAttribute("aria-hidden", "true"); ocean.style.display = "none";
+      wrap.prepend(ocean); oc = ocean.getContext("2d");
+      ["duck", "wrock1", "wrock2", "wrock3", "wrock4", "cloud_a", "cloud_b", "cloud_c", "cloud_d"].forEach((k) => keys.add(k));
+    }
+    const isleSeed = +(wrap.dataset.isle || 1) * 97;   // у каждого острова своё море
+    const hsh = (a, b, s) => {
+      let h = Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(s + isleSeed, 1442695041) | 0;
+      h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+      return (h >>> 0) / 4294967296;
+    };
+    function drawOcean(t) {
+      if (!ocean) return;
+      const r = wrap.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.visualViewport?.height || innerHeight;
+      const b0 = Math.max(0, -r.top), b1 = Math.min(r.height, vh - r.top);
+      if (!isWide() || !r.height || b1 <= b0 || wrap.hidden) { ocean.style.display = "none"; return; }
+      const W = vw, H = Math.ceil(b1 - b0);
+      if (bankKey !== vw + "|" + Math.round(r.width) + "|" + Math.round(r.left)) placeBankSides();   // показали остров / сменился размер
+      if (ocean.width !== W || ocean.height !== H) { ocean.width = W; ocean.height = H; }
+      ocean.style.cssText = `display:block;left:${Math.round(-r.left)}px;top:${Math.round(b0)}px;width:${W}px;height:${H}px`;
+      const k = r.width / canvas.width, g = oc;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.fillStyle = TS_INFO.water; g.fillRect(0, 0, W, H);
+      g.setTransform(k, 0, 0, k, r.left, -b0);        // дальше рисуем в единицах холста карты
+      g.imageSmoothingEnabled = false;
+      const wy0 = b0 / k - 80, wy1 = b1 / k + 80, wl = -r.left / k, wr = (W - r.left) / k, cw = canvas.width;
+      const edge = (x) => (x < 0 ? -x : x - cw);       // насколько далеко от края карты
+      // рябь — как на карте: две светлые чёрточки, появляются, чуть сдвигаются и тают
+      g.fillStyle = RIPPLE;
+      for (let cy = Math.floor(wy0 / 32); cy * 32 < wy1; cy++) for (let cx = Math.floor(wl / 72); cx * 72 < wr; cx++) {
+        if (cx * 72 + 72 > -8 && cx * 72 < cw + 8) { if (cx * 72 < cw) cx = Math.floor(cw / 72); continue; }
+        if (hsh(cx, cy, 1) > 0.42) continue;
+        const per = 2400 + hsh(cx, cy, 2) * 2400, ph = hsh(cx, cy, 3) * 6.283, a = Math.sin(ph + t / per * 6.283);
+        if (a <= 0.1) continue;
+        const L = 22 + Math.floor(hsh(cx, cy, 4) * 22), dr = hsh(cx, cy, 5) < 0.5 ? -1 : 1;
+        const px = Math.round(cx * 72 + hsh(cx, cy, 6) * 40 + dr * Math.sin(ph + t / (per * 1.6)) * 9), py = cy * 32 + Math.floor(hsh(cx, cy, 7) * 20);
+        if (edge(px) < 12 && edge(px + L) < 12) continue;
+        g.globalAlpha = Math.min(0.75, a - 0.1);
+        g.fillRect(px, py, L, 4); g.fillRect(px + Math.round(L * 0.3), py + 8, Math.round(L * 0.55), 4);
+      }
+      g.globalAlpha = 1;
+      const step = MAP_STEP();
+      const sprite = (key, x, y, sc, ms, ph, flip) => {
+        const im = img[key]; if (!im) return;
+        const [n, fw, fh] = TS_INFO[key], f = n > 1 ? (Math.floor(t / Math.max(ms, step)) + ph) % n : 0, w = fw * sc, h = fh * sc;
+        if (flip) { g.save(); g.translate(Math.round(x + w / 2), Math.round(y - h)); g.scale(-1, 1); g.drawImage(im, f * fw, 0, fw, fh, 0, 0, Math.round(w), Math.round(h)); g.restore(); }
+        else g.drawImage(im, f * fw, 0, fw, fh, Math.round(x - w / 2), Math.round(y - h), Math.round(w), Math.round(h));
+      };
+      // камни в пене: редко, не у самого края карты (чтобы не резались ею)
+      const RC = 300;
+      for (let cy = Math.floor(wy0 / RC) - 1; cy * RC < wy1 + RC; cy++) for (let cx = Math.floor(wl / RC); cx * RC < wr; cx++) {
+        if (hsh(cx, cy, 11) > 0.3) continue;
+        const x = cx * RC + 40 + hsh(cx, cy, 12) * (RC - 80), y = cy * RC + 40 + hsh(cx, cy, 13) * (RC - 80);
+        if (x > -70 && x < cw + 70) continue;
+        sprite("wrock" + (1 + Math.floor(hsh(cx, cy, 14) * 4)), x, y, 0.7 + hsh(cx, cy, 15) * 0.4, 95, Math.floor(hsh(cx, cy, 16) * 16), hsh(cx, cy, 17) < 0.5);
+      }
+      // утки — у острова (до ~5 клеток от края карты), медленно покачиваются туда-сюда
+      const DC = 150;
+      for (let cy = Math.floor(wy0 / DC) - 1; cy * DC < wy1 + DC; cy++) for (let cx = Math.floor(wl / DC); cx * DC < wr; cx++) {
+        const x0 = cx * DC + 30 + hsh(cx, cy, 21) * (DC - 60), d = edge(x0);
+        if (d < 40 || d > 340 || hsh(cx, cy, 22) > 0.16 - d / 340 * 0.08) continue;
+        const ph = hsh(cx, cy, 23) * 6.283, flip = hsh(cx, cy, 24) < 0.5;
+        const x = x0 + Math.sin(ph + t / 5200) * 14 * (flip ? -1 : 1), y = cy * DC + 30 + hsh(cx, cy, 25) * (DC - 60) + Math.sin(ph + t / 1700) * 1.5;
+        sprite("duck", x, y, 1.3, 260, Math.floor(ph * 3), flip);
+        // за уткой бывают утята (0–3): плывут следом цепочкой, чуть меньше
+        const kids = Math.floor(hsh(cx, cy, 26) * 4), dir = flip ? 1 : -1;
+        for (let j = 1; j <= kids; j++)
+          sprite("duck", x + dir * (24 + j * 20), y + (j % 2 ? 6 : 1) + Math.sin(ph + j + t / 1500) * 1.5, 0.85, 260, Math.floor(ph * 3) + j, flip);
+      }
+    }
+    // Облачный берег (bank) у края карты тянется и над морем по бокам — а не обрывается у края острова
+    const bankSide = [];
+    let bankKey = "";
+    function placeBankSides() {
+      bankSide.forEach((im) => im.remove()); bankSide.length = 0; bankKey = "";
+      if (!isWide() || !BANK.length) return;
+      const r = wrap.getBoundingClientRect(), k = r.width / canvas.width, cw = canvas.width;
+      if (!r.width) return;                          // карта скрыта (другой остров) — посчитаем, когда покажут
+      bankKey = document.documentElement.clientWidth + "|" + Math.round(r.width) + "|" + Math.round(r.left);
+      const wl = -r.left / k, wr = (document.documentElement.clientWidth - r.left) / k;
+      const rows = [BANK.filter((b) => b[2] < 400), BANK.filter((b) => b[2] > canvas.height - 500)].filter((g) => g.length);
+      const KEYS = ["cloud_a", "cloud_c", "cloud_b", "cloud_d"];
+      rows.forEach((row, ri) => {
+        const y = row.reduce((s, b) => s + b[2], 0) / row.length, sc = row.reduce((s, b) => s + b[3], 0) / row.length;
+        const left = Math.min(...row.map((b) => b[1])), right = Math.max(...row.map((b) => b[1]));
+        const put = (x, i) => {
+          const key = KEYS[(i + ri) % 4], [, w] = TS_INFO[key], s2 = sc * (0.9 + ((i * 37) % 10) / 40);
+          const im = new Image(); im.src = TS[key]; im.alt = ""; im.className = "bank";
+          im.style.cssText = `left:${((x - w * s2 / 2) / cw * 100).toFixed(2)}%;top:${((y + ((i * 53) % 30) - 15) / canvas.height * 100).toFixed(3)}%;`
+            + `width:${(w * s2 / cw * 100).toFixed(2)}%;animation-delay:${-(i + 3) * 1.7}s`;
+          cloudLayer.prepend(im); bankSide.push(im);
+        };
+        let i = 0;
+        for (let x = Math.min(left, 0) - 330; x > wl - 300; x -= 330) put(x, i++);
+        for (let x = Math.max(right, cw) + 330; x < wr + 300; x += 330) put(x, i++);
+      });
+    }
+    if (ocean) {
+      let rz = 0;
+      addEventListener("resize", () => { cancelAnimationFrame(rz); rz = requestAnimationFrame((t) => { placeBankSides(); drawOcean(STILL ? 0 : t); placeClouds(STILL ? 0 : t); }); });
+    }
     const cloudEls = [];
     function placeClouds(t) {
       if (!cloudEls.length) clouds.forEach((c) => {
@@ -5976,9 +6094,13 @@ function mapEngine(D) {
         cloudLayer.appendChild(im);
         cloudEls.push(im);
       });
-      const span = canvas.width + 600, k = wrap.clientWidth / canvas.width;
+      // на широком экране облака летят от левого края окна до правого (море по бокам — тоже их небо)
+      const k = wrap.clientWidth / canvas.width, wide = isWide() && k > 0, r = wide ? wrap.getBoundingClientRect() : null;
+      const x0 = wide ? -r.left / k - 600 : -600, x1 = wide ? canvas.width + (document.documentElement.clientWidth - r.right) / k : canvas.width;
+      const span = x1 - x0;
       clouds.forEach((c, i) => {
-        const x = ((c.x0 * span + (t / 1000) * c.v * 4) % span) - 600;
+        cloudEls[i].hidden = !!c.wide && !wide;
+        const x = ((c.x0 * span + (t / 1000) * c.v * 4) % span) + x0;
         cloudEls[i].style.transform = `translateX(${Math.round(x * k)}px)`;
       });
     }
@@ -5989,6 +6111,7 @@ function mapEngine(D) {
         drawSea(st, t);
         drawObjs(objStrips[i], t);
       });
+      drawOcean(t);
       placeClouds(t);
     }
     let last = 0;
@@ -6006,6 +6129,7 @@ function mapEngine(D) {
     }, { passive: true, capture: true });
     return Promise.all([...keys].map((k) => tsImage(k).then((im) => (img[k] = im)))).then(() => {
       paintLand();
+      placeBankSides();
       frame(0, true);
       requestAnimationFrame(loop);   // при «без движения» цикл ничего не рисует, кадр стоит
       // Суша рисуется один раз. Телефон при нехватке памяти может очистить большой холст
@@ -12191,10 +12315,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 120;
+const APP_VERSION = 121;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 121, date: "2026-11-13", text: "На компьютере море вокруг острова теперь живое: рябь, камни в пене, утки с утятами, а облака плывут через весь экран.", en: "On a computer the sea around the island is alive now: ripples, foamy rocks, ducks with ducklings, and clouds drift across the whole screen." },
   { v: 120, date: "2026-11-13", text: "На компьютере игра снова на весь экран: поле уровня крупнее — до низа окна, программе больше места, а вокруг острова на карте — море.", en: "On a computer the game is full screen again: the level board is bigger (down to the bottom of the window), the program gets more room, and the sea surrounds the island on the map." },
   { v: 119, date: "2026-11-13", text: "Мелкие исправления.", en: "Small fixes." },
   { v: 118, date: "2026-11-12", text: "В настройках появилась связь с разработчиком: можно написать или отправить отчёт, если что-то не получается.", en: "Settings now have a way to contact the developer: send a message or a report if something isn’t working.", big: true },
