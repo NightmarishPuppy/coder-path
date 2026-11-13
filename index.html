@@ -849,6 +849,11 @@ html.still .tile.err { animation: none; }
   font-size: 13px; line-height: 1; color: #ffd54a; text-shadow: 0 1px 0 #000; animation: tile-arrow 1s ease-in-out infinite; }
 html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: none; box-shadow: 0 0 0 4px #ffd54a99; }
 .chips .chip.ifchip { border: 2px solid #5fd3a6; color: #5fd3a6; font-weight: 700; }
+/* «＋ ещё»: серая пунктирная кнопка — открывает изученные раньше инструменты (они с серой точкой) */
+.chips .chip.morechip { border: 2px dashed var(--muted); color: var(--fg); background: transparent; font-weight: 700; }
+#levelview.blk .chips .chip.morechip { flex: 0 0 auto; padding: 0 14px; font-size: 16px !important; }
+.chips .chip.extra { position: relative; }
+.chips .chip.extra::after { content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
 /* Свой приём (функция): розовая рамка с заголовком «🧩 приём»; вызов — розовая плитка с маленькой картинкой того,
    что внутри приёма (те же стрелки). Кнопка вызова в палитре выглядит так же, как плитка. */
 .bdef {
@@ -1880,6 +1885,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
           </span>
           <button class="chip" id="lb-else" hidden>＋ иначе</button>
           <button class="chip" id="lb-what" hidden></button>
+          <button class="chip" id="lb-side" hidden></button>
           <button class="chip" id="lb-done">готово</button>
         </div>
       </div>
@@ -3912,15 +3918,17 @@ const LEVELS = [
     isle: 4,
     funcs: true, requireFn: true,
     loopButton: true,
+    more: true, moreIfs: ["enemy"],
+    crownPar: 6, crownGood: 7,
     after: "Крепкий в строю",
     goal: "Собери, как у ворот: «🔁 повторять» и [[fnbtn]]. Над дорогой стоит великан — у него шесть сердечек. Его можно просто пройти. А кто его победит, получит корону 👑. Говорят, он бьёт медленно…",
-    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    commands: ["moveRight", "attack"],
     par: 3, good: 4,
     map: [
       "#########",
       "####V####",
       "####.####",
-      "SGGG.GGGE",
+      "SGGG..GGE",
       "#########",
     ],
     starter: {
@@ -3981,14 +3989,16 @@ const LEVELS = [
     challenge: true,
     requireFn: true,
     loopButton: true,
+    more: true, moreIfs: ["enemy"],
+    crownPar: 6, crownGood: 7,
     goal: "Испытание: прорубись к воротам. Приём пустой, программа пустая, карта длинная [[pages]]. В строю есть крепкий гоблин. А в нише у ворот ждёт великан — за него корона 👑.",
-    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    commands: ["moveRight", "attack"],
     par: 3, good: 4,
     map: [
       "##################",
       "##############V###",
       "##############.###",
-      "SGG.B..GG.G..G.G.E",
+      "SGG.B..GG.G..G..GE",
       "##################",
     ],
     starter: {
@@ -4861,6 +4871,8 @@ const PROPS = {
 function loadLevel(i) {
   levelIdx = i;
   L = LEVELS[i];
+  addLearnedTools(L, i);
+  moreOpen = false;
   setTimeout(() => logEv("level", { code: oneLine(codeEl.value) }), 0);
   if (typeof statOpen === "function") statOpen(L.name);
   save.currentName = L.name;
@@ -4876,7 +4888,8 @@ function loadLevel(i) {
   $("goal").classList.remove("open");
   $("goal-more").textContent = tr("ещё ▾");   // задание свёрнуто — и надпись «ещё», а не «свернуть» с прошлого уровня
   requestAnimationFrame(() => { const g = $("goal"); $("goal-more").hidden = !(uiBlocks && g.scrollHeight > g.clientHeight + 2); });
-  $("par").innerHTML = tr('<span class="star">★★★</span> — не больше {par} {cmd} в коде, <span class="star">★★</span> — не больше {good}', { par: L.par, cmd: cmdWord(L.par), good: L.good });
+  $("par").innerHTML = tr('<span class="star">★★★</span> — не больше {par} {cmd} в коде, <span class="star">★★</span> — не больше {good}', { par: L.par, cmd: cmdWord(L.par), good: L.good })
+    + (L.crownPar ? tr('. С короной 👑 <span class="star">★★★</span> — не больше {n}', { n: L.crownPar }) : "");
   $("hint").innerHTML = tr(lang === "py"
     ? "Если код кончается циклом, кнопки ставят команду внутрь него с отступом. В Python отступ (4 пробела) и значит «внутри цикла»."
     : "Если код кончается циклом, кнопки ставят команду внутрь фигурных скобок. Звёзды считаются по числу команд в тексте кода.");
@@ -8467,6 +8480,33 @@ function drawEnemies(hpLeft) {
 }
 
 // ===== 6. Кнопки для телефона =====
+// ===== «＋ ещё»: все изученные инструменты =====
+// У уровня с more: true в палитре сначала только то, что нужно для ★★★. Кнопка «＋ ещё» открывает
+// всё, что игрок уже изучил раньше (стрелки, повторять, «если», «иначе», условия): так можно найти
+// своё решение — например, победить великана. Код с этими инструментами работает и без открытия кнопки.
+let moreOpen = false;
+const ARENA_ONLY = ["heal", "goToEnemy"];
+function addLearnedTools(lv, i) {
+  if (!lv.more || lv._base) return;
+  lv._base = { commands: [...lv.commands], ifs: [...(lv.ifs || [])], ifButton: !!lv.ifButton, elseButton: !!lv.elseButton, loopButton: !!lv.loopButton };
+  const cmds = new Set(lv.commands), ifs = [...(lv.ifs || [])];
+  let ifB = !!lv.ifButton, elseB = !!lv.elseButton, loopB = !!lv.loopButton;
+  for (let k = 0; k < i; k++) {
+    const o = LEVELS[k]._base || LEVELS[k];
+    if (LEVELS[k].arena) continue;                       // на арене свои команды — им тут не место
+    o.commands.forEach((c) => { if (!ARENA_ONLY.includes(c)) cmds.add(c); });
+    (o.ifs || []).forEach((w) => { if (w !== "near" && !ifs.includes(w)) ifs.push(w); });
+    ifB ||= !!o.ifButton; elseB ||= !!o.elseButton; loopB ||= !!o.loopButton;
+  }
+  // главные условия уровня — первыми (их ставит кнопка «если»)
+  for (const w of lv.moreIfs || []) { const j = ifs.indexOf(w); if (j > 0) { ifs.splice(j, 1); ifs.unshift(w); } }
+  lv.commands = ALL_COMMANDS.filter((c) => cmds.has(c));
+  lv.ifs = ifs;
+  lv.ifButton = ifB; lv.elseButton = elseB; lv.loopButton = loopB;
+}
+// инструмент из «＋ ещё» (не нужен для ★★★)
+const isExtra = (kind, name) => !!L._base && (kind === "cmd" ? !L._base.commands.includes(name) : !L._base[kind]);
+
 function buildChips() {
   chipsEl.innerHTML = "";
   const add = (id, cls, text, onClick) => {
@@ -8476,22 +8516,25 @@ function buildChips() {
     b.textContent = text;
     b.addEventListener("click", onClick);
     chipsEl.appendChild(b);
+    return b;
   };
+  const extra = (b, on) => { if (on) { b.classList.add("extra"); b.hidden = !moreOpen; } };
   L.commands.forEach((name) => {
-    add("add-" + name, "mv " + DIRS[name].axis + (L.newCommands?.includes(name) ? " new" : ""), uiBlocks ? DIRS[name].arrow : `${DIRS[name].arrow} ${disp(name)}`,
+    extra(add("add-" + name, "mv " + DIRS[name].axis + (L.newCommands?.includes(name) ? " new" : ""), uiBlocks ? DIRS[name].arrow : `${DIRS[name].arrow} ${disp(name)}`,
       () => selLine && DEF_LINE.test(codeEl.value.split("\n")[selLine - 1] ?? "") ? putIntoDef(disp(name))
-        : selLine ? putCommandOnLine(disp(name)) : insertLine(disp(name) + (lang === "py" ? "()" : "();")));
+        : selLine ? putCommandOnLine(disp(name)) : insertLine(disp(name) + (lang === "py" ? "()" : "();"))), isExtra("cmd", name));
   });
   if (L.loopButton) {
-    add("add-loop", "new loopchip", (uiBlocks ? "🔁 " : "↻ ") + tr("повторять"), () => {
+    extra(add("add-loop", "new loopchip", (uiBlocks ? "🔁 " : "↻ ") + tr("повторять"), () => {
       const code = codeEl.value.replace(/\s+$/, "");
       codeEl.value = (code ? code + "\n" : "") + (lang === "py" ? "while True:\n" : "while (true) {\n\n}\n");
       onCodeChange();
-    });
+    }), isExtra("loopButton"));
   }
   if (L.ifButton) {
-    add("add-if", "ifchip" + (L.newIf ? " new" : ""), (uiBlocks ? "❓ " : "? ") + tr("если"), () => {
-      const c = condDisp(levelConds()[0]);
+    extra(add("add-if", "ifchip" + (L.newIf ? " new" : ""), (uiBlocks ? "❓ " : "? ") + tr("если"), () => {
+      const conds = levelConds();
+      const c = condDisp(conds.find((x) => CONDS[x].what === L.ifs[0] && CONDS[x].move === "moveRight") || conds[0]);
       const lines = codeEl.value.replace(/\s+$/, "").split("\n").filter((l, i, a) => a.length > 1 || l.trim());
       const at = selLine ? Math.min(selLine, lines.length) : lines.length;   // после выбранной строки или в конец
       let ind = at ? (lines[at - 1].match(/^ */)[0]) : "";
@@ -8503,7 +8546,7 @@ function buildChips() {
       selLine = at + 1;                       // рамка выбрана: следующая стрелка ляжет в неё
       onCodeChange();
       drawCode();
-    });
+    }), isExtra("ifButton"));
   }
   // Кнопки своих приёмов: по одной на каждый приём в коде. Нажал — вызов приёма встаёт в конец
   // программы (или после выбранной плитки, если она не внутри приёма). На кнопке — те же стрелки,
@@ -8513,6 +8556,18 @@ function buildChips() {
     const b = $("add-fn-" + nm);
     b.innerHTML = uiBlocks ? `🧩${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
     b.setAttribute("aria-label", tr("Приём") + " " + nm);
+  }
+  // «＋ ещё» — открыть всё, что изучено раньше; «－ меньше» — спрятать обратно
+  if (chipsEl.querySelector(".extra")) {
+    const mb = add("more-tools", "morechip", moreOpen ? tr("－ меньше") : tr("＋ ещё"), () => {
+      moreOpen = !moreOpen;
+      chipsEl.querySelectorAll(".extra").forEach((b) => { b.hidden = !moreOpen; });
+      mb.textContent = moreOpen ? tr("－ меньше") : tr("＋ ещё");
+      mb.setAttribute("aria-expanded", String(moreOpen));
+      logEv("set", { b: moreOpen ? "ещё: открыто" : "ещё: закрыто" });
+      if (typeof fitBlocks === "function") fitBlocks();
+    });
+    mb.setAttribute("aria-expanded", String(moreOpen));
   }
   if (uiBlocks) { const br = document.createElement("span"); br.style.flexBasis = "100%"; chipsEl.appendChild(br); }
   [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
@@ -8634,6 +8689,12 @@ function inDefAt(lines, ln) {
 function insertCall(nm) {
   const call = nm + (lang === "py" ? "()" : "();");
   const lines = codeEl.value.replace(/\s+$/, "").split("\n");
+  // выбрана рамка цикла / «если» / «иначе» — вызов ложится в неё, как стрелка
+  if (selLine && selLine <= lines.length && !inDefAt(lines, selLine) && /^\s*(\}\s*)?(while|for|if|elif|else)\b/.test(lines[selLine - 1])) {
+    putCommandOnLine(nm);
+    drawCode();
+    return;
+  }
   if (selLine && selLine <= lines.length && !inDefAt(lines, selLine) && !DEF_LINE.test(lines[selLine - 1])
       && !/^\s*(while|for|if|elif|else)\b/.test(lines[selLine - 1])) {
     const ind = lines[selLine - 1].match(/^ */)[0];
@@ -8676,8 +8737,16 @@ function putCommandOnLine(name) {
       lines[i] = line.replace(re, (m, _old, open, args, close) => name + open + args + close);
     } else if (line.trim() === "") {
       lines[i] = indent + name + (lang === "py" ? "()" : "();");
+    } else if (/^\s*(\}\s*)?(while|for|if|elif|else)\b/.test(line)) {
+      // выбрана рамка (цикл, «если», «иначе»): шаг ложится в конец рамки, а рамка остаётся выбранной —
+      // можно сразу нажать следующую стрелку (рамка собирается подряд: ↑, ⚔, ↓ — как приём)
+      const fr = findFrames(lines.join("\n")).find((f) => f.start === selLine);
+      let at = fr ? fr.end : i + 1;
+      if (lang === "js" && fr) at = fr.end - 1;                  // перед закрывающей }
+      while (at > i + 1 && lines[at - 1].trim() === "") at--;    // пустые строки в конце — не тело
+      lines.splice(at, 0, indent + " ".repeat(INDENT()) + name + (lang === "py" ? "()" : "();"));
     } else {
-      const inside = /^\s*(\}\s*)?(while|for|if|elif|else|def|function)\b/.test(line) ? INDENT() : 0;
+      const inside = /^\s*(\}\s*)?(def|function)\b/.test(line) ? INDENT() : 0;
       lines.splice(i + 1, 0, indent + " ".repeat(inside) + name + (lang === "py" ? "()" : "();"));
       selLine = i + 2;
     }
@@ -10895,10 +10964,12 @@ function win() {
   }
   const wasChapterLocked = L.challenge && !chapterOpen(L.chapter + 1);
   const written = countWrittenCommands(codeEl.value);
-  const stars = written <= L.par ? 3 : written <= L.good ? 2 : 1;
   // корона: на уровне был великан, и рыцарь его победил
   const giants = enemies.filter((e) => e.giant);
   const crown = giants.length > 0 && !!plan?.hpLeft && giants.every((e) => (plan.hpLeft.get(enemyKey(e.x, e.y)) || 0) <= 0);
+  // путь с победой над великаном длиннее — для него свои пороги звёзд (crownPar / crownGood)
+  const par = crown && L.crownPar ? L.crownPar : L.par, good = crown && L.crownGood ? L.crownGood : L.good;
+  const stars = written <= par ? 3 : written <= good ? 2 : 1;
   const newCrown = crown && !save.crowns?.[L.name];
   if (crown) (save.crowns ||= {})[L.name] = 1;
   if (typeof statWin === "function") statWin(L.name, crown);
@@ -10908,7 +10979,7 @@ function win() {
 
   $("win-stars").innerHTML = starsHtml(stars) + (crown ? ` <span class="win-crown">👑</span>` : "");
   let note = tr("В коде {n} {w}.", { n: written, w: plural(written, "команда", "команды", "команд") });
-  note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: L.par }) : tr(" Идеально!");
+  note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(" Идеально!");
   if (crown) note += newCrown ? tr(" Ты победил великана — у тебя корона!") : tr(" Великан снова повержен.");
   else if (giants.length && !save.crowns?.[L.name]) note += tr(" Говорят, великана можно победить. Кто сумеет — получит корону.");
   const nextCh = CHAPTERS[L.chapter + 1];
@@ -11112,9 +11183,14 @@ function drawLineBar() {
   $("lb-else").hidden = !ifm || !L.elseButton || ELSE_LINE.test(after) || /^\s*elif\b/.test(after);
   const whats = L.ifs || [];
   $("lb-what").hidden = !ifm || whats.length < 2;
+  // сменить сторону условия (справа → сверху → слева → снизу) — на уровнях с «＋ ещё»
+  $("lb-side").hidden = !ifm || !L._base;
   if (ifm) {
     const k = CONDS[condKey(ifm[2])];
     $("lb-what").textContent = `${WHAT_RU[k.what]} ⇄ ${WHAT_RU[whats.find((w) => w !== k.what) || k.what]}`;
+    $("lb-side").textContent = `${k.arrow} ⟳`;
+    const sl = tr("Сменить сторону: сейчас {s}", { s: k.ru });
+    $("lb-side").setAttribute("aria-label", sl); $("lb-side").title = sl;
   }
   const full = tr(DEF_LINE.test(line) ? "Нажимай кнопки команд — шаги лягут в приём" : ifm ? ($("lb-else").hidden ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»"
       : "Кнопка команды — шаг внутрь «если»; «＋ иначе» — добавить «иначе»") : isElse ? "Рамка «иначе»: что делать, если нет"
@@ -11170,6 +11246,14 @@ $("lb-else").addEventListener("click", () => {
     if (lang === "py") { lines.splice(fr.end, 0, ind + "else:"); selLine = fr.end + 1; }
     else { lines[fr.end - 1] = lines[fr.end - 1].replace(/\}\s*$/, "} else {"); lines.splice(fr.end, 0, ind + "}"); selLine = fr.end; }
   });
+});
+$("lb-side").addEventListener("click", () => {
+  const lines = codeEl.value.split("\n"), m = (lines[selLine - 1] ?? "").match(IF_LINE);
+  if (!m) return;
+  const k = CONDS[condKey(m[2])], order = ["moveRight", "moveUp", "moveLeft", "moveDown"];
+  const next = order[(order.indexOf(k.move) + 1) % 4];
+  const c = COND_NAMES.find((x) => CONDS[x].what === k.what && CONDS[x].move === next);
+  if (c) editLines((ls) => { ls[selLine - 1] = ls[selLine - 1].replace(m[2], condDisp(c)); });
 });
 $("lb-what").addEventListener("click", () => {
   const lines = codeEl.value.split("\n"), m = (lines[selLine - 1] ?? "").match(IF_LINE);
@@ -12620,10 +12704,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 127;
+const APP_VERSION = 128;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 128, date: "2026-11-14", text: "У великанов теперь можно найти короткий путь к короне. Кнопка «＋ ещё» открывает все изученные инструменты.", en: "There is now a short way to win the crown from the giants. The “＋ more” button opens every tool you have learned." },
   { v: 127, date: "2026-11-14", text: "Новая глава на Острове мастеров — «Осада мастерской»: шесть уровней, и в каждом бой. А ещё великаны: их можно обойти, но кто победит — получит корону 👑.", en: "A new chapter on the Island of Masters — “Siege of the Workshop”: six levels, a fight in every one. And giants: you can walk past them, but whoever beats one gets a crown 👑.", big: true },
   { v: 126, date: "2026-11-13", text: "В настройках появилась кнопка «Сообщество»: канал игры в Telegram.", en: "There is a new Community button in settings: the game’s Telegram channel." },
   { v: 125, date: "2026-11-13", text: "Мелкие исправления.", en: "Small fixes." },

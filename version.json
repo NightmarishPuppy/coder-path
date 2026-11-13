@@ -1,21 +1,21 @@
 {
- "version": 127,
+ "version": 128,
  "date": "2026-11-14",
  "notes": [
-  "Новая глава на Острове мастеров — «Осада мастерской»: шесть уровней, и в каждом бой. А ещё великаны: их можно обойти, но кто победит — получит корону 👑."
+  "У великанов теперь можно найти короткий путь к короне. Кнопка «＋ ещё» открывает все изученные инструменты."
  ],
  "files": {
   "index.html": {
-   "size": 808880,
-   "hash": "69e466b5b564e994"
+   "size": 815608,
+   "hash": "63e91ac0427bcc5a"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 93193,
-   "hash": "8a2d41b7600e30be"
+   "size": 93506,
+   "hash": "de2fbe13e398c01a"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "a35fa0fc0c00b9f6"
+   "hash": "a75767eb3334116d"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A new chapter on the Island of Masters — “Siege of the Workshop”: six levels, a fight in every one. And giants: you can walk past them, but whoever beats one gets a crown 👑."
+  "There is now a short way to win the crown from the giants. The “＋ more” button opens every tool you have learned."
  ]
 }

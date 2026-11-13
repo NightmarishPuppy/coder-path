@@ -80,6 +80,10 @@ var EN = {
   " Великан снова повержен.": " The giant is down again.",
   " Говорят, великана можно победить. Кто сумеет — получит корону.": " They say the giant can be beaten. Whoever manages it gets a crown.",
   "мимо!": "miss!",
+  "＋ ещё": "＋ more",
+  "－ меньше": "－ less",
+  "Сменить сторону: сейчас {s}": "Change side: now {s}",
+  '. С короной 👑 <span class="star">★★★</span> — не больше {n}': '. With the crown 👑 <span class="star">★★★</span> — no more than {n}',
 
   // --- условия «если» ---
   "справа": "on the right", "слева": "on the left", "снизу": "below", "сверху": "above", "рядом": "nearby",
