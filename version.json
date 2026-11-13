@@ -1,13 +1,13 @@
 {
- "version": 124,
+ "version": 125,
  "date": "2026-11-13",
  "notes": [
-  "Крестик для закрытия окон стал крупным и заметным."
+  "Мелкие исправления."
  ],
  "files": {
   "index.html": {
-   "size": 787476,
-   "hash": "e0c87b62f50aecd5"
+   "size": 788055,
+   "hash": "a7aadcb6c349905a"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "3bbbe5e9b0d02b0d"
+   "hash": "c4fed9b7fc3157cd"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The close button on windows is now big and easy to see."
+  "Small fixes."
  ]
 }
