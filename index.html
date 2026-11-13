@@ -3940,6 +3940,31 @@ const LEVELS = [
     },
   },
   {
+    // Перед великаном: вопрос «если» умеет смотреть в любую сторону — кнопки ❓← ❓↑ ❓↓ ❓→ у выбранной рамки.
+    // Над дорогой вперемешку гоблины и свои: «бей всегда» задевает своего, «не бей» — гоблин бьёт сверху.
+    name: "Часовые над дорогой",
+    chapter: 14,
+    isle: 4,
+    sides: true,
+    after: "Крепкий в строю",
+    goal: "Нажми на номер строки [[line:2]] и на [[side:moveUp]]. Гоблины стоят над дорогой, а «если» смотрит вправо и их не видит. Зелёные кнопки поворачивают вопрос: враг справа, сверху, слева или снизу. Бить всё подряд нельзя — рядом свои.",
+    commands: ["moveRight", "attack"],
+    ifs: ["enemy"],
+    par: 2, good: 3,
+    allies: [{ at: [3, 2], kind: "pawn" }, { at: [6, 2], kind: "archer" }],
+    map: [
+      "#########",
+      "#########",
+      "##G##G#G#",
+      "S.......E",
+      "#########",
+    ],
+    starter: {
+      py: "while True:\n    if enemy_right():\n        attack()\n    move_right()\n",
+      js: "while (true) {\n  if (enemyRight()) {\n    attack();\n  }\n  moveRight();\n}\n",
+    },
+  },
+  {
     name: "Великан",
     chapter: 14,
     isle: 4,
@@ -3947,7 +3972,7 @@ const LEVELS = [
     loopButton: true,
     more: true, moreIfs: ["enemy"],
     crownPar: 6, crownGood: 7,
-    after: "Крепкий в строю",
+    after: "Часовые над дорогой",
     goal: "Собери, как у ворот: «🔁 повторять» и [[fnbtn]]. Над дорогой стоит великан — у него шесть сердечек. Его можно просто пройти. А кто его победит, получит корону 👑. Говорят, он бьёт медленно…",
     commands: ["moveRight", "attack"],
     par: 3, good: 4,
@@ -4049,6 +4074,8 @@ function btnRefs(html) {
     .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ ${tr("если")} <span class="ar">→</span> ${WHAT_RU[CONDS[levelConds()[0]]?.what || "wall"]}</span>`)
     // [[pages]] или [[pages:3]] — кнопки частей длинной карты, как на поле
     .replace(/\[\[pages(?::(\d))?\]\]/g, (m, k) => `<span class="pagesref">${Array.from({ length: +(k || 2) }, (_, i) => `${i ? "<i></i>" : ""}<b>${i + 1}</b>`).join("")}</span>`)
+    // [[side:moveUp]] — зелёная кнопка стороны вопроса «❓↑» из панели выбранной рамки «если»
+    .replace(/\[\[side:(\w+)\]\]/g, (m, n) => `<span class="ifbtnref">❓${DIRS[n].arrow}</span>`)
     .replace(/\[\[ifbtn\]\]/g, () => `<span class="ifbtnref">${uiBlocks ? "❓ " : "? "}${tr("если")}</span>`)
     // [[elsebtn]] — кнопка «＋ иначе» серой панели выбранной строки; [[elsehead]] — заголовок половины «иначе» в рамке
     .replace(/\[\[elsebtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("иначе")}</span>`)
@@ -5557,7 +5584,7 @@ ISLE_MAPS[3] = {
 // @@/isle3@@
 // @@isle4@@
 ISLE_MAPS[4] = {
-  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350]],
+  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350], [250, 350]],
   rows: [
     "....................................",
     "....................................",
@@ -9444,6 +9471,7 @@ const BLOCK_GOALS = {
   // Осада мастерской: приём в цикле
   "Строй у ворот": "Нажми «🔁 повторять», потом [[fnbtn]]. Приём «удар и шаг» уже готов, а цикл будет звать его снова и снова — через весь строй гоблинов до ворот.",
   "Крепкий в строю": "Нажми на [[tile:attack:1]] в розовой рамке и на [[num:2]]. В строю крепкий гоблин: одного удара ему мало. Поправишь приём — каждый удар в цикле станет двойным.",
+  "Часовые над дорогой": "Нажми на [[ifhead]] и на [[side:moveUp]]. Гоблины стоят над дорогой, а «если» смотрит вправо и их не видит. Зелёные кнопки поворачивают вопрос: враг справа, сверху, слева или снизу. Бить всё подряд нельзя — рядом свои.",
   "Великан": "Собери, как у ворот: «🔁 повторять» и [[fnbtn]]. Над дорогой стоит великан — у него шесть сердечек. Его можно просто пройти. А кто его победит, получит корону 👑. Говорят, он бьёт медленно…",
   "Не тот порядок": "Нажми на [[tile:attack:1]] в розовой рамке и на [[tool:earlier]]. В приёме рыцарь сначала шагает, а потом бьёт — и с разбегу врезается в гоблина. Карта длинная [[pages]]: строй тянется дальше.",
   "Штурм лестницы": "Нажми [[fnhead]], потом [[btn:attack]], [[btn:moveRight]] и [[btn:moveUp]]. На каждой ступеньке гоблин: ударить, шагнуть, подняться — и так до самого верха.",
@@ -11013,7 +11041,7 @@ function win() {
   const newCrown = crown && !save.crowns?.[L.name], newGem = gem && !save.gems?.[L.name];
   if (crown) (save.crowns ||= {})[L.name] = 1;
   if (gem) (save.gems ||= {})[L.name] = 1;
-  if (typeof statWin === "function") statWin(L.name, crown, gem);
+  if (typeof statWin === "function") statWin(L.name, crown, gem, missing);
   save.stars[L.name] = Math.max(save.stars[L.name] || 0, stars);
   writeSave();
   logEv("win", { stars, written, crown, gem, missing });
@@ -11228,7 +11256,7 @@ function drawLineBar() {
   $("lb-what").hidden = !ifm || whats.length < 2;
   // сторона условия: четыре зелёные кнопки «❓→ ❓↑ ❓← ❓↓», выбранная подсвечена — на уровнях с «＋ ещё»
   const sides = $("lb-sides");
-  sides.hidden = !ifm || !L._base;
+  sides.hidden = !ifm || !(L._base || L.sides);
   if (ifm) {
     const k = CONDS[condKey(ifm[2])];
     $("lb-what").textContent = `${WHAT_RU[k.what]} ⇄ ${WHAT_RU[whats.find((w) => w !== k.what) || k.what]}`;
@@ -12760,10 +12788,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 131;
+const APP_VERSION = 132;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 132, date: "2026-11-14", text: "Новый уровень в «Осаде мастерской» — «Часовые над дорогой»: вопрос «если» теперь можно повернуть вверх, вниз и влево.", en: "A new level in “Siege of the Workshop” — “Sentries above the Road”: the “if” question can now be turned up, down and left." },
   { v: 131, date: "2026-11-14", text: "Цель 💎 теперь показана только на уровнях, где решение короче действительно есть. Мелкие исправления.", en: "The 💎 goal is now shown only on levels where a shorter solution really exists. Small fixes." },
   { v: 130, date: "2026-11-14", text: "Победу больше не отнимают: если рыцарь дошёл, уровень пройден (без нужного приёма или цикла — до ★★). Корона за великана — при любом решении. А кто напишет программу короче, чем у разработчика, получит 💎.", en: "The win is never taken away now: if the knight made it, the level is passed (without the needed function or loop — up to ★★). The giant’s crown is yours with any solution. And whoever writes a program shorter than the developer’s gets a 💎.", big: true },
   { v: 129, date: "2026-11-14", text: "У рамки «если» появились кнопки сторон ❓← ❓↑ ❓↓ ❓→: теперь можно спросить, есть ли враг сверху, снизу или слева.", en: "The “if” frame now has side buttons ❓← ❓↑ ❓↓ ❓→: you can ask whether there is an enemy above, below or on the left." },
@@ -13237,7 +13266,10 @@ const statOn = () => /\.github\.io$|(^|\.)itch\.zone$|(^|\.)hwcdn\.net$/.test(lo
 let statDirty = false;
 function statRun(name) { const r = (stat.lv[name] ||= [0, 0, 0]); r[0]++; if (statVisit && statVisit.name === name) statVisit.ran = true; statDirty = true; statSave(); statSoon(2000); }
 // четвёртое число — победил ли великана (корона)
-function statWin(name, crown, gem) { const r = (stat.lv[name] ||= [0, 0, 0]); if (!r[1]) { r[1] = 1; r[2] = r[0]; } if (crown) r[3] = 1; if (gem) r[4] = 1; statDirty = true; statSave(); statSoon(3000); }
+function statWin(name, crown, gem, missing) { const r = (stat.lv[name] ||= [0, 0, 0]); if (!r[1]) { r[1] = 1; r[2] = r[0]; } if (crown) r[3] = 1; if (gem) r[4] = 1;
+  if (!missing) r[5] = 0; else if (r[5] !== 0) r[5] = 1;
+  for (let k = 3; k < 5; k++) r[k] ||= 0;   // без пропусков в списке   // 1 — проходил только без инструмента урока (цикла / приёма)
+  statDirty = true; statSave(); statSoon(3000); }
 // открытия уровня (stat.op) и уходы без единого «Запустить» (stat.nr) — по каждому уровню
 let statVisit = null;   // уровень, открытый сейчас: { name, ran }
 function statOpen(name) {
@@ -13314,12 +13346,12 @@ function statHtml(all) {
   h += bars("Версия игры", "v", {});
   // уровни: сколько пробовали, прошли, сколько попыток; где застревают — пробовали, но не прошли
   h += `<h3 class="st-h">Уровни</h3><p class="st-note">Пробовали — нажимали «Запустить». Прошли — % от пробовавших (красным — меньше 60 %). Попыток — в среднем до первой победы. Бросили — пробовали, не прошли и потом не играли 3+ дня.</p>`;
-  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th></tr>`;
+  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th><th>Без урока</th></tr>`;
   let isle = 0;
   LEVELS.forEach((lv) => {
     const n = lv.isle || 1;
-    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="9">${esc(ISLE_NAMES[n])}</td></tr>`; }
-    let opened = 0, left = 0, tried = 0, won = 0, tries = 0, quit = 0, crowned = 0, gems = 0;
+    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="10">${esc(ISLE_NAMES[n])}</td></tr>`; }
+    let opened = 0, left = 0, tried = 0, won = 0, tries = 0, quit = 0, crowned = 0, gems = 0, noTool = 0;
     for (const d of all) {
       opened += d.op?.[lv.name] || 0;
       left += d.nr?.[lv.name] || 0;
@@ -13328,13 +13360,14 @@ function statHtml(all) {
       tried++;
       if (r[3]) crowned++;
       if (r[4]) gems++;
+      if (r[5] === 1) noTool++;
       if (r[1]) { won++; tries += r[2] || r[0]; } else if (ago(d) > 3) quit++;
     }
     const pct = tried ? Math.round(won / tried * 100) : null;
     h += `<tr><td>${esc(lvName(lv.name))}</td><td>${opened || ""}</td><td>${left || ""}</td><td>${tried || ""}</td><td class="${pct !== null && pct < 60 && tried >= 3 ? "low" : ""}">${pct === null ? "" : pct + " %"}</td>`
-      + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td><td>${hasGiant(lv) ? crowned : ""}</td><td>${gems || ""}</td></tr>`;
+      + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td><td>${hasGiant(lv) ? crowned : ""}</td><td>${gems || ""}</td><td>${noTool || ""}</td></tr>`;
   });
-  return h + `</table><p class="st-note">«Открыли» — сколько раз уровень открывали на всех устройствах. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
+  return h + `</table><p class="st-note">«Без урока» — прошли, но ни разу с тем, чему учит уровень (без цикла или приёма). «Открыли» — сколько раз уровень открывали на всех устройствах. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
 }
 async function openStats() {
   sfx("tap");

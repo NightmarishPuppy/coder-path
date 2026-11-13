@@ -1,21 +1,21 @@
 {
- "version": 131,
+ "version": 132,
  "date": "2026-11-14",
  "notes": [
-  "Цель 💎 теперь показана только на уровнях, где решение короче действительно есть. Мелкие исправления."
+  "Новый уровень в «Осаде мастерской» — «Часовые над дорогой»: вопрос «если» теперь можно повернуть вверх, вниз и влево."
  ],
  "files": {
   "index.html": {
-   "size": 822268,
-   "hash": "2743caf7ec37e6e4"
+   "size": 825306,
+   "hash": "5c1446be0a878335"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 94910,
-   "hash": "3d4f44ca97c7aa88"
+   "size": 95540,
+   "hash": "0915e036dad1afa4"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "5e4330a8bb257212"
+   "hash": "3e2f648a70384cc1"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The 💎 goal is now shown only on levels where a shorter solution really exists. Small fixes."
+  "A new level in “Siege of the Workshop” — “Sentries above the Road”: the “if” question can now be turned up, down and left."
  ]
 }
