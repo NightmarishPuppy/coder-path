@@ -12315,10 +12315,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 121;
+const APP_VERSION = 122;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 122, date: "2026-11-13", text: "В Telegram на компьютере игра снова открывается на весь экран.", en: "In Telegram on a computer the game opens full screen again." },
   { v: 121, date: "2026-11-13", text: "На компьютере море вокруг острова теперь живое: рябь, камни в пене, утки с утятами, а облака плывут через весь экран.", en: "On a computer the sea around the island is alive now: ripples, foamy rocks, ducks with ducklings, and clouds drift across the whole screen." },
   { v: 120, date: "2026-11-13", text: "На компьютере игра снова на весь экран: поле уровня крупнее — до низа окна, программе больше места, а вокруг острова на карте — море.", en: "On a computer the game is full screen again: the level board is bigger (down to the bottom of the window), the program gets more room, and the sea surrounds the island on the map." },
   { v: 119, date: "2026-11-13", text: "Мелкие исправления.", en: "Small fixes." },
@@ -12930,9 +12931,9 @@ function initTelegram() {
 // там игра развернулась бы на весь монитор.
 function tgFullscreen() {
   if (!tgOk("8.0")) return;
-  // На компьютере (Telegram Desktop, macOS, веб) — как настроено в BotFather (Fullscreen): большое окно нужно для кода.
-  // Сами не просим и не выходим (v117 выходил — для программирования окно становилось слишком маленьким; v120 — вернули).
-  if (!/^(ios|android)/.test(tg.platform)) return;
+  // Во весь экран просим везде, и на компьютере (Telegram Desktop, macOS): там без просьбы окно маленькое,
+  // а для кода нужно большое (v117 выходил из полноэкранного, v120 перестал выходить, но не просил — v122 просит).
+  try { tg.expand(); } catch (e) {}
   const ask = () => { try { if (!tg.isFullscreen) tg.requestFullscreen(); } catch (e) {} };
   try { tg.onEvent("fullscreenFailed", (e) => logEv("set", { b: `Telegram: во весь экран нельзя (${e?.error || "?"})` })); } catch (e) {}
   ask();

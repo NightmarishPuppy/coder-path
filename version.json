@@ -1,13 +1,13 @@
 {
- "version": 121,
+ "version": 122,
  "date": "2026-11-13",
  "notes": [
-  "На компьютере море вокруг острова теперь живое: рябь, камни в пене, утки с утятами, а облака плывут через весь экран."
+  "В Telegram на компьютере игра снова открывается на весь экран."
  ],
  "files": {
   "index.html": {
-   "size": 784799,
-   "hash": "22651d490ad81205"
+   "size": 784976,
+   "hash": "015cdc0e687e65f7"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "d9fa23cf61f24aa3"
+   "hash": "433c13b9a99a4681"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "On a computer the sea around the island is alive now: ripples, foamy rocks, ducks with ducklings, and clouds drift across the whole screen."
+  "In Telegram on a computer the game opens full screen again."
  ]
 }
