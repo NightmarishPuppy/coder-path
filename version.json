@@ -1,13 +1,13 @@
 {
- "version": 122,
+ "version": 123,
  "date": "2026-11-13",
  "notes": [
-  "В Telegram на компьютере игра снова открывается на весь экран."
+  "Мелкие исправления."
  ],
  "files": {
   "index.html": {
-   "size": 784976,
-   "hash": "015cdc0e687e65f7"
+   "size": 786306,
+   "hash": "22eee98c225871e7"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "433c13b9a99a4681"
+   "hash": "b83714f82fb0fc4f"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "In Telegram on a computer the game opens full screen again."
+  "Small fixes."
  ]
 }

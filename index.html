@@ -4682,6 +4682,7 @@ function loadLevel(i) {
   levelIdx = i;
   L = LEVELS[i];
   setTimeout(() => logEv("level", { code: oneLine(codeEl.value) }), 0);
+  if (typeof statOpen === "function") statOpen(L.name);
   save.currentName = L.name;
   writeSave();
   showView("level");
@@ -12315,10 +12316,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 122;
+const APP_VERSION = 123;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 123, date: "2026-11-13", text: "Мелкие исправления.", en: "Small fixes." },
   { v: 122, date: "2026-11-13", text: "В Telegram на компьютере игра снова открывается на весь экран.", en: "In Telegram on a computer the game opens full screen again." },
   { v: 121, date: "2026-11-13", text: "На компьютере море вокруг острова теперь живое: рябь, камни в пене, утки с утятами, а облака плывут через весь экран.", en: "On a computer the sea around the island is alive now: ripples, foamy rocks, ducks with ducklings, and clouds drift across the whole screen." },
   { v: 120, date: "2026-11-13", text: "На компьютере игра снова на весь экран: поле уровня крупнее — до низа окна, программе больше места, а вокруг острова на карте — море.", en: "On a computer the game is full screen again: the level board is bigger (down to the bottom of the window), the program gets more room, and the sea surrounds the island on the map." },
@@ -12775,8 +12777,16 @@ const statSave = () => { try { localStorage.setItem(STAT_KEY, JSON.stringify(sta
 statSave();
 const statOn = () => /\.github\.io$|(^|\.)itch\.zone$|(^|\.)hwcdn\.net$/.test(location.hostname) && !window.claude && !save.dev;   // сайт, Telegram и itch.io
 // по уровню: [сколько раз нажимали «Запустить», прошёл ли (0/1), с какой попытки прошёл впервые]
-function statRun(name) { const r = (stat.lv[name] ||= [0, 0, 0]); r[0]++; statSave(); }
+function statRun(name) { const r = (stat.lv[name] ||= [0, 0, 0]); r[0]++; if (statVisit && statVisit.name === name) statVisit.ran = true; statSave(); }
 function statWin(name) { const r = (stat.lv[name] ||= [0, 0, 0]); if (!r[1]) { r[1] = 1; r[2] = r[0]; } statSave(); statSoon(3000); }
+// открытия уровня (stat.op) и уходы без единого «Запустить» (stat.nr) — по каждому уровню
+let statVisit = null;   // уровень, открытый сейчас: { name, ran }
+function statOpen(name) {
+  if (statVisit && !statVisit.ran) { const q = (stat.nr ||= {}); q[statVisit.name] = (q[statVisit.name] || 0) + 1; }
+  const o = (stat.op ||= {}); o[name] = (o[name] || 0) + 1;
+  statVisit = { name, ran: false };
+  statSave();
+}
 function statDoc() {
   const ua = navigator.userAgent, touch = navigator.maxTouchPoints > 0;
   const os = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && touch) ? "ios" : /Android/.test(ua) ? "android"
@@ -12790,6 +12800,7 @@ function statDoc() {
     os, form: touch ? (m < 600 ? "phone" : "tablet") : "desktop", lang: LOC,
     stars: LEVELS.reduce((s, l) => s + (save.stars[l.name] || 0), 0), won: won.length,
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
+    op: stat.op || {}, nr: stat.nr || {},
   };
 }
 let statTimer = null, statLast = 0;
@@ -12843,23 +12854,25 @@ function statHtml(all) {
   h += bars("Версия игры", "v", {});
   // уровни: сколько пробовали, прошли, сколько попыток; где застревают — пробовали, но не прошли
   h += `<h3 class="st-h">Уровни</h3><p class="st-note">Пробовали — нажимали «Запустить». Прошли — % от пробовавших (красным — меньше 60 %). Попыток — в среднем до первой победы. Бросили — пробовали, не прошли и потом не играли 3+ дня.</p>`;
-  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th></tr>`;
+  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th></tr>`;
   let isle = 0;
   LEVELS.forEach((lv) => {
     const n = lv.isle || 1;
-    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="5">${esc(ISLE_NAMES[n])}</td></tr>`; }
-    let tried = 0, won = 0, tries = 0, quit = 0;
+    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="7">${esc(ISLE_NAMES[n])}</td></tr>`; }
+    let opened = 0, left = 0, tried = 0, won = 0, tries = 0, quit = 0;
     for (const d of all) {
+      opened += d.op?.[lv.name] || 0;
+      left += d.nr?.[lv.name] || 0;
       const r = d.lv?.[lv.name];
       if (!r || !r[0]) continue;
       tried++;
       if (r[1]) { won++; tries += r[2] || r[0]; } else if (ago(d) > 3) quit++;
     }
     const pct = tried ? Math.round(won / tried * 100) : null;
-    h += `<tr><td>${esc(lvName(lv.name))}</td><td>${tried || ""}</td><td class="${pct !== null && pct < 60 && tried >= 3 ? "low" : ""}">${pct === null ? "" : pct + " %"}</td>`
+    h += `<tr><td>${esc(lvName(lv.name))}</td><td>${opened || ""}</td><td>${left || ""}</td><td>${tried || ""}</td><td class="${pct !== null && pct < 60 && tried >= 3 ? "low" : ""}">${pct === null ? "" : pct + " %"}</td>`
       + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td></tr>`;
   });
-  return h + `</table><p class="st-note">Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
+  return h + `</table><p class="st-note">«Открыли» — сколько раз уровень открывали на всех устройствах. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
 }
 async function openStats() {
   sfx("tap");
