@@ -1,21 +1,21 @@
 {
- "version": 126,
- "date": "2026-11-13",
+ "version": 127,
+ "date": "2026-11-14",
  "notes": [
-  "В настройках появилась кнопка «Сообщество»: канал игры в Telegram."
+  "Новая глава на Острове мастеров — «Осада мастерской»: шесть уровней, и в каждом бой. А ещё великаны: их можно обойти, но кто победит — получит корону 👑."
  ],
  "files": {
   "index.html": {
-   "size": 788876,
-   "hash": "6ff0782fece73e71"
+   "size": 808880,
+   "hash": "69e466b5b564e994"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 89091,
-   "hash": "8ce704e87997a4cf"
+   "size": 93193,
+   "hash": "8a2d41b7600e30be"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "13cdc31deb70c6b2"
+   "hash": "a35fa0fc0c00b9f6"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "There is a new Community button in settings: the game’s Telegram channel."
+  "A new chapter on the Island of Masters — “Siege of the Workshop”: six levels, a fight in every one. And giants: you can walk past them, but whoever beats one gets a crown 👑."
  ]
 }
