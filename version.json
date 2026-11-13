@@ -1,21 +1,21 @@
 {
- "version": 129,
+ "version": 130,
  "date": "2026-11-14",
  "notes": [
-  "У рамки «если» появились кнопки сторон ❓← ❓↑ ❓↓ ❓→: теперь можно спросить, есть ли враг сверху, снизу или слева."
+  "Победу больше не отнимают: если рыцарь дошёл, уровень пройден (без нужного приёма или цикла — до ★★). Корона за великана — при любом решении. А кто напишет программу короче, чем у разработчика, получит 💎."
  ],
  "files": {
   "index.html": {
-   "size": 817852,
-   "hash": "9c7201e3785c862e"
+   "size": 819964,
+   "hash": "1b6f19f922d20a5b"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 93465,
-   "hash": "90bdfa63d6628fcc"
+   "size": 94525,
+   "hash": "ee172aeb96b9e8d7"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "63cf72e848533d27"
+   "hash": "59f6a0be58f3349e"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The “if” frame now has side buttons ❓← ❓↑ ❓↓ ❓→: you can ask whether there is an enemy above, below or on the left."
+  "The win is never taken away now: if the knight made it, the level is passed (without the needed function or loop — up to ★★). The giant’s crown is yours with any solution. And whoever writes a program shorter than the developer’s gets a 💎."
  ]
 }

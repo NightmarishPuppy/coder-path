@@ -1104,6 +1104,7 @@ html.still .mapclouds img.bank { animation: none; }
 #mapview .isle-svg .num { font-family: var(--font-body); font-weight: 600; font-size: 14px; text-anchor: middle; dominant-baseline: central; }
 #mapview .isle-svg .nstars { font-family: var(--font-body); font-size: 10px; text-anchor: middle; letter-spacing: 1px; }
 #mapview .isle-svg .ncrown { font-size: 13px; text-anchor: middle; opacity: 0.4; filter: grayscale(1); }
+#mapview .isle-svg .ngem { font-size: 11px; text-anchor: middle; filter: drop-shadow(0 0 2px #7fe3ff); }
 #mapview .isle-svg .ncrown.on { opacity: 1; filter: drop-shadow(0 0 2px #ffd54a); }
 #mapview .isle-svg .region { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; text-anchor: middle; }
 #mapview .isle-svg .soon { font-family: var(--font-body); font-weight: 600; font-size: 12px; text-anchor: middle; }
@@ -3855,7 +3856,7 @@ const LEVELS = [
     codeRev: 2,
     goal: "Испытание: собери приём «ступенька» — вниз и два вправо. Потом [[tool:done]] и собери путь.",
     commands: ["moveRight", "moveDown"],
-    par: 7, good: 8,
+    par: 7, good: 8, best: 6,
     map: [
       "S########",
       ".C.######",
@@ -4172,8 +4173,8 @@ async function cloudSave() {
 function mergeSave(remote) {
   let changed = false;
   save.codeAt ||= {};
-  for (const k in remote.crowns || {}) {          // короны за великанов: есть на любом устройстве — есть везде
-    if (remote.crowns[k] && !save.crowns?.[k]) { (save.crowns ||= {})[k] = 1; changed = true; }
+  for (const key of ["crowns", "gems"]) for (const k in remote[key] || {}) {   // короны и 💎: есть на любом устройстве — есть везде
+    if (remote[key][k] && !save[key]?.[k]) { (save[key] ||= {})[k] = 1; changed = true; }
   }
   for (const k in remote.stars || {}) {
     const best = Math.max(save.stars[k] || 0, remote.stars[k] || 0);
@@ -4306,7 +4307,7 @@ async function fsPut(id, data) {
   if (!r.ok) throw new Error("write " + r.status);
 }
 // Что отправляем: только прогресс. Музыка, звуки, голос и режим проверки — у каждого устройства свои.
-const cloudPayload = () => ({ stars: save.stars, crowns: save.crowns || {}, code: save.code, codeAt: save.codeAt || {}, starsByName: true, label: playerLabel || undefined });
+const cloudPayload = () => ({ stars: save.stars, crowns: save.crowns || {}, gems: save.gems || {}, code: save.code, codeAt: save.codeAt || {}, starsByName: true, label: playerLabel || undefined });
 
 function scheduleSync(delay = 2000) {
   if (!syncOn) return;
@@ -4894,7 +4895,9 @@ function loadLevel(i) {
   $("goal-more").textContent = tr("ещё ▾");   // задание свёрнуто — и надпись «ещё», а не «свернуть» с прошлого уровня
   requestAnimationFrame(() => { const g = $("goal"); $("goal-more").hidden = !(uiBlocks && g.scrollHeight > g.clientHeight + 2); });
   $("par").innerHTML = tr('<span class="star">★★★</span> — не больше {par} {cmd} в коде, <span class="star">★★</span> — не больше {good}', { par: L.par, cmd: cmdWord(L.par), good: L.good })
-    + (L.crownPar ? tr('. С короной 👑 <span class="star">★★★</span> — не больше {n}', { n: L.crownPar }) : "");
+    + (L.crownPar ? tr('. С короной 👑 <span class="star">★★★</span> — не больше {n}', { n: L.crownPar }) : "")
+    // уже ★★★, а 💎 ещё нет — новая цель: обыграть разработчика
+    + ((save.stars[L.name] || 0) >= 3 && !save.gems?.[L.name] ? tr(". 💎 — если найдёшь решение короче {n}", { n: L.best ?? L.par }) : "");
   $("hint").innerHTML = tr(lang === "py"
     ? "Если код кончается циклом, кнопки ставят команду внутрь него с отступом. В Python отступ (4 пробела) и значит «внутри цикла»."
     : "Если код кончается циклом, кнопки ставят команду внутрь фигурных скобок. Звёзды считаются по числу команд в тексте кода.");
@@ -6491,6 +6494,7 @@ function renderMap() {
       add(`<text class="nstars" x="${x}" y="${y + H / 2 + 6}" fill="${stars ? "#ffd54a" : "#fff"}" stroke="#2a1f14" stroke-width="2.5" paint-order="stroke">${st}</text>`);
       // уровень с великаном: корона над кнопкой — яркая, если великан побеждён, бледная — если ещё нет
       if (hasGiant(lv)) add(`<text class="ncrown${save.crowns?.[lv.name] ? " on" : ""}" x="${x - S / 2 - 1}" y="${y - S / 2 + 4}">👑</text>`);
+      if (save.gems?.[lv.name]) add(`<text class="ngem" x="${x + S / 2 + 1}" y="${y + 6}">💎</text>`);
     }
     add(`</g>`);
   });
@@ -6543,7 +6547,8 @@ function renderMap() {
   const total = mine.reduce((s, [lv]) => s + (save.stars[lv.name] || 0), 0);
   const gl = mine.filter(([lv]) => hasGiant(lv)), crowns = gl.filter(([lv]) => save.crowns?.[lv.name]).length;
   $("map-progress").innerHTML = mine.length ? tr("Звёзд собрано: <b>{n}</b> из {m}", { n: total, m: mine.length * 3 })
-    + (gl.length ? ` · 👑 <b>${crowns}</b> ${tr("из")} ${gl.length}` : "") : tr("Уровни этого острова скоро появятся");
+    + (gl.length ? ` · 👑 <b>${crowns}</b> ${tr("из")} ${gl.length}` : "")
+    + ((gn) => gn ? ` · 💎 <b>${gn}</b>` : "")(mine.filter(([lv]) => save.gems?.[lv.name]).length) : tr("Уровни этого острова скоро появятся");
   const all = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
   $("sync-move").hidden = !syncOn || all > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
@@ -10961,21 +10966,18 @@ async function runArena() {
 }
 
 // ===== 14. Победа: звёзды и следующий уровень =====
-function win() {
-  // Испытание с циклом не засчитывается, если цикла в коде нет
-  if (L.requireLoop && !findLoops(codeEl.value).length) {
-    setStatus("Рыцарь дошёл, но в этом испытании нужен цикл. Найди, какие шаги повторяются, и положи их в цикл", "fail");
-    return;
-  }
-  // испытание главы приёмов: нужен свой приём — не пустой и позванный хотя бы раз
+// Чего из главного инструмента уровня нет в коде: "loop" / "fn" / null.
+// Победу это не отнимает (v130): рыцарь дошёл — уровень пройден, но не выше ★★, и подсказка.
+function toolMissing(code) {
+  if (L.requireLoop && !findLoops(code).length) return "loop";
   if (L.requireFn) {
-    const c = stripComments(codeEl.value), fns = defNames(c).filter((nm) => defBody(c, nm).length);
-    if (!fns.length || !countCalls(c, fns)) {
-      setStatus(L.challenge ? "Рыцарь дошёл, но в этом испытании нужен свой приём: собери шаги ступеньки в розовой рамке и позови приём розовой кнопкой"
-        : "Рыцарь дошёл, но здесь учимся приёмам: позови приём розовой кнопкой там, где ступенька, вместо отдельных стрелок", "fail");
-      return;
-    }
+    const c = stripComments(code), fns = defNames(c).filter((nm) => defBody(c, nm).length);
+    if (!fns.length || !countCalls(c, fns)) return "fn";
   }
+  return null;
+}
+function win() {
+  const missing = toolMissing(codeEl.value);
   const wasChapterLocked = L.challenge && !chapterOpen(L.chapter + 1);
   const written = countWrittenCommands(codeEl.value);
   // корона: на уровне был великан, и рыцарь его победил
@@ -10983,17 +10985,23 @@ function win() {
   const crown = giants.length > 0 && !!plan?.hpLeft && giants.every((e) => (plan.hpLeft.get(enemyKey(e.x, e.y)) || 0) <= 0);
   // путь с победой над великаном длиннее — для него свои пороги звёзд (crownPar / crownGood)
   const par = crown && L.crownPar ? L.crownPar : L.par, good = crown && L.crownGood ? L.crownGood : L.good;
-  const stars = written <= par ? 3 : written <= good ? 2 : 1;
-  const newCrown = crown && !save.crowns?.[L.name];
+  const stars = Math.min(missing ? 2 : 3, written <= par ? 3 : written <= good ? 2 : 1);
+  // 💎 «короче разработчика»: программа короче эталона разработчика (best, иначе порог ★★★) — любым способом
+  const best = crown ? L.crownBest ?? par : L.best ?? L.par;
+  const gem = !missing && written < best;   // с главным инструментом уровня — иначе 💎 давался бы за обход урока
+  const newCrown = crown && !save.crowns?.[L.name], newGem = gem && !save.gems?.[L.name];
   if (crown) (save.crowns ||= {})[L.name] = 1;
-  if (typeof statWin === "function") statWin(L.name, crown);
+  if (gem) (save.gems ||= {})[L.name] = 1;
+  if (typeof statWin === "function") statWin(L.name, crown, gem);
   save.stars[L.name] = Math.max(save.stars[L.name] || 0, stars);
   writeSave();
-  logEv("win", { stars, written, crown });
+  logEv("win", { stars, written, crown, gem, missing });
 
-  $("win-stars").innerHTML = starsHtml(stars) + (crown ? ` <span class="win-crown">👑</span>` : "");
+  $("win-stars").innerHTML = starsHtml(stars) + (crown ? ` <span class="win-crown">👑</span>` : "") + (gem ? ` <span class="win-crown">💎</span>` : "");
   let note = tr("В коде {n} {w}.", { n: written, w: plural(written, "команда", "команды", "команд") });
-  note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(" Идеально!");
+  if (missing) note += tr(missing === "fn" ? " Получилось! Для ★★★ здесь нужен свой приём (розовая рамка) — попробуй с ним." : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
+  else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
+  else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(" Идеально — как у разработчика! Найдёшь короче — получишь 💎.");
   if (crown) note += newCrown ? tr(" Ты победил великана — у тебя корона!") : tr(" Великан снова повержен.");
   else if (giants.length && !save.crowns?.[L.name]) note += tr(" Говорят, великана можно победить. Кто сумеет — получит корону.");
   const nextCh = CHAPTERS[L.chapter + 1];
@@ -12731,10 +12739,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 129;
+const APP_VERSION = 130;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 130, date: "2026-11-14", text: "Победу больше не отнимают: если рыцарь дошёл, уровень пройден (без нужного приёма или цикла — до ★★). Корона за великана — при любом решении. А кто напишет программу короче, чем у разработчика, получит 💎.", en: "The win is never taken away now: if the knight made it, the level is passed (without the needed function or loop — up to ★★). The giant’s crown is yours with any solution. And whoever writes a program shorter than the developer’s gets a 💎.", big: true },
   { v: 129, date: "2026-11-14", text: "У рамки «если» появились кнопки сторон ❓← ❓↑ ❓↓ ❓→: теперь можно спросить, есть ли враг сверху, снизу или слева.", en: "The “if” frame now has side buttons ❓← ❓↑ ❓↓ ❓→: you can ask whether there is an enemy above, below or on the left." },
   { v: 128, date: "2026-11-14", text: "У великанов теперь можно найти короткий путь к короне. Кнопка «＋ ещё» открывает все изученные инструменты.", en: "There is now a short way to win the crown from the giants. The “＋ more” button opens every tool you have learned." },
   { v: 127, date: "2026-11-14", text: "Новая глава на Острове мастеров — «Осада мастерской»: шесть уровней, и в каждом бой. А ещё великаны: их можно обойти, но кто победит — получит корону 👑.", en: "A new chapter on the Island of Masters — “Siege of the Workshop”: six levels, a fight in every one. And giants: you can walk past them, but whoever beats one gets a crown 👑.", big: true },
@@ -13045,7 +13054,7 @@ $("rep-clear").addEventListener("click", () => {
 // (она всегда берёт лучшие звёзды). Поэтому после сброса у устройства новый код, а старый
 // прогресс остаётся и в облаке (под старым кодом), и в копии на устройстве — его можно вернуть.
 const RESET_BACKUP = "coder-path-reset-backup";
-const PROGRESS_KEYS = ["stars", "crowns", "code", "codeAt", "currentName", "built", "dev"];
+const PROGRESS_KEYS = ["stars", "crowns", "gems", "code", "codeAt", "currentName", "built", "dev"];
 const HOLD_MS = 3000;
 const starsTotal = (st) => Object.values(st || {}).reduce((a, b) => a + (b || 0), 0);
 const starsWord = (n) => `★ ${n} ${plural(n, "звезда", "звезды", "звёзд")}`;
@@ -13067,7 +13076,7 @@ async function resetProgress() {
   PROGRESS_KEYS.forEach((k) => { if (save[k] !== undefined) backup.save[k] = save[k]; });
   try { localStorage.setItem(RESET_BACKUP, JSON.stringify(backup)); } catch (e) {}
   logEv("set", { b: `СБРОС ПРОГРЕССА (${starsTotal(save.stars)} ★, код ${player || "—"})` });
-  save.stars = {}; save.crowns = {}; save.code = {}; save.codeAt = {};
+  save.stars = {}; save.crowns = {}; save.gems = {}; save.code = {}; save.codeAt = {};
   delete save.currentName; delete save.built; delete save.dev;
   // новый код игрока выдаст первая синхронизация после перезапуска
   player = null; playerLabel = "";
@@ -13206,7 +13215,7 @@ const statOn = () => /\.github\.io$|(^|\.)itch\.zone$|(^|\.)hwcdn\.net$/.test(lo
 let statDirty = false;
 function statRun(name) { const r = (stat.lv[name] ||= [0, 0, 0]); r[0]++; if (statVisit && statVisit.name === name) statVisit.ran = true; statDirty = true; statSave(); statSoon(2000); }
 // четвёртое число — победил ли великана (корона)
-function statWin(name, crown) { const r = (stat.lv[name] ||= [0, 0, 0]); if (!r[1]) { r[1] = 1; r[2] = r[0]; } if (crown) r[3] = 1; statDirty = true; statSave(); statSoon(3000); }
+function statWin(name, crown, gem) { const r = (stat.lv[name] ||= [0, 0, 0]); if (!r[1]) { r[1] = 1; r[2] = r[0]; } if (crown) r[3] = 1; if (gem) r[4] = 1; statDirty = true; statSave(); statSoon(3000); }
 // открытия уровня (stat.op) и уходы без единого «Запустить» (stat.nr) — по каждому уровню
 let statVisit = null;   // уровень, открытый сейчас: { name, ran }
 function statOpen(name) {
@@ -13228,7 +13237,7 @@ function statDoc() {
     os, form: touch ? (m < 600 ? "phone" : "tablet") : "desktop", lang: LOC,
     stars: LEVELS.reduce((s, l) => s + (save.stars[l.name] || 0), 0), won: won.length,
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
-    op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length,
+    op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length, gems: Object.keys(save.gems || {}).length,
   };
 }
 let statTimer = null, statLast = 0;
@@ -13283,12 +13292,12 @@ function statHtml(all) {
   h += bars("Версия игры", "v", {});
   // уровни: сколько пробовали, прошли, сколько попыток; где застревают — пробовали, но не прошли
   h += `<h3 class="st-h">Уровни</h3><p class="st-note">Пробовали — нажимали «Запустить». Прошли — % от пробовавших (красным — меньше 60 %). Попыток — в среднем до первой победы. Бросили — пробовали, не прошли и потом не играли 3+ дня.</p>`;
-  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th></tr>`;
+  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th></tr>`;
   let isle = 0;
   LEVELS.forEach((lv) => {
     const n = lv.isle || 1;
-    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="8">${esc(ISLE_NAMES[n])}</td></tr>`; }
-    let opened = 0, left = 0, tried = 0, won = 0, tries = 0, quit = 0, crowned = 0;
+    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="9">${esc(ISLE_NAMES[n])}</td></tr>`; }
+    let opened = 0, left = 0, tried = 0, won = 0, tries = 0, quit = 0, crowned = 0, gems = 0;
     for (const d of all) {
       opened += d.op?.[lv.name] || 0;
       left += d.nr?.[lv.name] || 0;
@@ -13296,11 +13305,12 @@ function statHtml(all) {
       if (!r || !r[0]) continue;
       tried++;
       if (r[3]) crowned++;
+      if (r[4]) gems++;
       if (r[1]) { won++; tries += r[2] || r[0]; } else if (ago(d) > 3) quit++;
     }
     const pct = tried ? Math.round(won / tried * 100) : null;
     h += `<tr><td>${esc(lvName(lv.name))}</td><td>${opened || ""}</td><td>${left || ""}</td><td>${tried || ""}</td><td class="${pct !== null && pct < 60 && tried >= 3 ? "low" : ""}">${pct === null ? "" : pct + " %"}</td>`
-      + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td><td>${hasGiant(lv) ? crowned : ""}</td></tr>`;
+      + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td><td>${hasGiant(lv) ? crowned : ""}</td><td>${gems || ""}</td></tr>`;
   });
   return h + `</table><p class="st-note">«Открыли» — сколько раз уровень открывали на всех устройствах. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
 }
