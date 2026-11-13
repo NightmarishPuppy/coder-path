@@ -1,13 +1,13 @@
 {
- "version": 119,
- "date": "2026-11-12",
+ "version": 120,
+ "date": "2026-11-13",
  "notes": [
-  "Мелкие исправления"
+  "На компьютере игра снова на весь экран: поле уровня крупнее — до низа окна, программе больше места, а вокруг острова на карте — море."
  ],
  "files": {
   "index.html": {
-   "size": 772233,
-   "hash": "5dd81346f4d00bf0"
+   "size": 774432,
+   "hash": "8295b5d23bf6a01b"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "bf961ca00e032b73"
+   "hash": "cd233f44ef16005d"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Small fixes"
+  "On a computer the game is full screen again: the level board is bigger (down to the bottom of the window), the program gets more room, and the sea surrounds the island on the map."
  ]
 }
