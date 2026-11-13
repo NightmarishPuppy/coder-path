@@ -1341,14 +1341,17 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 .sheet-box > div { display: flex; flex-direction: column; gap: 12px; }
 .sheet-box > div[hidden] { display: none; }
 .sheet-box > .tabs { flex-direction: row; gap: 4px; }
-.sheet h2 { margin: 0; padding-right: 40px; font-family: var(--font-display); font-size: 22px; }
+.sheet h2 { margin: 0; padding-right: 56px; font-family: var(--font-display); font-size: 22px; }
 .sheet p { margin: 0; color: var(--muted); font-size: 14px; }
 .sheet-x {
-  position: absolute; top: 12px; right: 12px;
-  width: 36px; height: 36px; border-radius: 50%;
-  border: 1px solid var(--wall-edge); background: var(--panel); color: var(--fg);
-  font-size: 16px; cursor: pointer;
+  position: absolute; top: 10px; right: 10px;
+  width: 44px; height: 44px; border-radius: 50%; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--fg); background: var(--torch); color: #13151b;
+  cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
+.sheet-x svg { width: 20px; height: 20px; display: block; }
+.sheet-x:active { transform: scale(0.94); }
 .code-big { display: flex; justify-content: center; gap: 8px; }
 .code-part {
   flex: 1; max-width: 124px;
@@ -1591,7 +1594,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 <!-- Окно «Настройки» (шестерёнка): код игрока, установка, обновления, звук, анимация -->
 <div class="sheet" id="set-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="set-h">
   <div class="sheet-box">
-    <button class="sheet-x" id="set-close" aria-label="Закрыть">✕</button>
+    <button class="sheet-x" id="set-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5L19 19M19 5L5 19" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></button>
     <h2 id="set-h">Настройки</h2>
       <button class="synccard" id="sync-open" hidden>
       <span class="sync-dot" id="sync-dot"></span>
@@ -1668,7 +1671,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 <!-- Окно «Начать заново»: что сотрётся и кнопка, которую надо держать 3 секунды -->
 <div class="sheet" id="reset-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="reset-h">
   <div class="sheet-box">
-    <button class="sheet-x" id="reset-close" aria-label="Закрыть">✕</button>
+    <button class="sheet-x" id="reset-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5L19 19M19 5L5 19" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></button>
     <div>
       <h2 id="reset-h">Начать игру заново?</h2>
       <ul class="reset-list">
@@ -1687,7 +1690,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 <!-- Окно «Статистика игроков» (только в режиме для взрослых): анонимные отметки из базы, коллекция stats -->
 <div class="sheet" id="stats-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="stats-h">
   <div class="sheet-box stats-box">
-    <button class="sheet-x" id="stats-close" aria-label="Закрыть">✕</button>
+    <button class="sheet-x" id="stats-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5L19 19M19 5L5 19" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></button>
     <div>
       <h2 id="stats-h">Статистика игроков</h2>
       <div id="stats-body"></div>
@@ -1698,7 +1701,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 <!-- Окно «Как установить»: инструкция для этого устройства и браузера -->
 <div class="sheet" id="inst-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="inst-h">
   <div class="sheet-box">
-    <button class="sheet-x" id="inst-close" aria-label="Закрыть">✕</button>
+    <button class="sheet-x" id="inst-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5L19 19M19 5L5 19" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></button>
     <div>
       <h2 id="inst-h">Как установить игру</h2>
       <p class="inst-dev" id="inst-dev"></p>
@@ -1715,7 +1718,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 <!-- Окно «Код игрока»: показать свой код или ввести код с другого устройства (всё кнопками) -->
 <div class="sheet" id="sync-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sync-h">
   <div class="sheet-box">
-    <button class="sheet-x" id="sync-close" aria-label="Закрыть">✕</button>
+    <button class="sheet-x" id="sync-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5L19 19M19 5L5 19" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></button>
     <h2 id="sync-h">Код игрока</h2>
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" data-tab="show">Мой код</button>
@@ -12316,10 +12319,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 123;
+const APP_VERSION = 124;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 124, date: "2026-11-13", text: "Крестик для закрытия окон стал крупным и заметным.", en: "The close button on windows is now big and easy to see." },
   { v: 123, date: "2026-11-13", text: "Мелкие исправления.", en: "Small fixes." },
   { v: 122, date: "2026-11-13", text: "В Telegram на компьютере игра снова открывается на весь экран.", en: "In Telegram on a computer the game opens full screen again." },
   { v: 121, date: "2026-11-13", text: "На компьютере море вокруг острова теперь живое: рябь, камни в пене, утки с утятами, а облака плывут через весь экран.", en: "On a computer the sea around the island is alive now: ripples, foamy rocks, ducks with ducklings, and clouds drift across the whole screen." },
