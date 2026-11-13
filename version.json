@@ -1,21 +1,21 @@
 {
- "version": 125,
+ "version": 126,
  "date": "2026-11-13",
  "notes": [
-  "Мелкие исправления."
+  "В настройках появилась кнопка «Сообщество»: канал игры в Telegram."
  ],
  "files": {
   "index.html": {
-   "size": 788055,
-   "hash": "a7aadcb6c349905a"
+   "size": 788876,
+   "hash": "6ff0782fece73e71"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 89042,
-   "hash": "f5b79b4e96f29525"
+   "size": 89091,
+   "hash": "8ce704e87997a4cf"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "c4fed9b7fc3157cd"
+   "hash": "13cdc31deb70c6b2"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Small fixes."
+  "There is a new Community button in settings: the game’s Telegram channel."
  ]
 }

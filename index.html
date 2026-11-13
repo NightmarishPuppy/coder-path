@@ -1645,6 +1645,9 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
       </div>
       <p class="app-status" id="rep-msg" role="status"></p>
     </div>
+    <div class="app-row community-row">
+      <a class="btn reset community" id="comm-link" target="_blank" rel="noopener">💬 Сообщество</a>
+    </div>
     <div class="app-row app-audio">
       <label for="app-steps">🔢 Цифры шагов на поле:</label>
       <select id="app-steps">
@@ -12319,10 +12322,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 125;
+const APP_VERSION = 126;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 126, date: "2026-11-13", text: "В настройках появилась кнопка «Сообщество»: канал игры в Telegram.", en: "There is a new Community button in settings: the game’s Telegram channel." },
   { v: 125, date: "2026-11-13", text: "Мелкие исправления.", en: "Small fixes." },
   { v: 124, date: "2026-11-13", text: "Крестик для закрытия окон стал крупным и заметным.", en: "The close button on windows is now big and easy to see." },
   { v: 123, date: "2026-11-13", text: "Мелкие исправления.", en: "Small fixes." },
@@ -12598,6 +12602,10 @@ const repMsg = (t) => ($("rep-msg").textContent = tr(t));
 // Связь с разработчиком (версия 118): в браузере — полный адрес ссылкой; в Telegram (tgArrangeSettings) —
 // ник @selfspawned и первая кнопка «Отправить отчёт»: отчёт копируется, открывается чат с разработчиком.
 const DEV_TG = "selfspawned", DEV_URL = "https://t.me/" + DEV_TG;
+// канал игры для игроков: английский и русский (по языку игры)
+const COMM_URL = LOC === "en" ? "https://t.me/coderpaths" : "https://t.me/coderpathru";
+$("comm-link").href = COMM_URL;
+$("comm-link").addEventListener("click", (e) => { if (typeof tg !== "undefined" && tg && tgOk("6.1")) { e.preventDefault(); try { tg.openTelegramLink(COMM_URL); } catch (err) {} } });
 $("rep-text").innerHTML = tr("Что-то непонятно, не получается или есть идея? Напиши разработчику в Telegram: {link}. Если застрял — нажми «Скопировать отчёт» (что ты нажимал и где застрял, без личных данных) и пришли его.", { link: `<a href="${DEV_URL}" target="_blank" rel="noopener">${DEV_URL}</a>` });
 $("rep-copy").addEventListener("click", async () => {
   const ok = await copyText(buildReport());

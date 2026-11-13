@@ -203,6 +203,7 @@ var EN = {
   "Фигурные скобки — это JavaScript. В Python вместо них сдвиг строк": "Curly braces are JavaScript. In Python you shift lines instead",
   "Цикл крутится, а рыцарь стоит на месте. Положи команды внутрь цикла": "The loop keeps spinning but the knight stands still. Put commands inside the loop",
   "✉️ Связь с разработчиком": "✉️ Contact the developer",
+  "💬 Сообщество": "💬 Community",
   "Что-то непонятно, не получается или есть идея? Напиши разработчику в Telegram: {link}. Если застрял — нажми «Скопировать отчёт» (что ты нажимал и где застрял, без личных данных) и пришли его.": "Something unclear, not working, or have an idea? Message the developer on Telegram: {link}. If you’re stuck, tap “Copy report” (what you tapped and where you got stuck, no personal data) and send it.",
   "Нашёл ошибку, застрял или есть идея? Напиши разработчику: {nick}. Кнопка «📤 Отправить отчёт» скопирует отчёт (что ты нажимал и где застрял, без личных данных) и откроет чат — вставь его и отправь.": "Found a bug, got stuck, or have an idea? Message the developer: {nick}. The “📤 Send report” button copies a report (what you tapped and where you got stuck, no personal data) and opens the chat — paste it and send.",
   "📤 Отправить отчёт @{nick}": "📤 Send report to @{nick}",
