@@ -1,21 +1,21 @@
 {
- "version": 128,
+ "version": 129,
  "date": "2026-11-14",
  "notes": [
-  "У великанов теперь можно найти короткий путь к короне. Кнопка «＋ ещё» открывает все изученные инструменты."
+  "У рамки «если» появились кнопки сторон ❓← ❓↑ ❓↓ ❓→: теперь можно спросить, есть ли враг сверху, снизу или слева."
  ],
  "files": {
   "index.html": {
-   "size": 815608,
-   "hash": "63e91ac0427bcc5a"
+   "size": 817852,
+   "hash": "9c7201e3785c862e"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 93506,
-   "hash": "de2fbe13e398c01a"
+   "size": 93465,
+   "hash": "90bdfa63d6628fcc"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "a75767eb3334116d"
+   "hash": "63cf72e848533d27"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "There is now a short way to win the crown from the giants. The “＋ more” button opens every tool you have learned."
+  "The “if” frame now has side buttons ❓← ❓↑ ❓↓ ❓→: you can ask whether there is an enemy above, below or on the left."
  ]
 }

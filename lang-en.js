@@ -82,7 +82,7 @@ var EN = {
   "мимо!": "miss!",
   "＋ ещё": "＋ more",
   "－ меньше": "－ less",
-  "Сменить сторону: сейчас {s}": "Change side: now {s}",
+  "Если {w} {s}": "If {w} {s}",
   '. С короной 👑 <span class="star">★★★</span> — не больше {n}': '. With the crown 👑 <span class="star">★★★</span> — no more than {n}',
 
   // --- условия «если» ---

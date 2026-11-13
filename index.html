@@ -849,6 +849,11 @@ html.still .tile.err { animation: none; }
   font-size: 13px; line-height: 1; color: #ffd54a; text-shadow: 0 1px 0 #000; animation: tile-arrow 1s ease-in-out infinite; }
 html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: none; box-shadow: 0 0 0 4px #ffd54a99; }
 .chips .chip.ifchip { border: 2px solid #5fd3a6; color: #5fd3a6; font-weight: 700; }
+/* сторона условия в панели выбранной рамки «если»: зелёные, как рамка «если»; выбранная — залита */
+.lb-sides { display: inline-flex; gap: 4px; }
+.lb-sides[hidden] { display: none; }
+#linebar .chip.side { border: 2px solid #5fd3a6; color: #5fd3a6; font-weight: 700; min-width: 44px; padding: 0 6px; }
+#linebar .chip.side.on { background: #5fd3a6; color: #13151b; }
 /* «＋ ещё»: серая пунктирная кнопка — открывает изученные раньше инструменты (они с серой точкой) */
 .chips .chip.morechip { border: 2px dashed var(--muted); color: var(--fg); background: transparent; font-weight: 700; }
 #levelview.blk .chips .chip.morechip { flex: 0 0 auto; padding: 0 14px; font-size: 16px !important; }
@@ -1885,7 +1890,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
           </span>
           <button class="chip" id="lb-else" hidden>＋ иначе</button>
           <button class="chip" id="lb-what" hidden></button>
-          <button class="chip" id="lb-side" hidden></button>
+          <span class="lb-sides" id="lb-sides" hidden></span>
           <button class="chip" id="lb-done">готово</button>
         </div>
       </div>
@@ -8536,8 +8541,17 @@ function buildChips() {
       const conds = levelConds();
       const c = condDisp(conds.find((x) => CONDS[x].what === L.ifs[0] && CONDS[x].move === "moveRight") || conds[0]);
       const lines = codeEl.value.replace(/\s+$/, "").split("\n").filter((l, i, a) => a.length > 1 || l.trim());
-      const at = selLine ? Math.min(selLine, lines.length) : lines.length;   // после выбранной строки или в конец
+      let at = selLine ? Math.min(selLine, lines.length) : lines.length;   // после выбранной строки или в конец
       let ind = at ? (lines[at - 1].match(/^ */)[0]) : "";
+      // JavaScript: программа кончается циклом — рамка встаёт внутрь него, перед закрывающей }
+      if (!selLine && lang === "js") {
+        const lp = findFrames(lines.join("\n")).filter((f) => f.end === lines.length && /^\s*(while|for)\b/.test(lines[f.start - 1])).sort((a, b) => b.start - a.start)[0];
+        if (lp) {
+          at = lp.end - 1;
+          while (at > lp.start && lines[at - 1].trim() === "") lines.splice(--at, 1);   // пустая строка в пустом цикле не нужна
+          ind = " ".repeat(lp.indent + INDENT());
+        }
+      }
       // после заголовка цикла или рамки (while True: / if …: / else:) рамка встаёт внутрь — с отступом
       if (at && lang === "py" && /^\s*(while|for|if|elif|else|def)\b.*:\s*$/.test(lines[at - 1])) ind += " ".repeat(INDENT());
       const add = lang === "py" ? [`${ind}if ${c}():`] : [`${ind}if (${c}()) {`, `${ind}}`];
@@ -11183,14 +11197,30 @@ function drawLineBar() {
   $("lb-else").hidden = !ifm || !L.elseButton || ELSE_LINE.test(after) || /^\s*elif\b/.test(after);
   const whats = L.ifs || [];
   $("lb-what").hidden = !ifm || whats.length < 2;
-  // сменить сторону условия (справа → сверху → слева → снизу) — на уровнях с «＋ ещё»
-  $("lb-side").hidden = !ifm || !L._base;
+  // сторона условия: четыре зелёные кнопки «❓→ ❓↑ ❓← ❓↓», выбранная подсвечена — на уровнях с «＋ ещё»
+  const sides = $("lb-sides");
+  sides.hidden = !ifm || !L._base;
   if (ifm) {
     const k = CONDS[condKey(ifm[2])];
     $("lb-what").textContent = `${WHAT_RU[k.what]} ⇄ ${WHAT_RU[whats.find((w) => w !== k.what) || k.what]}`;
-    $("lb-side").textContent = `${k.arrow} ⟳`;
-    const sl = tr("Сменить сторону: сейчас {s}", { s: k.ru });
-    $("lb-side").setAttribute("aria-label", sl); $("lb-side").title = sl;
+    if (!sides.hidden) {
+      sides.innerHTML = "";
+      for (const mv of ["moveLeft", "moveUp", "moveDown", "moveRight"]) {
+        const c = COND_NAMES.find((x) => CONDS[x].what === k.what && CONDS[x].move === mv);
+        if (!c) continue;
+        const b = document.createElement("button");
+        b.className = "chip side" + (c === condKey(ifm[2]) ? " on" : "");
+        b.id = "lb-side-" + mv;
+        b.textContent = "❓" + CONDS[c].arrow;
+        const al = tr("Если {w} {s}", { w: WHAT_RU[k.what], s: CONDS[c].ru });
+        b.setAttribute("aria-label", al); b.title = al;
+        b.addEventListener("click", () => {
+          const ls0 = codeEl.value.split("\n"), m = (ls0[selLine - 1] ?? "").match(IF_LINE);
+          if (m) editLines((ls) => { ls[selLine - 1] = ls[selLine - 1].replace(m[2], condDisp(c)); });
+        });
+        sides.appendChild(b);
+      }
+    }
   }
   const full = tr(DEF_LINE.test(line) ? "Нажимай кнопки команд — шаги лягут в приём" : ifm ? ($("lb-else").hidden ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»"
       : "Кнопка команды — шаг внутрь «если»; «＋ иначе» — добавить «иначе»") : isElse ? "Рамка «иначе»: что делать, если нет"
@@ -11221,6 +11251,11 @@ function drawLineBar() {
   $("lb-up").disabled = selLine === 1;
   $("lb-down").disabled = selLine === lines.length;
   $("lb-out").disabled = !/^ /.test(line);
+  // узкая полоска на телефоне и видны кнопки стороны «если» — убираем то, что здесь почти не нужно,
+  // иначе кнопки не влезают: «раньше / позже», отступ и «враг ⇄ препятствие»
+  const crowded = float && !sides.hidden;
+  $("lb-up").hidden = $("lb-down").hidden = crowded;
+  if (crowded) { $("lb-what").hidden = true; document.querySelector(".shift").hidden = true; }
   // подпись не помещается в две строки (узкий экран, много кнопок) — остаются одни значки.
   // Меряем в самом конце, когда кнопки панели уже приняли свой вид.
   const info = bar.querySelector(".lb-info");
@@ -11246,14 +11281,6 @@ $("lb-else").addEventListener("click", () => {
     if (lang === "py") { lines.splice(fr.end, 0, ind + "else:"); selLine = fr.end + 1; }
     else { lines[fr.end - 1] = lines[fr.end - 1].replace(/\}\s*$/, "} else {"); lines.splice(fr.end, 0, ind + "}"); selLine = fr.end; }
   });
-});
-$("lb-side").addEventListener("click", () => {
-  const lines = codeEl.value.split("\n"), m = (lines[selLine - 1] ?? "").match(IF_LINE);
-  if (!m) return;
-  const k = CONDS[condKey(m[2])], order = ["moveRight", "moveUp", "moveLeft", "moveDown"];
-  const next = order[(order.indexOf(k.move) + 1) % 4];
-  const c = COND_NAMES.find((x) => CONDS[x].what === k.what && CONDS[x].move === next);
-  if (c) editLines((ls) => { ls[selLine - 1] = ls[selLine - 1].replace(m[2], condDisp(c)); });
 });
 $("lb-what").addEventListener("click", () => {
   const lines = codeEl.value.split("\n"), m = (lines[selLine - 1] ?? "").match(IF_LINE);
@@ -12704,10 +12731,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 128;
+const APP_VERSION = 129;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 129, date: "2026-11-14", text: "У рамки «если» появились кнопки сторон ❓← ❓↑ ❓↓ ❓→: теперь можно спросить, есть ли враг сверху, снизу или слева.", en: "The “if” frame now has side buttons ❓← ❓↑ ❓↓ ❓→: you can ask whether there is an enemy above, below or on the left." },
   { v: 128, date: "2026-11-14", text: "У великанов теперь можно найти короткий путь к короне. Кнопка «＋ ещё» открывает все изученные инструменты.", en: "There is now a short way to win the crown from the giants. The “＋ more” button opens every tool you have learned." },
   { v: 127, date: "2026-11-14", text: "Новая глава на Острове мастеров — «Осада мастерской»: шесть уровней, и в каждом бой. А ещё великаны: их можно обойти, но кто победит — получит корону 👑.", en: "A new chapter on the Island of Masters — “Siege of the Workshop”: six levels, a fight in every one. And giants: you can walk past them, but whoever beats one gets a crown 👑.", big: true },
   { v: 126, date: "2026-11-13", text: "В настройках появилась кнопка «Сообщество»: канал игры в Telegram.", en: "There is a new Community button in settings: the game’s Telegram channel." },
