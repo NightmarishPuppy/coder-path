@@ -1,21 +1,21 @@
 {
- "version": 130,
+ "version": 131,
  "date": "2026-11-14",
  "notes": [
-  "Победу больше не отнимают: если рыцарь дошёл, уровень пройден (без нужного приёма или цикла — до ★★). Корона за великана — при любом решении. А кто напишет программу короче, чем у разработчика, получит 💎."
+  "Цель 💎 теперь показана только на уровнях, где решение короче действительно есть. Мелкие исправления."
  ],
  "files": {
   "index.html": {
-   "size": 819964,
-   "hash": "1b6f19f922d20a5b"
+   "size": 822268,
+   "hash": "2743caf7ec37e6e4"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 94525,
-   "hash": "ee172aeb96b9e8d7"
+   "size": 94910,
+   "hash": "3d4f44ca97c7aa88"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "59f6a0be58f3349e"
+   "hash": "5e4330a8bb257212"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The win is never taken away now: if the knight made it, the level is passed (without the needed function or loop — up to ★★). The giant’s crown is yours with any solution. And whoever writes a program shorter than the developer’s gets a 💎."
+  "The 💎 goal is now shown only on levels where a shorter solution really exists. Small fixes."
  ]
 }

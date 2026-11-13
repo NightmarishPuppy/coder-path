@@ -80,6 +80,8 @@ var EN = {
   " Великан снова повержен.": " The giant is down again.",
   " Говорят, великана можно победить. Кто сумеет — получит корону.": " They say the giant can be beaten. Whoever manages it gets a crown.",
   "мимо!": "miss!",
+  "Слово {c} в этой игре не работает. Приём описывают отдельной строкой, а зовут по имени со скобками": "The word {c} doesn’t work in this game. A function is defined on its own line and called by name with brackets",
+  "{c} пишут со скобками: {c}()": "{c} is written with brackets: {c}()",
   " Получилось! Для ★★★ здесь нужен свой приём (розовая рамка) — попробуй с ним.": " You made it! For ★★★ this level needs your own function (the pink frame) — try it with one.",
   " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.": " You made it! For ★★★ this level needs the “repeat” loop — try it with one.",
   " Короче, чем у разработчика (у него {n})! Это 💎.": " Shorter than the developer’s (his is {n})! That’s a 💎.",

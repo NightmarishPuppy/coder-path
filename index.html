@@ -2023,6 +2023,19 @@ function checkDefs(code, lg) {
     if (!(name in defs)) defs[name] = i;
   });
   const names = Object.keys(defs);
+  // Команды, вопросы и приёмы зовут только со скобками: имя без скобок (a = attack) дало бы команде
+  // второе имя, и её вызовы не считались бы. По той же причине не работают функции без имени и eval.
+  const callable = [...ALL_COMMANDS, ...PY_NAMES, ...COND_NAMES, ...COND_NAMES.map((c) => CONDS[c].py), ...names];
+  const bare = new RegExp(`\\b(${callable.join("|")})\\b(?!\\s*\\()`), banned = /=>|\b(eval|arguments|Function|lambda|globalThis|window)\b/;
+  lines.forEach((raw, i) => {
+    const body = raw.replace(lg === "py" ? /#.*/ : /\/\/.*/, "");
+    const isDef = DEF_LINE.test(raw);
+    let m = banned.exec(body);
+    if (!m && lg !== "py" && !isDef && /\bfunction\b/.test(body)) m = ["function"];
+    if (m) throw pyError(i + 1, tr("Слово {c} в этой игре не работает. Приём описывают отдельной строкой, а зовут по имени со скобками", { c: m[1] || m[0] }));
+    m = isDef ? null : bare.exec(body);
+    if (m) throw pyError(i + 1, tr("{c} пишут со скобками: {c}()", { c: m[1] }));
+  });
   if (lg !== "py" || !names.length) return;
   let inDef = false;
   lines.forEach((raw, i) => {
@@ -2143,6 +2156,7 @@ const LEVELS = [
   },
   {
     name: "Подвал",
+    gem: true,   // есть решение короче эталона (тест gem)
     chapter: 0,
     after: "Поворот",
     goal: "Доведи рыцаря до двери сам. Помни: в скобках можно написать число шагов, <code>moveRight(3)</code> — три клетки вправо.",
@@ -2194,6 +2208,7 @@ const LEVELS = [
   },
   {
     name: "Развилка",
+    gem: true,   // есть решение короче эталона (тест gem)
     chapter: 0,
     after: "Поворот",
     goal: "К двери ведут два пути. Найди короткий: за длинный дадут меньше звёзд.",
@@ -2210,6 +2225,7 @@ const LEVELS = [
   },
   {
     name: "Починка",
+    gem: true,   // есть решение короче эталона (тест gem)
     chapter: 0,
     after: "Поворот",
     bug: true,
@@ -2342,6 +2358,7 @@ const LEVELS = [
   // K — ключ, C — монета. Дверь открывается, когда взят ключ и собраны все монеты.
   {
     name: "Ключ",
+    gem: true,   // есть решение короче эталона (тест gem)
     chapter: 2,
     goal: "Новое: <b>ключ</b>. Дверь заперта! Чтобы взять ключ, просто наступи на его клетку. Потом иди к двери.",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
@@ -2355,6 +2372,7 @@ const LEVELS = [
   },
   {
     name: "Сокровищница",
+    gem: true,   // есть решение короче эталона (тест gem)
     chapter: 2,
     after: "Ключ",
     goal: "Новое: <b>монеты</b>. Эта дверь откроется, только когда соберёшь все монеты. Сколько их осталось — видно в углу поля.",
@@ -2404,6 +2422,7 @@ const LEVELS = [
   },
   {
     name: "Перепутанный путь",
+    gem: true,   // есть решение короче эталона (тест gem)
     chapter: 2,
     after: "Ключ",
     bug: true,
@@ -2461,6 +2480,7 @@ const LEVELS = [
   },
   {
     name: "Крепкий гоблин",
+    gem: true,   // есть решение короче эталона (тест gem)
     chapter: 3,
     after: "Гоблин",
     goal: "Над этим гоблином два сердечка: ему нужно <b>два удара</b>, и после первого он успеет ударить в ответ. Код почти готов. Нажми на номер строки <b>2</b>, потом цифру <b>2</b>: получится <code>attack(2)</code>.",
@@ -2519,6 +2539,7 @@ const LEVELS = [
   },
   {
     name: "Нехватка удара",
+    gem: true,   // есть решение короче эталона (тест gem)
     chapter: 3,
     after: "Крепкий гоблин",
     bug: true,
@@ -4897,7 +4918,7 @@ function loadLevel(i) {
   $("par").innerHTML = tr('<span class="star">★★★</span> — не больше {par} {cmd} в коде, <span class="star">★★</span> — не больше {good}', { par: L.par, cmd: cmdWord(L.par), good: L.good })
     + (L.crownPar ? tr('. С короной 👑 <span class="star">★★★</span> — не больше {n}', { n: L.crownPar }) : "")
     // уже ★★★, а 💎 ещё нет — новая цель: обыграть разработчика
-    + ((save.stars[L.name] || 0) >= 3 && !save.gems?.[L.name] ? tr(". 💎 — если найдёшь решение короче {n}", { n: L.best ?? L.par }) : "");
+    + (L.gem && (save.stars[L.name] || 0) >= 3 && !save.gems?.[L.name] ? tr(". 💎 — если найдёшь решение короче {n}", { n: L.best ?? L.par }) : "");
   $("hint").innerHTML = tr(lang === "py"
     ? "Если код кончается циклом, кнопки ставят команду внутрь него с отступом. В Python отступ (4 пробела) и значит «внутри цикла»."
     : "Если код кончается циклом, кнопки ставят команду внутрь фигурных скобок. Звёзды считаются по числу команд в тексте кода.");
@@ -11001,7 +11022,7 @@ function win() {
   let note = tr("В коде {n} {w}.", { n: written, w: plural(written, "команда", "команды", "команд") });
   if (missing) note += tr(missing === "fn" ? " Получилось! Для ★★★ здесь нужен свой приём (розовая рамка) — попробуй с ним." : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
-  else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(" Идеально — как у разработчика! Найдёшь короче — получишь 💎.");
+  else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
   if (crown) note += newCrown ? tr(" Ты победил великана — у тебя корона!") : tr(" Великан снова повержен.");
   else if (giants.length && !save.crowns?.[L.name]) note += tr(" Говорят, великана можно победить. Кто сумеет — получит корону.");
   const nextCh = CHAPTERS[L.chapter + 1];
@@ -12739,10 +12760,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 130;
+const APP_VERSION = 131;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 131, date: "2026-11-14", text: "Цель 💎 теперь показана только на уровнях, где решение короче действительно есть. Мелкие исправления.", en: "The 💎 goal is now shown only on levels where a shorter solution really exists. Small fixes." },
   { v: 130, date: "2026-11-14", text: "Победу больше не отнимают: если рыцарь дошёл, уровень пройден (без нужного приёма или цикла — до ★★). Корона за великана — при любом решении. А кто напишет программу короче, чем у разработчика, получит 💎.", en: "The win is never taken away now: if the knight made it, the level is passed (without the needed function or loop — up to ★★). The giant’s crown is yours with any solution. And whoever writes a program shorter than the developer’s gets a 💎.", big: true },
   { v: 129, date: "2026-11-14", text: "У рамки «если» появились кнопки сторон ❓← ❓↑ ❓↓ ❓→: теперь можно спросить, есть ли враг сверху, снизу или слева.", en: "The “if” frame now has side buttons ❓← ❓↑ ❓↓ ❓→: you can ask whether there is an enemy above, below or on the left." },
   { v: 128, date: "2026-11-14", text: "У великанов теперь можно найти короткий путь к короне. Кнопка «＋ ещё» открывает все изученные инструменты.", en: "There is now a short way to win the crown from the giants. The “＋ more” button opens every tool you have learned." },
