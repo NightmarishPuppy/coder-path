@@ -8980,8 +8980,10 @@ function buildChips() {
           ind = " ".repeat(lp.indent + INDENT());
         }
       }
-      // после заголовка цикла или рамки (while True: / if …: / else:) рамка встаёт внутрь — с отступом
+      // после заголовка цикла или рамки (while True: / if …: / else:) рамка встаёт внутрь — с отступом;
+      // в JavaScript то же после строки, которая открывает блок «{» (while (true) { / if (…) { / } else {)
       if (at && lang === "py" && /^\s*(while|for|if|elif|else|def)\b.*:\s*$/.test(lines[at - 1])) ind += " ".repeat(INDENT());
+      else if (at && lang === "js" && selLine && /\{\s*$/.test(lines[at - 1])) ind += " ".repeat(INDENT());
       const add = lang === "py" ? [`${ind}if ${c}():`] : [`${ind}if (${c}()) {`, `${ind}}`];
       lines.splice(at, 0, ...add);
       codeEl.value = lines.join("\n") + "\n";
@@ -13283,10 +13285,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 145;
+const APP_VERSION = 146;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 146, date: "2026-11-14", text: "В JavaScript «если», поставленное внутрь цикла или «иначе», теперь пишется с правильным отступом.", en: "In JavaScript, an “if” placed inside a loop or an “else” now gets the right indentation." },
   { v: 145, date: "2026-11-14", text: "Второй дополнительный уровень — «Найти и уничтожить»: тропинка налево от «Осады». Гоблин спрятался, а в «иначе» можно поставить ещё одно «если». В блоках на телефоне вернулась кнопка «враг ⇄ препятствие» там, где на уровне нужны оба вопроса.", en: "A second bonus level — “Seek and Destroy”: a side path to the left of the “Siege”. The goblin is hiding, and you can put another “if” inside the “else”. In blocks on phones, the “enemy ⇄ obstacle” button is back where a level needs both questions.", big: true },
   { v: 144, date: "2026-11-14", text: "На Острове мастеров появился первый дополнительный уровень — «Зачистка»: тропинка от «Осады» к башне. Он не обязательный, открывается после испытания острова.", en: "The first bonus level is on the Island of Masters — “Clean Sweep”: a side path from the “Siege” to the tower. It’s optional and opens after the island’s challenge.", big: true },
   { v: 143, date: "2026-11-14", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },

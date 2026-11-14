@@ -1,13 +1,13 @@
 {
- "version": 145,
+ "version": 146,
  "date": "2026-11-14",
  "notes": [
-  "Второй дополнительный уровень — «Найти и уничтожить»: тропинка налево от «Осады». Гоблин спрятался, а в «иначе» можно поставить ещё одно «если». В блоках на телефоне вернулась кнопка «враг ⇄ препятствие» там, где на уровне нужны оба вопроса."
+  "В JavaScript «если», поставленное внутрь цикла или «иначе», теперь пишется с правильным отступом."
  ],
  "files": {
   "index.html": {
-   "size": 886758,
-   "hash": "cdc6829d8d39297f"
+   "size": 887332,
+   "hash": "92e2714a130fbe47"
   },
   "art.js": {
    "size": 1848735,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "391f77bb93eb6c0e"
+   "hash": "3cb709f673d23f62"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A second bonus level — “Seek and Destroy”: a side path to the left of the “Siege”. The goblin is hiding, and you can put another “if” inside the “else”. In blocks on phones, the “enemy ⇄ obstacle” button is back where a level needs both questions."
+  "In JavaScript, an “if” placed inside a loop or an “else” now gets the right indentation."
  ]
 }
