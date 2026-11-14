@@ -8624,6 +8624,22 @@ function buildChips() {
     b.innerHTML = uiBlocks ? `🧩${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
     b.setAttribute("aria-label", tr("Приём") + " " + nm);
   }
+  // Приём удалили из программы (вместе с его кнопкой) — кнопка «🧩 ＋ приём» ставит пустую рамку приёма
+  // обратно, в начало программы; рамка сразу выбрана — стрелки ложатся в неё.
+  if (L.funcs) {
+    const have = defNames(codeEl.value);
+    const nm = [...defNames(L.starter.py || ""), "trick"].find((n) => !have.includes(n));
+    if (!have.length || defNames(L.starter.py || "").some((n) => !have.includes(n))) {
+      const b = add("add-def", "fnchip", "🧩 ＋ " + tr("приём"), () => {
+        const rest = codeEl.value.replace(/^\s+|\s+$/g, "");
+        codeEl.value = (lang === "py" ? `def ${nm}():\n` : `function ${nm}() {\n}\n`) + (rest ? "\n" + rest + "\n" : "");
+        selLine = 1;
+        onCodeChange();
+        drawCode();
+      });
+      b.setAttribute("aria-label", tr("Новый приём"));
+    }
+  }
   // «＋ ещё» — открыть всё, что изучено раньше; «－ меньше» — спрятать обратно
   if (chipsEl.querySelector(".extra")) {
     const mb = add("more-tools", "morechip", moreOpen ? tr("－ меньше") : tr("＋ ещё"), () => {
@@ -10212,7 +10228,7 @@ function onCodeChange() {
 // Кнопки приёмов показывают, что в приёме лежит: приём поправили — картинка на кнопке тоже меняется.
 // Приём убрали или добавили — палитра собирается заново.
 function refreshFnChips() {
-  const names = defNames(codeEl.value), have = [...chipsEl.querySelectorAll(".fnchip")].map((b) => b.id.slice(7));
+  const names = defNames(codeEl.value), have = [...chipsEl.querySelectorAll(".fnchip:not(#add-def)")].map((b) => b.id.slice(7));
   if (names.join() !== have.join()) { buildChips(); return; }
   for (const nm of names) $("add-fn-" + nm).innerHTML = uiBlocks ? `🧩${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
 }
@@ -12788,10 +12804,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 132;
+const APP_VERSION = 133;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 133, date: "2026-11-14", text: "Если убрать приём из программы, его можно вернуть кнопкой «🧩 ＋ приём».", en: "If you remove a function from the program, the “🧩 ＋ function” button brings it back." },
   { v: 132, date: "2026-11-14", text: "Новый уровень в «Осаде мастерской» — «Часовые над дорогой»: вопрос «если» теперь можно повернуть вверх, вниз и влево.", en: "A new level in “Siege of the Workshop” — “Sentries above the Road”: the “if” question can now be turned up, down and left." },
   { v: 131, date: "2026-11-14", text: "Цель 💎 теперь показана только на уровнях, где решение короче действительно есть. Мелкие исправления.", en: "The 💎 goal is now shown only on levels where a shorter solution really exists. Small fixes." },
   { v: 130, date: "2026-11-14", text: "Победу больше не отнимают: если рыцарь дошёл, уровень пройден (без нужного приёма или цикла — до ★★). Корона за великана — при любом решении. А кто напишет программу короче, чем у разработчика, получит 💎.", en: "The win is never taken away now: if the knight made it, the level is passed (without the needed function or loop — up to ★★). The giant’s crown is yours with any solution. And whoever writes a program shorter than the developer’s gets a 💎.", big: true },

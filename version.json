@@ -1,21 +1,21 @@
 {
- "version": 132,
+ "version": 133,
  "date": "2026-11-14",
  "notes": [
-  "Новый уровень в «Осаде мастерской» — «Часовые над дорогой»: вопрос «если» теперь можно повернуть вверх, вниз и влево."
+  "Если убрать приём из программы, его можно вернуть кнопкой «🧩 ＋ приём»."
  ],
  "files": {
   "index.html": {
-   "size": 825306,
-   "hash": "5c1446be0a878335"
+   "size": 826569,
+   "hash": "1640f9a6ed5392a3"
   },
   "art.js": {
    "size": 1764922,
    "hash": "a04c822f533c4117"
   },
   "lang-en.js": {
-   "size": 95540,
-   "hash": "0915e036dad1afa4"
+   "size": 95583,
+   "hash": "90585a2f71018da6"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "3e2f648a70384cc1"
+   "hash": "2dc1d6bb068bcb48"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A new level in “Siege of the Workshop” — “Sentries above the Road”: the “if” question can now be turned up, down and left."
+  "If you remove a function from the program, the “🧩 ＋ function” button brings it back."
  ]
 }
