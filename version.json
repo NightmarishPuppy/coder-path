@@ -1,13 +1,13 @@
 {
- "version": 136,
+ "version": 137,
  "date": "2026-11-14",
  "notes": [
-  "Крестик на карте архипелага тоже стал крупным и заметным."
+  "Мелкие исправления."
  ],
  "files": {
   "index.html": {
-   "size": 832183,
-   "hash": "89a173df4f56df2d"
+   "size": 832865,
+   "hash": "39735cf1c96e8187"
   },
   "art.js": {
    "size": 1790430,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "1dc9d3a7f45d99c1"
+   "hash": "28dc419034054b4f"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The close button on the archipelago map is big and easy to see now too."
+  "Small fixes."
  ]
 }
