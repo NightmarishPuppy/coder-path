@@ -119,6 +119,8 @@ var EN = {
   // --- экран уровня ---
   "← Карта": "← Map",
   "← Редактор": "← Editor",
+  "Свой уровень из редактора.": "Your own level from the editor.",
+  "Уровень ещё не пройден: твоё решение задаст порог ★★★": "Not solved yet: your solution will set the ★★★ threshold",
   "Редактор": "Editor",
   "Пройдено: в коде {n} {w}. Записал как порог ★★★.": "Done: {n} {w} in the code. Saved as the ★★★ threshold.",
   "ещё ▾": "more ▾",

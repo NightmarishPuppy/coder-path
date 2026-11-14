@@ -1414,7 +1414,7 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 .ed-br.on { border-color: var(--torch); box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.4); }
 .ed-br small { position: absolute; left: 0; right: 0; bottom: 0; font-size: 9.5px; line-height: 1.25; background: #000a; color: #fff; }
 .ed-gridwrap { overflow-x: auto; }
-.ed-grid { display: grid; gap: 1px; background: #8a7a3e; border: 2px solid #8a7a3e; border-radius: 6px; touch-action: none; user-select: none; -webkit-user-select: none; margin: 0 auto; max-width: 100%; }
+.ed-grid { display: grid; gap: 1px; background: #8a7a3e; border: 2px solid #8a7a3e; border-radius: 6px; touch-action: pan-x; user-select: none; -webkit-user-select: none; margin: 0 auto; max-width: 100%; }
 .ed-c { aspect-ratio: 1; background: #e6cf7c; display: grid; place-items: center; position: relative; overflow: hidden; min-width: 0; }
 .ed-c.w, .ed-br.w { background: #3f6b3a; }
 .edi { display: block; background-repeat: no-repeat; background-position: 0 0; image-rendering: pixelated; pointer-events: none; }
@@ -1911,7 +1911,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
     <p class="ed-msg" id="ed-msg"></p>
     <div class="ed-row"><span class="ed-l">Кто идёт</span><div class="skinbar ed-roles" id="ed-roles"></div>
       <label class="ed-chk"><input type="checkbox" id="ed-calm"> гоблин сам не бьёт</label></div>
-    <div class="ed-row"><span class="ed-l ed-wide">Команды, которые есть у игрока</span><div class="ed-cmds" id="ed-cmds"></div></div>
+    <div class="ed-row"><span class="ed-l ed-wide">Кнопки игрока — самое нужное. Остальные в игре спрятаны под «＋ ещё»</span><div class="ed-cmds" id="ed-cmds"></div></div>
     <div class="ed-row"><span class="ed-l">Вид</span><select id="ed-view" aria-label="Вид поля"></select>
       <span class="ed-par" id="ed-par"></span></div>
     <div class="ed-row"><textarea id="ed-goal" rows="2" placeholder="Задание для игрока (можно пусто — напишет Claude)" aria-label="Задание"></textarea></div>
@@ -2255,10 +2255,11 @@ const LEVELS = [
   // ---------- Глава 1. Берег ----------
   // Самый первый уровень — сразу бой: одна кнопка, один удар, победа.
   // slay — двери нет: уровень пройден, когда побеждены все гоблины.
+  // first — самый первый уровень: одна кнопка, без цифр, свои подсказки (у своих уровней из редактора slay бывает, а first — нет).
   {
     name: "Первый удар",
     chapter: 0,
-    slay: true,
+    slay: true, first: true,
     goal: "Гоблин стащил монеты! Нажми [[btn:attack]], потом <b>Запустить</b> — рыцарь ударит гоблина. Кнопка — это команда рыцарю.",
     commands: ["attack"],
     par: 1, good: 2,
@@ -5109,8 +5110,8 @@ async function paintGround(wrap, terr, themeName, rnd) {
 // зелени: к испытанию Берега уже начинается лес.
 function themeFor(i) {
   const lv = LEVELS[i];
-  const inCh = LEVELS.filter((l) => l.chapter === lv.chapter && !l.slay);
-  const t = inCh.length > 1 && !lv.slay ? inCh.indexOf(lv) / (inCh.length - 1) : 0; // 0 — начало главы, 1 — конец
+  const inCh = LEVELS.filter((l) => l.chapter === lv.chapter && !l.first && !l.draft);
+  const t = inCh.length > 1 && !lv.first ? (lv.draft ? 0.5 : inCh.indexOf(lv) / (inCh.length - 1)) : 0; // 0 — начало главы, 1 — конец
   if (lv.isle === 2) return { name: "beach", t: 0.85 };
   if (lv.isle === 3) return { name: "cave", t: 0.35 };   // Остров рудокопов — шахты
   if (lv.isle === 4) return { name: "beach", t: 0.7 };   // Остров мастеров — луг у мастерских
@@ -5217,7 +5218,7 @@ function loadLevel(i) {
   $("goal").classList.remove("open");
   $("goal-more").textContent = tr("ещё ▾");   // задание свёрнуто — и надпись «ещё», а не «свернуть» с прошлого уровня
   requestAnimationFrame(() => { const g = $("goal"); $("goal-more").hidden = !(uiBlocks && g.scrollHeight > g.clientHeight + 2); });
-  $("par").innerHTML = tr('<span class="star">★★★</span> — не больше {par} {cmd} в коде, <span class="star">★★</span> — не больше {good}', { par: L.par, cmd: cmdWord(L.par), good: L.good })
+  $("par").innerHTML = L.draft && L.par >= 99 ? tr("Уровень ещё не пройден: твоё решение задаст порог ★★★") : tr('<span class="star">★★★</span> — не больше {par} {cmd} в коде, <span class="star">★★</span> — не больше {good}', { par: L.par, cmd: cmdWord(L.par), good: L.good })
     + (L.crownPar ? tr('. С короной 👑 <span class="star">★★★</span> — не больше {n}', { n: L.crownPar }) : "")
     // уже ★★★, а 💎 ещё нет — новая цель: обыграть разработчика
     + (L.gem && (save.stars[L.name] || 0) >= 3 && !save.gems?.[L.name] ? tr(". 💎 — если найдёшь решение короче {n}", { n: L.best ?? L.par }) : "");
@@ -8756,7 +8757,7 @@ function buildBoard() {
   itemsTag = document.createElement("div");
   itemsTag.className = "itemstag";
   itemsTag.id = "itemstag";
-  itemsTag.hidden = !items.length && (!enemies.length || !!L.slay || !!L.calm);
+  itemsTag.hidden = !items.length && (!enemies.length || !!L.first || !!L.calm);
   // над полем один ряд: слева счётчик, справа — картинки обёрток (что будет на поле)
   const top = document.createElement("div");
   top.className = "boardtop"; top.id = "boardtop";
@@ -8816,7 +8817,7 @@ function drawItems(got) {
   lastGot = got;
   items.forEach((it) => it.el.classList.toggle("taken", got.taken.has(`${it.x},${it.y}`)));
   exitCell?.classList.toggle("locked", doorLocked(got));
-  const hearts = !L.slay && !L.calm && enemies.length || evs().some((e) => e.kind !== "fell");
+  const hearts = !L.first && !L.calm && enemies.some((e) => !e.job) || evs().some((e) => e.kind !== "fell");
   if (!items.length && !hearts) return;
   let html = "";
   if (hearts) {
@@ -8872,6 +8873,7 @@ function addLearnedTools(lv, i) {
   }
   // главные условия уровня — первыми (их ставит кнопка «если»)
   for (const w of lv.moreIfs || []) { const j = ifs.indexOf(w); if (j > 0) { ifs.splice(j, 1); ifs.unshift(w); } }
+  if (lv.edAll) ["moveRight", "moveDown", "moveUp", "moveLeft", "attack", "work"].forEach((c) => cmds.add(c));   // свой уровень: в «＋ ещё» — всё
   lv.commands = ALL_COMMANDS.filter((c) => cmds.has(c));
   lv.ifs = ifs;
   lv.ifButton = ifB; lv.elseButton = elseB; lv.loopButton = loopB;
@@ -8968,7 +8970,7 @@ function buildChips() {
   }
   if (uiBlocks) { const br = document.createElement("span"); br.style.flexBasis = "100%"; chipsEl.appendChild(br); }
   // на самом первом уровне (slay) цифр нет: одна кнопка — один удар
-  if (!L.slay) [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
+  if (!L.first) [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
 }
 
 // ===== «Отменить команду» и «Вернуть» =====
@@ -10004,7 +10006,7 @@ function renderBlocks(active = 0, err = 0) {
   const items = parseBlocks(codeEl.value);
   const lines = codeEl.value.split("\n").length, grew = lines > (box._lines || 0);
   box._lines = lines;
-  if (!items.length) { box.innerHTML = `<span class="empty">${roleText(tr(L.slay ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря"))}</span>`; fitBlocks(); return; }
+  if (!items.length) { box.innerHTML = `<span class="empty">${roleText(tr(L.first ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря"))}</span>`; fitBlocks(); return; }
   const top = box.scrollTop;
   box.innerHTML = items.map((it) => blockHtml(it, active, err)).join("");
   box.scrollTop = top;
@@ -10104,7 +10106,7 @@ function fitBoard(force = false) {
   // и поле сжималось (арена «Битва: испытание»: 188 → 137 px высоты на 360×740).
   const box = $("blocks"), realHtml = box.innerHTML, realTop = box.scrollTop;
   const starter = parseBlocks(L.starter?.py || "");
-  box.innerHTML = starter.length ? starter.map((it) => blockHtml(it, 0, 0)).join("") : `<span class="empty">${roleText(tr(L.slay ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря"))}</span>`;
+  box.innerHTML = starter.length ? starter.map((it) => blockHtml(it, 0, 0)).join("") : `<span class="empty">${roleText(tr(L.first ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря"))}</span>`;
   box.style.maxHeight = "";
   const ratio = viewW() / H, vh = sh - 6;
   const bh = camEl.getBoundingClientRect().height;   // у длинной карты меряем окно, а не всё поле
@@ -10535,7 +10537,7 @@ function reset() {
   drawEnemies(fullHp());
   refreshPlan();
   const todo = tr(uiBlocks ? "Нажимай стрелки, потом «Запустить»" : "Напиши код и нажми «Запустить»");
-  setStatus(L.slay ? tr(uiBlocks ? "Нажми ⚔, потом «Запустить»" : "Нажми ⚔ attack, потом «Запустить»")
+  setStatus(L.first ? tr(uiBlocks ? "Нажми ⚔, потом «Запустить»" : "Нажми ⚔ attack, потом «Запустить»")
     : showSteps() && L.chapter === 0 ? tr("Цифры на поле — сколько шагов до клетки. ") + todo : todo);
 }
 
@@ -10786,7 +10788,7 @@ async function run() {
             e.el.classList.remove("windup");
             if (e.giant) { giantLoot(e.el.parentNode); setStatus("Великан повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
             if (e.shield) { giantLoot(e.el.parentNode); setStatus("Щитоносец повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
-            if (L.slay) giantLoot(e.el.parentNode, false);   // гоблин стащил монеты — они разлетаются
+            if (L.first) giantLoot(e.el.parentNode, false);   // гоблин стащил монеты — они разлетаются
             // облачко пыли из набора: проигрывается один раз
             const pf = sprite("poof", e.giant ? 1.6 : e.shield ? 1.3 : 1.1, { bottom: 0, cls: "poof" });
             pf.style.animation = "spr10 0.6s steps(10) 1 forwards";
@@ -11942,7 +11944,7 @@ function scheduleCoach() {
   clearTimeout(coachTimer);
   clearTimeout(scrollTimer);
   // новичку (ещё ни одной звезды) и на самом первом уровне рука приходит быстрее
-  const fresh = typeof L !== "undefined" && L?.slay || !Object.keys(save.stars || {}).length;
+  const fresh = typeof L !== "undefined" && L?.first || !Object.keys(save.stars || {}).length;
   coachTimer = setTimeout(showCoach, fresh ? COACH_FAST : COACH_DELAY);
 }
 document.addEventListener("pointerdown", (e) => { if (!e.target.closest?.("#coach-edge")) scheduleCoach(); }, true);
@@ -13217,10 +13219,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 142;
+const APP_VERSION = 143;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 143, date: "2026-11-14", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 142, date: "2026-11-14", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 141, date: "2026-11-14", text: "На трёх уровнях Берега теперь можно выбрать, кто пойдёт: рыцарь бьёт гоблина, работник рубит дерево, колет камень и прогоняет овцу, монах собирает грибы — его путь хитрее. Монет на этих уровнях больше нет. Щитоносец стал чёрным рыцарем со щитом.", en: "On three Shore levels you can now choose who goes: the knight fights a goblin, the worker chops a tree, breaks a rock and shoos a sheep away, the monk picks mushrooms on a trickier path. Coins are gone from these levels. The shield-bearer is now a black knight with a shield.", big: true },
   { v: 140, date: "2026-11-14", text: "Теперь можно выбирать, что будет на поле: ⚔ гоблин на пути, монеты по дороге или просто путь. Картинки — над полем и в окне победы над кнопкой «Дальше». Пока на пяти уровнях Берега.", en: "You can now choose what’s on the board: ⚔ a goblin in the way, coins along the road, or just the path. The pictures are above the board and in the win window over the “Next” button. On five Shore levels for now.", big: true },
@@ -13840,7 +13843,7 @@ const ED_BRUSH = [[".", "пол"], ["#", "стена"], ["S", "старт"], ["E
 const ED_CMDS = ["moveRight", "moveDown", "moveUp", "moveLeft", "attack", "work", "loop"];
 const ED_VIEWS = [0, 1, 2, 3];   // вид поля — главы первого острова: Берег, Лес, Пещеры, Скалы
 let edAll = [], edCur = 0, edBrush = "#", edPlaying = null;
-const edNew = () => ({ id: Date.now().toString(36), name: "Мой уровень", view: 0, role: "fight", calm: true, cmds: ["moveRight", "moveDown"],
+const edNew = () => ({ id: Date.now().toString(36), name: "Мой уровень", view: 0, role: "fight", calm: true, cmds: ["moveRight", "moveDown", "moveUp", "moveLeft"],
   rows: ["S......", ".......", ".......", ".......", "......E"], goal: "", par: 0, code: { py: "", js: "" } });
 const edD = () => edAll[edCur];
 function edLoad() {
@@ -13879,6 +13882,7 @@ function edDraw() {
   const g = $("ed-grid");
   g.style.gridTemplateColumns = `repeat(${W}, 1fr)`;
   g.style.width = `min(100%, ${W * 64}px)`;
+  g.style.minWidth = `${W * 30}px`;   // длинное поле не сжимается в крошку — листается вбок
   g.innerHTML = d.rows.map((row, y) => [...row].map((ch, x) => `<div class="ed-c${ch === "#" ? " w" : ""}" data-x="${x}" data-y="${y}">${edIcon(ch, d.role)}</div>`).join("")).join("");
   $("ed-roles").replaceChildren(...SKIN_IDS.map((id) => {
     const b = document.createElement("button");
@@ -13908,7 +13912,7 @@ function edPaint(el) {
 }
 function edResize(what) {
   const d = edD(); let W = d.rows[0].length, H = d.rows.length;
-  if (what === "w+" && W < 10) d.rows = d.rows.map((r) => r + ".");
+  if (what === "w+" && W < 18) d.rows = d.rows.map((r) => r + ".");
   if (what === "w-" && W > 3 && W - 1 >= H) d.rows = d.rows.map((r) => r.slice(0, -1));
   if (what === "h+" && H < 8 && H + 1 <= W) d.rows.push(".".repeat(W));   // поле не выше своей ширины: на телефоне высокое не помещается
   if (what === "h-" && H > 1) d.rows.pop();
@@ -13917,8 +13921,9 @@ function edResize(what) {
 // черновик → уровень игры
 function edLevel(d) {
   const all = d.rows.join("");
-  return { name: d.name || "Мой уровень", draft: true, chapter: d.view || 0, skin: d.role === "fight" ? undefined : d.role, calm: !!d.calm,
-    slay: !all.includes("E"), goal: d.goal || "Свой уровень из редактора.", commands: d.cmds.filter((c) => c !== "loop"), loopButton: d.cmds.includes("loop") || undefined,
+  return { name: d.name || "Мой уровень", draft: true, chapter: d.view || 0, view: d.rows[0].length > 10 ? 9 : undefined,   // шире 10 клеток — длинная карта, по частям skin: d.role === "fight" ? undefined : d.role, calm: !!d.calm,
+    slay: !all.includes("E"), goal: d.goal || tr("Свой уровень из редактора."), commands: d.cmds.filter((c) => c !== "loop"), loopButton: d.cmds.includes("loop") || undefined,
+    more: true, edAll: true,   // «＋ ещё»: все остальные инструменты игры — пробовать решения шире выбранного минимума
     par: d.par || 99, good: (d.par || 99) + 2, map: d.rows.slice(), starter: { py: d.code?.py || "", js: d.code?.js || "" } };
 }
 function edPlay() {
