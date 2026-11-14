@@ -1,21 +1,21 @@
 {
- "version": 141,
+ "version": 142,
  "date": "2026-11-14",
  "notes": [
-  "На трёх уровнях Берега теперь можно выбрать, кто пойдёт: рыцарь бьёт гоблина, работник рубит дерево, колет камень и прогоняет овцу, монах собирает грибы — его путь хитрее. Монет на этих уровнях больше нет. Щитоносец стал чёрным рыцарем со щитом."
+  "Небольшие улучшения внутри игры."
  ],
  "files": {
   "index.html": {
-   "size": 858695,
-   "hash": "b005bbb91c2a34c9"
+   "size": 879771,
+   "hash": "0f697257c67da105"
   },
   "art.js": {
    "size": 1848735,
    "hash": "6644bf7489db3a42"
   },
   "lang-en.js": {
-   "size": 100005,
-   "hash": "9c201f4d8fb44ef8"
+   "size": 100229,
+   "hash": "6db582b0178b1ff3"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "beb4f39e6944da89"
+   "hash": "6dc99f90d668e823"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "On three Shore levels you can now choose who goes: the knight fights a goblin, the worker chops a tree, breaks a rock and shoos a sheep away, the monk picks mushrooms on a trickier path. Coins are gone from these levels. The shield-bearer is now a black knight with a shield."
+  "Small improvements inside the game."
  ]
 }

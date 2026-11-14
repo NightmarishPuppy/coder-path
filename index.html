@@ -1394,6 +1394,41 @@ html.tg #levelview #eyebrow { padding-right: 184px; min-height: 34px; box-sizing
 .sheet[hidden] { display: none; }
 html.sheet-open, html.sheet-open body { overflow: hidden; }
 .stats-open { display: block; margin: 10px auto 0; }
+.ed { display: flex; flex-direction: column; gap: 10px; max-width: 720px; margin: 0 auto; }
+.ed-h { font-size: 17px; }
+.ed-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ed-row select, .ed-row input:not([type]), .ed-row textarea, #ed-out { flex: 1 1 140px; min-width: 0; font: inherit; font-size: 15px; color: var(--ink, #e8e8ee); background: #1d2029;
+  border: 1px solid #3a4056; border-radius: 8px; padding: 8px 10px; }
+#ed-out { width: 100%; box-sizing: border-box; font: 12px/1.35 ui-monospace, monospace; }
+.ed-b { font: inherit; font-size: 14px; color: inherit; background: #262b3b; border: 1px solid #454c66; border-radius: 8px; padding: 8px 12px; cursor: pointer; min-height: 38px; }
+.ed-b:active { background: #333a52; }
+.ed-del { color: #ff9b8a; }
+.ed-size span { color: var(--muted); font-size: 18px; margin-left: 6px; }
+.ed-size .ed-b { min-width: 40px; padding: 6px 0; }
+.ed-wide { flex-basis: 100%; }
+.ed-main .btn { white-space: nowrap; padding-inline: 8px; font-size: 17px; }
+.ed-size b { min-width: 1.4em; text-align: center; }
+.ed-l { color: var(--muted); font-size: 13px; min-width: 62px; }
+.ed-brushes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.ed-br { aspect-ratio: 1; border-radius: 10px; border: 2px solid #454c66; background: #e6cf7c; padding: 0; cursor: pointer; display: grid; place-items: center; position: relative; overflow: hidden; }
+.ed-br.on { border-color: var(--torch); box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.4); }
+.ed-br small { position: absolute; left: 0; right: 0; bottom: 0; font-size: 9.5px; line-height: 1.25; background: #000a; color: #fff; }
+.ed-gridwrap { overflow-x: auto; }
+.ed-grid { display: grid; gap: 1px; background: #8a7a3e; border: 2px solid #8a7a3e; border-radius: 6px; touch-action: none; user-select: none; -webkit-user-select: none; margin: 0 auto; max-width: 100%; }
+.ed-c { aspect-ratio: 1; background: #e6cf7c; display: grid; place-items: center; position: relative; overflow: hidden; min-width: 0; }
+.ed-c.w, .ed-br.w { background: #3f6b3a; }
+.edi { display: block; background-repeat: no-repeat; background-position: 0 0; image-rendering: pixelated; pointer-events: none; }
+.ed-c em, .ed-br em { position: absolute; right: 2px; top: 0; font-style: normal; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000; pointer-events: none; }
+.ed-key { font-size: 20px; pointer-events: none; }
+.ed-msg { margin: 0; font-size: 13px; color: #ffb199; min-height: 1.3em; }
+.ed-msg.ok { color: #7fe0b0; }
+.ed-roles { margin-left: 0; }
+.ed-chk { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.ed-cmds { display: flex; gap: 6px; flex: 1 1 100%; max-width: 420px; }
+.ed-cmd { min-width: 38px; flex: 1 1 0; height: 38px; border-radius: 8px; border: 2px solid #454c66; background: #1d2029; color: #8d93a8; font: inherit; font-size: 17px; cursor: pointer; padding: 0 4px; }
+.ed-cmd.on { border-color: var(--torch); color: #fff; background: #3a2f1c; }
+.ed-par { font-size: 13px; color: var(--muted); }
+.ed-main .btn { flex: 1 1 0; }
 .stats-box { max-width: 720px; }
 .st-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin: 10px 0 14px; }
 .st-card { background: #1d2029; border: 1px solid #2c3040; border-radius: 10px; padding: 8px 10px; }
@@ -1634,6 +1669,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
     <button class="btn reset movebtn" id="sync-move" hidden>📲 Уже играл на другом устройстве? Перенести прогресс</button>
     <p class="map-note" id="cloud-note" hidden>Прогресс сохраняется в твоём аккаунте Claude</p>
     <button class="btn stats-open" id="stats-open" hidden>📊 Статистика игроков</button>
+    <button class="btn stats-open" id="editor-open" hidden>✏️ Редактор уровней</button>
     <p class="map-note dev" id="dev-note" hidden>Режим проверки: все уровни открыты. Пять раз нажми на название Coder Path, чтобы выключить.</p>
   </header>
   <div class="mapwrap" data-isle="1">
@@ -1850,6 +1886,45 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
       </div>
       <p>Звёзды с этого устройства не пропадут: из двух сохранений берём лучшее.</p>
     </div>
+  </div>
+</div>
+
+<!-- Редактор уровней (только в режиме для взрослых): нарисовать поле, выбрать команды и героя, пройти самому, отправить текстом -->
+<div class="wrap" id="editorview" hidden>
+  <header>
+    <div class="toprow"><button class="backbtn" id="ed-back">← Карта</button><b class="ed-h">Редактор уровней</b></div>
+  </header>
+  <div class="ed">
+    <div class="ed-row">
+      <select id="ed-drafts" aria-label="Мои уровни"></select>
+      <button class="ed-b" id="ed-new">＋ Новый</button>
+      <button class="ed-b" id="ed-copy">Копия</button>
+      <button class="ed-b ed-del" id="ed-del">Удалить</button>
+    </div>
+    <div class="ed-row"><input id="ed-name" maxlength="40" placeholder="Название уровня" aria-label="Название уровня"></div>
+    <div class="ed-row ed-size">
+      <span aria-hidden="true">↔</span><button class="ed-b" data-sz="w-" aria-label="Уже">−</button><b id="ed-w"></b><button class="ed-b" data-sz="w+" aria-label="Шире">＋</button>
+      <span aria-hidden="true">↕</span><button class="ed-b" data-sz="h-" aria-label="Ниже">−</button><b id="ed-h"></b><button class="ed-b" data-sz="h+" aria-label="Выше">＋</button>
+    </div>
+    <div class="ed-brushes" id="ed-brushes" role="group" aria-label="Что рисуем"></div>
+    <div class="ed-gridwrap"><div class="ed-grid" id="ed-grid"></div></div>
+    <p class="ed-msg" id="ed-msg"></p>
+    <div class="ed-row"><span class="ed-l">Кто идёт</span><div class="skinbar ed-roles" id="ed-roles"></div>
+      <label class="ed-chk"><input type="checkbox" id="ed-calm"> гоблин сам не бьёт</label></div>
+    <div class="ed-row"><span class="ed-l ed-wide">Команды, которые есть у игрока</span><div class="ed-cmds" id="ed-cmds"></div></div>
+    <div class="ed-row"><span class="ed-l">Вид</span><select id="ed-view" aria-label="Вид поля"></select>
+      <span class="ed-par" id="ed-par"></span></div>
+    <div class="ed-row"><textarea id="ed-goal" rows="2" placeholder="Задание для игрока (можно пусто — напишет Claude)" aria-label="Задание"></textarea></div>
+    <div class="ed-row ed-main">
+      <button class="btn next" id="ed-play">▶ Играть</button>
+      <button class="btn reset" id="ed-send">Отправить</button>
+    </div>
+    <div class="ed-row">
+      <select id="ed-from" aria-label="Взять поле из игры"></select>
+      <button class="ed-b" id="ed-paste">Вставить текст</button>
+    </div>
+    <textarea id="ed-out" rows="6" hidden readonly aria-label="Текст уровня"></textarea>
+    <p class="map-note">Нарисуй поле, нажми «Играть» и пройди сам — число команд запишется как порог ★★★. «Отправить» копирует текст уровня: пришли его Claude в чат.</p>
   </div>
 </div>
 
@@ -5123,9 +5198,14 @@ function loadLevel(i) {
   addLearnedTools(L, i);
   moreOpen = false;
   setTimeout(() => logEv("level", { code: oneLine(codeEl.value) }), 0);
-  if (typeof statOpen === "function") statOpen(L.name);
-  save.currentName = L.name;
-  writeSave();
+  // черновик из редактора — не уровень игры: в прогресс и статистику не идёт
+  if (!L.draft) {
+    if (typeof statOpen === "function") statOpen(L.name);
+    save.currentName = L.name;
+    writeSave();
+  }
+  $("to-map").textContent = tr(L.draft ? "← Редактор" : "← Карта");
+  $("win-map").textContent = tr(L.draft ? "Редактор" : "Карта");
   showView("level");
 
   const ch = CHAPTERS[L.chapter];
@@ -6611,6 +6691,7 @@ function showView(v) {
   if (v === "map" && !$("levelview").hidden) { logEv("map"); curIsle = isleOf(L); }   // с уровня — на его остров
   $("mapview").hidden = v !== "map";
   $("levelview").hidden = v !== "level";
+  $("editorview").hidden = v !== "editor";
   if (v === "map") renderMap();
   // фон звучит по месту, где герой: у воды, в лесу, под землёй (см. updatePlace)
   if (typeof updatePlace === "function") updatePlace();
@@ -6799,6 +6880,7 @@ function renderMap() {
   $("sync-move").hidden = !syncOn || all > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
   $("stats-open").hidden = !save.dev;
+  $("editor-open").hidden = !save.dev;
   if (curIsle === 3) showBuiltBridge();
   if (!$("mapview").hidden && typeof updatePlace === "function") updatePlace();   // фон — по месту, где теперь рыцарь
 }
@@ -10478,9 +10560,12 @@ function drawLoopView(p) {
 function onCodeChange() {
   if (running) return;
   showProblems = false;
-  save.code[codeKey()] = codeEl.value;
-  (save.codeAt ||= {})[codeKey()] = Date.now(); // когда правили — для синхронизации
-  writeSave();
+  if (L.draft) edKeepCode();   // программа черновика лежит в самом черновике, не в сохранении игры
+  else {
+    save.code[codeKey()] = codeEl.value;
+    (save.codeAt ||= {})[codeKey()] = Date.now(); // когда правили — для синхронизации
+    writeSave();
+  }
   winBox.hidden = true;
   if (variantsDone.size) { variantsDone.clear(); drawVariants(); }
   if (L.funcs) refreshFnChips();
@@ -11342,6 +11427,17 @@ function toolMissing(code) {
   return null;
 }
 function win() {
+  if (L.draft) {
+    // свой уровень пройден: длина программы автора — порог ★★★
+    const n = countWrittenCommands(codeEl.value);
+    edWon(n);
+    $("win-stars").innerHTML = starsHtml(3);
+    $("win-note").textContent = tr("Пройдено: в коде {n} {w}. Записал как порог ★★★.", { n, w: plural(n, "команда", "команды", "команд") });
+    nextBtn.hidden = true; $("win-isle").hidden = true; $("win-taste").hidden = true;
+    winBox.hidden = false;
+    fitBlocks();
+    return;
+  }
   const missing = toolMissing(codeEl.value);
   const wasChapterLocked = L.challenge && !chapterOpen(L.chapter + 1);
   const written = countWrittenCommands(codeEl.value);
@@ -11710,7 +11806,7 @@ function showBoard() {
   const vh = (window.visualViewport?.height || innerHeight) - (window.tgBottom || 0);
   if (r.top < top || r.bottom > vh) scrollTo({ top: Math.max(0, scrollY + r.top - top), behavior: STILL ? "auto" : "smooth" });
 }
-runBtn.addEventListener("click", () => { if (!running) { showBoard(); if (typeof statRun === "function") statRun(L.name); } run(); });
+runBtn.addEventListener("click", () => { if (!running) { showBoard(); if (typeof statRun === "function" && !L.draft) statRun(L.name); } run(); });
 resetBtn.addEventListener("click", () => { if (!running) { winBox.hidden = true; reset(); } });
 nextBtn.addEventListener("click", () => loadLevel(levelIdx + 1));
 $("restore").addEventListener("click", () => {
@@ -11962,8 +12058,10 @@ document.querySelectorAll("#mapview .isle-svg").forEach((el) => {
   el.addEventListener("click", onMapTap);
   el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onMapTap(e); } });
 });
-$("to-map").addEventListener("click", () => { if (!running) showView("map"); });
-$("win-map").addEventListener("click", () => showView("map"));
+// уйти с уровня: с обычного — на карту, с черновика — обратно в редактор
+const leaveLevel = () => { if (running) return; if (L?.draft) edClosePlay(); else showView("map"); };
+$("to-map").addEventListener("click", leaveLevel);
+$("win-map").addEventListener("click", leaveLevel);
 $("win-isle").addEventListener("click", () => { winBox.hidden = true; const n = L.isle || 1; curIsle = n; showView("map"); startIslandRun(n + 1); });
 
 // ===== 18. Музыка и звуки =====
@@ -13119,10 +13217,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 141;
+const APP_VERSION = 142;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 142, date: "2026-11-14", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 141, date: "2026-11-14", text: "На трёх уровнях Берега теперь можно выбрать, кто пойдёт: рыцарь бьёт гоблина, работник рубит дерево, колет камень и прогоняет овцу, монах собирает грибы — его путь хитрее. Монет на этих уровнях больше нет. Щитоносец стал чёрным рыцарем со щитом.", en: "On three Shore levels you can now choose who goes: the knight fights a goblin, the worker chops a tree, breaks a rock and shoos a sheep away, the monk picks mushrooms on a trickier path. Coins are gone from these levels. The shield-bearer is now a black knight with a shield.", big: true },
   { v: 140, date: "2026-11-14", text: "Теперь можно выбирать, что будет на поле: ⚔ гоблин на пути, монеты по дороге или просто путь. Картинки — над полем и в окне победы над кнопкой «Дальше». Пока на пяти уровнях Берега.", en: "You can now choose what’s on the board: ⚔ a goblin in the way, coins along the road, or just the path. The pictures are above the board and in the win window over the “Next” button. On five Shore levels for now.", big: true },
   { v: 139, date: "2026-11-14", text: "На Берегу появились гоблины: в «Подвале», «Спирали» и «Каменном лабиринте» дорогу к двери теперь сторожит гоблин. Рука-подсказка для новичков появляется быстрее.", en: "Goblins have come to the Shore: in “The Cellar”, “Spiral” and “Stone Maze” a goblin now guards the way to the door. The pointing-hand hint shows up faster for newcomers." },
@@ -13731,6 +13830,172 @@ async function openStats() {
   catch (e) { $("stats-body").innerHTML = `<p class="st-note">Не удалось загрузить статистику (${String(e.message).replace(/</g, "&lt;")}). Нет связи с Google или в базе ещё не открыто чтение (правила Firebase).</p>`; }
 }
 $("stats-open").addEventListener("click", openStats);
+
+// ===== Редактор уровней (режим для взрослых) =====
+// Черновики лежат на этом устройстве (localStorage). «Играть» кладёт черновик в конец LEVELS как обычный уровень
+// с пометкой draft (на карту и в прогресс он не попадает) и убирает оттуда при возврате в редактор.
+const ED_KEY = "coder-path-drafts";
+const ED_BRUSH = [[".", "пол"], ["#", "стена"], ["S", "старт"], ["E", "дверь"], ["G", "гоблин"], ["B", "крепкий"],
+  ["T", "дерево"], ["R", "камень"], ["O", "овца"], ["M", "гриб"], ["C", "монета"], ["K", "ключ"]];
+const ED_CMDS = ["moveRight", "moveDown", "moveUp", "moveLeft", "attack", "work", "loop"];
+const ED_VIEWS = [0, 1, 2, 3];   // вид поля — главы первого острова: Берег, Лес, Пещеры, Скалы
+let edAll = [], edCur = 0, edBrush = "#", edPlaying = null;
+const edNew = () => ({ id: Date.now().toString(36), name: "Мой уровень", view: 0, role: "fight", calm: true, cmds: ["moveRight", "moveDown"],
+  rows: ["S......", ".......", ".......", ".......", "......E"], goal: "", par: 0, code: { py: "", js: "" } });
+const edD = () => edAll[edCur];
+function edLoad() {
+  try { edAll = JSON.parse(localStorage.getItem(ED_KEY) || "[]"); } catch (e) { edAll = []; }
+  if (!Array.isArray(edAll) || !edAll.length) edAll = [edNew()];
+  edCur = Math.min(edCur, edAll.length - 1);
+}
+const edSave = () => { try { localStorage.setItem(ED_KEY, JSON.stringify(edAll)); } catch (e) {} };
+// картинка клетки: первый кадр спрайта из набора, без искажения пропорций
+function edIcon(ch, role) {
+  const key = { S: SKIN_SPR[role || "fight"], E: "house", G: "gt_idle", B: "gt_idle", T: "tree4", R: "rock4", O: "jb_sheep", M: "mush3", C: "coin", "#": "tree1" }[ch];
+  if (ch === "K") return `<span class="ed-key">🔑</span>`;
+  if (!key) return "";
+  const inf = TS_INFO[key], [n, fw, fh] = Array.isArray(inf) ? inf : [inf || 1, 120, 120];
+  const big = ch === "S" ? 150 : ch === "G" || ch === "B" ? 120 : 84;
+  return `<i class="edi" style="background-image:url(${TS[key]});background-size:${n * 100}% 100%;aspect-ratio:${fw}/${fh};${fw >= fh ? "width" : "height"}:${big}%"></i>` + (ch === "B" ? "<em>2</em>" : "");
+}
+// что мешает играть (пустая строка — всё в порядке)
+function edProblem(d) {
+  const all = d.rows.join(""), cnt = (c) => all.split(c).length - 1;
+  if (cnt("S") !== 1) return "Поставь старт — одну клетку, откуда идёт герой";
+  if (!cnt("E") && !(cnt("G") + cnt("B"))) return "Поставь дверь (или гоблина — тогда победа, когда он побеждён)";
+  if (cnt("G") + cnt("B") && !d.cmds.includes("attack") && !d.cmds.includes("work")) return "На поле гоблин, а команды ⚔ нет";
+  if (/[TRO]/.test(all) && !d.cmds.includes("work") && !d.cmds.includes("attack")) return "На поле дело для работника, а команды 🪓 нет";
+  if (!d.cmds.some((c) => c.startsWith("move"))) return cnt("E") ? "Выбери хотя бы одну стрелку" : "";
+  return "";
+}
+function edDraw() {
+  const d = edD();
+  $("ed-drafts").innerHTML = edAll.map((x, k) => `<option value="${k}"${k === edCur ? " selected" : ""}>${(x.name || "Без названия").replace(/[<&]/g, "")}</option>`).join("");
+  if (document.activeElement !== $("ed-name")) $("ed-name").value = d.name;
+  if (document.activeElement !== $("ed-goal")) $("ed-goal").value = d.goal || "";
+  const W = d.rows[0].length, H = d.rows.length;
+  $("ed-w").textContent = W; $("ed-h").textContent = H;
+  $("ed-brushes").innerHTML = ED_BRUSH.map(([ch, t]) => `<button class="ed-br${ch === "#" ? " w" : ""}${ch === edBrush ? " on" : ""}" data-ch="${ch}" aria-label="${t}" aria-pressed="${ch === edBrush}">${edIcon(ch, d.role)}<small>${t}</small></button>`).join("");
+  const g = $("ed-grid");
+  g.style.gridTemplateColumns = `repeat(${W}, 1fr)`;
+  g.style.width = `min(100%, ${W * 64}px)`;
+  g.innerHTML = d.rows.map((row, y) => [...row].map((ch, x) => `<div class="ed-c${ch === "#" ? " w" : ""}" data-x="${x}" data-y="${y}">${edIcon(ch, d.role)}</div>`).join("")).join("");
+  $("ed-roles").replaceChildren(...SKIN_IDS.map((id) => {
+    const b = document.createElement("button");
+    b.className = "skinbtn" + (id === d.role ? " on" : ""); b.innerHTML = skinIcon(id); b.title = SKIN_NAME[id]; b.setAttribute("aria-label", SKIN_NAME[id]);
+    b.addEventListener("click", () => { d.role = id; edSave(); edDraw(); });
+    return b;
+  }));
+  $("ed-calm").checked = !!d.calm;
+  $("ed-cmds").innerHTML = ED_CMDS.map((c) => `<button class="ed-cmd${d.cmds.includes(c) ? " on" : ""}" data-c="${c}" aria-pressed="${d.cmds.includes(c)}">${c === "loop" ? "🔁" : DIRS[c].arrow}</button>`).join("");
+  $("ed-view").innerHTML = ED_VIEWS.map((k) => `<option value="${k}"${k === d.view ? " selected" : ""}>${CHAPTERS[k].name}</option>`).join("");
+  $("ed-par").textContent = d.par ? `★★★ — ${d.par} ${plural(d.par, "команда", "команды", "команд")} (твоё решение)` : "ещё не пройден";
+  const pr = edProblem(d);
+  $("ed-msg").textContent = pr || "Готово к игре";
+  $("ed-msg").classList.toggle("ok", !pr);
+  $("ed-from").innerHTML = `<option value="">Взять поле из игры…</option>` + LEVELS.filter((l) => !l.draft && !l.arena).map((l) => `<option>${l.name}</option>`).join("");
+}
+// поле поменялось — прежнее решение уже не доказательство
+const edTouched = () => { const d = edD(); d.par = 0; edSave(); };
+function edPaint(el) {
+  const c = el?.closest?.(".ed-c"); if (!c) return;
+  const d = edD(), x = +c.dataset.x, y = +c.dataset.y;
+  if (d.rows[y][x] === edBrush) return;
+  // старт и дверь — по одной: новая убирает прежнюю
+  if (edBrush === "S" || edBrush === "E") d.rows = d.rows.map((r) => r.replace(edBrush, "."));
+  d.rows[y] = d.rows[y].slice(0, x) + edBrush + d.rows[y].slice(x + 1);
+  edTouched(); edDraw();
+}
+function edResize(what) {
+  const d = edD(); let W = d.rows[0].length, H = d.rows.length;
+  if (what === "w+" && W < 10) d.rows = d.rows.map((r) => r + ".");
+  if (what === "w-" && W > 3 && W - 1 >= H) d.rows = d.rows.map((r) => r.slice(0, -1));
+  if (what === "h+" && H < 8 && H + 1 <= W) d.rows.push(".".repeat(W));   // поле не выше своей ширины: на телефоне высокое не помещается
+  if (what === "h-" && H > 1) d.rows.pop();
+  edTouched(); edDraw();
+}
+// черновик → уровень игры
+function edLevel(d) {
+  const all = d.rows.join("");
+  return { name: d.name || "Мой уровень", draft: true, chapter: d.view || 0, skin: d.role === "fight" ? undefined : d.role, calm: !!d.calm,
+    slay: !all.includes("E"), goal: d.goal || "Свой уровень из редактора.", commands: d.cmds.filter((c) => c !== "loop"), loopButton: d.cmds.includes("loop") || undefined,
+    par: d.par || 99, good: (d.par || 99) + 2, map: d.rows.slice(), starter: { py: d.code?.py || "", js: d.code?.js || "" } };
+}
+function edPlay() {
+  const d = edD(), pr = edProblem(d);
+  if (pr) { $("ed-msg").textContent = pr; $("ed-msg").classList.remove("ok"); return; }
+  edPlaying = d;
+  LEVELS.push(edLevel(d));
+  loadLevel(LEVELS.length - 1);
+}
+function edClosePlay() {
+  const k = LEVELS.findIndex((l) => l.draft);
+  if (k >= 0) LEVELS.splice(k, 1);
+  edPlaying = null; winBox.hidden = true;
+  L = LEVELS[0]; levelIdx = 0;   // «текущим» снова считается настоящий уровень
+  showView("editor"); edDraw();
+}
+function edKeepCode() { if (!edPlaying) return; (edPlaying.code ||= {})[lang] = codeEl.value; edSave(); }
+function edWon(n) { if (!edPlaying) return; edKeepCode(); if (!edPlaying.par || n < edPlaying.par) edPlaying.par = n; edSave(); }
+const edText = (d) => "Coder Path — уровень из редактора\n" + JSON.stringify({ name: d.name, view: CHAPTERS[d.view || 0].name, role: d.role, calm: !!d.calm,
+  commands: d.cmds, map: d.rows, goal: d.goal || "", stars3: d.par || null, solution: d.code?.py || d.code?.js || "" }, null, 1);
+function edFromText(t) {
+  const o = JSON.parse(t.slice(t.indexOf("{")));
+  if (!Array.isArray(o.map) || !o.map.length || o.map.some((r) => typeof r !== "string" || r.length !== o.map[0].length)) throw new Error("map");
+  const d = edNew();
+  d.name = String(o.name || "Мой уровень").slice(0, 40); d.rows = o.map.map((r) => r.replace(/[^.#SEGBTROMCK]/g, "."));
+  d.role = SKIN_IDS.includes(o.role) ? o.role : "fight"; d.calm = o.calm !== false; d.goal = String(o.goal || "");
+  d.cmds = (Array.isArray(o.commands) ? o.commands : d.cmds).filter((c) => ED_CMDS.includes(c));
+  d.view = Math.max(0, ED_VIEWS.findIndex((k) => CHAPTERS[k].name === o.view)); d.par = +o.stars3 || 0;
+  if (o.solution) d.code.py = String(o.solution);
+  return d;
+}
+$("editor-open").addEventListener("click", () => { sfx("tap"); edLoad(); showView("editor"); edDraw(); });
+$("ed-back").addEventListener("click", () => showView("map"));
+$("ed-drafts").addEventListener("change", (e) => { edCur = +e.target.value; edDraw(); });
+$("ed-new").addEventListener("click", () => { edAll.push(edNew()); edCur = edAll.length - 1; edSave(); edDraw(); });
+$("ed-copy").addEventListener("click", () => { const c = JSON.parse(JSON.stringify(edD())); c.id = Date.now().toString(36); c.name = (c.name + " 2").slice(0, 40); edAll.push(c); edCur = edAll.length - 1; edSave(); edDraw(); });
+$("ed-del").addEventListener("click", () => { if (!confirm("Удалить уровень «" + edD().name + "»?")) return; edAll.splice(edCur, 1); if (!edAll.length) edAll = [edNew()]; edCur = Math.max(0, edCur - 1); edSave(); edDraw(); });
+$("ed-name").addEventListener("input", (e) => { edD().name = e.target.value; edSave(); });
+$("ed-name").addEventListener("change", edDraw);
+$("ed-goal").addEventListener("input", (e) => { edD().goal = e.target.value; edSave(); });
+$("ed-calm").addEventListener("change", (e) => { edD().calm = e.target.checked; edTouched(); edDraw(); });
+$("ed-view").addEventListener("change", (e) => { edD().view = +e.target.value; edSave(); });
+$("ed-brushes").addEventListener("click", (e) => { const b = e.target.closest(".ed-br"); if (b) { edBrush = b.dataset.ch; edDraw(); } });
+$("ed-cmds").addEventListener("click", (e) => { const b = e.target.closest(".ed-cmd"); if (!b) return; const d = edD(), c = b.dataset.c; d.cmds = d.cmds.includes(c) ? d.cmds.filter((x) => x !== c) : ED_CMDS.filter((x) => x === c || d.cmds.includes(x)); edTouched(); edDraw(); });
+document.querySelectorAll(".ed-size [data-sz]").forEach((b) => b.addEventListener("click", () => edResize(b.dataset.sz)));
+// рисуем нажатием и ведя пальцем по полю
+{
+  const g = $("ed-grid"); let down = false;
+  g.addEventListener("pointerdown", (e) => { down = true; edPaint(e.target); e.preventDefault(); });
+  g.addEventListener("pointermove", (e) => { if (down) edPaint(document.elementFromPoint(e.clientX, e.clientY)); });
+  window.addEventListener("pointerup", () => { down = false; });
+  window.addEventListener("pointercancel", () => { down = false; });
+}
+$("ed-play").addEventListener("click", edPlay);
+$("ed-send").addEventListener("click", async () => {
+  const t = edText(edD()), out = $("ed-out");
+  out.hidden = false; out.value = t;
+  let ok = false;
+  try { await navigator.clipboard.writeText(t); ok = true; } catch (e) { out.focus(); out.select(); try { ok = document.execCommand("copy"); } catch (e2) {} }
+  $("ed-msg").textContent = ok ? "Текст уровня скопирован — вставь его в чат с Claude" : "Не удалось скопировать сам — выдели текст ниже и скопируй";
+  $("ed-msg").classList.toggle("ok", ok);
+});
+$("ed-paste").addEventListener("click", async () => {
+  let t = ""; try { t = await navigator.clipboard.readText(); } catch (e) {}
+  if (!t || !t.includes("{")) t = prompt("Вставь сюда текст уровня") || "";
+  if (!t) return;
+  try { edAll.push(edFromText(t)); edCur = edAll.length - 1; edSave(); edDraw(); }
+  catch (e) { $("ed-msg").textContent = "Не похоже на текст уровня"; $("ed-msg").classList.remove("ok"); }
+});
+$("ed-from").addEventListener("change", (e) => {
+  const lv = LEVELS.find((l) => l.name === e.target.value); if (!lv) return;
+  const d = edNew();
+  d.name = (lv.name + " — свой").slice(0, 40); d.rows = (lv.maps ? lv.maps[0] : lv.map).map((r) => r.replace(/[^.#SEGBTROMCK]/g, "."));
+  d.cmds = ED_CMDS.filter((c) => lv.commands.includes(c) || (c === "loop" && lv.loopButton));
+  d.role = lv.skin && SKIN_IDS.includes(lv.skin) ? lv.skin : "fight"; d.calm = !!lv.calm; d.view = ED_VIEWS.includes(lv.chapter) ? lv.chapter : 0;
+  edAll.push(d); edCur = edAll.length - 1; edSave(); edDraw();
+});
 $("stats-close").addEventListener("click", () => { sfx("tap"); $("stats-sheet").hidden = true; });
 $("stats-sheet").addEventListener("click", (e) => { if (e.target === $("stats-sheet")) $("stats-sheet").hidden = true; });
 
