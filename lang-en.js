@@ -119,6 +119,9 @@ var EN = {
   // --- экран уровня ---
   "← Карта": "← Map",
   "← Редактор": "← Editor",
+  "доп.": "bonus",
+  ", дополнительный": ", bonus level",
+  "дополнительный уровень": "bonus level",
   "Свой уровень из редактора.": "Your own level from the editor.",
   "Уровень ещё не пройден: твоё решение задаст порог ★★★": "Not solved yet: your solution will set the ★★★ threshold",
   "Редактор": "Editor",
@@ -822,6 +825,8 @@ var EN_LEVELS = {
   "Штурм лестницы": { name: "Storming the Stairs",
     goal: "Tap [[fnhead]], then [[btn:attack]], [[btn:moveRight]] and [[btn:moveUp]]. A goblin on every step: hit, step, climb — all the way to the top.",
     block: "Tap [[fnhead]], then [[btn:attack]], [[btn:moveRight]] and [[btn:moveUp]]. A goblin on every step: hit, step, climb — all the way to the top." },
+  "Зачистка": { name: "Clean Sweep",
+    goal: "A bonus level — you don’t need it to move on. There is no door: defeat all the goblins. The map is long [[pages]], and two of them stand above the road — you can reach them if you climb up." },
   "Осада: испытание": { name: "Siege: Challenge",
     goal: "Challenge: cut your way to the gate. The function is empty, the program is empty, the map is long [[pages]]. There is a tough goblin in the line. And up above stands a shield-bearer — an enemy you haven’t met before. Beat him for a crown 👑.",
     block: "Challenge: cut your way to the gate. The function is empty, the program is empty, the map is long [[pages]]. There is a tough goblin in the line. And up above stands a shield-bearer — an enemy you haven’t met before. Beat him for a crown 👑." },

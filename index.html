@@ -386,6 +386,9 @@ html.still .enemy.job .jobtool { animation: none; }
 .win-taste[hidden] { display: none; }
 .win-taste .skinbar { margin-left: 0; }
 .win-taste .skinbtn { width: 54px; height: 48px; }
+.nside-ring { fill: none; stroke: #ffd54a; stroke-width: 2; stroke-dasharray: 4 3; }
+.node.locked .nside-ring { stroke: #c9c3a8; opacity: 0.7; }
+.nside { font-size: 8.5px; font-weight: 800; text-anchor: middle; fill: #ffd54a; stroke: #2a1f14; stroke-width: 2.5; paint-order: stroke; letter-spacing: 0.3px; }
 .nskin { font-size: 8px; text-anchor: end; fill: #fff; stroke: #2a1f14; stroke-width: 2; paint-order: stroke; }
 .itemstag {
   align-self: flex-start;
@@ -4230,6 +4233,34 @@ const LEVELS = [
       js: "function strike() {\n}\n",
     },
   },
+  // ===== Дополнительные уровни (side: true): в стороне от главной дороги, для прогресса не нужны =====
+  // Своя тропинка на карте, пометка «доп.»; не считаются концом острова, «Дальше» на них не ведёт.
+  // Открываются после испытания острова — чтобы не подсказывать приём короны «Великана».
+  // «Зачистка» нарисована в редакторе уровней (Сергей): двери нет, победа — когда побеждены все гоблины.
+  {
+    name: "Зачистка",
+    chapter: 14,
+    isle: 4,
+    side: true,
+    view: 9,
+    sides: true,
+    slay: true,
+    after: "Осада: испытание",
+    more: true, moreIfs: ["enemy"],
+    loopButton: true, ifButton: true, elseButton: true,
+    goal: "Дополнительный уровень — для прогресса не нужен. Двери нет: победи всех гоблинов. Карта длинная [[pages]], а двое стоят над дорогой — дотянешься, если поднимешься к ним.",
+    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    ifs: ["enemy"],
+    par: 6, good: 8,
+    map: [
+      "##################",
+      "###G########...###",
+      "###G########.#.###",
+      "SGG....GG.G.....G#",
+      "##################",
+    ],
+    starter: { py: "", js: "" },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -5211,7 +5242,7 @@ function loadLevel(i) {
 
   const ch = CHAPTERS[L.chapter];
   const numInChapter = LEVELS.filter((lv, k) => lv.chapter === L.chapter && k <= i).length;
-  $("eyebrow").textContent = `${ch.name} · ` + (L.challenge ? tr("испытание") : tr("уровень {n}", { n: numInChapter })) + (L.bug ? tr(" · найди ошибку") : "");
+  $("eyebrow").textContent = `${ch.name} · ` + (L.challenge ? tr("испытание") : L.side ? tr("дополнительный уровень") : tr("уровень {n}", { n: numInChapter })) + (L.bug ? tr(" · найди ошибку") : "");
   $("title").textContent = lvName(L.name);
   // кнопки в тексте рисуем до перевода на язык игрока (метка содержит JS-имя команды)
   $("goal").innerHTML = goalHtml();
@@ -5860,7 +5891,7 @@ ISLE_MAPS[3] = {
 // @@/isle3@@
 // @@isle4@@
 ISLE_MAPS[4] = {
-  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350], [250, 350]],
+  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350], [250, 350], [310, 390]],
   rows: [
     "....................................",
     "....................................",
@@ -5974,8 +6005,8 @@ ISLE_MAPS[4] = {
     ".............#....",
     ".............#....",
     "....##########....",
-    "....#.............",
-    "....#.............",
+    "....#........#....",
+    "....#........###..",
     "....#########.....",
     "............#.....",
     "............#.....",
@@ -6725,7 +6756,7 @@ const GATES = {
   4: [{ at: [130, 516], to: 3, kind: "bridge", dir: 1 }],
 };
 const gateTo = (from, to) => GATES[from].find((g) => g.to === to);
-const LAST_OF = (n) => LEVELS.filter((lv) => (lv.isle || 1) === n).at(-1);
+const LAST_OF = (n) => LEVELS.filter((lv) => (lv.isle || 1) === n && !lv.side).at(-1);   // дополнительные — не конец острова
 const LAST_LEVEL = () => LAST_OF(1);   // «Перевал»
 // вперёд — после испытания последней главы острова; назад — всегда
 const gateOpen = (from, to) => save.dev || to < from || (save.stars[LAST_OF(from)?.name] || 0) > 0;
@@ -6801,19 +6832,22 @@ function renderMap() {
 
   // Точки уровней этого острова — круглые кнопки из набора
   const mine = isleLevels();
-  const nextI = mine.find(([lv, i]) => isOpen(i) && !passed(lv.name))?.[1] ?? -1;
+  const nextI = mine.find(([lv, i]) => isOpen(i) && !passed(lv.name) && !lv.side)?.[1] ?? -1;   // «следующий» — только на главной дороге
   mine.forEach(([lv, i], k) => {
     const [x, y] = D.nodes[k];
     const open = isOpen(i), stars = save.stars[lv.name] || 0;
-    const num = LEVELS.filter((l, j) => l.chapter === lv.chapter && j <= i && !l.challenge).length;
+    const num = LEVELS.filter((l, j) => l.chapter === lv.chapter && j <= i && !l.challenge && !l.side).length;
     const S = lv.challenge ? 36 : 31, H = S * 94 / 88;
-    add(`<g class="node${open ? "" : " locked"}" data-i="${i}" tabindex="0" role="button" aria-label="${lvName(lv.name)}${lv.challenge ? tr(", испытание") : ""}${open ? "" : tr(", закрыт")}${stars ? tr(", звёзд: {n}", { n: stars }) : ""}">`);
+    add(`<g class="node${open ? "" : " locked"}" data-i="${i}" tabindex="0" role="button" aria-label="${lvName(lv.name)}${lv.challenge ? tr(", испытание") : ""}${lv.side ? tr(", дополнительный") : ""}${open ? "" : tr(", закрыт")}${stars ? tr(", звёзд: {n}", { n: stars }) : ""}">`);
     if (i === nextI) add(`<circle class="pulse" cx="${x}" cy="${y}" r="${S / 2 + 4}" fill="none" stroke="#fff3c4" stroke-width="3"/>`);
     add(`<use class="ring" href="#im-btn${lv.challenge ? "r" : "b"}" x="${x - S / 2}" y="${y - H / 2}" width="${S}" height="${H}" ${open ? "" : 'filter="url(#f-gray)"'}/>`);
     if (!open) add(`<use href="#im-lock" x="${x - 7}" y="${y - 9}" width="14" height="15.6"/>`);
     else if (lv.challenge) add(`<use href="#im-shield" x="${x - 10}" y="${y - 11}" width="20" height="19"/>`);
+    else if (lv.side) add(`<text class="bnum" x="${x}" y="${y - 1}">＋</text>`);
     else add(`<text class="bnum" x="${x}" y="${y - 1}">${num}</text>`);
-    if (open && lv.commands.includes("attack") && !lv.challenge) add(`<use href="#im-sword" x="${x + 6}" y="${y - S / 2 - 8}" width="16" height="16"/>`);
+    // дополнительный уровень: золотая пунктирная обводка и подпись «доп.» — сразу видно, что он в стороне
+    if (lv.side) add(`<circle class="nside-ring" cx="${x}" cy="${y}" r="${S / 2 + 3}"/><text class="nside" x="${x}" y="${y - S / 2 - 5}">${tr("доп.")}</text>`);
+    if (open && lv.commands.includes("attack") && !lv.challenge && !lv.side) add(`<use href="#im-sword" x="${x + 6}" y="${y - S / 2 - 8}" width="16" height="16"/>`);
     if (open) {
       const st = [0, 1, 2].map((j) => (j < stars ? "★" : "☆")).join("");
       add(`<text class="nstars" x="${x}" y="${y + H / 2 + 6}" fill="${stars ? "#ffd54a" : "#fff"}" stroke="#2a1f14" stroke-width="2.5" paint-order="stroke">${st}</text>`);
@@ -11481,7 +11515,7 @@ function win() {
 
   // "Дальше" ведёт к следующему уровню по порядку, если он открыт
   const nxt = levelIdx + 1;
-  nextBtn.hidden = !(nxt < LEVELS.length && isOpen(nxt) && isleOf(LEVELS[nxt]) === isleOf(L));
+  nextBtn.hidden = !(nxt < LEVELS.length && isOpen(nxt) && isleOf(LEVELS[nxt]) === isleOf(L) && !LEVELS[nxt].side);   // на дополнительный «Дальше» не ведёт
   // у следующего уровня есть обёртки — над «Дальше» картинки: что будет на поле (не трогал — как в прошлый раз)
   const wt = $("win-taste"), nl = LEVELS[nxt];
   wt.hidden = nextBtn.hidden || skinsOf(nl).length < 2 || !save.rolePicked;   // до первого большого выбора строки нет: выбор покажет экран «Кто пойдёт?»
@@ -13219,10 +13253,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 143;
+const APP_VERSION = 144;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 144, date: "2026-11-14", text: "На Острове мастеров появился первый дополнительный уровень — «Зачистка»: тропинка от «Осады» к башне. Он не обязательный, открывается после испытания острова.", en: "The first bonus level is on the Island of Masters — “Clean Sweep”: a side path from the “Siege” to the tower. It’s optional and opens after the island’s challenge.", big: true },
   { v: 143, date: "2026-11-14", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 142, date: "2026-11-14", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 141, date: "2026-11-14", text: "На трёх уровнях Берега теперь можно выбрать, кто пойдёт: рыцарь бьёт гоблина, работник рубит дерево, колет камень и прогоняет овцу, монах собирает грибы — его путь хитрее. Монет на этих уровнях больше нет. Щитоносец стал чёрным рыцарем со щитом.", en: "On three Shore levels you can now choose who goes: the knight fights a goblin, the worker chops a tree, breaks a rock and shoos a sheep away, the monk picks mushrooms on a trickier path. Coins are gone from these levels. The shield-bearer is now a black knight with a shield.", big: true },

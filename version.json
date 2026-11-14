@@ -1,21 +1,21 @@
 {
- "version": 143,
+ "version": 144,
  "date": "2026-11-14",
  "notes": [
-  "Небольшие улучшения внутри игры."
+  "На Острове мастеров появился первый дополнительный уровень — «Зачистка»: тропинка от «Осады» к башне. Он не обязательный, открывается после испытания острова."
  ],
  "files": {
   "index.html": {
-   "size": 881057,
-   "hash": "bae69c7f5ddf6660"
+   "size": 884318,
+   "hash": "0cbbbc3b83a9fa38"
   },
   "art.js": {
    "size": 1848735,
    "hash": "6644bf7489db3a42"
   },
   "lang-en.js": {
-   "size": 100490,
-   "hash": "36f6eda8a95aecf1"
+   "size": 100885,
+   "hash": "1a6d2394ab215ca6"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "e6122abe36014f52"
+   "hash": "0a1014d3b13d6c1e"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Small improvements inside the game."
+  "The first bonus level is on the Island of Masters — “Clean Sweep”: a side path from the “Siege” to the tower. It’s optional and opens after the island’s challenge."
  ]
 }
