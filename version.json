@@ -1,21 +1,21 @@
 {
- "version": 146,
- "date": "2026-11-14",
+ "version": 147,
+ "date": "2026-11-15",
  "notes": [
-  "В JavaScript «если», поставленное внутрь цикла или «иначе», теперь пишется с правильным отступом."
+  "Новая глава на Острове мастеров — «Стены замка»: два приёма в одной программе, а потом приём, который зовёт другой приём. В блоках у приёмов теперь буквы А и Б. Подписи на карте островов переведены на английский."
  ],
  "files": {
   "index.html": {
-   "size": 887332,
-   "hash": "92e2714a130fbe47"
+   "size": 896690,
+   "hash": "6f66b9112f1b8e2e"
   },
   "art.js": {
    "size": 1848735,
    "hash": "6644bf7489db3a42"
   },
   "lang-en.js": {
-   "size": 101163,
-   "hash": "f48dfed852b3a4d1"
+   "size": 103287,
+   "hash": "bbe6371b5265b186"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "3cb709f673d23f62"
+   "hash": "17af3138e6ecaf17"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "In JavaScript, an “if” placed inside a loop or an “else” now gets the right indentation."
+  "A new chapter on the Island of Masters — “Castle Walls”: two functions in one program, and then a function that calls another function. In blocks, functions now have letters A and B. Map labels on the islands are translated into English."
  ]
 }

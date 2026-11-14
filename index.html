@@ -932,6 +932,9 @@ html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation:
 /* плитка-вызов компактная: четыре вызова помещаются в один ряд даже на узком телефоне */
 .tile.fn { border-color: var(--fn); background: #ff6ad51c; gap: 2px; min-width: 0; padding: 0 5px; }
 .tile.fn .pz { font-size: 15px; }
+.fnl { display: inline-grid; place-items: center; min-width: 1.15em; height: 1.15em; padding: 0 2px; border-radius: 5px; background: var(--fn); color: #2a0a22;
+  font: 800 0.72em/1 var(--font-display); margin: 0 2px 0 -1px; }
+.fnmini .m.f { color: var(--fn); }
 .tile.fn .fnmini { font-size: 14px; gap: 2px; }
 .fnmini { display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-display); font-size: 15px; line-height: 1; }
 .fnmini .m.h { color: var(--torch); } .fnmini .m.v { color: var(--frost); } .fnmini .m.a { color: var(--sword); }
@@ -2188,11 +2191,20 @@ function defBody(code, name) {
   const d = parseBlocks(code).find((it) => it.def === name);
   return d ? d.body : [];
 }
+// Буква приёма (А, Б, В…) — когда в программе два приёма и больше: в блоках имена не видны,
+// а пустые приёмы выглядят одинаково. Буква стоит на заголовке рамки, на плитке-вызове и на кнопке.
+function fnLetter(code, name) {
+  const ns = defNames(code), k = ns.indexOf(name);
+  return ns.length > 1 && k >= 0 ? (EN_ON ? "ABCDEFGH" : "АБВГДЕЖЗ")[k] || "" : "";
+}
+const fnTag = (code, name) => { const l = fnLetter(code, name); return l ? `<b class="fnl">${l}</b>` : ""; };
 // маленькая картинка приёма — его стрелки подряд: на плитке-вызове и на кнопке в палитре
+// (вызов другого приёма внутри — его буква)
 function fnMini(code, name) {
-  const body = defBody(code, name).filter((t) => t.name);
+  const body = defBody(code, name).filter((t) => t.name || t.call);
   if (!body.length) return "";
   return `<span class="fnmini" aria-hidden="true">${body.map((t) => {
+    if (t.call) return `<span class="m f">🧩${fnLetter(code, t.call)}</span>`;
     const d = DIRS[ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name)];
     return `<span class="m ${d.axis}">${d.arrow}${t.n > 1 ? t.n : ""}</span>`;
   }).join("")}</span>`;
@@ -2248,6 +2260,7 @@ const CHAPTERS = [
   // Четвёртый остров (isle: 4) — Остров мастеров, свои приёмы (функции)
   { name: tr("Мастерская"), topic: tr("свои приёмы"), isle: 4 },
   { name: tr("Осада мастерской"), topic: tr("приём в цикле"), isle: 4 },
+  { name: tr("Стены замка"), topic: tr("два приёма"), isle: 4 },
 ];
 
 // Уровни по порядку на карте.
@@ -4286,6 +4299,116 @@ const LEVELS = [
     ],
     starter: { py: "", js: "" },
   },
+  // ===== Глава «Стены замка» (Остров мастеров): два приёма в одной программе, потом приём зовёт приём =====
+  // По одной новой вещи: две кнопки приёмов → собрать второй → собрать оба → приём зовёт приём → испытание.
+  // requireFn: 2 — для ★★★ нужны два непустых приёма, оба позваны; в блоках у приёмов буквы А и Б.
+  {
+    name: "Два приёма",
+    chapter: 15,
+    isle: 4,
+    funcs: true, requireFn: 2,
+    newFn: true,
+    goal: "Нажми [[fnbtn:2]], потом два раза [[fnbtn]] и снова [[fnbtn:2]]. Теперь приёмов два: А бьёт гоблина и шагает вперёд, Б перелезает через препятствие сверху.",
+    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    par: 10, good: 12,
+    map: [
+      "#########",
+      "#########",
+      "#...#...#",
+      "SG#.GG#E#",
+      "#########",
+    ],
+    starter: {
+      py: "def hit():\n    attack()\n    move_right()\n\ndef hop():\n    move_up()\n    move_right(2)\n    move_down()\n\nhit()\n",
+      js: "function hit() {\n  attack();\n  moveRight();\n}\n\nfunction hop() {\n  moveUp();\n  moveRight(2);\n  moveDown();\n}\n\nhit();\n",
+    },
+  },
+  {
+    name: "Собери второй",
+    chapter: 15,
+    isle: 4,
+    funcs: true, requireFn: 2,
+    after: "Два приёма",
+    goal: "Нажми [[fnhead:2]], потом [[btn:moveDown]], [[btn:moveRight]] [[num:2]] и [[btn:moveUp]]. Приём Б пустой, а программа уже зовёт его: он должен пронырнуть под препятствием снизу.",
+    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    par: 9, good: 11,
+    map: [
+      "#########",
+      "#########",
+      "S#.GG#E##",
+      "...#...##",
+      "#########",
+    ],
+    starter: {
+      py: "def hit():\n    attack()\n    move_right()\n\ndef dive():\n\ndive()\nhit()\nhit()\ndive()\n",
+      js: "function hit() {\n  attack();\n  moveRight();\n}\n\nfunction dive() {\n}\n\ndive();\nhit();\nhit();\ndive();\n",
+    },
+  },
+  {
+    name: "Сверху и снизу",
+    chapter: 15,
+    isle: 4,
+    funcs: true, requireFn: 2,
+    after: "Собери второй",
+    goal: "Собери оба приёма: нажми [[fnhead]] и ↑, →2, ↓ — это путь поверху, потом [[fnhead:2]] и ↓, →2, ↑ — понизу. Программа уже готова: сверху, снизу, сверху, снизу.",
+    commands: ["moveRight", "moveUp", "moveDown"],
+    par: 10, good: 12,
+    map: [
+      "#########",
+      "...#...##",
+      "S#.#.#.#E",
+      "##...#...",
+      "#########",
+    ],
+    starter: {
+      py: "def hop():\n\ndef dive():\n\nhop()\ndive()\nhop()\ndive()\n",
+      js: "function hop() {\n}\n\nfunction dive() {\n}\n\nhop();\ndive();\nhop();\ndive();\n",
+    },
+  },
+  {
+    name: "Приём зовёт приём",
+    chapter: 15,
+    isle: 4,
+    funcs: true, requireFn: 2, requireNest: true, nestFns: true,
+    after: "Сверху и снизу",
+    goal: "Нажми [[fnhead:2]], потом два раза [[fnbtn]]. Приём может позвать другой приём: Б зовёт А дважды — и рыцарь бьёт пару гоблинов одной кнопкой.",
+    commands: ["moveRight", "moveDown", "attack"],
+    par: 10, good: 12,
+    map: [
+      "#########",
+      "SGG######",
+      "##.GG####",
+      "####.GG##",
+      "######E##",
+    ],
+    starter: {
+      py: "def hit():\n    attack()\n    move_right()\n\ndef pair():\n\npair()\nmove_down()\npair()\nmove_down()\npair()\nmove_down()\n",
+      js: "function hit() {\n  attack();\n  moveRight();\n}\n\nfunction pair() {\n}\n\npair();\nmoveDown();\npair();\nmoveDown();\npair();\nmoveDown();\n",
+    },
+  },
+  {
+    name: "Стены замка: испытание",
+    chapter: 15,
+    isle: 4,
+    funcs: true, requireFn: 2, nestFns: true,
+    challenge: true,
+    more: true,
+    after: "Приём зовёт приём",
+    goal: "Испытание: поднимись по стене замка к воротам. Приёмы пустые, программа пустая. На стене два дела: ступенька вверх и гоблин на пути — каждому свой приём.",
+    commands: ["moveRight", "moveUp", "attack"],
+    par: 12, good: 14,
+    map: [
+      "#######.E",
+      "#####..G#",
+      "##..GG###",
+      "#..######",
+      "SG#######",
+    ],
+    starter: {
+      py: "def step():\n\ndef hit():\n",
+      js: "function step() {\n}\n\nfunction hit() {\n}\n",
+    },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -4309,9 +4432,11 @@ function btnRefs(html) {
     .replace(/\[\[elsebtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("иначе")}</span>`)
     .replace(/\[\[elsehead\]\]/g, () => `<span class="elseref">${tr("иначе")}</span>`)
     // [[fnbtn]] — розовая кнопка своего приёма (с картинкой того, что в нём), [[fnhead]] — заголовок рамки приёма
-    .replace(/\[\[fnbtn\]\]/g, () => { const nm = defNames(codeEl?.value || L?.starter?.[lang] || "")[0];
-      return `<span class="fnref">🧩${!nm ? "" : uiBlocks ? fnMini(codeEl.value, nm) : " " + nm + "()"}</span>`; })
-    .replace(/\[\[fnhead\]\]/g, () => `<span class="fnheadref">🧩 ${tr("приём")}</span>`);
+    // [[fnbtn:2]] / [[fnhead:2]] — второй приём (когда их два: с буквой Б)
+    .replace(/\[\[fnbtn(?::(\d))?\]\]/g, (m, k) => { const src = codeEl?.value || L?.starter?.[lang] || "", nm = defNames(src)[(+k || 1) - 1];
+      return `<span class="fnref">🧩${!nm ? "" : uiBlocks ? fnTag(src, nm) + fnMini(src, nm) : " " + nm + "()"}</span>`; })
+    .replace(/\[\[fnhead(?::(\d))?\]\]/g, (m, k) => { const src = codeEl?.value || L?.starter?.[lang] || "", nm = defNames(src)[(+k || 1) - 1], l = nm ? fnLetter(src, nm) : "";
+      return `<span class="fnheadref">🧩 ${tr("приём")}${l ? " " + l : ""}</span>`; });
 }
 function langify(html) {
   const body = lang === "py"
@@ -5916,7 +6041,7 @@ ISLE_MAPS[3] = {
 // @@/isle3@@
 // @@isle4@@
 ISLE_MAPS[4] = {
-  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350], [250, 350], [310, 390], [50, 350]],
+  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350], [250, 350], [310, 390], [50, 350], [230, 270], [170, 270], [110, 250], [150, 210], [210, 210]],
   rows: [
     "....................................",
     "....................................",
@@ -6058,7 +6183,7 @@ ISLE_MAPS[4] = {
     ["wrock2", 12.6, 28.4, 0.7],
     ["duck", 15.0, 27.8, 1.3],
   ],
-  labels: [["МАСТЕРСКАЯ", 268, 502], ["ОСАДА", 150, 318]],
+  labels: [["МАСТЕРСКАЯ", 268, 502], ["ОСАДА", 150, 318], ["СТЕНЫ ЗАМКА", 118, 176]],
   bank: [["cloud_b", 260, 1810, 1.1], ["cloud_a", 600, 1790, 1.3], ["cloud_c", 900, 1830, 1.0], ["cloud_d", 1090, 1820, 1.0]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm2",
@@ -6847,7 +6972,8 @@ function renderMap() {
   });
 
   // Подписи глав на лентах из набора
-  D.labels.forEach(([t, x, y]) => {
+  D.labels.forEach(([t0, x, y]) => {
+    const t = tr(t0);   // подписи островов 2–4 в данных карты по-русски — переводим здесь
     const w = t.length * 9 + 14, h = 22, cap = 16;
     add(`<g aria-hidden="true"><use href="#im-rib0" x="${x - w / 2 - cap}" y="${y - h / 2}" width="${cap}" height="${h}"/>`
       + `<use href="#im-rib1" x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}"/>`
@@ -8998,7 +9124,7 @@ function buildChips() {
   if (L.funcs) for (const nm of defNames(codeEl.value)) {
     add("add-fn-" + nm, "fnchip" + (L.newFn ? " new" : ""), "", () => insertCall(nm));
     const b = $("add-fn-" + nm);
-    b.innerHTML = uiBlocks ? `🧩${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
+    b.innerHTML = uiBlocks ? `🧩${fnTag(codeEl.value, nm)}${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
     b.setAttribute("aria-label", tr("Приём") + " " + nm);
   }
   // Приём удалили из программы (вместе с его кнопкой) — кнопка «🧩 ＋ приём» ставит пустую рамку приёма
@@ -9136,8 +9262,19 @@ function selectLine(n) {
   drawCode();
 }
 
-// Вызов своего приёма. Внутрь приёма (и внутрь его рамки) вызов не кладём — приём звал бы сам себя.
+// Вызов своего приёма. Выбран заголовок другого приёма — вызов ложится в конец того приёма
+// (приём зовёт приём); выбрана плитка внутри другого приёма — после неё. В сам себя — нет: приём звал бы сам себя без конца.
 // Выбрана плитка программы — вызов встаёт после неё, иначе — в конец программы.
+function defNameAt(lines, ln) {
+  for (let j = ln - 1; j >= 0; j--) {
+    const t = lines[j];
+    if (!t.trim()) continue;
+    const m = t.match(DEF_LINE);
+    if (m) return m[1] || m[2];
+    if (!/^\s/.test(t) && !/^\s*\}/.test(t)) return null;
+  }
+  return null;
+}
 function inDefAt(lines, ln) {
   for (let j = ln - 1; j >= 0; j--) {
     const t = lines[j];
@@ -9150,6 +9287,18 @@ function inDefAt(lines, ln) {
 function insertCall(nm) {
   const call = nm + (lang === "py" ? "()" : "();");
   const lines = codeEl.value.replace(/\s+$/, "").split("\n");
+  const host = selLine && selLine <= lines.length ? defNameAt(lines, selLine) : null;
+  if (host && host === nm) { setStatus(tr("Приём не зовёт сам себя: выбери другой приём или плитку программы"), "fail"); return; }
+  if (host && L.nestFns) {
+    if (DEF_LINE.test(lines[selLine - 1])) { putIntoDef(nm); return; }   // заголовок приёма — в конец приёма
+    const ind = lines[selLine - 1].match(/^ */)[0];
+    lines.splice(selLine, 0, ind + call);
+    selLine++;
+    codeEl.value = lines.join("\n") + "\n";
+    onCodeChange();
+    drawCode();
+    return;
+  }
   // выбрана рамка цикла / «если» / «иначе» — вызов ложится в неё, как стрелка
   if (selLine && selLine <= lines.length && !inDefAt(lines, selLine) && /^\s*(\}\s*)?(while|for|if|elif|else)\b/.test(lines[selLine - 1])) {
     putCommandOnLine(nm);
@@ -10034,7 +10183,7 @@ let activeVia = 0;   // при запуске: строка, откуда поз
 function tileHtml(t, active, err) {
   const cls = (t.line === selLine ? " sel" : "") + (t.line === active || (t.call && t.line === activeVia) ? " now" : "") + (t.line === err ? " err" : "");
   if (t.bad) return `<button class="tile bad${cls}" data-line="${t.line}">${esc(t.bad)}</button>`;
-  if (t.call) return `<button class="tile fn${cls}" data-line="${t.line}" aria-label="${tr("приём")} ${t.call}"><span class="pz">🧩</span>${fnMini(codeEl.value, t.call)}</button>`;
+  if (t.call) return `<button class="tile fn${cls}" data-line="${t.line}" aria-label="${tr("приём")} ${t.call}"><span class="pz">🧩</span>${fnTag(codeEl.value, t.call)}${fnMini(codeEl.value, t.call)}</button>`;
   const key = ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name);
   const d = DIRS[key];
   return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.n}"><span class="ar">${d.arrow}</span><span class="nn">${t.n}</span></button>`;
@@ -10048,7 +10197,7 @@ function blockHtml(it, active, err) {
   }
   if (it.def) {
     const st = (it.line === selLine ? " sel" : "");
-    return `<div class="bdef${it.line === err ? " err" : ""}"><button class="dhead${st}" data-line="${it.line}" aria-label="${tr("свой приём")} ${it.def}">🧩 ${tr("приём")}</button>`
+    return `<div class="bdef${it.line === err ? " err" : ""}"><button class="dhead${st}" data-line="${it.line}" aria-label="${tr("свой приём")} ${it.def}">🧩 ${tr("приём")}${fnLetter(codeEl.value, it.def) ? " " + fnLetter(codeEl.value, it.def) : ""}</button>`
       + body(it.body, tr("что делает приём"), true) + `</div>`;
   }
   if (it.cond) {
@@ -10639,7 +10788,7 @@ function onCodeChange() {
 function refreshFnChips() {
   const names = defNames(codeEl.value), have = [...chipsEl.querySelectorAll(".fnchip:not(#add-def)")].map((b) => b.id.slice(7));
   if (names.join() !== have.join()) { buildChips(); return; }
-  for (const nm of names) $("add-fn-" + nm).innerHTML = uiBlocks ? `🧩${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
+  for (const nm of names) $("add-fn-" + nm).innerHTML = uiBlocks ? `🧩${fnTag(codeEl.value, nm)}${fnMini(codeEl.value, nm)}` : `🧩 ${esc(nm)}()`;
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -11486,6 +11635,10 @@ function toolMissing(code) {
   if (L.requireFn) {
     const c = stripComments(code), fns = defNames(c).filter((nm) => defBody(c, nm).length);
     if (!fns.length || !countCalls(c, fns)) return "fn";
+    // requireFn: 2 — нужны два разных непустых приёма, и оба позваны (из программы или из другого приёма)
+    if (L.requireFn >= 2 && fns.filter((nm) => countCalls(c, [nm])).length < 2) return "fn2";
+    // nestFns — один приём зовёт другой
+    if (L.requireNest && !fns.some((nm) => defBody(c, nm).some((t) => t.call && t.call !== nm && fns.includes(t.call)))) return "nest";
   }
   return null;
 }
@@ -11524,7 +11677,10 @@ function win() {
 
   $("win-stars").innerHTML = starsHtml(stars) + (crown ? ` <span class="win-crown">👑</span>` : "") + (gem ? ` <span class="win-crown">💎</span>` : "");
   let note = tr("В коде {n} {w}.", { n: written, w: plural(written, "команда", "команды", "команд") });
-  if (missing) note += tr(missing === "fn" ? " Получилось! Для ★★★ здесь нужен свой приём (розовая рамка) — попробуй с ним." : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
+  if (missing) note += tr(missing === "fn" ? " Получилось! Для ★★★ здесь нужен свой приём (розовая рамка) — попробуй с ним."
+    : missing === "fn2" ? " Получилось! Для ★★★ здесь нужны оба приёма — и А, и Б."
+    : missing === "nest" ? " Получилось! Для ★★★ один приём должен позвать другой: выбери заголовок приёма и нажми кнопку другого."
+    : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
   else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
   if (crown) note += bossShield ? (newCrown ? tr(" Ты победил щитоносца — у тебя корона!") : tr(" Щитоносец снова повержен."))
@@ -13285,10 +13441,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 146;
+const APP_VERSION = 147;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 147, date: "2026-11-15", text: "Новая глава на Острове мастеров — «Стены замка»: два приёма в одной программе, а потом приём, который зовёт другой приём. В блоках у приёмов теперь буквы А и Б. Подписи на карте островов переведены на английский.", en: "A new chapter on the Island of Masters — “Castle Walls”: two functions in one program, and then a function that calls another function. In blocks, functions now have letters A and B. Map labels on the islands are translated into English.", big: true },
   { v: 146, date: "2026-11-14", text: "В JavaScript «если», поставленное внутрь цикла или «иначе», теперь пишется с правильным отступом.", en: "In JavaScript, an “if” placed inside a loop or an “else” now gets the right indentation." },
   { v: 145, date: "2026-11-14", text: "Второй дополнительный уровень — «Найти и уничтожить»: тропинка налево от «Осады». Гоблин спрятался, а в «иначе» можно поставить ещё одно «если». В блоках на телефоне вернулась кнопка «враг ⇄ препятствие» там, где на уровне нужны оба вопроса.", en: "A second bonus level — “Seek and Destroy”: a side path to the left of the “Siege”. The goblin is hiding, and you can put another “if” inside the “else”. In blocks on phones, the “enemy ⇄ obstacle” button is back where a level needs both questions.", big: true },
   { v: 144, date: "2026-11-14", text: "На Острове мастеров появился первый дополнительный уровень — «Зачистка»: тропинка от «Осады» к башне. Он не обязательный, открывается после испытания острова.", en: "The first bonus level is on the Island of Masters — “Clean Sweep”: a side path from the “Siege” to the tower. It’s optional and opens after the island’s challenge.", big: true },
