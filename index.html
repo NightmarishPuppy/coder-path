@@ -1155,8 +1155,8 @@ html.still .mapring { animation: none; }
 .archi-top { position: sticky; top: 0; z-index: 9999; display: flex; align-items: center; justify-content: space-between;
   padding: max(10px, env(safe-area-inset-top, 0px)) 16px 22px; background: linear-gradient(rgba(19, 21, 27, 0.88), rgba(19, 21, 27, 0)); pointer-events: none; }
 .archi-title { font-family: var(--font-display); font-weight: 700; font-size: 18px; letter-spacing: 0.04em; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
-.archi-close { pointer-events: auto; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(19, 21, 27, 0.72); display: grid; place-items: center; cursor: pointer; }
-.archi-close svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; }
+.archi-close { pointer-events: auto; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--fg); background: var(--torch); display: grid; place-items: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); }
+.archi-close svg { width: 20px; height: 20px; fill: none; stroke: #13151b; stroke-width: 3.6; stroke-linecap: round; }
 .archi-world { position: relative; width: min(100%, 560px); margin: -76px auto 0; aspect-ratio: 360 / 2360; }
 .archi-isle { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .archi-isle canvas { display: block; width: 100%; height: auto; }
@@ -12855,10 +12855,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 135;
+const APP_VERSION = 136;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 136, date: "2026-11-14", text: "Крестик на карте архипелага тоже стал крупным и заметным.", en: "The close button on the archipelago map is big and easy to see now too." },
   { v: 135, date: "2026-11-14", text: "В испытании «Осада» новый враг вместо второго великана — щитоносец. Его корона — отдельная загадка: старый способ не сработает.", en: "The “Siege” challenge has a new enemy instead of a second giant — the shield-bearer. His crown is a puzzle of its own: the old trick won’t work.", big: true },
   { v: 134, date: "2026-11-14", text: "Цифра после стрелки теперь работает и когда выбрана рамка: меняет плитку, которую только что положили.", en: "A number after an arrow now works when a frame is selected too: it changes the tile you just added." },
   { v: 133, date: "2026-11-14", text: "Если убрать приём из программы, его можно вернуть кнопкой «🧩 ＋ приём».", en: "If you remove a function from the program, the “🧩 ＋ function” button brings it back." },

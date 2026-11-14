@@ -1,13 +1,13 @@
 {
- "version": 135,
+ "version": 136,
  "date": "2026-11-14",
  "notes": [
-  "В испытании «Осада» новый враг вместо второго великана — щитоносец. Его корона — отдельная загадка: старый способ не сработает."
+  "Крестик на карте архипелага тоже стал крупным и заметным."
  ],
  "files": {
   "index.html": {
-   "size": 831901,
-   "hash": "cd5af4cd6b73bf06"
+   "size": 832183,
+   "hash": "89a173df4f56df2d"
   },
   "art.js": {
    "size": 1790430,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "b69789674b1d4a0f"
+   "hash": "1dc9d3a7f45d99c1"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The “Siege” challenge has a new enemy instead of a second giant — the shield-bearer. His crown is a puzzle of its own: the old trick won’t work."
+  "The close button on the archipelago map is big and easy to see now too."
  ]
 }
