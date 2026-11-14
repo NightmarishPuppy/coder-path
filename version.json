@@ -1,21 +1,21 @@
 {
- "version": 140,
+ "version": 141,
  "date": "2026-11-14",
  "notes": [
-  "Теперь можно выбирать, что будет на поле: ⚔ гоблин на пути, монеты по дороге или просто путь. Картинки — над полем и в окне победы над кнопкой «Дальше». Пока на пяти уровнях Берега."
+  "На трёх уровнях Берега теперь можно выбрать, кто пойдёт: рыцарь бьёт гоблина, работник рубит дерево, колет камень и прогоняет овцу, монах собирает грибы — его путь хитрее. Монет на этих уровнях больше нет. Щитоносец стал чёрным рыцарем со щитом."
  ],
  "files": {
   "index.html": {
-   "size": 846655,
-   "hash": "587d1bd8612c51b5"
+   "size": 858695,
+   "hash": "b005bbb91c2a34c9"
   },
   "art.js": {
-   "size": 1790430,
-   "hash": "b296b5d5ffd147ed"
+   "size": 1848735,
+   "hash": "6644bf7489db3a42"
   },
   "lang-en.js": {
-   "size": 98003,
-   "hash": "9546473edc5d90a1"
+   "size": 100005,
+   "hash": "9c201f4d8fb44ef8"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "4c3b62b26cd28a6f"
+   "hash": "beb4f39e6944da89"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "You can now choose what’s on the board: ⚔ a goblin in the way, coins along the road, or just the path. The pictures are above the board and in the win window over the “Next” button. On five Shore levels for now."
+  "On three Shore levels you can now choose who goes: the knight fights a goblin, the worker chops a tree, breaks a rock and shoos a sheep away, the monk picks mushrooms on a trickier path. Coins are gone from these levels. The shield-bearer is now a black knight with a shield."
  ]
 }

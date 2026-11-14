@@ -346,19 +346,46 @@ html.still .windfx span:not(.mote) { display: none; }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .item { transition: none; }
 .boardtop { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; }
+.skinbtn { opacity: 0.8; }
 .boardtop[hidden] { display: none; }
 .skinbar { display: flex; gap: 6px; margin-left: auto; }
-.skinbtn { width: 38px; height: 30px; padding: 0; border-radius: 15px; border: 2px solid #4a5068; background: var(--bg); cursor: pointer;
+.skinbtn { width: 46px; height: 42px; padding: 0; border-radius: 12px; border: 2px solid #4a5068; background: var(--bg); cursor: pointer;
   display: grid; place-items: center; font-size: 15px; line-height: 1; opacity: 0.72; position: relative; }
-.skinbtn img { width: 20px; height: 20px; image-rendering: pixelated; object-fit: contain; }
+.skinbtn { overflow: hidden; }
+.fig { display: block; width: 172%; aspect-ratio: 1; flex: none; background-repeat: no-repeat; background-position: 0 0; image-rendering: pixelated; }
+.skinbtn .fig { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -54%); }
+.enemy.job .hp { display: none; }
+.enemy.job .jobtool { position: absolute; top: -6%; right: 2%; width: 34%; image-rendering: pixelated; z-index: 4; animation: jobbob 1.1s ease-in-out infinite;
+  filter: drop-shadow(0 1px 0 #2a1f14) drop-shadow(0 0 3px #fff8); }
+@keyframes jobbob { 50% { transform: translateY(-14%); } }
+html.still .enemy.job .jobtool { animation: none; }
+.enemy.job .j-run { display: none; }
+.enemy.job-sheep.gone { opacity: 0; transform: translateX(170%); transition: transform 0.8s ease-in, opacity 0.3s ease 0.55s; }
+.enemy.job-sheep.gone.flee-l { transform: translateX(-170%) scaleX(-1); }
+.enemy.job-sheep.gone .j-run { display: block; }
+.enemy.job-sheep.gone .j-idle { display: none; }
+.enemy.job-tree.gone, .enemy.job-rock.gone { transform: scale(0.7); }
+.poof.stump { animation: none !important; z-index: 1; }
+.item.mush { inset: 20% 22% 14%; }
+.rolepick { position: fixed; inset: 0; z-index: 60; background: rgba(12, 14, 22, 0.86); display: grid; place-items: center; padding: 14px; }
+.rp-card { width: min(560px, 100%); background: var(--panel, #232738); border: 2px solid var(--torch); border-radius: 14px; padding: 16px 12px 12px; text-align: center; }
+.rp-card h2 { margin: 0 0 12px; font-size: 20px; }
+.rp-card p { margin: 12px 4px 0; font-size: 13px; color: var(--muted); }
+.rp-row { display: flex; gap: 8px; }
+.rp-opt { flex: 1 1 0; min-width: 0; padding: 6px 4px 10px; border-radius: 12px; border: 2px solid #4a5068; background: var(--bg); color: inherit; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; overflow: hidden; font: inherit; }
+.rp-opt:active, .rp-opt:hover { border-color: var(--torch); background: #3a2f1c; }
+.rp-opt .fig { width: 130%; margin: -12% 0 -14%; }
+.rp-opt b { font-size: 15px; }
+.rp-opt span { font-size: 11.5px; line-height: 1.25; color: var(--muted); min-height: 2.5em; }
 .skinbtn.on { border-color: var(--torch); background: #3a2f1c; opacity: 1; box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.25); }
-.skinbtn.done::after { content: "✓"; position: absolute; right: -4px; top: -6px; font-size: 10px; font-weight: 700; color: #10241c; background: #5fd3a6;
+.skinbtn.done::after { content: "✓"; position: absolute; right: 1px; top: 1px; font-size: 10px; font-weight: 700; color: #10241c; background: #5fd3a6;
   width: 14px; height: 14px; border-radius: 7px; display: grid; place-items: center; }
 .skinbtn:disabled { cursor: default; }
 .win-taste { flex-basis: 100%; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted, #aab); }
 .win-taste[hidden] { display: none; }
 .win-taste .skinbar { margin-left: 0; }
-.win-taste .skinbtn { width: 46px; height: 36px; border-radius: 18px; }
+.win-taste .skinbtn { width: 54px; height: 48px; }
 .nskin { font-size: 8px; text-anchor: end; fill: #fff; stroke: #2a1f14; stroke-width: 2; paint-order: stroke; }
 .itemstag {
   align-self: flex-start;
@@ -1863,7 +1890,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
           <div class="note" id="win-note"></div>
         </div>
         <div class="win-taste" id="win-taste" hidden>
-          <span>Дальше будет:</span>
+          <span>Кто пойдёт дальше:</span>
           <div class="skinbar" id="win-taste-row" role="group"></div>
         </div>
         <div class="win-actions">
@@ -2010,6 +2037,8 @@ const DIRS = {
   moveUp:    { dx: 0, dy: -1, arrow: "↑", axis: "v", py: "move_up" },
   // Удар: рыцарь не двигается, а бьёт гоблина рядом. attack(2) — два удара подряд.
   attack:    { dx: 0, dy: 0, arrow: "⚔", axis: "a", py: "attack" },
+  // Работа: то же, что удар, только для работника — срубить дерево, расколоть камень, прогнать овцу.
+  work:      { dx: 0, dy: 0, arrow: "🪓", axis: "a", py: "work" },
   // Арена: идти к ближайшему врагу и лечиться (рыцарь сам решает куда — команда без числа)
   goToEnemy: { dx: 0, dy: 0, arrow: "➤", axis: "g", py: "go_to_enemy" },
   heal:      { dx: 0, dy: 0, arrow: "♥", axis: "l", py: "heal" },
@@ -2203,13 +2232,15 @@ const LEVELS = [
     goal: "Доведи рыцаря до двери сам. Помни: в скобках можно написать число шагов, <code>moveRight(3)</code> — три клетки вправо.",
     commands: ["moveRight", "moveDown"],
     par: 5, good: 7,
-    // Обёртки («вкус»): тот же урок и почти те же нажатия, другое на поле. Сам уровень — вид «просто путь» (think).
-    // fight — на пути гоблин (calm: сам не бьёт, только не пускает; бояться его начнём в Скалах), coins — по дороге монеты.
+    // Роли: кто идёт. fight — рыцарь и гоблин (calm: сам не бьёт, только не пускает), work — работник и дерево на том же месте,
+    // monk — монах: поле хитрее (прямая дорога к двери есть, но грибы лежат на другой) — на команду длиннее, без 💎.
     skins: {
       fight: { calm: true, codeRev: 2, commands: ["moveRight", "moveDown", "attack"], par: 6, good: 8,
         map: ["S..#...", "##.#...", "...G.#.", ".###.#.", "...#..E"] },
-      coins: { codeRev: "c", map: ["SC.#...", "##.#...", "...C.#.", ".###C#.", "...#.CE"] },
-      think: {},
+      work: { calm: true, codeRev: "w", commands: ["moveRight", "moveDown", "work"], par: 6, good: 8,
+        map: ["S..#...", "##.#...", "...T.#.", ".###.#.", "...#..E"] },
+      monk: { codeRev: "m", par: 6, good: 8, gem: false,
+        map: ["S.M....", ".#.###.", "..M..#.", "#.#.M..", "....#.E"] },
     },
     map: [
       "S..#...",
@@ -2228,10 +2259,6 @@ const LEVELS = [
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     newCommands: ["moveUp", "moveLeft"],
     par: 7, good: 9,
-    skins: {
-      coins: { codeRev: "c", map: [".C.#...", ".#.#C#.", ".#C#.#C", ".#.C.#.", "S#####E"] },
-      think: {},
-    },
     map: [
       "...#...",
       ".#.#.#.",
@@ -2251,8 +2278,10 @@ const LEVELS = [
     skins: {
       fight: { calm: true, codeRev: 2, commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"], par: 8, good: 10,
         map: ["S......", "######.", ".....#.", ".###.#.", ".#EG.#.", ".#####.", "......."] },
-      coins: { codeRev: "c", map: ["S..C...", "######.", "..C..#.", ".###.#C", "C#EC.#.", ".#####.", "...C..."] },
-      think: {},
+      work: { calm: true, codeRev: "w", commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "work"], par: 8, good: 10,
+        map: ["S......", "######.", ".....#.", ".###.#.", ".#EO.#.", ".#####.", "......."] },
+      monk: { codeRev: "m", par: 9, good: 11,
+        map: ["S......", "######.", "..M..#.", ".###.#M", ".#E..#.", ".M####.", "......."] },
     },
     map: [
       "S......",
@@ -2291,10 +2320,6 @@ const LEVELS = [
     goal: "Код уже написан, но в одной строке ошибка. Нажми «Запустить» и посмотри, где рыцарь остановится: эта строка подсветится. Потом нажми на её номер и поправь число кнопками.",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     par: 4, good: 6,
-    skins: {
-      coins: { codeRev: "c", map: ["S.C.###", "###C###", "###..C.", "######C", "######E"] },
-      think: {},
-    },
     map: [
       "S...###",
       "###.###",
@@ -2318,8 +2343,10 @@ const LEVELS = [
     skins: {
       fight: { calm: true, codeRev: 2, commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"], par: 8, good: 10,
         map: ["###.....", "#...#.#.", "....##..", ".##.#.#.", ".####.G.", "S####E##"] },
-      coins: { codeRev: "c", map: ["###..C..", "#...#.#.", "..C.##.C", "C##.#.#.", ".####.C.", "S####E##"] },
-      think: {},
+      work: { calm: true, codeRev: "w", commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "work"], par: 8, good: 10,
+        map: ["###.....", "#...#.#.", "....##..", ".##.#.#.", ".####.R.", "S####E##"] },
+      monk: { codeRev: "m", par: 10, good: 12,
+        map: ["###.....", "#.M.#.#.", "....##..", ".##.#M#.", ".####...", "S####E##"] },
     },
     map: [
       "###.....",
@@ -4567,24 +4594,29 @@ function suggested() {
   return i === -1 ? indexOf(LAST_LEVEL().name) : i;
 }
 const indexOf = (name) => LEVELS.findIndex((lv) => lv.name === name);
+const isHit = (name) => name === "attack" || name === "work";   // удар рыцаря и работа работника — одно действие
 
-// ===== Обёртки уровня («вкус») =====
-// Урок и порядок уровней одни для всех; игрок выбирает только, что будет на поле:
-// fight — гоблин на пути, coins — монеты по дороге, think — просто путь.
-// Вкус один на всю игру (save.taste, по умолчанию бой); у уровня нет такой обёртки — берётся «просто путь».
-const SKIN_IDS = ["fight", "coins", "think"];
-const SKIN_KEYS = ["map", "par", "good", "commands", "calm", "codeRev", "best"];   // что обёртка может поменять в уровне
-const SKIN_NAME = { fight: "Бой", coins: "Монеты", think: "Просто путь" };
-const skinIcon = (id) => id === "fight" ? `<img alt="" src="${TS.ui_sword}">` : id === "coins" ? `<img alt="" src="${TS.coin}">` : `<span aria-hidden="true">💡</span>`;
+// ===== Роли: кто идёт на уровень =====
+// Урок и порядок уровней одни для всех; на уровне с ролями игрок выбирает, КТО пойдёт:
+// fight — рыцарь (на пути гоблин, команда attack), work — работник (на пути дело: дерево, камень, овца; команда work),
+// monk — монах (тот же урок, но поле хитрее: надо собрать все грибы). Сложность у рыцаря и работника равная, у монаха выше.
+// Выбор — на каждом уровне заново (save.taste помнит последний, по умолчанию рыцарь); у уровня нет такой роли — идёт рыцарь.
+const SKIN_IDS = ["fight", "work", "monk"];
+const SKIN_KEYS = ["map", "par", "good", "commands", "calm", "codeRev", "best", "gem"];   // что роль может поменять в уровне
+const SKIN_NAME = { fight: "Рыцарь", work: "Работник", monk: "Монах" };
+const SKIN_DOES = { fight: "бьёт гоблина", work: "расчищает дорогу", monk: "ищет грибы — путь хитрее" };
+const SKIN_SPR = { fight: "kidle", work: "pw_idle", monk: "mk_idle" };
+// фигурка роли: первый кадр её анимации
+const skinIcon = (id) => `<i class="fig" style="background-image:url(${TS[SKIN_SPR[id]]});background-size:${TS_INFO[SKIN_SPR[id]][0] ?? TS_INFO[SKIN_SPR[id]]}00% 100%"></i>`;
 const skinsOf = (lv) => lv?.skins ? SKIN_IDS.filter((id) => lv.skins[id]) : [];
-const skinFor = (lv) => { const t = save.taste || "fight"; return !lv.skins ? null : lv.skins[t] ? t : lv.skins.think ? "think" : skinsOf(lv)[0]; };
+const skinFor = (lv) => { const t = save.taste || "fight"; return !lv.skins ? null : lv.skins[t] ? t : lv.skins.fight ? "fight" : skinsOf(lv)[0]; };
 function applySkin(lv) {
   if (!lv.skins) return;
   if (!lv._plain) { lv._plain = {}; SKIN_KEYS.forEach((k) => (lv._plain[k] = lv[k])); }
   lv.skin = skinFor(lv);
   Object.assign(lv, lv._plain, lv.skins[lv.skin]);
 }
-// сменить вкус: except — уровень, который сейчас на экране и трогать нельзя (окно победы)
+// сменить роль: except — уровень, который сейчас на экране и трогать нельзя (окно победы)
 function setTaste(id, except) {
   save.taste = id;
   writeSave();
@@ -4592,15 +4624,30 @@ function setTaste(id, except) {
   if (typeof statTaste === "function") statTaste(id);
 }
 LEVELS.forEach(applySkin);
-// фраза обёртки в задании — сразу после первого предложения (первым остаётся действие)
+// дело работника на этом поле: T — дерево, R — камень, O — овца
+const JOB_KIND = { T: "tree", R: "rock", O: "sheep" };
+const jobOf = (lv) => { for (const row of lv.map) for (const ch of row) if (JOB_KIND[ch]) return JOB_KIND[ch]; return null; };
+// фраза роли в задании — сразу после первого предложения (первым остаётся действие)
 function skinGoal(text) {
+  const job = L.skin === "work" && jobOf(L);
   const add = L.skin === "fight" ? tr("Гоблин на пути не пускает: подойди вплотную и ударь — [[btn:attack]].")
-    : L.skin === "coins" ? tr("Собери по дороге все монеты — они откроют дверь.") : "";
+    : job === "tree" ? tr("Дорогу загородило дерево: подойди вплотную и сруби — [[btn:work]].")
+    : job === "rock" ? tr("Дорогу завалил камень: подойди вплотную и расколи — [[btn:work]].")
+    : job === "sheep" ? tr("На дороге разлеглась овца: подойди вплотную и прогони — [[btn:work]].")
+    : L.skin === "monk" ? tr("Собери все грибы — без них дверь не откроется. Путь тут хитрее.") : "";
   if (!add) return text;
   const m = text.match(/^(.*?[.!?])(\s+)(.*)$/s);
   return m ? `${m[1]} ${add} ${m[3]}` : `${text} ${add}`;
 }
-const goalHtml = () => uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(skinGoal(BLOCK_GOALS[L.name])) : btnRefs(langify(btnRefs(skinGoal(L.goal))));
+// в текстах уровня «рыцарь» — это тот, кто идёт: у работника и монаха слово меняется (с падежами)
+function roleText(t) {
+  const r = L?.skin;
+  if ((r !== "work" && r !== "monk") || typeof t !== "string") return t;
+  if (EN_ON) return t.replace(/\bknight\b/g, r === "work" ? "worker" : "monk").replace(/\bKnight\b/g, r === "work" ? "Worker" : "Monk");
+  const stem = r === "work" ? "аботник" : "онах", up = r === "work" ? "Р" : "М", low = r === "work" ? "р" : "м";
+  return t.replace(/([Рр])ыцар(ь|я|ю|ем|е)(?![а-яё])/g, (m, c, e) => (c === "Р" ? up : low) + stem + { "ь": "", "я": "а", "ю": "у", "ем": "ом", "е": "е" }[e]);
+}
+const goalHtml = () => roleText(uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(skinGoal(BLOCK_GOALS[L.name])) : btnRefs(langify(btnRefs(skinGoal(L.goal)))));
 // ряд картинок «что будет на поле»: on — выбранная, done — в этой обёртке уровень уже пройден
 function skinButtons(lv, onPick) {
   const cur = skinFor(lv);
@@ -4609,8 +4656,8 @@ function skinButtons(lv, onPick) {
     b.className = "skinbtn" + (id === cur ? " on" : "") + (save.skins?.[lv.name + "|" + id] ? " done" : "");
     b.dataset.skin = id;
     b.innerHTML = skinIcon(id);
-    b.setAttribute("aria-label", tr(SKIN_NAME[id]));
-    b.title = tr(SKIN_NAME[id]);
+    b.setAttribute("aria-label", tr(SKIN_NAME[id]) + " — " + tr(SKIN_DOES[id]));
+    b.title = tr(SKIN_NAME[id]) + " — " + tr(SKIN_DOES[id]);
     b.setAttribute("aria-pressed", id === cur);
     b.addEventListener("click", () => { sfx("tap"); onPick(id); });
     return b;
@@ -4636,10 +4683,10 @@ function goblinSprites(hp, giant, shield) {
   const out = document.createDocumentFragment();
   const mk = (key, k, bottom, dur, cls) => out.appendChild(sprite(key, k, { bottom, dur, delay: cls === "g-idle" ? Math.random() : 0, cls }));
   if (shield) {
-    // щитоносец — чёрный копейщик из набора: стоит, колет копьём, закрывается щитом
-    mk("bl_idle", 0.66, -14, 1.2, "g-idle");
-    mk("bl_side", 0.66, -14, 0.4, "g-atk side down up");
-    mk("bl_def", 0.66, -14, 0.5, "g-def");
+    // щитоносец — чёрный рыцарь из набора: стоит, прикрывшись щитом (этим и отличается от великана), бьёт мечом
+    mk("bw_guard", 0.72, -15, 1.6, "g-idle");
+    mk("bw_side", 0.72, -15, 0.4, "g-atk side down up");
+    mk("bw_guard", 0.72, -15, 0.4, "g-def");
   } else if (giant) {
     // великан: тот же чёрный воин, но крупнее — выше клетки; движется медленнее
     mk("bw_idle", 0.92, -20, 1.3, "g-idle");
@@ -5046,7 +5093,30 @@ const PROPS = {
 
 
 // ===== 5. Загрузка уровня =====
+// Первый уровень с ролями — экран во всё поле: «Кто пойдёт?» Три фигуры, любая ведёт вперёд.
+// Дальше роль меняют картинками над полем и в окне победы.
+function askRole(i) {
+  const lv = LEVELS[i];
+  document.getElementById("rolepick")?.remove();
+  const box = document.createElement("div");
+  box.className = "rolepick"; box.id = "rolepick";
+  box.setAttribute("role", "dialog"); box.setAttribute("aria-label", tr("Кто пойдёт на этот уровень?"));
+  box.innerHTML = `<div class="rp-card"><h2>${tr("Кто пойдёт на этот уровень?")}</h2><div class="rp-row"></div><p>${tr("Урок тот же. Выбирать можно на каждом уровне заново — картинками над полем.")}</p></div>`;
+  skinsOf(lv).forEach((id) => {
+    const b = document.createElement("button");
+    b.className = "rp-opt"; b.dataset.skin = id;
+    b.innerHTML = `${skinIcon(id)}<b>${tr(SKIN_NAME[id])}</b><span>${tr(SKIN_DOES[id])}</span>`;
+    b.addEventListener("click", () => { sfx("tap"); save.rolePicked = 1; setTaste(id); box.remove(); loadLevel(i); });
+    box.querySelector(".rp-row").appendChild(b);
+  });
+  document.body.appendChild(box);
+}
 function loadLevel(i) {
+  if (skinsOf(LEVELS[i]).length > 1 && !save.rolePicked && !save.skins?.[LEVELS[i].name + "|" + (LEVELS[i].skin || "")] && typeof TS !== "undefined") {
+    // роли ещё ни разу не выбирали: сначала уровень открывается как обычно, поверх — экран выбора
+    save.rolePicked = 0;
+    setTimeout(() => { if (levelIdx === i && !save.rolePicked) askRole(i); }, 350);
+  }
   levelIdx = i;
   L = LEVELS[i];
   applySkin(L);
@@ -6670,7 +6740,7 @@ function renderMap() {
       if (save.gems?.[lv.name]) add(`<text class="ngem" x="${x + S / 2 + 1}" y="${y + 6}">💎</text>`);
       // уровень пройден в двух и более обёртках — маленькие значки слева от кнопки
       const sk = skinsOf(lv).filter((id) => save.skins?.[lv.name + "|" + id]);
-      if (sk.length > 1) add(`<text class="nskin" x="${x - S / 2 - 1}" y="${y + 6}">${sk.map((id) => ({ fight: "⚔", coins: "●", think: "💡" }[id])).join("")}</text>`);
+      if (sk.length > 1) add(`<text class="nskin" x="${x - S / 2 - 1}" y="${y + 6}">${sk.map((id) => ({ fight: "⚔", work: "🪓", monk: "🍄" }[id])).join("")}</text>`);
     }
     add(`</g>`);
   });
@@ -8460,13 +8530,31 @@ function buildBoard() {
       }
       if (ch === "S") start = { x, y };
       // Ключ и монеты: запоминаем, где лежат, и рисуем в клетке
-      if (ch === "K" || ch === "C") {
+      if (ch === "K" || ch === "C" || ch === "M") {
+        // M — гриб монаха: собирается, как монета (без всех грибов дверь заперта)
         const type = ch === "K" ? "key" : "coin";
         const it = document.createElement("div");
-        it.className = "item " + type;
-        it.innerHTML = type === "key" ? KEY_SVG : `<img alt="" src="${TS.coin}">`;
+        it.className = "item " + type + (ch === "M" ? " mush" : "");
+        it.innerHTML = type === "key" ? KEY_SVG : `<img alt="" src="${ch === "M" ? TS.mush3 : TS.coin}">`;
         cell.appendChild(it);
-        items.push({ type, x, y, el: it });
+        items.push({ type, x, y, el: it, mush: ch === "M" });
+      }
+      // Дела работника: дерево (T), камень (R), овца (O). Для движка это «враг» с одним сердечком,
+      // который сам не бьёт: упёрся — не пускает, команда work — убирает с дороги.
+      if (JOB_KIND[ch]) {
+        const job = JOB_KIND[ch];
+        const en = document.createElement("div");
+        en.className = "enemy job job-" + job;
+        const ew = document.createElement("div");
+        ew.className = "ewrap";
+        if (job === "tree") ew.appendChild(sprite("tree4", 0.46, { bottom: 6, dur: 1.4, delay: Math.random() }));
+        if (job === "rock") ew.appendChild(sprite("rock4", 1.05, { bottom: 8 }));
+        if (job === "sheep") { ew.appendChild(sprite("jb_sheep", 0.95, { bottom: 10, dur: 1.1, cls: "j-idle" })); ew.appendChild(sprite("jb_sheeprun", 0.95, { bottom: 10, dur: 0.35, cls: "j-run" })); }
+        en.appendChild(ew);
+        en.insertAdjacentHTML("beforeend", `<div class="hp" hidden></div>`);
+        if (job !== "sheep") en.insertAdjacentHTML("beforeend", `<img class="jobtool" alt="" src="${job === "tree" ? TS.tool_axe : TS.tool_pick}">`);
+        cell.appendChild(en);
+        enemies.push({ x, y, hp: 1, giant: false, shield: false, job, el: en });
       }
       // Гоблины: G — один удар, B — два удара
       if (ch === "G" || ch === "B" || ch === "W" || ch === "V" || ch === "H") {
@@ -8529,10 +8617,14 @@ function buildBoard() {
   // рыцарь: стоит — анимация "дыхания", идёт — бег (класс run)
   const kw = document.createElement("div");
   kw.className = "kwrap";
-  const kIdle = sprite("kidle", 0.66, { bottom: -14, dur: 0.8, cls: "k-idle" });
-  const kRun = sprite("krun", 0.66, { bottom: -14, dur: 0.5, cls: "k-run" });
-  const kAtk = sprite("katk", 0.66, { bottom: -14, dur: 0.4, cls: "k-atk" });
-  const kGuard = sprite("kguard", 0.66, { bottom: -14, dur: 0.5, cls: "k-guard" });
+  // кто идёт: рыцарь, работник (за дело берётся топором или киркой) или монах — кадры одной рамки, место то же
+  const job = L.skin === "work" ? jobOf(L) : null;
+  const HK = L.skin === "work" ? ["pw_idle", "pw_run", job === "rock" ? "pw_pick" : job === "sheep" ? "pw_run" : "pw_axe", "pw_idle"]
+    : L.skin === "monk" ? ["mk_idle", "mk_run", "mk_idle", "mk_idle"] : ["kidle", "krun", "katk", "kguard"];
+  const kIdle = sprite(HK[0], 0.66, { bottom: -14, dur: 0.8, cls: "k-idle" });
+  const kRun = sprite(HK[1], 0.66, { bottom: -14, dur: 0.5, cls: "k-run" });
+  const kAtk = sprite(HK[2], 0.66, { bottom: -14, dur: job ? 0.5 : 0.4, cls: "k-atk" });
+  const kGuard = sprite(HK[3], 0.66, { bottom: -14, dur: 0.5, cls: "k-guard" });
   kw.append(kIdle, kRun, kAtk, kGuard);
   heroEl.appendChild(kw);
   // сердечки рыцаря — только на уровнях с гоблинами
@@ -8588,7 +8680,7 @@ function buildBoard() {
   top.className = "boardtop"; top.id = "boardtop";
   const sb = document.createElement("div");
   sb.className = "skinbar"; sb.id = "skinbar";
-  sb.setAttribute("role", "group"); sb.setAttribute("aria-label", tr("Что на поле"));
+  sb.setAttribute("role", "group"); sb.setAttribute("aria-label", tr("Кто идёт"));
   if (skinsOf(L).length > 1) sb.append(...skinButtons(L, (id) => { if (running || id === L.skin) return; setTaste(id); loadLevel(levelIdx); }));
   top.append(itemsTag, sb);
   top.hidden = itemsTag.hidden && !sb.children.length;
@@ -8650,7 +8742,7 @@ function drawItems(got) {
       Array.from({ length: KNIGHT_HP }, (_, k) => `<img alt="" class="${k < knightHp ? "" : "off"}" src="${HEART_K_URL}">`).join("") + `</span>`;
   }
   if (needKey()) html += `<span class="${got.key ? "got" : ""}">${KEY_SVG}${tr(got.key ? "есть" : "нет")}</span>`;
-  if (coinsTotal()) html += `<span class="${got.coins === coinsTotal() ? "got" : ""}"><img alt="" src="${TS.coin}">${got.coins}/${coinsTotal()}</span>`;
+  if (coinsTotal()) html += `<span class="${got.coins === coinsTotal() ? "got" : ""}"><img alt="" src="${items.some((it) => it.mush) ? TS.mush3 : TS.coin}">${got.coins}/${coinsTotal()}</span>`;
   itemsTag.innerHTML = html;
 }
 const noneGot = () => ({ key: false, coins: 0, taken: new Set() });
@@ -9405,7 +9497,7 @@ function buildPlan(code) {
     if (L.calm) return list;   // на Берегу гоблин сам не бьёт: стоит и не пускает
     for (const e of enemies) {
       const k = enemyKey(e.x, e.y);
-      if (e.giant || e.shield || kHp <= 0 || k === except || !goblinAt(e.x, e.y)) continue;
+      if (e.job || e.giant || e.shield || kHp <= 0 || k === except || !goblinAt(e.x, e.y)) continue;
       if (Math.abs(e.x - pos.x) + Math.abs(e.y - pos.y) !== 1) continue;
       do {
         kHp--;
@@ -9439,14 +9531,14 @@ function buildPlan(code) {
   const make = (name) => (line, n) => {
     if (n === undefined) n = 1;
     if (!Number.isInteger(n) || n < 1 || n > MAX_STEPS) {
-      throw pyError(line, `${disp(name)}(${n}): ` + tr(name === "attack" ? "число ударов должно быть целым от 1 до {max}" : "число шагов должно быть целым от 1 до {max}", { max: MAX_STEPS }));
+      throw pyError(line, `${disp(name)}(${n}): ` + tr(isHit(name) ? "число ударов должно быть целым от 1 до {max}" : "число шагов должно быть целым от 1 до {max}", { max: MAX_STEPS }));
     }
     const lp = loopOfLine(loops, line) || (callStack[0] ? loopOfLine(loops, callStack[0]) : null);   // шаг приёма, позванного из цикла
     const c = { name, n, line, via: callStack[0] || 0, ...DIRS[name], from: { ...pos }, cells: [], got: [],
                 loop: lp ? { line: lp.start, round: rounds[lp.start] || 1 } : null };
     commands.push(c);
     const i = commands.length - 1;
-    if (name === "attack") {
+    if (isHit(name)) {
       // Удар: бьём гоблина впереди; если впереди никого — того, кто стоит рядом с другой стороны
       c.hits = [];
       for (let s = 0; s < n; s++) {
@@ -9830,7 +9922,7 @@ function renderBlocks(active = 0, err = 0) {
   const items = parseBlocks(codeEl.value);
   const lines = codeEl.value.split("\n").length, grew = lines > (box._lines || 0);
   box._lines = lines;
-  if (!items.length) { box.innerHTML = `<span class="empty">${tr(L.slay ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря")}</span>`; fitBlocks(); return; }
+  if (!items.length) { box.innerHTML = `<span class="empty">${roleText(tr(L.slay ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря"))}</span>`; fitBlocks(); return; }
   const top = box.scrollTop;
   box.innerHTML = items.map((it) => blockHtml(it, active, err)).join("");
   box.scrollTop = top;
@@ -9930,7 +10022,7 @@ function fitBoard(force = false) {
   // и поле сжималось (арена «Битва: испытание»: 188 → 137 px высоты на 360×740).
   const box = $("blocks"), realHtml = box.innerHTML, realTop = box.scrollTop;
   const starter = parseBlocks(L.starter?.py || "");
-  box.innerHTML = starter.length ? starter.map((it) => blockHtml(it, 0, 0)).join("") : `<span class="empty">${tr(L.slay ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря")}</span>`;
+  box.innerHTML = starter.length ? starter.map((it) => blockHtml(it, 0, 0)).join("") : `<span class="empty">${roleText(tr(L.slay ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря"))}</span>`;
   box.style.maxHeight = "";
   const ratio = viewW() / H, vh = sh - 6;
   const bh = camEl.getBoundingClientRect().height;   // у длинной карты меряем окно, а не всё поле
@@ -10216,7 +10308,7 @@ function drawRoute(p, activeIdx = -1) {
   // рыцарь бьёт, а сам гоблин остаётся открытым. Рядом — номер команды. Гоблин побеждён — мечи убираем.
   // (Красный крестик значит «ошибка, сюда нельзя» — для битвы он не годится.)
   shown.forEach(({ cmd, i }) => {
-    if (cmd.name !== "attack") return;
+    if (!isHit(cmd.name)) return;
     const t = cmd.hits.find((h) => h.target);
     if (!t) return;
     const ex = (cmd.from.x + t.at.x) / 2 + 0.5, ey = (cmd.from.y + t.at.y) / 2 + 0.5;
@@ -10298,7 +10390,7 @@ function setStatus(text, kind = "", pill = "") {
   // в журнал — без шума: строка «move_right(3)» во время запуска не нужна
   if (text !== lastStatusLogged && !/^Напиши код|^Цифры на поле/.test(text) && !/^[A-Za-z_]+\(\d*\)$/.test(text)) { lastStatusLogged = text; logEv("status", { text: text.slice(0, 200), kind }); }
   if (/^Напиши код|^Цифры на поле/.test(text)) lastStatusLogged = "";
-  text = tr(text); pill = tr(pill);   // готовые фразы переводим здесь; фразы с числами — tr(…, {…}) там, где их собирают
+  text = roleText(tr(text)); pill = tr(pill);   // готовые фразы переводим здесь; фразы с числами — tr(…, {…}) там, где их собирают
   if (kind === "fail" && L?.maps) text = tr("Вариант {n}: ", { n: variant + 1 }) + text;
   statusEl.className = "status " + kind;
   statusEl.innerHTML = (pill ? `<span class="pill"></span>` : "") + `<span></span>`;
@@ -10352,6 +10444,7 @@ function reset() {
   // длинная карта: рыцарь вернулся на старт — окно к нему (при открытии сразу, после запуска плавно)
   if (camX === null) camFollow("now"); else if (moved) camFollow("page");
   exitCell?.classList.remove("open");
+  boardEl.querySelectorAll(".poof.stump").forEach((n) => n.remove());   // пни и осколки прошлого запуска
   heroEl.classList.remove("atk", "guard", "hurt", "dead");
   boardEl.querySelectorAll(".poof").forEach((el) => el.remove());
   enemies.forEach((e) => e.el.classList.remove("atk-side", "atk-down", "atk-up", "face-r", "windup", "blocking"));
@@ -10551,7 +10644,7 @@ async function run() {
     roundTag.hidden = !cmd.loop;
     if (cmd.loop) roundTag.textContent = "↻ " + tr("круг {n}", { n: cmd.loop.round });
 
-    if (cmd.name === "attack") {
+    if (isHit(cmd.name)) {
       heroEl.classList.remove("run");
       for (let s = 0; s < cmd.n; s++) {
         const h = cmd.hits[s];
@@ -10562,7 +10655,8 @@ async function run() {
         setStatus(label, "", `${where} · ${tr("удар")} ${s + 1}/${cmd.n}`);
         if (h.face.dx) heroEl.classList.toggle("flip", h.face.dx < 0);
         heroEl.classList.add("atk");
-        sfx(h.blocked ? "bump" : h.target ? "hit" : "swish");
+        const tgt = h.target && enemies.find((e) => enemyKey(e.x, e.y) === h.target);
+        sfx(h.blocked ? "bump" : tgt?.job ? "knock" : h.target ? "hit" : "swish");
         await wait(200);
         if (h.ally) {
           const al = allyEls.find((x) => x.a.at[0] === h.ally.x && x.a.at[1] === h.ally.y);
@@ -10592,7 +10686,18 @@ async function run() {
           void e.el.offsetWidth;
           e.el.classList.add("hit");
           drawEnemies(h.hp);
-          if (h.hp.get(h.target) <= 0) {
+          if (h.hp.get(h.target) <= 0 && e.job) {
+            // дело сделано: дерево срублено — остаётся пень, камень расколот — пыль и осколки, овца убегает
+            if (e.job === "tree") { const st = sprite("stump1", 0.8, { bottom: 8, cls: "poof stump" }); e.el.parentNode.appendChild(st); }
+            if (e.job === "rock") {
+              const pf = sprite("poof", 1.1, { bottom: 0, cls: "poof" });
+              pf.style.animation = "spr10 0.6s steps(10) 1 forwards";
+              e.el.parentNode.appendChild(pf); setTimeout(() => pf.remove(), 700);
+              e.el.parentNode.appendChild(sprite("stone2", 0.9, { bottom: 10, cls: "poof stump" }));
+            }
+            if (e.job === "sheep") e.el.classList.toggle("flee-l", h.face.dx > 0 || (!h.face.dx && Math.random() < 0.5));
+            setStatus(e.job === "tree" ? "Дерево срублено — дорога свободна!" : e.job === "rock" ? "Камень расколот — дорога свободна!" : "Овца убежала — дорога свободна!", "");
+          } else if (h.hp.get(h.target) <= 0) {
             e.el.classList.remove("windup");
             if (e.giant) { giantLoot(e.el.parentNode); setStatus("Великан повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
             if (e.shield) { giantLoot(e.el.parentNode); setStatus("Щитоносец повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
@@ -10667,6 +10772,9 @@ async function run() {
           setStatus("Великан стоит на пути — сквозь него не пройти. Обойди его или победи: тогда будет корона 👑", "fail");
         } else if (p.crash.reason === "goblin" && p.crash.max >= 5) {
           setStatus("Чёрный рыцарь не пропустит, а победить его нельзя — у него пять сердечек. Обойди его подальше", "fail");
+        } else if (p.crash.reason === "goblin" && enemies.find((e) => e.x === p.crash.at.x && e.y === p.crash.at.y)?.job) {
+          const job = enemies.find((e) => e.x === p.crash.at.x && e.y === p.crash.at.y).job, w = uiBlocks ? "🪓" : "work()";
+          setStatus(tr(job === "tree" ? "Дерево не обойти! Сначала сруби его: {w}" : job === "rock" ? "Камень не обойти! Сначала расколи его: {w}" : "Овца не уходит! Сначала прогони её: {w}", { w }), "fail");
         } else if (p.crash.reason === "goblin") {
           const { hp, max } = p.crash;
           const more = `${hp} ${plural(hp, "удар", "удара", "ударов")}`;
@@ -10677,7 +10785,7 @@ async function run() {
           const g = p.crash.got, left = coinsTotal() - g.coins;
           const what = needKey() && !g.key
             ? (left ? tr("сначала возьми ключ и собери монеты (осталось {n})", { n: left }) : tr("сначала возьми ключ"))
-            : tr("сначала собери все монеты (осталось {n})", { n: left });
+            : tr(items.some((it) => it.mush) ? "сначала собери все грибы (осталось {n})" : "сначала собери все монеты (осталось {n})", { n: left });
           setStatus(tr("Дверь пока заперта: {what}", { what }), "fail");
         } else if (p.crash.reason === "tree") {
           setStatus(uiBlocks ? "Дерево упало прямо на дорогу! Тут поможет рамка «если»: есть препятствие — обойди"
@@ -11278,7 +11386,7 @@ function win() {
   nextBtn.hidden = !(nxt < LEVELS.length && isOpen(nxt) && isleOf(LEVELS[nxt]) === isleOf(L));
   // у следующего уровня есть обёртки — над «Дальше» картинки: что будет на поле (не трогал — как в прошлый раз)
   const wt = $("win-taste"), nl = LEVELS[nxt];
-  wt.hidden = nextBtn.hidden || skinsOf(nl).length < 2;
+  wt.hidden = nextBtn.hidden || skinsOf(nl).length < 2 || !save.rolePicked;   // до первого большого выбора строки нет: выбор покажет экран «Кто пойдёт?»
   if (!wt.hidden) {
     const draw = () => { $("win-taste-row").replaceChildren(...skinButtons(nl, (id) => { setTaste(id, L); draw(); })); };
     draw();
@@ -11759,8 +11867,8 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ===== 17. Прочитать задание вслух =====
-const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack" }
-  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар" };
+const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work" }
+  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа" };
 function speakGoal() {
   try {
     let t = $("title").textContent + ". " + $("goal").textContent;
@@ -13011,10 +13119,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 140;
+const APP_VERSION = 141;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 141, date: "2026-11-14", text: "На трёх уровнях Берега теперь можно выбрать, кто пойдёт: рыцарь бьёт гоблина, работник рубит дерево, колет камень и прогоняет овцу, монах собирает грибы — его путь хитрее. Монет на этих уровнях больше нет. Щитоносец стал чёрным рыцарем со щитом.", en: "On three Shore levels you can now choose who goes: the knight fights a goblin, the worker chops a tree, breaks a rock and shoos a sheep away, the monk picks mushrooms on a trickier path. Coins are gone from these levels. The shield-bearer is now a black knight with a shield.", big: true },
   { v: 140, date: "2026-11-14", text: "Теперь можно выбирать, что будет на поле: ⚔ гоблин на пути, монеты по дороге или просто путь. Картинки — над полем и в окне победы над кнопкой «Дальше». Пока на пяти уровнях Берега.", en: "You can now choose what’s on the board: ⚔ a goblin in the way, coins along the road, or just the path. The pictures are above the board and in the win window over the “Next” button. On five Shore levels for now.", big: true },
   { v: 139, date: "2026-11-14", text: "На Берегу появились гоблины: в «Подвале», «Спирали» и «Каменном лабиринте» дорогу к двери теперь сторожит гоблин. Рука-подсказка для новичков появляется быстрее.", en: "Goblins have come to the Shore: in “The Cellar”, “Spiral” and “Stone Maze” a goblin now guards the way to the door. The pointing-hand hint shows up faster for newcomers." },
   { v: 138, date: "2026-11-14", text: "Новый первый уровень — «Первый удар»: игра теперь начинается с боя. Одна кнопка ⚔ — и гоблин повержен.", en: "A new first level — “First Strike”: the game now starts with a fight. One ⚔ button — and the goblin is down." },
@@ -13582,10 +13691,10 @@ function statHtml(all) {
   h += bars("Версия игры", "v", {});
   // вкус: что на поле выбирают (по устройствам, где уже есть уровни с обёртками)
   {
-    const N = { fight: "⚔ Бой", coins: "● Монеты", think: "💡 Просто путь" }, sum = (key) => { const c = {}; for (const d of all) for (const k in d[key] || {}) c[k] = (c[k] || 0) + d[key][k]; return c; };
+    const N = { fight: "⚔ Рыцарь", work: "🪓 Работник", monk: "🍄 Монах" }, sum = (key) => { const c = {}; for (const d of all) for (const k in d[key] || {}) c[k] = (c[k] || 0) + d[key][k]; return c; };
     const tw = sum("tw"), tp = sum("tp"), picked = all.filter((d) => Object.keys(d.tp || {}).length).length, played = all.filter((d) => Object.keys(d.tw || {}).length).length;
     const line = (c) => SKIN_IDS.map((k) => `${N[k]}: <b>${c[k] || 0}</b>`).join(" · ");
-    h += `<h3 class="st-h">Вкус (что на поле)</h3><p class="st-note">Побед в обёртке (раз): ${line(tw)}.<br>Выбирали сами (раз): ${line(tp)}.<br>Устройств, игравших уровни с обёртками: <b>${played}</b>, из них сами выбирали: <b>${picked}</b>.</p>`;
+    h += `<h3 class="st-h">Роли (кто идёт на уровень)</h3><p class="st-note">Побед за роль (раз): ${line(tw)}.<br>Выбирали сами (раз): ${line(tp)}.<br>Устройств, игравших уровни с ролями: <b>${played}</b>, из них сами выбирали: <b>${picked}</b>. Счёт с версии 141.</p>`;
   }
   // уровни: сколько пробовали, прошли, сколько попыток; где застревают — пробовали, но не прошли
   h += `<h3 class="st-h">Уровни</h3><p class="st-note">Пробовали — нажимали «Запустить». Прошли — % от пробовавших (красным — меньше 60 %). Попыток — в среднем до первой победы. Бросили — пробовали, не прошли и потом не играли 3+ дня.</p>`;
