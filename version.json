@@ -1,21 +1,21 @@
 {
- "version": 147,
+ "version": 148,
  "date": "2026-11-15",
  "notes": [
-  "Новая глава на Острове мастеров — «Стены замка»: два приёма в одной программе, а потом приём, который зовёт другой приём. В блоках у приёмов теперь буквы А и Б. Подписи на карте островов переведены на английский."
+  "Новая глава на Острове мастеров — «Ворота замка»: приём с числом. Пишешь charge(3) — и приём делает 3 шага; внутри приёма вместо цифры стоит n. В блоках — плитка «n», кнопка «n» и число на вызове: «n=3»."
  ],
  "files": {
   "index.html": {
-   "size": 896690,
-   "hash": "6f66b9112f1b8e2e"
+   "size": 908032,
+   "hash": "e40d311a29cc67c9"
   },
   "art.js": {
    "size": 1848735,
    "hash": "6644bf7489db3a42"
   },
   "lang-en.js": {
-   "size": 103287,
-   "hash": "bbe6371b5265b186"
+   "size": 105816,
+   "hash": "fe076988a4b960e4"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "17af3138e6ecaf17"
+   "hash": "9b6a336dba4e3041"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A new chapter on the Island of Masters — “Castle Walls”: two functions in one program, and then a function that calls another function. In blocks, functions now have letters A and B. Map labels on the islands are translated into English."
+  "A new chapter on the Island of Masters — “Castle Gate”: a function with a number. Write charge(3) — and the function takes 3 steps; inside the function, n stands in place of the digit. In blocks — an “n” tile, an “n” button and the number on the call: “n=3”."
  ]
 }

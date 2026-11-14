@@ -935,6 +935,10 @@ html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation:
 .fnl { display: inline-grid; place-items: center; min-width: 1.15em; height: 1.15em; padding: 0 2px; border-radius: 5px; background: var(--fn); color: #2a0a22;
   font: 800 0.72em/1 var(--font-display); margin: 0 2px 0 -1px; }
 .fnmini .m.f { color: var(--fn); }
+.tile .nn.nv, .chips .chip.nparam { color: var(--fn); font-style: italic; font-weight: 800; }
+.chips .chip.nparam { border-color: var(--fn) !important; background: #ff6ad514; }
+.tile.fn .nn.fnarg { margin-left: 4px; padding: 0 4px; border-radius: 6px; background: #ff6ad533; color: #fff; font-style: italic; font-size: 0.9em; }
+.nref { color: var(--fn); font-style: italic; font-weight: 800; }
 .tile.fn .fnmini { font-size: 14px; gap: 2px; }
 .fnmini { display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-display); font-size: 15px; line-height: 1; }
 .fnmini .m.h { color: var(--torch); } .fnmini .m.v { color: var(--frost); } .fnmini .m.a { color: var(--sword); }
@@ -2129,7 +2133,14 @@ const PY_NAMES = ALL_COMMANDS.map((c) => DIRS[c].py);
 const ANY_NAME = [...ALL_COMMANDS, ...PY_NAMES].join("|");      // для поиска в тексте
 // Свои приёмы (функции): def stair(): в Python, function stair() { в JavaScript.
 // Тело приёма — строки со сдвигом под ним; вызов — stair() отдельной строкой.
-const DEF_LINE = /^\s*(?:def\s+([A-Za-z_]\w*)\s*\(\s*\)\s*:|function\s+([A-Za-z_]\w*)\s*\(\s*\)\s*\{)\s*(?:#.*|\/\/.*)?$/;
+const DEF_LINE = /^\s*(?:def\s+([A-Za-z_]\w*)\s*\(\s*(?:[A-Za-z_]\w*\s*)?\)\s*:|function\s+([A-Za-z_]\w*)\s*\(\s*(?:[A-Za-z_]\w*\s*)?\)\s*\{)\s*(?:#.*|\/\/.*)?$/;
+// Приём с числом: def charge(n): / function charge(n) { — в скобках имя числа (обычно n). Внутри приёма его пишут
+// вместо цифры: move_right(n). Зовут с цифрой: charge(3) — и n в этот раз равно 3.
+const DEF_PARAM = /^\s*(?:def|function)\s+([A-Za-z_]\w*)\s*\(\s*([A-Za-z_]\w*)?\s*\)/;
+function defParam(code, name) {
+  for (const l of code.split("\n")) { const m = l.match(DEF_PARAM); if (m && m[1] === name && DEF_LINE.test(l)) return m[2] || ""; }
+  return "";
+}
 function defNames(code) {
   const out = [];
   for (const l of code.split("\n")) { const m = l.match(DEF_LINE); if (m) out.push(m[1] || m[2]); }
@@ -2138,8 +2149,8 @@ function defNames(code) {
 // Ищем имя приёма со скобками, а заголовок (def stair() / function stair()) отсекаем, глядя на текст перед ним.
 // (Раньше это делало «заглядывание назад» (?<!…) в регулярном выражении, но Safari до 16.4 его не понимает.)
 function replaceCalls(text, names, fn) {
-  return text.replace(new RegExp(`\\b(${names.join("|")})\\s*\\(\\s*\\)`, "g"),
-    (m, nm, at, all) => /(?:def|function)\s+$/.test(all.slice(0, at)) ? m : fn(nm));
+  return text.replace(new RegExp(`\\b(${names.join("|")})\\s*\\(\\s*([A-Za-z_]\\w*|\\d+)?\\s*\\)`, "g"),
+    (m, nm, arg, at, all) => /(?:def|function)\s+$/.test(all.slice(0, at)) ? m : fn(nm, arg || ""));
 }
 // Проверка своих приёмов перед запуском (понятные подсказки вместо «Не понял код»):
 // 1) приём нельзя называть как команду рыцаря или вопрос к полю (move_right, obstacle_right…);
@@ -2154,8 +2165,23 @@ function checkDefs(code, lg) {
       throw pyError(i + 1, tr("Приём нельзя назвать {c}: так уже зовут команду рыцаря. Придумай другое имя, например stair", { c: name }));
     if (COND_NAMES.includes(name) || COND_NAMES.some((c) => CONDS[c].py === name))
       throw pyError(i + 1, tr("Приём нельзя назвать {c}: так уже называется вопрос к полю. Придумай другое имя, например stair", { c: name }));
+    const pm = l.match(DEF_PARAM)?.[2];
+    if (pm && (ALL_COMMANDS.includes(pm) || PY_NAMES.includes(pm) || COND_NAMES.includes(pm) || COND_NAMES.some((c) => CONDS[c].py === pm)))
+      throw pyError(i + 1, tr("Число приёма нельзя назвать {c}: так зовут команду или вопрос. Назови его n", { c: pm }));
     if (!(name in defs)) defs[name] = i;
   });
+  // приём с числом зовут с числом: charge(3); приём без числа — с пустыми скобками
+  {
+    const params = Object.fromEntries(Object.keys(defs).map((nm) => [nm, defParam(code, nm)]));
+    lines.forEach((raw, i) => {
+      if (DEF_LINE.test(raw) || !Object.keys(defs).length) return;
+      replaceCalls(raw.replace(lg === "py" ? /#.*/ : /\/\/.*/, ""), Object.keys(defs), (nm, arg) => {
+        if (params[nm] && !arg) throw pyError(i + 1, tr("Приём {c} ждёт число в скобках, например {c}(3)", { c: nm }));
+        if (!params[nm] && arg) throw pyError(i + 1, tr("У приёма {c} нет числа: зови его {c}()", { c: nm }));
+        return "";
+      });
+    });
+  }
   const names = Object.keys(defs);
   // Команды, вопросы и приёмы зовут только со скобками: имя без скобок (a = attack) дало бы команде
   // второе имя, и её вызовы не считались бы. По той же причине не работают функции без имени и eval.
@@ -2206,7 +2232,7 @@ function fnMini(code, name) {
   return `<span class="fnmini" aria-hidden="true">${body.map((t) => {
     if (t.call) return `<span class="m f">🧩${fnLetter(code, t.call)}</span>`;
     const d = DIRS[ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name)];
-    return `<span class="m ${d.axis}">${d.arrow}${t.n > 1 ? t.n : ""}</span>`;
+    return `<span class="m ${d.axis}">${d.arrow}${t.v ? t.v : t.n > 1 ? t.n : ""}</span>`;
   }).join("")}</span>`;
 }
 const PY_TO_JS = Object.fromEntries(ALL_COMMANDS.map((c) => [DIRS[c].py, c]));
@@ -2261,6 +2287,7 @@ const CHAPTERS = [
   { name: tr("Мастерская"), topic: tr("свои приёмы"), isle: 4 },
   { name: tr("Осада мастерской"), topic: tr("приём в цикле"), isle: 4 },
   { name: tr("Стены замка"), topic: tr("два приёма"), isle: 4 },
+  { name: tr("Ворота замка"), topic: tr("приём с числом"), isle: 4 },
 ];
 
 // Уровни по порядку на карте.
@@ -4408,6 +4435,96 @@ const LEVELS = [
       py: "def step():\n\ndef hit():\n",
       js: "function step() {\n}\n\nfunction hit() {\n}\n",
     },
+  },  // ===== Глава «Ворота замка» (Остров мастеров): приём с числом (параметр) =====
+  // def charge(n): — n это число из вызова: charge(3) — и n в этот раз 3. В блоках: на плитке-вызове «n=3»,
+  // внутри приёма плитка «→ n», кнопка «n» (paramFn) ставит n вместо цифры. requireParam — для ★★★ приём должен пользоваться n.
+  {
+    name: "Приём с числом",
+    chapter: 16,
+    isle: 4,
+    funcs: true, paramFn: true, requireFn: true, requireParam: true,
+    newFn: true,
+    goal: "Нажми на второй вызов приёма и на [[num:3]], потом на третий и на [[num:2]]. Это приём с числом n: сколько шагов пройти перед ударом. Число пишут при вызове — charge(3), и n в этот раз равно 3.",
+    commands: ["moveRight", "attack"],
+    par: 6, good: 8,
+    map: [
+      "#########",
+      "#########",
+      "S.G..G.GE",
+      "#########",
+      "#########",
+    ],
+    starter: {
+      py: "def charge(n):\n    move_right(n)\n    attack()\n\ncharge(1)\ncharge(1)\ncharge(1)\nmove_right(2)\n",
+      js: "function charge(n) {\n  moveRight(n);\n  attack();\n}\n\ncharge(1);\ncharge(1);\ncharge(1);\nmoveRight(2);\n",
+    },
+  },
+  {
+    name: "Число в приёме",
+    chapter: 16,
+    isle: 4,
+    funcs: true, paramFn: true, requireFn: true, requireParam: true,
+    slay: true,
+    after: "Приём с числом",
+    goal: "Нажми на плитку ↑ в рамке [[fnhead]] и на [[nbtn]], потом так же на ↓. Сейчас приём всегда лезет на 1 клетку, а лучники стоят на башнях разной высоты: с n он поднимется на столько, сколько сказано в вызове. Двери нет — победи всех.",
+    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    par: 9, good: 11,
+    map: [
+      "#####G###",
+      "#G###.###",
+      "#.#G#.###",
+      "#.#.#.###",
+      "S.....###",
+    ],
+    starter: {
+      py: "def tower(n):\n    move_up()\n    attack()\n    move_down()\n\nmove_right()\ntower(2)\nmove_right(2)\ntower(1)\nmove_right(2)\ntower(3)\n",
+      js: "function tower(n) {\n  moveUp();\n  attack();\n  moveDown();\n}\n\nmoveRight();\ntower(2);\nmoveRight(2);\ntower(1);\nmoveRight(2);\ntower(3);\n",
+    },
+  },
+  {
+    name: "Прыжок на n",
+    chapter: 16,
+    isle: 4,
+    funcs: true, paramFn: true, requireFn: true, requireParam: true,
+    after: "Число в приёме",
+    goal: "Нажми [[fnhead]], потом [[btn:moveUp]], [[btn:moveRight]], [[nbtn]] и [[btn:moveDown]]. Приём «прыжок» пустой: вверх, вправо на n, вниз — через камни разной ширины. Программа уже зовёт его с нужными числами.",
+    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    par: 8, good: 10,
+    map: [
+      "#########",
+      "#########",
+      "...#....#",
+      "S#.G.##.E",
+      "#########",
+    ],
+    starter: {
+      py: "def leap(n):\n\nleap(2)\nattack()\nmove_right(2)\nleap(3)\nmove_right()\n",
+      js: "function leap(n) {\n}\n\nleap(2);\nattack();\nmoveRight(2);\nleap(3);\nmoveRight();\n",
+    },
+  },
+  {
+    name: "Ворота замка: испытание",
+    chapter: 16,
+    isle: 4,
+    funcs: true, paramFn: true, requireFn: true, requireParam: true,
+    challenge: true,
+    more: true,
+    slay: true,
+    after: "Прыжок на n",
+    goal: "Испытание: у ворот замка лучники стоят на башнях разной высоты. Приём и программа пустые. Собери один приём с числом n — и позови его для каждой башни. Двери нет — победи всех.",
+    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    par: 8, good: 10,
+    map: [
+      "######G##",
+      "##G###.#G",
+      "##.#G#.#.",
+      "##.#.#.#.",
+      "S........",
+    ],
+    starter: {
+      py: "def tower(n):\n",
+      js: "function tower(n) {\n}\n",
+    },
   },
 ];
 
@@ -4432,6 +4549,8 @@ function btnRefs(html) {
     .replace(/\[\[elsebtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("иначе")}</span>`)
     .replace(/\[\[elsehead\]\]/g, () => `<span class="elseref">${tr("иначе")}</span>`)
     // [[fnbtn]] — розовая кнопка своего приёма (с картинкой того, что в нём), [[fnhead]] — заголовок рамки приёма
+    // [[nbtn]] — кнопка «n» (число приёма)
+    .replace(/\[\[nbtn\]\]/g, () => `<span class="numref nref">n</span>`)
     // [[fnbtn:2]] / [[fnhead:2]] — второй приём (когда их два: с буквой Б)
     .replace(/\[\[fnbtn(?::(\d))?\]\]/g, (m, k) => { const src = codeEl?.value || L?.starter?.[lang] || "", nm = defNames(src)[(+k || 1) - 1];
       return `<span class="fnref">🧩${!nm ? "" : uiBlocks ? fnTag(src, nm) + fnMini(src, nm) : " " + nm + "()"}</span>`; })
@@ -6041,7 +6160,7 @@ ISLE_MAPS[3] = {
 // @@/isle3@@
 // @@isle4@@
 ISLE_MAPS[4] = {
-  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350], [250, 350], [310, 390], [50, 350], [230, 270], [170, 270], [110, 250], [150, 210], [210, 210]],
+  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350], [250, 350], [310, 390], [50, 350], [230, 270], [170, 270], [110, 250], [150, 210], [210, 210], [250, 210], [250, 170], [210, 170], [190, 110]],
   rows: [
     "....................................",
     "....................................",
@@ -6183,7 +6302,7 @@ ISLE_MAPS[4] = {
     ["wrock2", 12.6, 28.4, 0.7],
     ["duck", 15.0, 27.8, 1.3],
   ],
-  labels: [["МАСТЕРСКАЯ", 268, 502], ["ОСАДА", 150, 318], ["СТЕНЫ ЗАМКА", 118, 176]],
+  labels: [["МАСТЕРСКАЯ", 268, 502], ["ОСАДА", 150, 318], ["СТЕНЫ ЗАМКА", 118, 176], ["ВОРОТА ЗАМКА", 272, 132]],
   bank: [["cloud_b", 260, 1810, 1.1], ["cloud_a", 600, 1790, 1.3], ["cloud_c", 900, 1830, 1.0], ["cloud_d", 1090, 1820, 1.0]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm2",
@@ -9135,7 +9254,8 @@ function buildChips() {
     if (!have.length || defNames(L.starter.py || "").some((n) => !have.includes(n))) {
       const b = add("add-def", "fnchip", "🧩 ＋ " + tr("приём"), () => {
         const rest = codeEl.value.replace(/^\s+|\s+$/g, "");
-        codeEl.value = (lang === "py" ? `def ${nm}():\n` : `function ${nm}() {\n}\n`) + (rest ? "\n" + rest + "\n" : "");
+        const pm = defParam(L.starter.py || "", nm);
+        codeEl.value = (lang === "py" ? `def ${nm}(${pm}):\n` : `function ${nm}(${pm}) {\n}\n`) + (rest ? "\n" + rest + "\n" : "");
         selLine = 1;
         onCodeChange();
         drawCode();
@@ -9158,6 +9278,11 @@ function buildChips() {
   if (uiBlocks) { const br = document.createElement("span"); br.style.flexBasis = "100%"; chipsEl.appendChild(br); }
   // на самом первом уровне (slay) цифр нет: одна кнопка — один удар
   if (!L.first) [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
+  // приём с числом: кнопка «n» — вместо цифры поставить число приёма (плитка в приёме станет «→ n»)
+  if (L.paramFn) {
+    const b = add("n-param", "num nparam", "n", setParamArg);
+    b.setAttribute("aria-label", tr("число приёма n"));
+  }
 }
 
 // ===== «Отменить команду» и «Вернуть» =====
@@ -9231,7 +9356,8 @@ $("redo-cmd").addEventListener("click", () => {
 function setLastNumber(n) {
   const text = codeEl.value;
   // последняя плитка — вызов приёма: у него числа нет. Раньше цифра молча меняла другую плитку (в приёме или выше).
-  const lastLine = text.replace(/\s+$/, "").split("\n").pop() || "";
+  const all = text.replace(/\s+$/, "").split("\n"), lastLine = all[all.length - 1] || "";
+  if (setCallArg(all, all.length - 1, n)) { codeEl.value = all.join("\n") + "\n"; onCodeChange(); return; }
   if (countCalls(lastLine, defNames(text))) return;
   const re = new RegExp(`\\b(${ANY_NAME})\\s*\\(\\s*\\d*\\s*\\)`, "g");
   let last = null, m;
@@ -9285,7 +9411,7 @@ function inDefAt(lines, ln) {
   return false;
 }
 function insertCall(nm) {
-  const call = nm + (lang === "py" ? "()" : "();");
+  const call = nm + (defParam(codeEl.value, nm) ? "(1)" : "()") + (lang === "py" ? "" : ";");
   const lines = codeEl.value.replace(/\s+$/, "").split("\n");
   const host = selLine && selLine <= lines.length ? defNameAt(lines, selLine) : null;
   if (host && host === nm) { setStatus(tr("Приём не зовёт сам себя: выбери другой приём или плитку программы"), "fail"); return; }
@@ -9327,7 +9453,7 @@ function putIntoDef(name) {
   const fr = findFrames(codeEl.value).find((f) => f.start === selLine);
   editLines((lines) => {
     const ind = " ".repeat(lines[selLine - 1].match(/^ */)[0].length + INDENT());
-    const cmd = ind + name + (lang === "py" ? "()" : "();");
+    const cmd = ind + name + (defParam(codeEl.value, name) ? "(1)" : "()") + (lang === "py" ? "" : ";");
     let at = fr ? fr.end : selLine;                        // после последней строки приёма
     if (lang === "js" && fr) at = fr.end - 1;               // перед закрывающей }
     while (at > selLine && lines[at - 1].trim() === "") at--;   // пустые строки в конце приёма — не тело
@@ -9363,9 +9489,38 @@ function putCommandOnLine(name) {
   });
 }
 
+// Кнопка «n»: выбрана плитка внутри приёма с числом — её цифра меняется на n; выбран заголовок такого приёма —
+// последняя плитка в нём; ничего не выбрано — последняя плитка программы, если она внутри такого приёма.
+function setParamArg() {
+  const lines = codeEl.value.split("\n");
+  let i = selLine ? selLine - 1 : -1;
+  if (i < 0) { for (let j = lines.length - 1; j >= 0; j--) if (CMD_ON_LINE().test(lines[j])) { i = j; break; } }
+  if (i < 0) return;
+  const host = DEF_LINE.test(lines[i]) ? (lines[i].match(DEF_LINE)[1] || lines[i].match(DEF_LINE)[2]) : defNameAt(lines, i + 1);
+  const pm = host && defParam(codeEl.value, host);
+  if (!pm) { setStatus(tr("Кнопка n работает внутри приёма с числом — выбери плитку в его рамке"), "fail"); return; }
+  if (DEF_LINE.test(lines[i])) {
+    const fr = findFrames(codeEl.value).find((f) => f.start === i + 1), ind = lines[i].match(/^ */)[0].length + INDENT();
+    let j = fr ? Math.min(fr.end, lines.length) - 1 : i;
+    while (j > i && !(lines[j].match(/^ */)[0].length === ind && CMD_ON_LINE().test(lines[j]))) j--;
+    if (j <= i) return;
+    i = j;
+  }
+  if (!CMD_ON_LINE().test(lines[i])) return;
+  editLines((ls) => { ls[i] = ls[i].replace(CMD_ON_LINE(), (m, name) => `${name}(${pm})`); });
+}
+// вызов приёма с числом на строке: charge(3) — цифра меняет число вызова
+function setCallArg(lines, i, n) {
+  const fns = defNames(lines.join("\n")).filter((nm) => defParam(lines.join("\n"), nm));
+  if (!fns.length || DEF_LINE.test(lines[i] ?? "")) return false;
+  let hit = false;
+  lines[i] = replaceCalls(lines[i] ?? "", fns, (nm) => (hit = true, `${nm}(${n})`));
+  return hit;
+}
 function setNumberOnLine(n) {
   editLines((lines) => {
     let i = selLine - 1;
+    if (setCallArg(lines, i, n)) return;
     // выбрана рамка (приём, цикл, «если», «иначе»): цифра меняет последнюю плитку, положенную в эту рамку
     const hd = (lines[i] ?? "").match(/^(\s*)(\}\s*)?(while|for|if|elif|else|def|function)\b/);
     if (hd) {
@@ -9596,7 +9751,7 @@ function findFrames(code) {
     return out;
   }
   const out = [];
-  const re = /\b(?:(?:while|for|if)\s*\([^\n]*\)|else|function\s+[A-Za-z_]\w*\s*\(\s*\))\s*\{/g;
+  const re = /\b(?:(?:while|for|if)\s*\([^\n]*\)|else|function\s+[A-Za-z_]\w*\s*\(\s*(?:[A-Za-z_]\w*\s*)?\))\s*\{/g;
   const lineOf = (idx) => code.slice(0, idx).split("\n").length;
   let m;
   while ((m = re.exec(code))) {
@@ -9681,10 +9836,11 @@ function pyToJs(code) {
       if (!closers) throw pyError(n, "else должен стоять под своим if, без сдвига");
       js = "else {";
       expectIndent = n; expectIf = true;
-    } else if ((m = text.match(/^def\s+([A-Za-z_]\w*)\s*\(\s*\)\s*:$/))) {
+    } else if ((m = text.match(/^def\s+([A-Za-z_]\w*)\s*\(\s*([A-Za-z_]\w*)?\s*\)\s*:$/))) {
       // свой приём: def stair(): → function stair() {   (пустой приём — не ошибка, как пустая рамка «если»)
+      // приём с числом: def charge(n): → function charge(n) {
       if (indent) throw pyError(n, "Приём (def) пишется с самого начала строки, без сдвига");
-      js = `function ${m[1]}() {`;
+      js = `function ${m[1]}(${m[2] || ""}) {`;
       expectIndent = n; expectIf = true;
     } else if ((m = text.match(/^while\s+(.+):$/))) {
       js = `while (${m[1].replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false")}) {`;
@@ -9725,7 +9881,7 @@ function instrument(code) {
   const fns = defNames(code);
   return code
     .split("\n")
-    .map((line, i) => (fns.length ? replaceCalls(line, fns, (nm) => `__call(${i + 1}, ${nm})`) : line)
+    .map((line, i) => (fns.length ? replaceCalls(line, fns, (nm, arg) => `__call(${i + 1}, ${nm}${arg ? ", " + arg : ""})`) : line)
       .replace(cmdRe, `$1(${i + 1}, `)
       .replace(condRe, `$1(${i + 1}, `)
       .replace(/\b(while|for)\s*\(([^\n]*)\)\s*\{/, (m) => `${m} __loop(${i + 1});`))
@@ -9817,10 +9973,10 @@ function buildPlan(code) {
 
   // вызовы своих приёмов: стопка строк, откуда позвали (приём может позвать другой приём)
   const callStack = [];
-  const __call = (line, fn) => {
+  const __call = (line, fn, ...args) => {
     if (callStack.length >= 12) throw pyError(line, "Приём зовёт сам себя снова и снова. Внутри приёма не нужно звать его же");
     callStack.push(line);
-    try { fn(); } finally { callStack.pop(); }
+    try { fn(...args); } finally { callStack.pop(); }
   };
   const make = (name) => (line, n) => {
     if (n === undefined) n = 1;
@@ -10127,14 +10283,14 @@ if (EN_ON) for (const lv of LEVELS) {
 // и сохранение работают как в текстовом режиме. Нажал на плитку — она выбрана
 // (это выбор строки): кнопки-стрелки меняют её направление, цифры — число шагов.
 let uiBlocks = save.ui ? save.ui === "blocks" : true;   // по умолчанию — блоки
-const BLK_RE = new RegExp(`^(\\s*)(${ANY_NAME})\\s*\\(\\s*(\\d*)\\s*\\)\\s*;?\\s*(?:#.*|//.*)?$`);
+const BLK_RE = new RegExp(`^(\\s*)(${ANY_NAME})\\s*\\(\\s*(\\d*|[A-Za-z_]\\w*)\\s*\\)\\s*;?\\s*(?:#.*|//.*)?$`);
 // Программа как дерево: плитки, рамки цикла и рамки «если» (с половиной «иначе»).
 // Что внутри рамки — решает сдвиг строки, как в Python.
 function parseBlocks(code) {
   const root = { body: [], indent: -1 };
   const stack = [root];
   let lastIf = null;
-  const fns = defNames(code), fnCall = fns.length ? new RegExp(`^\\s*(${fns.join("|")})\\s*\\(\\s*\\)\\s*;?\\s*(?:#.*|//.*)?$`) : null;
+  const fns = defNames(code), fnCall = fns.length ? new RegExp(`^\\s*(${fns.join("|")})\\s*\\(\\s*(\\d*|[A-Za-z_]\\w*)\\s*\\)\\s*;?\\s*(?:#.*|//.*)?$`) : null;
   code.split("\n").forEach((raw, k) => {
     const line = k + 1, t = raw.trim();
     if (!t || t.startsWith("#") || t.startsWith("//") || t === "}") return;
@@ -10166,7 +10322,7 @@ function parseBlocks(code) {
       return;
     }
     const cm = fnCall && raw.match(fnCall);
-    if (cm) { parent.body.push({ call: cm[1], line }); return; }
+    if (cm) { parent.body.push({ call: cm[1], arg: cm[2] || "", line }); return; }
     const im = raw.match(IF_LINE);
     if (im) {
       const node = { cond: condKey(im[2]), neg: !!im[1], line, body: [], indent };
@@ -10175,7 +10331,8 @@ function parseBlocks(code) {
       return;
     }
     const m = raw.match(BLK_RE);
-    parent.body.push(m ? { name: m[2], n: Number(m[3] || 1), line } : { bad: t, line });
+    // в приёме с числом вместо цифры может стоять его имя: move_right(n) — плитка «→ n»
+    parent.body.push(m ? (/^\d*$/.test(m[3]) ? { name: m[2], n: Number(m[3] || 1), line } : { name: m[2], n: 1, v: m[3], line }) : { bad: t, line });
   });
   return root.body;
 }
@@ -10183,9 +10340,10 @@ let activeVia = 0;   // при запуске: строка, откуда поз
 function tileHtml(t, active, err) {
   const cls = (t.line === selLine ? " sel" : "") + (t.line === active || (t.call && t.line === activeVia) ? " now" : "") + (t.line === err ? " err" : "");
   if (t.bad) return `<button class="tile bad${cls}" data-line="${t.line}">${esc(t.bad)}</button>`;
-  if (t.call) return `<button class="tile fn${cls}" data-line="${t.line}" aria-label="${tr("приём")} ${t.call}"><span class="pz">🧩</span>${fnTag(codeEl.value, t.call)}${fnMini(codeEl.value, t.call)}</button>`;
+  if (t.call) return `<button class="tile fn${cls}" data-line="${t.line}" aria-label="${tr("приём")} ${t.call}${t.arg ? " " + t.arg : ""}"><span class="pz">🧩</span>${fnTag(codeEl.value, t.call)}${fnMini(codeEl.value, t.call)}${t.arg ? `<span class="nn fnarg">${esc(defParam(codeEl.value, t.call) || "n")}=${esc(t.arg)}</span>` : ""}</button>`;
   const key = ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name);
   const d = DIRS[key];
+  if (t.v) return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.v}"><span class="ar">${d.arrow}</span><span class="nn nv">${esc(t.v)}</span></button>`;
   return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.n}"><span class="ar">${d.arrow}</span><span class="nn">${t.n}</span></button>`;
 }
 function blockHtml(it, active, err) {
@@ -11637,6 +11795,8 @@ function toolMissing(code) {
     if (!fns.length || !countCalls(c, fns)) return "fn";
     // requireFn: 2 — нужны два разных непустых приёма, и оба позваны (из программы или из другого приёма)
     if (L.requireFn >= 2 && fns.filter((nm) => countCalls(c, [nm])).length < 2) return "fn2";
+    // requireParam — приём с числом, и внутри он им пользуется (move_right(n))
+    if (L.requireParam && !fns.some((nm) => { const pm = defParam(c, nm); return pm && defBody(c, nm).some((t) => t.v === pm); })) return "param";
     // nestFns — один приём зовёт другой
     if (L.requireNest && !fns.some((nm) => defBody(c, nm).some((t) => t.call && t.call !== nm && fns.includes(t.call)))) return "nest";
   }
@@ -11680,6 +11840,7 @@ function win() {
   if (missing) note += tr(missing === "fn" ? " Получилось! Для ★★★ здесь нужен свой приём (розовая рамка) — попробуй с ним."
     : missing === "fn2" ? " Получилось! Для ★★★ здесь нужны оба приёма — и А, и Б."
     : missing === "nest" ? " Получилось! Для ★★★ один приём должен позвать другой: выбери заголовок приёма и нажми кнопку другого."
+    : missing === "param" ? " Получилось! Для ★★★ здесь нужен приём с числом: внутри приёма вместо цифры поставь n, а число пиши в вызове."
     : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
   else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
@@ -13441,10 +13602,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 147;
+const APP_VERSION = 148;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 148, date: "2026-11-15", text: "Новая глава на Острове мастеров — «Ворота замка»: приём с числом. Пишешь charge(3) — и приём делает 3 шага; внутри приёма вместо цифры стоит n. В блоках — плитка «n», кнопка «n» и число на вызове: «n=3».", en: "A new chapter on the Island of Masters — “Castle Gate”: a function with a number. Write charge(3) — and the function takes 3 steps; inside the function, n stands in place of the digit. In blocks — an “n” tile, an “n” button and the number on the call: “n=3”.", big: true },
   { v: 147, date: "2026-11-15", text: "Новая глава на Острове мастеров — «Стены замка»: два приёма в одной программе, а потом приём, который зовёт другой приём. В блоках у приёмов теперь буквы А и Б. Подписи на карте островов переведены на английский.", en: "A new chapter on the Island of Masters — “Castle Walls”: two functions in one program, and then a function that calls another function. In blocks, functions now have letters A and B. Map labels on the islands are translated into English.", big: true },
   { v: 146, date: "2026-11-14", text: "В JavaScript «если», поставленное внутрь цикла или «иначе», теперь пишется с правильным отступом.", en: "In JavaScript, an “if” placed inside a loop or an “else” now gets the right indentation." },
   { v: 145, date: "2026-11-14", text: "Второй дополнительный уровень — «Найти и уничтожить»: тропинка налево от «Осады». Гоблин спрятался, а в «иначе» можно поставить ещё одно «если». В блоках на телефоне вернулась кнопка «враг ⇄ препятствие» там, где на уровне нужны оба вопроса.", en: "A second bonus level — “Seek and Destroy”: a side path to the left of the “Siege”. The goblin is hiding, and you can put another “if” inside the “else”. In blocks on phones, the “enemy ⇄ obstacle” button is back where a level needs both questions.", big: true },
