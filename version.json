@@ -1,21 +1,21 @@
 {
- "version": 139,
+ "version": 140,
  "date": "2026-11-14",
  "notes": [
-  "На Берегу появились гоблины: в «Подвале», «Спирали» и «Каменном лабиринте» дорогу к двери теперь сторожит гоблин. Рука-подсказка для новичков появляется быстрее."
+  "Теперь можно выбирать, что будет на поле: ⚔ гоблин на пути, монеты по дороге или просто путь. Картинки — над полем и в окне победы над кнопкой «Дальше». Пока на пяти уровнях Берега."
  ],
  "files": {
   "index.html": {
-   "size": 837373,
-   "hash": "4880e90136c1431a"
+   "size": 846655,
+   "hash": "587d1bd8612c51b5"
   },
   "art.js": {
    "size": 1790430,
    "hash": "b296b5d5ffd147ed"
   },
   "lang-en.js": {
-   "size": 97712,
-   "hash": "81188c81a2df3d60"
+   "size": 98003,
+   "hash": "9546473edc5d90a1"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "af476765b5e5fc34"
+   "hash": "4c3b62b26cd28a6f"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Goblins have come to the Shore: in “The Cellar”, “Spiral” and “Stone Maze” a goblin now guards the way to the door. The pointing-hand hint shows up faster for newcomers."
+  "You can now choose what’s on the board: ⚔ a goblin in the way, coins along the road, or just the path. The pictures are above the board and in the win window over the “Next” button. On five Shore levels for now."
  ]
 }

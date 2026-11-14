@@ -345,6 +345,21 @@ html.still .windfx span:not(.mote) { display: none; }
 .item.taken { transform: translateY(-40%) scale(0.4); opacity: 0; }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .item { transition: none; }
+.boardtop { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; }
+.boardtop[hidden] { display: none; }
+.skinbar { display: flex; gap: 6px; margin-left: auto; }
+.skinbtn { width: 38px; height: 30px; padding: 0; border-radius: 15px; border: 2px solid #4a5068; background: var(--bg); cursor: pointer;
+  display: grid; place-items: center; font-size: 15px; line-height: 1; opacity: 0.72; position: relative; }
+.skinbtn img { width: 20px; height: 20px; image-rendering: pixelated; object-fit: contain; }
+.skinbtn.on { border-color: var(--torch); background: #3a2f1c; opacity: 1; box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.25); }
+.skinbtn.done::after { content: "✓"; position: absolute; right: -4px; top: -6px; font-size: 10px; font-weight: 700; color: #10241c; background: #5fd3a6;
+  width: 14px; height: 14px; border-radius: 7px; display: grid; place-items: center; }
+.skinbtn:disabled { cursor: default; }
+.win-taste { flex-basis: 100%; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted, #aab); }
+.win-taste[hidden] { display: none; }
+.win-taste .skinbar { margin-left: 0; }
+.win-taste .skinbtn { width: 46px; height: 36px; border-radius: 18px; }
+.nskin { font-size: 8px; text-anchor: end; fill: #fff; stroke: #2a1f14; stroke-width: 2; paint-order: stroke; }
 .itemstag {
   align-self: flex-start;
   display: flex;
@@ -1847,6 +1862,10 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
           <div class="stars" id="win-stars"></div>
           <div class="note" id="win-note"></div>
         </div>
+        <div class="win-taste" id="win-taste" hidden>
+          <span>Дальше будет:</span>
+          <div class="skinbar" id="win-taste-row" role="group"></div>
+        </div>
         <div class="win-actions">
           <button class="btn reset" id="win-map">Карта</button>
           <button class="btn next" id="next">Дальше</button>
@@ -2181,15 +2200,21 @@ const LEVELS = [
     gem: true,   // есть решение короче эталона (тест gem)
     chapter: 0,
     after: "Поворот",
-    calm: true,   // гоблин Берега сам не бьёт — только не пускает (бояться его начнём в Скалах)
-    codeRev: 2,   // на пути появился гоблин: старый сохранённый код не подходит
-    goal: "Доведи рыцаря до двери сам. Гоблин на пути не пускает: подойди вплотную и ударь — [[btn:attack]]. В скобках можно написать число шагов: <code>moveRight(3)</code> — три клетки вправо.",
-    commands: ["moveRight", "moveDown", "attack"],
-    par: 6, good: 8,
+    goal: "Доведи рыцаря до двери сам. Помни: в скобках можно написать число шагов, <code>moveRight(3)</code> — три клетки вправо.",
+    commands: ["moveRight", "moveDown"],
+    par: 5, good: 7,
+    // Обёртки («вкус»): тот же урок и почти те же нажатия, другое на поле. Сам уровень — вид «просто путь» (think).
+    // fight — на пути гоблин (calm: сам не бьёт, только не пускает; бояться его начнём в Скалах), coins — по дороге монеты.
+    skins: {
+      fight: { calm: true, codeRev: 2, commands: ["moveRight", "moveDown", "attack"], par: 6, good: 8,
+        map: ["S..#...", "##.#...", "...G.#.", ".###.#.", "...#..E"] },
+      coins: { codeRev: "c", map: ["SC.#...", "##.#...", "...C.#.", ".###C#.", "...#.CE"] },
+      think: {},
+    },
     map: [
       "S..#...",
       "##.#...",
-      "...G.#.",
+      ".....#.",
       ".###.#.",
       "...#..E",
     ],
@@ -2203,6 +2228,10 @@ const LEVELS = [
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     newCommands: ["moveUp", "moveLeft"],
     par: 7, good: 9,
+    skins: {
+      coins: { codeRev: "c", map: [".C.#...", ".#.#C#.", ".#C#.#C", ".#.C.#.", "S#####E"] },
+      think: {},
+    },
     map: [
       "...#...",
       ".#.#.#.",
@@ -2216,17 +2245,21 @@ const LEVELS = [
     name: "Спираль",
     chapter: 0,
     after: "Поворот",
-    calm: true,
-    codeRev: 2,   // у двери появился гоблин
-    goal: "Дверь в самой середине, и её сторожит гоблин. Обойди стены по кругу и ударь его: [[btn:attack]].",
-    commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"],
-    par: 8, good: 10,
+    goal: "Дверь в самой середине. Обойди стены по кругу.",
+    commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
+    par: 7, good: 9,
+    skins: {
+      fight: { calm: true, codeRev: 2, commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"], par: 8, good: 10,
+        map: ["S......", "######.", ".....#.", ".###.#.", ".#EG.#.", ".#####.", "......."] },
+      coins: { codeRev: "c", map: ["S..C...", "######.", "..C..#.", ".###.#C", "C#EC.#.", ".#####.", "...C..."] },
+      think: {},
+    },
     map: [
       "S......",
       "######.",
       ".....#.",
       ".###.#.",
-      ".#EG.#.",
+      ".#E..#.",
       ".#####.",
       ".......",
     ],
@@ -2258,6 +2291,10 @@ const LEVELS = [
     goal: "Код уже написан, но в одной строке ошибка. Нажми «Запустить» и посмотри, где рыцарь остановится: эта строка подсветится. Потом нажми на её номер и поправь число кнопками.",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     par: 4, good: 6,
+    skins: {
+      coins: { codeRev: "c", map: ["S.C.###", "###C###", "###..C.", "######C", "######E"] },
+      think: {},
+    },
     map: [
       "S...###",
       "###.###",
@@ -2275,17 +2312,21 @@ const LEVELS = [
     chapter: 0,
     after: "Поворот",
     challenge: true,
-    calm: true,
-    codeRev: 2,   // у двери появился гоблин
-    goal: "Испытание Берега: все четыре направления, числа шагов и гоблин у двери. Пройдёшь — откроется Лес. Подсказок нет, но на поле видно, куда пойдёт рыцарь.",
-    commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"],
-    par: 8, good: 10,
+    goal: "Испытание Берега: все четыре направления и числа шагов. Пройдёшь — откроется Лес. Подсказок нет, но на поле видно, куда пойдёт рыцарь.",
+    commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
+    par: 7, good: 9,
+    skins: {
+      fight: { calm: true, codeRev: 2, commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"], par: 8, good: 10,
+        map: ["###.....", "#...#.#.", "....##..", ".##.#.#.", ".####.G.", "S####E##"] },
+      coins: { codeRev: "c", map: ["###..C..", "#...#.#.", "..C.##.C", "C##.#.#.", ".####.C.", "S####E##"] },
+      think: {},
+    },
     map: [
       "###.....",
       "#...#.#.",
       "....##..",
       ".##.#.#.",
-      ".####.G.",
+      ".####...",
       "S####E##",
     ],
     starter: { py: "", js: "" },
@@ -4249,7 +4290,7 @@ async function cloudSave() {
 function mergeSave(remote) {
   let changed = false;
   save.codeAt ||= {};
-  for (const key of ["crowns", "gems"]) for (const k in remote[key] || {}) {   // короны и 💎: есть на любом устройстве — есть везде
+  for (const key of ["crowns", "gems", "skins"]) for (const k in remote[key] || {}) {   // короны и 💎: есть на любом устройстве — есть везде
     if (remote[key][k] && !save[key]?.[k]) { (save[key] ||= {})[k] = 1; changed = true; }
   }
   for (const k in remote.stars || {}) {
@@ -4383,7 +4424,7 @@ async function fsPut(id, data) {
   if (!r.ok) throw new Error("write " + r.status);
 }
 // Что отправляем: только прогресс. Музыка, звуки, голос и режим проверки — у каждого устройства свои.
-const cloudPayload = () => ({ stars: save.stars, crowns: save.crowns || {}, gems: save.gems || {}, code: save.code, codeAt: save.codeAt || {}, starsByName: true, label: playerLabel || undefined });
+const cloudPayload = () => ({ stars: save.stars, crowns: save.crowns || {}, gems: save.gems || {}, skins: save.skins || {}, code: save.code, codeAt: save.codeAt || {}, starsByName: true, label: playerLabel || undefined });
 
 function scheduleSync(delay = 2000) {
   if (!syncOn) return;
@@ -4526,6 +4567,55 @@ function suggested() {
   return i === -1 ? indexOf(LAST_LEVEL().name) : i;
 }
 const indexOf = (name) => LEVELS.findIndex((lv) => lv.name === name);
+
+// ===== Обёртки уровня («вкус») =====
+// Урок и порядок уровней одни для всех; игрок выбирает только, что будет на поле:
+// fight — гоблин на пути, coins — монеты по дороге, think — просто путь.
+// Вкус один на всю игру (save.taste, по умолчанию бой); у уровня нет такой обёртки — берётся «просто путь».
+const SKIN_IDS = ["fight", "coins", "think"];
+const SKIN_KEYS = ["map", "par", "good", "commands", "calm", "codeRev", "best"];   // что обёртка может поменять в уровне
+const SKIN_NAME = { fight: "Бой", coins: "Монеты", think: "Просто путь" };
+const skinIcon = (id) => id === "fight" ? `<img alt="" src="${TS.ui_sword}">` : id === "coins" ? `<img alt="" src="${TS.coin}">` : `<span aria-hidden="true">💡</span>`;
+const skinsOf = (lv) => lv?.skins ? SKIN_IDS.filter((id) => lv.skins[id]) : [];
+const skinFor = (lv) => { const t = save.taste || "fight"; return !lv.skins ? null : lv.skins[t] ? t : lv.skins.think ? "think" : skinsOf(lv)[0]; };
+function applySkin(lv) {
+  if (!lv.skins) return;
+  if (!lv._plain) { lv._plain = {}; SKIN_KEYS.forEach((k) => (lv._plain[k] = lv[k])); }
+  lv.skin = skinFor(lv);
+  Object.assign(lv, lv._plain, lv.skins[lv.skin]);
+}
+// сменить вкус: except — уровень, который сейчас на экране и трогать нельзя (окно победы)
+function setTaste(id, except) {
+  save.taste = id;
+  writeSave();
+  LEVELS.forEach((lv) => { if (lv !== except) applySkin(lv); });
+  if (typeof statTaste === "function") statTaste(id);
+}
+LEVELS.forEach(applySkin);
+// фраза обёртки в задании — сразу после первого предложения (первым остаётся действие)
+function skinGoal(text) {
+  const add = L.skin === "fight" ? tr("Гоблин на пути не пускает: подойди вплотную и ударь — [[btn:attack]].")
+    : L.skin === "coins" ? tr("Собери по дороге все монеты — они откроют дверь.") : "";
+  if (!add) return text;
+  const m = text.match(/^(.*?[.!?])(\s+)(.*)$/s);
+  return m ? `${m[1]} ${add} ${m[3]}` : `${text} ${add}`;
+}
+const goalHtml = () => uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(skinGoal(BLOCK_GOALS[L.name])) : btnRefs(langify(btnRefs(skinGoal(L.goal))));
+// ряд картинок «что будет на поле»: on — выбранная, done — в этой обёртке уровень уже пройден
+function skinButtons(lv, onPick) {
+  const cur = skinFor(lv);
+  return skinsOf(lv).map((id) => {
+    const b = document.createElement("button");
+    b.className = "skinbtn" + (id === cur ? " on" : "") + (save.skins?.[lv.name + "|" + id] ? " done" : "");
+    b.dataset.skin = id;
+    b.innerHTML = skinIcon(id);
+    b.setAttribute("aria-label", tr(SKIN_NAME[id]));
+    b.title = tr(SKIN_NAME[id]);
+    b.setAttribute("aria-pressed", id === cur);
+    b.addEventListener("click", () => { sfx("tap"); onPick(id); });
+    return b;
+  });
+}
 let levelIdx = Math.max(0, indexOf(save.currentName) );
 // Варианты поля (у уровня есть maps): какой показан и какие уже пройдены этим кодом
 let variant = 0, variantsDone = new Set();
@@ -4959,6 +5049,7 @@ const PROPS = {
 function loadLevel(i) {
   levelIdx = i;
   L = LEVELS[i];
+  applySkin(L);
   addLearnedTools(L, i);
   moreOpen = false;
   setTimeout(() => logEv("level", { code: oneLine(codeEl.value) }), 0);
@@ -4972,7 +5063,7 @@ function loadLevel(i) {
   $("eyebrow").textContent = `${ch.name} · ` + (L.challenge ? tr("испытание") : tr("уровень {n}", { n: numInChapter })) + (L.bug ? tr(" · найди ошибку") : "");
   $("title").textContent = lvName(L.name);
   // кнопки в тексте рисуем до перевода на язык игрока (метка содержит JS-имя команды)
-  $("goal").innerHTML = uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(BLOCK_GOALS[L.name]) : btnRefs(langify(btnRefs(L.goal)));
+  $("goal").innerHTML = goalHtml();
   $("goal").classList.remove("open");
   $("goal-more").textContent = tr("ещё ▾");   // задание свёрнуто — и надпись «ещё», а не «свернуть» с прошлого уровня
   requestAnimationFrame(() => { const g = $("goal"); $("goal-more").hidden = !(uiBlocks && g.scrollHeight > g.clientHeight + 2); });
@@ -4993,7 +5084,7 @@ function loadLevel(i) {
   // (код ставим до кнопок: кнопки своих приёмов берутся из кода уровня)
   codeEl.value = save.code[codeKey()] ?? (lang === "js" ? save.code[L.name] : undefined) ?? L.starter[lang];
   buildChips();
-  if (L.funcs) $("goal").innerHTML = uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(BLOCK_GOALS[L.name]) : btnRefs(langify(btnRefs(L.goal)));   // картинка приёма в задании — из кода
+  if (L.funcs) $("goal").innerHTML = goalHtml();   // картинка приёма в задании — из кода
   winBox.hidden = true;
   reset();
   requestAnimationFrame(() => requestAnimationFrame(() => { fitText(); fitBoard(true); }));
@@ -6577,6 +6668,9 @@ function renderMap() {
       // уровень с великаном: корона над кнопкой — яркая, если великан побеждён, бледная — если ещё нет
       if (hasGiant(lv)) add(`<text class="ncrown${save.crowns?.[lv.name] ? " on" : ""}" x="${x - S / 2 - 1}" y="${y - S / 2 + 4}">👑</text>`);
       if (save.gems?.[lv.name]) add(`<text class="ngem" x="${x + S / 2 + 1}" y="${y + 6}">💎</text>`);
+      // уровень пройден в двух и более обёртках — маленькие значки слева от кнопки
+      const sk = skinsOf(lv).filter((id) => save.skins?.[lv.name + "|" + id]);
+      if (sk.length > 1) add(`<text class="nskin" x="${x - S / 2 - 1}" y="${y + 6}">${sk.map((id) => ({ fight: "⚔", coins: "●", think: "💡" }[id])).join("")}</text>`);
     }
     add(`</g>`);
   });
@@ -8484,12 +8578,21 @@ function buildBoard() {
 
   // Счётчик предметов
   // (он стоит над полем, а не на нём, чтобы не закрывать рыцаря)
-  document.getElementById("itemstag")?.remove();
+  document.getElementById("boardtop")?.remove();
   itemsTag = document.createElement("div");
   itemsTag.className = "itemstag";
   itemsTag.id = "itemstag";
   itemsTag.hidden = !items.length && (!enemies.length || !!L.slay || !!L.calm);
-  camEl.parentNode.insertBefore(itemsTag, camEl);
+  // над полем один ряд: слева счётчик, справа — картинки обёрток (что будет на поле)
+  const top = document.createElement("div");
+  top.className = "boardtop"; top.id = "boardtop";
+  const sb = document.createElement("div");
+  sb.className = "skinbar"; sb.id = "skinbar";
+  sb.setAttribute("role", "group"); sb.setAttribute("aria-label", tr("Что на поле"));
+  if (skinsOf(L).length > 1) sb.append(...skinButtons(L, (id) => { if (running || id === L.skin) return; setTaste(id); loadLevel(levelIdx); }));
+  top.append(itemsTag, sb);
+  top.hidden = itemsTag.hidden && !sb.children.length;
+  camEl.parentNode.insertBefore(top, camEl);
 
   // в пещере в воздухе медленно плавают пылинки
   if (theme.name === "cave") {
@@ -9585,7 +9688,7 @@ const BLOCK_GOALS = {
   "Шахта: испытание": "Испытание: программа пустая, ступенек четыре, карта длинная [[pages]]. Подсказка: «🔁 повторять», в цикле шаг вправо и «если» со ступенькой вверх.",
   "Первые шаги": "Теперь рыцарю нужно к двери. Нажми стрелку <b>→</b>: появится плитка — это один шаг. Потом нажми <b>Запустить</b>. Хочешь ★★★? Нажми цифру <b>4</b>: плитка станет <b>→4</b>, четыре шага сразу.",
   "Поворот": "Новая стрелка <b>↓</b>. Плитки уже лежат, но рыцарь не доходит одну клетку. Нажми на плитку <b>↓2</b>, потом цифру <b>3</b> и «Запустить».",
-  "Подвал": "Доведи рыцаря до двери сам. Гоблин на пути не пускает: подойди вплотную и ударь — [[btn:attack]]. Цифра на плитке — сколько шагов: <b>→3</b> — три клетки вправо. Цифры на поле подскажут, сколько нужно.",
+  "Подвал": "Доведи рыцаря до двери сам. Цифра на плитке — сколько шагов: <b>→3</b> — три клетки вправо. Цифры на поле подскажут, сколько нужно.",
   "Починка": "Плитки уже лежат, но в одной ошибка. Нажми «Запустить» и посмотри, где рыцарь остановится: эта плитка подсветится. Нажми на неё и поправь число.",
   "Лестница": "Новое: <b>цикл</b>. Всё, что лежит в рамке <b>🔁 повторять</b>, рыцарь повторяет снова и снова, пока не дойдёт до двери. Рамка уже есть — положи в неё один шаг лестницы: стрелки сами кладут плитки в рамку.",
   "Зубцы": "Посмотри на дорогу: какие шаги в ней повторяются? Нажми <b>🔁 повторять</b> — появится пустая рамка. Положи в неё эти шаги стрелками.",
@@ -11146,7 +11249,8 @@ function win() {
   const newCrown = crown && !save.crowns?.[L.name], newGem = gem && !save.gems?.[L.name];
   if (crown) (save.crowns ||= {})[L.name] = 1;
   if (gem) (save.gems ||= {})[L.name] = 1;
-  if (typeof statWin === "function") statWin(L.name, crown, gem, missing);
+  if (L.skin) (save.skins ||= {})[L.name + "|" + L.skin] = 1;   // в какой обёртке пройден
+  if (typeof statWin === "function") statWin(L.name, crown, gem, missing, L.skin);
   save.stars[L.name] = Math.max(save.stars[L.name] || 0, stars);
   writeSave();
   logEv("win", { stars, written, crown, gem, missing });
@@ -11172,6 +11276,13 @@ function win() {
   // "Дальше" ведёт к следующему уровню по порядку, если он открыт
   const nxt = levelIdx + 1;
   nextBtn.hidden = !(nxt < LEVELS.length && isOpen(nxt) && isleOf(LEVELS[nxt]) === isleOf(L));
+  // у следующего уровня есть обёртки — над «Дальше» картинки: что будет на поле (не трогал — как в прошлый раз)
+  const wt = $("win-taste"), nl = LEVELS[nxt];
+  wt.hidden = nextBtn.hidden || skinsOf(nl).length < 2;
+  if (!wt.hidden) {
+    const draw = () => { $("win-taste-row").replaceChildren(...skinButtons(nl, (id) => { setTaste(id, L); draw(); })); };
+    draw();
+  }
   $("win-note").textContent = note;
   winBox.hidden = false;
   fitBlocks();
@@ -11304,6 +11415,7 @@ function setDisabled(v) {
   chipsEl.querySelectorAll(".chip").forEach((b) => (b.disabled = v));
   document.querySelectorAll(".langs button").forEach((b) => (b.disabled = v));
   $("to-map").disabled = v;
+  document.querySelectorAll("#skinbar .skinbtn").forEach((b) => (b.disabled = v));
   drawVariants();
   drawPages();
   drawLineBar();
@@ -12899,10 +13011,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 139;
+const APP_VERSION = 140;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 140, date: "2026-11-14", text: "Теперь можно выбирать, что будет на поле: ⚔ гоблин на пути, монеты по дороге или просто путь. Картинки — над полем и в окне победы над кнопкой «Дальше». Пока на пяти уровнях Берега.", en: "You can now choose what’s on the board: ⚔ a goblin in the way, coins along the road, or just the path. The pictures are above the board and in the win window over the “Next” button. On five Shore levels for now.", big: true },
   { v: 139, date: "2026-11-14", text: "На Берегу появились гоблины: в «Подвале», «Спирали» и «Каменном лабиринте» дорогу к двери теперь сторожит гоблин. Рука-подсказка для новичков появляется быстрее.", en: "Goblins have come to the Shore: in “The Cellar”, “Spiral” and “Stone Maze” a goblin now guards the way to the door. The pointing-hand hint shows up faster for newcomers." },
   { v: 138, date: "2026-11-14", text: "Новый первый уровень — «Первый удар»: игра теперь начинается с боя. Одна кнопка ⚔ — и гоблин повержен.", en: "A new first level — “First Strike”: the game now starts with a fight. One ⚔ button — and the goblin is down." },
   { v: 137, date: "2026-11-14", text: "Мелкие исправления.", en: "Small fixes." },
@@ -13223,7 +13336,7 @@ $("rep-clear").addEventListener("click", () => {
 // (она всегда берёт лучшие звёзды). Поэтому после сброса у устройства новый код, а старый
 // прогресс остаётся и в облаке (под старым кодом), и в копии на устройстве — его можно вернуть.
 const RESET_BACKUP = "coder-path-reset-backup";
-const PROGRESS_KEYS = ["stars", "crowns", "gems", "code", "codeAt", "currentName", "built", "dev"];
+const PROGRESS_KEYS = ["stars", "crowns", "gems", "skins", "code", "codeAt", "currentName", "built", "dev"];
 const HOLD_MS = 3000;
 const starsTotal = (st) => Object.values(st || {}).reduce((a, b) => a + (b || 0), 0);
 const starsWord = (n) => `★ ${n} ${plural(n, "звезда", "звезды", "звёзд")}`;
@@ -13245,7 +13358,7 @@ async function resetProgress() {
   PROGRESS_KEYS.forEach((k) => { if (save[k] !== undefined) backup.save[k] = save[k]; });
   try { localStorage.setItem(RESET_BACKUP, JSON.stringify(backup)); } catch (e) {}
   logEv("set", { b: `СБРОС ПРОГРЕССА (${starsTotal(save.stars)} ★, код ${player || "—"})` });
-  save.stars = {}; save.crowns = {}; save.gems = {}; save.code = {}; save.codeAt = {};
+  save.stars = {}; save.crowns = {}; save.gems = {}; save.skins = {}; save.code = {}; save.codeAt = {};
   delete save.currentName; delete save.built; delete save.dev;
   // новый код игрока выдаст первая синхронизация после перезапуска
   player = null; playerLabel = "";
@@ -13384,7 +13497,10 @@ const statOn = () => /\.github\.io$|(^|\.)itch\.zone$|(^|\.)hwcdn\.net$/.test(lo
 let statDirty = false;
 function statRun(name) { const r = (stat.lv[name] ||= [0, 0, 0]); r[0]++; if (statVisit && statVisit.name === name) statVisit.ran = true; statDirty = true; statSave(); statSoon(2000); }
 // четвёртое число — победил ли великана (корона)
-function statWin(name, crown, gem, missing) { const r = (stat.lv[name] ||= [0, 0, 0]); if (!r[1]) { r[1] = 1; r[2] = r[0]; } if (crown) r[3] = 1; if (gem) r[4] = 1;
+// вкус: stat.tw — побед в каждой обёртке, stat.tp — сколько раз игрок сам выбирал обёртку
+function statTaste(id) { const q = (stat.tp ||= {}); q[id] = (q[id] || 0) + 1; statDirty = true; statSave(); statSoon(4000); }
+function statWin(name, crown, gem, missing, skin) { const r = (stat.lv[name] ||= [0, 0, 0]);
+  if (skin) { const q = (stat.tw ||= {}); q[skin] = (q[skin] || 0) + 1; } if (!r[1]) { r[1] = 1; r[2] = r[0]; } if (crown) r[3] = 1; if (gem) r[4] = 1;
   if (!missing) r[5] = 0; else if (r[5] !== 0) r[5] = 1;
   for (let k = 3; k < 5; k++) r[k] ||= 0;   // без пропусков в списке   // 1 — проходил только без инструмента урока (цикла / приёма)
   statDirty = true; statSave(); statSoon(3000); }
@@ -13411,6 +13527,7 @@ function statDoc() {
     stars: LEVELS.reduce((s, l) => s + (save.stars[l.name] || 0), 0), won: won.length,
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
     op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length, gems: Object.keys(save.gems || {}).length,
+    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {},
   };
 }
 let statTimer = null, statLast = 0;
@@ -13463,6 +13580,13 @@ function statHtml(all) {
   h += bars("Язык", "lang", { ru: "Русский", en: "English" });
   h += bars("Дальше всего дошли", "isle", ISLE_NAMES);
   h += bars("Версия игры", "v", {});
+  // вкус: что на поле выбирают (по устройствам, где уже есть уровни с обёртками)
+  {
+    const N = { fight: "⚔ Бой", coins: "● Монеты", think: "💡 Просто путь" }, sum = (key) => { const c = {}; for (const d of all) for (const k in d[key] || {}) c[k] = (c[k] || 0) + d[key][k]; return c; };
+    const tw = sum("tw"), tp = sum("tp"), picked = all.filter((d) => Object.keys(d.tp || {}).length).length, played = all.filter((d) => Object.keys(d.tw || {}).length).length;
+    const line = (c) => SKIN_IDS.map((k) => `${N[k]}: <b>${c[k] || 0}</b>`).join(" · ");
+    h += `<h3 class="st-h">Вкус (что на поле)</h3><p class="st-note">Побед в обёртке (раз): ${line(tw)}.<br>Выбирали сами (раз): ${line(tp)}.<br>Устройств, игравших уровни с обёртками: <b>${played}</b>, из них сами выбирали: <b>${picked}</b>.</p>`;
+  }
   // уровни: сколько пробовали, прошли, сколько попыток; где застревают — пробовали, но не прошли
   h += `<h3 class="st-h">Уровни</h3><p class="st-note">Пробовали — нажимали «Запустить». Прошли — % от пробовавших (красным — меньше 60 %). Попыток — в среднем до первой победы. Бросили — пробовали, не прошли и потом не играли 3+ дня.</p>`;
   h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th><th>Без урока</th></tr>`;
