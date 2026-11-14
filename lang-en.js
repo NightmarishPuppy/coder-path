@@ -825,6 +825,8 @@ var EN_LEVELS = {
   "Штурм лестницы": { name: "Storming the Stairs",
     goal: "Tap [[fnhead]], then [[btn:attack]], [[btn:moveRight]] and [[btn:moveUp]]. A goblin on every step: hit, step, climb — all the way to the top.",
     block: "Tap [[fnhead]], then [[btn:attack]], [[btn:moveRight]] and [[btn:moveUp]]. A goblin on every step: hit, step, climb — all the way to the top." },
+  "Найти и уничтожить": { name: "Seek and Destroy",
+    goal: "A bonus level — you don’t need it to move on. There is no door: find the goblin and defeat it. It is hiding — you can only spot it from above. You can put an “if” inside an “else”." },
   "Зачистка": { name: "Clean Sweep",
     goal: "A bonus level — you don’t need it to move on. There is no door: defeat all the goblins. The map is long [[pages]], and two of them stand above the road — you can reach them if you climb up." },
   "Осада: испытание": { name: "Siege: Challenge",

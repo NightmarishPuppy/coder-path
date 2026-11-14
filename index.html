@@ -4261,6 +4261,31 @@ const LEVELS = [
     ],
     starter: { py: "", js: "" },
   },
+  // «Найти и уничтожить» (из редактора, Сергей): гоблин спрятан в углу, видно его только сверху, с дальней дорожки.
+  // Вложенное «если»: враг снизу — спуститься и ударить, иначе: сверху стена — идти вправо, иначе — подняться ярусом выше.
+  {
+    name: "Найти и уничтожить",
+    chapter: 14,
+    isle: 4,
+    side: true,
+    sides: true,
+    slay: true,
+    after: "Осада: испытание",
+    more: true, moreIfs: ["enemy"],
+    loopButton: true, ifButton: true, elseButton: true,
+    goal: "Дополнительный уровень — для прогресса не нужен. Двери нет: найди гоблина и победи его. Он спрятался — заметить его можно только сверху. «Если» можно поставить внутрь «иначе».",
+    commands: ["moveRight", "moveUp", "moveLeft", "moveDown", "attack"],
+    ifs: ["enemy", "wall"],
+    par: 6, good: 8,
+    map: [
+      "##.......",
+      "##.#####.",
+      "##.....#.",
+      "######.#G",
+      "S......##",
+    ],
+    starter: { py: "", js: "" },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -5891,7 +5916,7 @@ ISLE_MAPS[3] = {
 // @@/isle3@@
 // @@isle4@@
 ISLE_MAPS[4] = {
-  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350], [250, 350], [310, 390]],
+  nodes: [[150, 470], [190, 470], [230, 470], [250, 430], [210, 410], [150, 410], [110, 410], [90, 370], [130, 350], [170, 350], [210, 350], [250, 350], [310, 390], [50, 350]],
   rows: [
     "....................................",
     "....................................",
@@ -6004,7 +6029,7 @@ ISLE_MAPS[4] = {
     ".............#....",
     ".............#....",
     ".............#....",
-    "....##########....",
+    "..############....",
     "....#........#....",
     "....#........###..",
     "....#########.....",
@@ -11771,7 +11796,12 @@ function drawLineBar() {
   // иначе кнопки не влезают: «раньше / позже», отступ и «враг ⇄ препятствие»
   const crowded = float && !sides.hidden;
   $("lb-up").hidden = $("lb-down").hidden = crowded;
-  if (crowded) { $("lb-what").hidden = true; document.querySelector(".shift").hidden = true; }
+  // «враг ⇄ препятствие» оставляем, если на уровне оба вопроса (иначе в блоках не выбрать) — короткой подписью
+  if (crowded) {
+    if (whats.length < 2) $("lb-what").hidden = true;
+    else if (ifm) $("lb-what").textContent = "⇄ " + WHAT_RU[whats.find((w) => w !== CONDS[condKey(ifm[2])].what)];
+    document.querySelector(".shift").hidden = true;
+  }
   // подпись не помещается в две строки (узкий экран, много кнопок) — остаются одни значки.
   // Меряем в самом конце, когда кнопки панели уже приняли свой вид.
   const info = bar.querySelector(".lb-info");
@@ -13253,10 +13283,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 144;
+const APP_VERSION = 145;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 145, date: "2026-11-14", text: "Второй дополнительный уровень — «Найти и уничтожить»: тропинка налево от «Осады». Гоблин спрятался, а в «иначе» можно поставить ещё одно «если». В блоках на телефоне вернулась кнопка «враг ⇄ препятствие» там, где на уровне нужны оба вопроса.", en: "A second bonus level — “Seek and Destroy”: a side path to the left of the “Siege”. The goblin is hiding, and you can put another “if” inside the “else”. In blocks on phones, the “enemy ⇄ obstacle” button is back where a level needs both questions.", big: true },
   { v: 144, date: "2026-11-14", text: "На Острове мастеров появился первый дополнительный уровень — «Зачистка»: тропинка от «Осады» к башне. Он не обязательный, открывается после испытания острова.", en: "The first bonus level is on the Island of Masters — “Clean Sweep”: a side path from the “Siege” to the tower. It’s optional and opens after the island’s challenge.", big: true },
   { v: 143, date: "2026-11-14", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 142, date: "2026-11-14", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
