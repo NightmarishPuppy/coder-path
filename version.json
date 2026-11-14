@@ -1,13 +1,13 @@
 {
- "version": 133,
+ "version": 134,
  "date": "2026-11-14",
  "notes": [
-  "Если убрать приём из программы, его можно вернуть кнопкой «🧩 ＋ приём»."
+  "Цифра после стрелки теперь работает и когда выбрана рамка: меняет плитку, которую только что положили."
  ],
  "files": {
   "index.html": {
-   "size": 826569,
-   "hash": "1640f9a6ed5392a3"
+   "size": 827519,
+   "hash": "2efd8721c6f4ae4d"
   },
   "art.js": {
    "size": 1764922,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "2dc1d6bb068bcb48"
+   "hash": "3ac85d106d971dec"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "If you remove a function from the program, the “🧩 ＋ function” button brings it back."
+  "A number after an arrow now works when a frame is selected too: it changes the tile you just added."
  ]
 }
