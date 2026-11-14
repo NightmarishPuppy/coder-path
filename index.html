@@ -174,6 +174,11 @@ html.still .ally { animation: none !important; }
 .enemy.atk-side .g-atk.side, .enemy.atk-down .g-atk.down, .enemy.atk-up .g-atk.up { display: block; }
 .enemy.atk-side .g-idle, .enemy.atk-down .g-idle, .enemy.atk-up .g-idle { display: none; }
 .enemy.face-r .ewrap { transform: none; } /* рыцарь справа — гоблин разворачивается к нему */
+/* щитоносец: закрылся щитом */
+.enemy .g-def { display: none; }
+.enemy.blocking .g-def { display: block; }
+.enemy.blocking .g-idle { display: none; }
+.enemy.shield { z-index: 3; }
 /* великан: замахнулся — первый кадр удара застыл, над головой мигает «!» */
 .enemy.giant { z-index: 3; }
 .enemy.giant .hp { top: -14%; }
@@ -4041,16 +4046,16 @@ const LEVELS = [
     challenge: true,
     requireFn: true,
     loopButton: true,
-    more: true, moreIfs: ["enemy"],
-    crownPar: 6, crownGood: 7,
-    goal: "Испытание: прорубись к воротам. Приём пустой, программа пустая, карта длинная [[pages]]. В строю есть крепкий гоблин. А в нише у ворот ждёт великан — за него корона 👑.",
+    more: true, moreIfs: ["wall"],
+    crownPar: 12, crownGood: 14,
+    goal: "Испытание: прорубись к воротам. Приём пустой, программа пустая, карта длинная [[pages]]. В строю есть крепкий гоблин. А наверху стоит щитоносец — такого врага ты ещё не встречал. За него корона 👑.",
     commands: ["moveRight", "attack"],
     par: 3, good: 4,
     map: [
       "##################",
-      "##############V###",
-      "##############.###",
-      "SGG.B..GG.G..G..GE",
+      "############.H.###",
+      "############.#.###",
+      "SGG.B..GG.G.....GE",
       "##################",
     ],
     starter: {
@@ -4514,10 +4519,15 @@ const HEART_URL = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http:/
 // обычный — гоблин с факелом (стоит, бьёт вбок, вниз, вверх),
 // крепкий (два удара) — гоблин с рюкзаком динамита (стоит, бросает).
 // Все кадры одного гоблина вырезаны одной рамкой, поэтому при ударе он не "прыгает".
-function goblinSprites(hp, giant) {
+function goblinSprites(hp, giant, shield) {
   const out = document.createDocumentFragment();
   const mk = (key, k, bottom, dur, cls) => out.appendChild(sprite(key, k, { bottom, dur, delay: cls === "g-idle" ? Math.random() : 0, cls }));
-  if (giant) {
+  if (shield) {
+    // щитоносец — чёрный копейщик из набора: стоит, колет копьём, закрывается щитом
+    mk("bl_idle", 0.66, -14, 1.2, "g-idle");
+    mk("bl_side", 0.66, -14, 0.4, "g-atk side down up");
+    mk("bl_def", 0.66, -14, 0.5, "g-def");
+  } else if (giant) {
     // великан: тот же чёрный воин, но крупнее — выше клетки; движется медленнее
     mk("bw_idle", 0.92, -20, 1.3, "g-idle");
     mk("bw_side", 0.92, -20, 0.6, "g-atk side down up");
@@ -4538,7 +4548,8 @@ function goblinSprites(hp, giant) {
 }
 const KNIGHT_HP = 3; // столько ударов гоблина выдерживает рыцарь
 const GIANT_HP = 6;  // сердечек у великана (V на поле)
-const hasGiant = (lv) => !lv.arena && (lv.maps || [lv.map]).some((m) => m.some((row) => row.includes("V")));
+const SHIELD_HP = 3; // сердечек у щитоносца (H на поле)
+const hasGiant = (lv) => !lv.arena && (lv.maps || [lv.map]).some((m) => m.some((row) => /[VH]/.test(row)));
 let hero = { x: 0, y: 0 };
 let running = false;
 let showAll = false, loopViewBtn = null;   // кнопка 🔂/🔁 на поле
@@ -8307,7 +8318,7 @@ function buildBoard() {
       // дерево, которое повалит лесоруб, — невысокая ель; по бокам от неё пусто (там стоит лесоруб и падает дерево)
       if (allyAt(x, y)) { tl.over = null; if (tl.ground === "water") tl.ground = "grass"; }
       // прямо под врагом не растёт высокое дерево: его крона закрывала бы ноги, будто враг стоит на дереве
-      if (y > 0 && "GBWV".includes(map[y - 1][x]) && PROPS[tl.over]?.tall) tl.over = "bush1";
+      if (y > 0 && "GBWVH".includes(map[y - 1][x]) && PROPS[tl.over]?.tall) tl.over = "bush1";
       for (const e of evs().filter((e) => e.kind === "fell")) {
         const f = fellCells(e);
         if (f.tree[0] === x && f.tree[1] === y) { tl.over = "tree1"; tl.ground = "grass"; }
@@ -8340,21 +8351,23 @@ function buildBoard() {
         items.push({ type, x, y, el: it });
       }
       // Гоблины: G — один удар, B — два удара
-      if (ch === "G" || ch === "B" || ch === "W" || ch === "V") {
+      if (ch === "G" || ch === "B" || ch === "W" || ch === "V" || ch === "H") {
         // V — великан: шесть сердечек, бьёт только в ответ и с замахом (его можно победить, если отскакивать)
-        const giant = ch === "V";
-        const hp = giant ? GIANT_HP : ch === "W" ? 5 : ch === "B" ? 2 : 1;
+        // H — щитоносец: три сердечка, спереди удар принимает на щит и бьёт в ответ; уязвим со спины,
+        // после каждого пропущенного удара поворачивается к рыцарю. Сам не нападает.
+        const giant = ch === "V", shield = ch === "H";
+        const hp = giant ? GIANT_HP : shield ? SHIELD_HP : ch === "W" ? 5 : ch === "B" ? 2 : 1;
         const en = document.createElement("div");
-        en.className = "enemy" + (hp >= 5 ? " big" : "") + (giant ? " giant" : "");
+        en.className = "enemy" + (hp >= 5 ? " big" : "") + (giant ? " giant" : "") + (shield ? " shield" : "");
         en.style.setProperty("--heart", `url("${HEART_URL}")`);
         const ew = document.createElement("div");
         ew.className = "ewrap";
-        ew.appendChild(goblinSprites(hp, giant));
+        ew.appendChild(goblinSprites(hp, giant, shield));
         en.appendChild(ew);
         en.insertAdjacentHTML("beforeend", `<div class="hp">${"<i class=on></i>".repeat(hp)}</div>`);
         if (giant) en.insertAdjacentHTML("beforeend", `<div class="bang" aria-hidden="true">!</div>`);
         cell.appendChild(en);
-        enemies.push({ x, y, hp, giant, el: en });
+        enemies.push({ x, y, hp, giant, shield, el: en });
         if (hp < 5 && actx) { soundBuf("goblin-attack.mp3"); soundBuf("goblin-death.mp3"); soundBuf("sword-hit.mp3"); }   // заранее
       }
       if (ch === "E") {
@@ -9246,6 +9259,7 @@ function buildPlan(code) {
   // Великан (V) сам не нападает. Ударил его — он замахивается и бьёт после СЛЕДУЮЩЕГО действия рыцаря
   // (шага или удара). Если рыцарь к этому времени отошёл с соседней клетки — замах мимо.
   let swing = null;   // { key } — великан замахнулся
+  const facing = new Map();   // куда смотрит щитоносец: -1 влево (так он стоит сначала), 1 вправо
   const settle = () => {
     if (!swing) return null;
     const s = swing; swing = null;
@@ -9262,7 +9276,7 @@ function buildPlan(code) {
     const list = [];
     for (const e of enemies) {
       const k = enemyKey(e.x, e.y);
-      if (e.giant || kHp <= 0 || k === except || !goblinAt(e.x, e.y)) continue;
+      if (e.giant || e.shield || kHp <= 0 || k === except || !goblinAt(e.x, e.y)) continue;
       if (Math.abs(e.x - pos.x) + Math.abs(e.y - pos.y) !== 1) continue;
       do {
         kHp--;
@@ -9322,9 +9336,22 @@ function buildPlan(code) {
         if (d) {
           face = d;
           const k = enemyKey(pos.x + d.dx, pos.y + d.dy);
+          const en0 = enemies.find((e) => enemyKey(e.x, e.y) === k);
+          // щитоносец: рыцарь перед ним — удар приходится в щит, и он колет в ответ
+          if (en0.shield && d.dy === 0 && (facing.get(k) ?? -1) === -d.dx) {
+            kHp--;
+            c.hits.push({ target: k, at: { x: pos.x + d.dx, y: pos.y + d.dy }, face: { ...d }, hp: new Map(hpLeft), pre, blocked: true,
+              post: [{ key: k, dx: -d.dx, dy: 0, hp: kHp }] });
+            if (kHp <= 0) { dead = { by: k, shield: true, left: hpLeft.get(k), max: en0.hp, cmd: i, step: s, after: true }; break; }
+            continue;
+          }
           hpLeft.set(k, hpLeft.get(k) - 1);
           c.hits.push({ target: k, at: { x: pos.x + d.dx, y: pos.y + d.dy }, face: { ...d }, hp: new Map(hpLeft), pre });
-          const en0 = enemies.find((e) => enemyKey(e.x, e.y) === k);
+          if (en0.shield) {
+            // удар в спину (или сбоку) прошёл: щитоносец поворачивается к рыцарю — теперь щит с этой стороны
+            if (d.dx && hpLeft.get(k) > 0) { facing.set(k, -d.dx); c.hits[c.hits.length - 1].turn = -d.dx; }
+            continue;
+          }
           if (en0.giant) {
             // по великану: сначала его прошлый замах (если был), потом новый замах, пока он жив
             const h = c.hits[c.hits.length - 1];
@@ -9364,7 +9391,7 @@ function buildPlan(code) {
       // Гоблин на пути работает как стена, пока его не победить
       if (goblinAt(next.x, next.y)) {
         const en = enemies.find((e) => e.x === next.x && e.y === next.y);
-        crash = { cmd: i, step: s, at: next, reason: "goblin", hp: hpLeft.get(enemyKey(next.x, next.y)), max: en.hp };
+        crash = { cmd: i, step: s, at: next, reason: "goblin", hp: hpLeft.get(enemyKey(next.x, next.y)), max: en.hp, shield: en.shield };
         break;
       }
       const atExit = next.x === exitPos.x && next.y === exitPos.y;
@@ -9500,7 +9527,7 @@ const BLOCK_GOALS = {
   "Великан": "Собери, как у ворот: «🔁 повторять» и [[fnbtn]]. Над дорогой стоит великан — у него шесть сердечек. Его можно просто пройти. А кто его победит, получит корону 👑. Говорят, он бьёт медленно…",
   "Не тот порядок": "Нажми на [[tile:attack:1]] в розовой рамке и на [[tool:earlier]]. В приёме рыцарь сначала шагает, а потом бьёт — и с разбегу врезается в гоблина. Карта длинная [[pages]]: строй тянется дальше.",
   "Штурм лестницы": "Нажми [[fnhead]], потом [[btn:attack]], [[btn:moveRight]] и [[btn:moveUp]]. На каждой ступеньке гоблин: ударить, шагнуть, подняться — и так до самого верха.",
-  "Осада: испытание": "Испытание: прорубись к воротам. Приём пустой, программа пустая, карта длинная [[pages]]. В строю есть крепкий гоблин. А в нише у ворот ждёт великан — за него корона 👑.",
+  "Осада: испытание": "Испытание: прорубись к воротам. Приём пустой, программа пустая, карта длинная [[pages]]. В строю есть крепкий гоблин. А наверху стоит щитоносец — такого врага ты ещё не встречал. За него корона 👑.",
   // Остров рудокопов: длинные карты, «если» внутри цикла
   "Ступеньки вверх": "Новое: длинная карта! Она не влезает в экран, поэтому показана частями [[pages]] — это <b>одна</b> карта, а не варианты. Полистай её кнопками или проведи пальцем по полю. В цикле 🔁 пустая рамка «если»: она проверяет на каждом круге. Нажми на неё [[ifhead]], потом кнопку [[btn:moveUp]].",
   "Ступеньки вниз": "Шахта уходит вниз. Полистай карту [[pages]], потом нажми на рамку [[ifhead]] и кнопку [[btn:moveDown]].",
@@ -10196,7 +10223,7 @@ function reset() {
   exitCell.classList.remove("open");
   heroEl.classList.remove("atk", "guard", "hurt", "dead");
   boardEl.querySelectorAll(".poof").forEach((el) => el.remove());
-  enemies.forEach((e) => e.el.classList.remove("atk-side", "atk-down", "atk-up", "face-r", "windup"));
+  enemies.forEach((e) => e.el.classList.remove("atk-side", "atk-down", "atk-up", "face-r", "windup", "blocking"));
   drawKnightHp(KNIGHT_HP);
   drawItems(noneGot());
   drawEnemies(fullHp());
@@ -10274,7 +10301,7 @@ async function playStrikes(list) {
     const dir = st.dy > 0 ? "down" : st.dy < 0 ? "up" : "side";
     e.el.classList.toggle("face-r", st.dx > 0);
     e.el.classList.add("atk-" + dir);
-    if (!e.el.classList.contains("big")) sfx("gobatk");          // гоблин рычит на замахе (чёрный рыцарь — нет)
+    if (!e.el.classList.contains("big") && !e.shield) sfx("gobatk");          // гоблин рычит на замахе (чёрный рыцарь — нет)
     heroEl.classList.remove("run", "atk");
     heroEl.classList.add("guard");
     if (st.dx) heroEl.classList.toggle("flip", st.dx > 0); // рыцарь поворачивается к гоблину
@@ -10351,6 +10378,7 @@ async function knightFalls(why) {
   sfx("fall");
   await wait(900);
   const n = why?.max || 1;
+  if (why?.shield) return setStatus("Щит не пробить! Щитоносец отбивает удар и колет в ответ. Спереди его не взять…", "fail");
   if (why?.giant) return setStatus("Великан достал рыцаря! Он бьёт медленно, с замахом: после удара не стой рядом с ним", "fail");
   if (n >= 5) return setStatus("Чёрный рыцарь слишком силён — с ним не справиться. Не подходи к нему: если он впереди, обойди подальше", "fail");
   if (why?.ambush) return setStatus("Засада оказалась сильнее: у рыцаря кончились сердечки. Найди путь, где после засады рыцаря успеет подлечить монах", "fail");
@@ -10402,7 +10430,7 @@ async function run() {
         setStatus(label, "", `${where} · ${tr("удар")} ${s + 1}/${cmd.n}`);
         if (h.face.dx) heroEl.classList.toggle("flip", h.face.dx < 0);
         heroEl.classList.add("atk");
-        sfx(h.target ? "hit" : "swish");
+        sfx(h.blocked ? "bump" : h.target ? "hit" : "swish");
         await wait(200);
         if (h.ally) {
           const al = allyEls.find((x) => x.a.at[0] === h.ally.x && x.a.at[1] === h.ally.y);
@@ -10417,8 +10445,17 @@ async function run() {
             : "Ой! Рядом не враг, а свой — {who}. Бей, только если враг рядом: attack() — под if enemy_right()", { who }), "fail");
           return finish();
         }
-        if (h.target) {
+        if (h.blocked) {
+          // удар в щит: щитоносец закрывается, над ним «щит!»
           const e = enemies.find((e) => enemyKey(e.x, e.y) === h.target);
+          e.el.classList.add("blocking");
+          boardFloat(e.el.parentNode, tr("щит!"));
+          setStatus("Удар пришёлся в щит! Спереди щитоносца не пробить", "");
+          await wait(380);
+          e.el.classList.remove("blocking");
+        } else if (h.target) {
+          const e = enemies.find((e) => enemyKey(e.x, e.y) === h.target);
+          if (h.turn) setTimeout(() => e.el.classList.toggle("face-r", h.turn > 0), 260);   // получил в спину — разворачивается
           e.el.classList.remove("hit");
           void e.el.offsetWidth;
           e.el.classList.add("hit");
@@ -10426,8 +10463,9 @@ async function run() {
           if (h.hp.get(h.target) <= 0) {
             e.el.classList.remove("windup");
             if (e.giant) { giantLoot(e.el.parentNode); setStatus("Великан повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
+            if (e.shield) { giantLoot(e.el.parentNode); setStatus("Щитоносец повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
             // облачко пыли из набора: проигрывается один раз
-            const pf = sprite("poof", e.giant ? 1.6 : 1.1, { bottom: 0, cls: "poof" });
+            const pf = sprite("poof", e.giant ? 1.6 : e.shield ? 1.3 : 1.1, { bottom: 0, cls: "poof" });
             pf.style.animation = "spr10 0.6s steps(10) 1 forwards";
             e.el.parentNode.appendChild(pf);
             setTimeout(() => pf.remove(), 700);
@@ -10480,7 +10518,9 @@ async function run() {
         showProblems = true;
         drawRoute(p, i);
         await wait(420);
-        if (p.crash.reason === "goblin" && p.crash.max === GIANT_HP) {
+        if (p.crash.reason === "goblin" && p.crash.shield) {
+          setStatus("Щитоносец стоит на пути — сквозь него не пройти", "fail");
+        } else if (p.crash.reason === "goblin" && p.crash.max === GIANT_HP) {
           setStatus("Великан стоит на пути — сквозь него не пройти. Обойди его или победи: тогда будет корона 👑", "fail");
         } else if (p.crash.reason === "goblin" && p.crash.max >= 5) {
           setStatus("Чёрный рыцарь не пропустит, а победить его нельзя — у него пять сердечек. Обойди его подальше", "fail");
@@ -11055,7 +11095,7 @@ function win() {
   const wasChapterLocked = L.challenge && !chapterOpen(L.chapter + 1);
   const written = countWrittenCommands(codeEl.value);
   // корона: на уровне был великан, и рыцарь его победил
-  const giants = enemies.filter((e) => e.giant);
+  const giants = enemies.filter((e) => e.giant || e.shield), bossShield = giants.some((e) => e.shield);
   const crown = giants.length > 0 && !!plan?.hpLeft && giants.every((e) => (plan.hpLeft.get(enemyKey(e.x, e.y)) || 0) <= 0);
   // путь с победой над великаном длиннее — для него свои пороги звёзд (crownPar / crownGood)
   const par = crown && L.crownPar ? L.crownPar : L.par, good = crown && L.crownGood ? L.crownGood : L.good;
@@ -11076,8 +11116,10 @@ function win() {
   if (missing) note += tr(missing === "fn" ? " Получилось! Для ★★★ здесь нужен свой приём (розовая рамка) — попробуй с ним." : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
   else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
-  if (crown) note += newCrown ? tr(" Ты победил великана — у тебя корона!") : tr(" Великан снова повержен.");
-  else if (giants.length && !save.crowns?.[L.name]) note += tr(" Говорят, великана можно победить. Кто сумеет — получит корону.");
+  if (crown) note += bossShield ? (newCrown ? tr(" Ты победил щитоносца — у тебя корона!") : tr(" Щитоносец снова повержен."))
+    : newCrown ? tr(" Ты победил великана — у тебя корона!") : tr(" Великан снова повержен.");
+  else if (giants.length && !save.crowns?.[L.name]) note += tr(bossShield ? " Говорят, и щитоносца можно победить. Кто сумеет — получит корону."
+    : " Говорят, великана можно победить. Кто сумеет — получит корону.");
   const nextCh = CHAPTERS[L.chapter + 1];
   const myIsle = L.isle || 1, lastOfIsle = L.name === LAST_OF(myIsle)?.name && !!gateTo(myIsle, myIsle + 1);
   if (lastOfIsle) note += tr(myIsle === 1 ? " Ты прошёл весь остров! От крепости открылся мост к новому острову."
@@ -12813,10 +12855,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 134;
+const APP_VERSION = 135;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 135, date: "2026-11-14", text: "В испытании «Осада» новый враг вместо второго великана — щитоносец. Его корона — отдельная загадка: старый способ не сработает.", en: "The “Siege” challenge has a new enemy instead of a second giant — the shield-bearer. His crown is a puzzle of its own: the old trick won’t work.", big: true },
   { v: 134, date: "2026-11-14", text: "Цифра после стрелки теперь работает и когда выбрана рамка: меняет плитку, которую только что положили.", en: "A number after an arrow now works when a frame is selected too: it changes the tile you just added." },
   { v: 133, date: "2026-11-14", text: "Если убрать приём из программы, его можно вернуть кнопкой «🧩 ＋ приём».", en: "If you remove a function from the program, the “🧩 ＋ function” button brings it back." },
   { v: 132, date: "2026-11-14", text: "Новый уровень в «Осаде мастерской» — «Часовые над дорогой»: вопрос «если» теперь можно повернуть вверх, вниз и влево.", en: "A new level in “Siege of the Workshop” — “Sentries above the Road”: the “if” question can now be turned up, down and left." },

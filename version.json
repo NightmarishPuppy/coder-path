@@ -1,21 +1,21 @@
 {
- "version": 134,
+ "version": 135,
  "date": "2026-11-14",
  "notes": [
-  "Цифра после стрелки теперь работает и когда выбрана рамка: меняет плитку, которую только что положили."
+  "В испытании «Осада» новый враг вместо второго великана — щитоносец. Его корона — отдельная загадка: старый способ не сработает."
  ],
  "files": {
   "index.html": {
-   "size": 827519,
-   "hash": "2efd8721c6f4ae4d"
+   "size": 831901,
+   "hash": "cd5af4cd6b73bf06"
   },
   "art.js": {
-   "size": 1764922,
-   "hash": "a04c822f533c4117"
+   "size": 1790430,
+   "hash": "b296b5d5ffd147ed"
   },
   "lang-en.js": {
-   "size": 95583,
-   "hash": "90585a2f71018da6"
+   "size": 96906,
+   "hash": "e35cd9a63944777a"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "3ac85d106d971dec"
+   "hash": "b69789674b1d4a0f"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A number after an arrow now works when a frame is selected too: it changes the tile you just added."
+  "The “Siege” challenge has a new enemy instead of a second giant — the shield-bearer. His crown is a puzzle of its own: the old trick won’t work."
  ]
 }
