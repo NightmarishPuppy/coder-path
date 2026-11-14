@@ -935,6 +935,7 @@ html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation:
 .fnl { display: inline-grid; place-items: center; min-width: 1.15em; height: 1.15em; padding: 0 2px; border-radius: 5px; background: var(--fn); color: #2a0a22;
   font: 800 0.72em/1 var(--font-display); margin: 0 2px 0 -1px; }
 .fnmini .m.f { color: var(--fn); }
+.fnmini .m.c { color: #5fe3a8; }   /* рамка «если» в приёме — зелёная, как сама рамка */
 .tile .nn.nv, .chips .chip.nparam { color: var(--fn); font-style: italic; font-weight: 800; }
 .chips .chip.nparam { border-color: var(--fn) !important; background: #ff6ad514; }
 .tile.fn .nn.fnarg { margin-left: 4px; padding: 0 4px; border-radius: 6px; background: #ff6ad533; color: #fff; font-style: italic; font-size: 0.9em; }
@@ -1702,6 +1703,11 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
     <svg class="isle-svg" viewBox="0 0 360 600" role="img" aria-label="Карта Острова мастеров"></svg>
     <canvas class="map-clouds" aria-hidden="true"></canvas>
   </div>
+  <div class="mapwrap" data-isle="5" hidden>
+    <canvas class="map-canvas" aria-hidden="true"></canvas>
+    <svg class="isle-svg" viewBox="0 0 360 600" role="img" aria-label="Карта Острова хитрецов"></svg>
+    <canvas class="map-clouds" aria-hidden="true"></canvas>
+  </div>
   <p class="map-toast" id="map-toast" role="status"></p>
   <div class="howto">
     <b>Уже умеешь программировать?</b>
@@ -2227,10 +2233,11 @@ const fnTag = (code, name) => { const l = fnLetter(code, name); return l ? `<b c
 // маленькая картинка приёма — его стрелки подряд: на плитке-вызове и на кнопке в палитре
 // (вызов другого приёма внутри — его буква)
 function fnMini(code, name) {
-  const body = defBody(code, name).filter((t) => t.name || t.call);
+  const body = defBody(code, name).filter((t) => t.name || t.call || t.cond);
   if (!body.length) return "";
   return `<span class="fnmini" aria-hidden="true">${body.map((t) => {
     if (t.call) return `<span class="m f">🧩${fnLetter(code, t.call)}</span>`;
+    if (t.cond) return `<span class="m c">❓${CONDS[t.cond]?.arrow || ""}</span>`;
     const d = DIRS[ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name)];
     return `<span class="m ${d.axis}">${d.arrow}${t.v ? t.v : t.n > 1 ? t.n : ""}</span>`;
   }).join("")}</span>`;
@@ -2288,6 +2295,8 @@ const CHAPTERS = [
   { name: tr("Осада мастерской"), topic: tr("приём в цикле"), isle: 4 },
   { name: tr("Стены замка"), topic: tr("два приёма"), isle: 4 },
   { name: tr("Ворота замка"), topic: tr("приём с числом"), isle: 4 },
+  // Пятый остров (isle: 5) — Остров хитрецов: приём сам решает, что делать («если» внутри приёма)
+  { name: tr("Отмель"), topic: tr("приём с «если»"), isle: 5 },
 ];
 
 // Уровни по порядку на карте.
@@ -4526,6 +4535,123 @@ const LEVELS = [
       js: "function tower(n) {\n}\n",
     },
   },
+  // ===== Остров хитрецов, глава «Отмель»: приём с «если» внутри =====
+  // Приём сам решает, что делать: def step(): move_right() / if enemy_up(): attack(). В нишах у дороги —
+  // то гоблины, то свои (allies), и в каждом варианте поля по-разному: «бей всегда» задевает своего,
+  // без «если» программа не пройдёт оба варианта. requireFnIf — для ★★★ «если» должно быть внутри приёма.
+  {
+    name: "Хитрый приём",
+    chapter: 17,
+    isle: 5,
+    funcs: true, requireFn: true, requireFnIf: true,
+    newFn: true,
+    slay: true, gem: true,
+    goal: "Новое: приём, который сам решает. Внутри розовой рамки — рамка «если»: рыцарь шагает вправо и смотрит вверх. Бьёт, только если там враг, — в нишах то гоблины, то свои. Нажми [[fnbtn]] ещё 4 раза: одна и та же кнопка пройдёт оба варианта поля.",
+    commands: ["moveRight", "attack"],
+    ifs: ["enemy"],
+    par: 8, good: 10,
+    allies: [{ at: [4, 1], kind: "pawn", v: [0] }, { at: [2, 1], kind: "pawn", v: [1] }, { at: [7, 1], kind: "archer", v: [1] }],
+    maps: [
+      ["#########", "##G####G#", "#S......#", "#########", "#########"],
+      ["#########", "####G#G##", "#S......#", "#########", "#########"],
+    ],
+    starter: {
+      py: "def step():\n    move_right()\n    if enemy_up():\n        attack()\n\nstep()\nstep()\n",
+      js: "function step() {\n  moveRight();\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nstep();\nstep();\n",
+    },
+  },
+  {
+    name: "Проверка в приёме",
+    chapter: 17,
+    isle: 5,
+    funcs: true, requireFn: true, requireFnIf: true,
+    slay: true,
+    ifButton: true, sides: true,
+    after: "Хитрый приём",
+    goal: "Теперь «если» в приём положишь ты. Гоблины прячутся в нишах снизу. Нажми на плитку [[tile:moveRight:1]] в рамке [[fnhead]], потом [[ifbtn]], [[side:moveDown]] и [[btn:attack]]. Программа уже зовёт приём по кругу.",
+    commands: ["moveRight", "attack"],
+    ifs: ["enemy"],
+    par: 3, good: 4,
+    allies: [{ at: [5, 3], kind: "pawn", v: [0] }, { at: [4, 3], kind: "archer", v: [1] }],
+    maps: [
+      ["#########", "#########", "#S......#", "###G##G##", "#########"],
+      ["#########", "#########", "#S......#", "##G####G#", "#########"],
+    ],
+    starter: {
+      py: "def step():\n    move_right()\n\nwhile True:\n    step()\n",
+      js: "function step() {\n  moveRight();\n}\n\nwhile (true) {\n  step();\n}\n",
+    },
+  },
+  {
+    name: "Иначе в приёме",
+    chapter: 17,
+    isle: 5,
+    funcs: true, requireFn: true, requireFnIf: true,
+    elseButton: true,
+    after: "Проверка в приёме",
+    goal: "Без боя: спуск по уступам к двери. В приёме «если справа препятствие — вниз». Добавь и «иначе — вправо»: нажми на рамку «если» в приёме, потом [[elsebtn]] и [[btn:moveRight]]. Приём шагнёт или вниз, или вправо — одно из двух.",
+    commands: ["moveRight", "moveDown"],
+    ifs: ["wall"],
+    par: 3, good: 4,
+    maps: [
+      ["#########", "S.#######", "#....####", "####...##", "######..E"],
+      ["#########", "S...#####", "###.#####", "###....##", "######..E"],
+    ],
+    starter: {
+      py: "def step():\n    if obstacle_right():\n        move_down()\n\nwhile True:\n    step()\n",
+      js: "function step() {\n  if (obstacleRight()) {\n    moveDown();\n  }\n}\n\nwhile (true) {\n  step();\n}\n",
+    },
+  },
+  {
+    name: "Два вопроса",
+    chapter: 17,
+    isle: 5,
+    funcs: true, requireFn: true, requireFnIf: true,
+    slay: true,
+    ifButton: true, sides: true,
+    after: "Иначе в приёме",
+    goal: "Ниши теперь и сверху, и снизу. Приём смотрит только вверх — пусть смотрит и вниз. Нажми на плитку [[tile:moveRight:1]] в рамке [[fnhead]], потом [[ifbtn]], [[side:moveDown]] и [[btn:attack]]. В одном приёме можно задать два вопроса.",
+    commands: ["moveRight", "attack"],
+    ifs: ["enemy"],
+    par: 4, good: 5,
+    allies: [{ at: [4, 1], kind: "pawn", v: [0] }, { at: [2, 3], kind: "archer", v: [0] }, { at: [6, 3], kind: "pawn", v: [0] },
+      { at: [3, 1], kind: "archer", v: [1] }, { at: [5, 3], kind: "pawn", v: [1] }],
+    maps: [
+      ["#########", "##G###G##", "#S......#", "####G####", "#########"],
+      ["#########", "#####G###", "#S......#", "###G###G#", "#########"],
+    ],
+    starter: {
+      py: "def step():\n    move_right()\n    if enemy_up():\n        attack()\n\nwhile True:\n    step()\n",
+      js: "function step() {\n  moveRight();\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nwhile (true) {\n  step();\n}\n",
+    },
+  },
+  {
+    name: "Отмель: испытание",
+    chapter: 17,
+    isle: 5,
+    funcs: true, requireFn: true, requireFnIf: true,
+    challenge: true,
+    more: true,
+    slay: true,
+    loopButton: true, ifButton: true,
+    after: "Два вопроса",
+    goal: "Испытание: на отмели засада — гоблины в нишах сверху и снизу, а рядом с ними свои. Приём и программа пустые. Собери приём, который сам решает, кого бить, и позови его по кругу. Три варианта поля — одна программа.",
+    commands: ["moveRight", "attack"],
+    ifs: ["enemy"],
+    par: 4, good: 6,
+    allies: [{ at: [3, 3], kind: "pawn", v: [0] }, { at: [6, 1], kind: "archer", v: [0] },
+      { at: [2, 1], kind: "archer", v: [1] }, { at: [5, 3], kind: "pawn", v: [1] }, { at: [7, 1], kind: "pawn", v: [1] },
+      { at: [4, 1], kind: "pawn", v: [2] }, { at: [6, 3], kind: "archer", v: [2] }],
+    maps: [
+      ["#########", "###G#####", "#S......#", "##G##G#G#", "#########"],
+      ["#########", "####G####", "#S......#", "###G##G##", "#########"],
+      ["#########", "##G####G#", "#S......#", "#####G###", "#########"],
+    ],
+    starter: {
+      py: "def step():\n",
+      js: "function step() {\n}\n",
+    },
+  },
 ];
 
 // Переводим текст задания на язык игрока
@@ -5415,6 +5541,7 @@ function themeFor(i) {
   if (lv.isle === 2) return { name: "beach", t: 0.85 };
   if (lv.isle === 3) return { name: "cave", t: 0.35 };   // Остров рудокопов — шахты
   if (lv.isle === 4) return { name: "beach", t: 0.7 };   // Остров мастеров — луг у мастерских
+  if (lv.isle === 5) return { name: "beach", t: 0.25 };  // Остров хитрецов — отмели и песок у лагуны
   return { name: ["beach", "forest", "cave", "mountain"][lv.chapter] || "mountain", t };
 }
 // Что в клетке: ground — земля (sand, grass, mix, water, rock), over — что стоит сверху
@@ -6303,12 +6430,165 @@ ISLE_MAPS[4] = {
     ["duck", 15.0, 27.8, 1.3],
   ],
   labels: [["МАСТЕРСКАЯ", 268, 502], ["ОСАДА", 150, 318], ["СТЕНЫ ЗАМКА", 118, 176], ["ВОРОТА ЗАМКА", 272, 132]],
-  bank: [["cloud_b", 260, 1810, 1.1], ["cloud_a", 600, 1790, 1.3], ["cloud_c", 900, 1830, 1.0], ["cloud_d", 1090, 1820, 1.0]],
+  bank: [["cloud_b", 260, 1810, 1.1], ["cloud_a", 600, 1790, 1.3], ["cloud_c", 900, 1830, 1.0], ["cloud_d", 1090, 1820, 1.0], ["cloud_c", 1235, 1420, 0.7]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm2",
   clear: [],
+  tide: {"path": [[13.2, 23.3], [15.1, 23.5], [16.8, 23.1], [18.9, 23.0]], "w": 1.3},
 };
 // @@/isle4@@
+// @@isle5@@
+ISLE_MAPS[5] = {
+  nodes: [[150, 490], [190, 490], [230, 490], [250, 450], [210, 430]],
+  rows: [
+    "....................................",
+    "....................................",
+    "....................................",
+    "........................sss.........",
+    "...................ssssssgss........",
+    "................ssssgggggggs........",
+    "..............sssggggggggggss.......",
+    ".........ssssssgggggggggggggs.......",
+    ".........sggggggggggggggggggss......",
+    "........ssgggggggggggggggggggs......",
+    "........sggggggggggggggggggggss.....",
+    ".......ssgggggggggggggggggggggs.....",
+    ".......sggggggggggggggggggggggss....",
+    "......ssgggggggggggggggggggggggs....",
+    "......sggggggggggggggggggggggggss...",
+    "......sgggggggggggggggggggggggggss..",
+    "......sggggggggggggggggggggggggggs..",
+    "......sggggggggggggggggggggggggggss.",
+    ".....ssgggggggggggggggggggggggggggs.",
+    ".....sggggggggggggggggggggggggggggs.",
+    ".....sggggggggggggggggggggggggggggs.",
+    ".....sggggggggggggggggggggggggggggs.",
+    ".....sggggggggggggggggggggggggggggss",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sgggggggggggggggggggggggggggggs",
+    ".....sggggggggggggggggggggggggggggss",
+    ".....sggggggggggggggggggggggggggggs.",
+    ".....sgggggggggggggggggggggggggggss.",
+    ".....sgggggggggggggggggggggggggggs..",
+    ".....sgggggggggggggggggggggggggggs..",
+    ".....sggggggggggggggggggggggggggss..",
+    ".....sggggggggggggggggggggggggggs...",
+    ".....ssgggggggggggggggggggggggggs...",
+    "......sgggggggggggggggggggggggggs...",
+    "......sggggggggggggggggggggggggss...",
+    "......sssssgggggggggggggggggggss....",
+    "..........sggggggggggggggggggss.....",
+    "..........sssssssssssssssggggs......",
+    "..........ssssssssssssssssssss......",
+    "...........ssssssssssssssssss.......",
+    "............sssssssssssssss.........",
+    ".............sssssssssssss..........",
+    "..............sssssssssss...........",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+    "....................................",
+  ],
+  terr: [
+    "..................",
+    "..........222222..",
+    "..........222222..",
+    "..........222222..",
+    "..........222222..",
+    "..........111111..",
+    "......11111111111.",
+    "......11111111111.",
+    "......11111111111.",
+    "..111111111111111.",
+    "..111111111111111.",
+    "..111111111111111.",
+    "..111111111111111.",
+    "..1111111.........",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  road: [
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "............#.....",
+    "............#.....",
+    "............#.....",
+    "............#.....",
+    ".........####.....",
+    ".........#........",
+    ".........#........",
+    ".........#####....",
+    ".............#....",
+    ".............#....",
+    ".............#....",
+    ".............#....",
+    ".............#....",
+    "....##########....",
+    "....#.............",
+    "....#.............",
+    "....#.............",
+    "....#########.....",
+    "............#.....",
+    "............#.....",
+    ".......######.....",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  ramps: [],
+  deco: [
+    ["castle_r", 12.6, 3.7, 0.6],
+    ["house_r1", 6.0, 16.6, 0.6],
+    ["house_r3", 14.4, 22.6, 0.6],
+    ["tower_r", 3.4, 19.9, 0.6],
+    ["archery_r", 9.0, 19.8, 0.55],
+    ["house_r2", 15.0, 20.3, 0.6, true],
+    ["sheep", 6.6, 19.4, 0.42],
+    ["sheepg", 11.3, 18.8, 0.42, true],
+    ["wrock1", 2.2, 27.3, 0.8],
+    ["wrock2", 7.4, 27.6, 0.7],
+    ["wrock4", 15.6, 26.2, 0.8],
+    ["duck", 4.6, 28.4, 1.3],
+  ],
+  labels: [["ОТМЕЛЬ", 214, 534]],
+  bank: [["cloud_c", 40, 1440, 0.9], ["cloud_d", -20, 1530, 0.8]],
+  clouds: [["sc_cloud1", 8, 5, 0.25]],
+  tm: "sc_tm4",
+  clear: [],
+  tide: {"path": [[6.1, 24.1], [4.4, 24.6], [2.4, 24.4], [-0.9, 24.7]], "w": 1.3},
+};
+// @@/isle5@@
 // Островок заставки (не остров игры): поле боя, замок на плато, мосты в облака по краям
 // @@isle0@@
 ISLE_MAPS[0] = {
@@ -6497,6 +6777,36 @@ function mapEngine(D) {
     return mapLand(x, y) || hAt(cx, cy) > 0 || faceAt(cx, cy);
   };
 
+  // Отлив (v149): коса из песка, которая встаёт из воды, когда рыцарь уходит на другой остров.
+  // D.tide = { path: [[x, y], …] — середина косы в крупных клетках от берега к краю карты, w — ширина }.
+  // Клетки косы — мелкие клетки воды у этой линии; s — насколько далеко клетка от берега (по линии):
+  // вода отступает от берега к краю карты, а возвращается обратно — с края.
+  const TIDE = D.tide ? (() => {
+    const P = D.tide.path, w = D.tide.w || 1.1, segs = [];
+    let len = 0;
+    for (let i = 1; i < P.length; i++) {
+      const l = Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
+      segs.push([P[i - 1], P[i], len, l]); len += l;
+    }
+    const cells = [];
+    for (let fy = 0; fy < MAP_H; fy++) for (let fx = 0; fx < MAP_W; fx++) {
+      if (fineSolid(fx, fy)) continue;
+      const x = (fx + 0.5) / 2, y = (fy + 0.5) / 2;
+      let best = 1e9, at = 0;
+      for (const [a, b, s0, l] of segs) {
+        const t = Math.max(0, Math.min(1, ((x - a[0]) * (b[0] - a[0]) + (y - a[1]) * (b[1] - a[1])) / (l * l)));
+        const d = Math.hypot(x - a[0] - t * (b[0] - a[0]), y - a[1] - t * (b[1] - a[1]));
+        if (d < best) { best = d; at = s0 + t * l; }
+      }
+      // коса то шире, то уже — как настоящая отмель, а не ровная дорожка
+      if (best <= (w / 2) * (0.94 + 0.12 * Math.sin(at * 2.3 + 0.6))) cells.push({ fx, fy, s: at });
+    }
+    return { cells, len, path: P };
+  })() : null;
+  const tideSet = new Set((TIDE?.cells || []).map((c) => c.fy * MAP_W + c.fx));
+  // tideApi.on(x, y) — точка (крупные клетки) на косе (когда коса видна целиком)
+  const tideApi = { k: 0, path: TIDE?.path || null, on: (x, y) => tideSet.has(Math.floor(y * 2) * MAP_W + Math.floor(x * 2)) };
+
   // Точка (x, y) в крупных клетках стоит на земле высоты h: не на обрыве и не в воздухе.
   // У края террасы, над обрывом, земля кончается раньше границы клетки — оставляем запас.
   function onGround(x, y, h) {
@@ -6536,7 +6846,8 @@ function mapEngine(D) {
     // перед большими постройками (монастырь, шахта, дома) деревья не растут — иначе закрывают их;
     // убираем уже после того, как все деревья расставлены, чтобы остальные остались на своих местах
     const BIG = { monastery_y: 1.0, mine: 1.1, castle: 1.2, fortress: 1.2, house_y: 0.8, house_c: 0.8, tower_y: 0.6, build: 1.4, ghouse: 0.5,
-      castle_p: 1.3, barracks_p: 1.0, archery_p: 1.0, house_p1: 0.7, house_p2: 0.7, tower_p: 0.6 };
+      castle_p: 1.3, barracks_p: 1.0, archery_p: 1.0, house_p1: 0.7, house_p2: 0.7, tower_p: 0.6,
+      castle_r: 1.3, tower_r: 0.6, house_r1: 0.6, house_r2: 0.7, house_r3: 0.7, archery_r: 1.0 };
     // clear — места без деревьев (ущелье, где идёт бой за золото), [x0, y0, x1, y1] в клетках
     const CLEAR = D.clear || [];
     return out.filter(([, x, y]) => !MAP_DECO.some(([k, ox, oy]) => BIG[k] && Math.abs(x - ox) < BIG[k] + 0.5 && y > oy - 0.4 && y < oy + 1.7)
@@ -6587,6 +6898,15 @@ function mapEngine(D) {
     land.setAttribute("aria-hidden", "true");
     land.style.top = "0"; land.style.height = "100%";
     wrap.insertBefore(land, canvas);
+    // коса отлива — свой холст поверх суши (пустой, пока воды не отступили)
+    let tideCv = null, tideFoam = [];
+    if (TIDE) {
+      tideCv = newCanvas(canvas.width, canvas.height);
+      tideCv.className = "mapstrip";
+      tideCv.setAttribute("aria-hidden", "true");
+      tideCv.style.top = "0"; tideCv.style.height = "100%";
+      wrap.insertBefore(tideCv, canvas);
+    }
     const objStrips = makeStrips();
 
     // Плитка по соседям (как в наборе): середина, край, угол, полоска или одиночная.
@@ -6690,6 +7010,66 @@ function mapEngine(D) {
         }
       }
     }
+    // Коса отлива при уровне k (0 — полная вода, 1 — коса видна до края карты). Впереди отступающей
+    // воды — светлая мель, за ней мокрый тёмный песок, который на глазах подсыхает. Песок той же плиткой,
+    // что берег: где коса подходит к берегу, плитки берега перерисованы как одно целое с ней.
+    function paintTide(k) {
+      if (!tideCv) return;
+      tideApi.k = k;
+      const g = tideCv.getContext("2d");
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, tideCv.width, tideCv.height);
+      tideFoam = [];
+      if (k <= 0) return;
+      const front = k * (TIDE.len + 1.4), key = (x, y) => y * MAP_W + x;
+      const sand = new Map(), shallow = [];
+      for (const c of TIDE.cells) {
+        const p = front - c.s;
+        if (p > -0.7) shallow.push([c, Math.min(1, (p + 0.7) / 0.7)]);
+        if (p >= 0.5) sand.set(key(c.fx, c.fy), Math.max(0, Math.min(1, 1 - (p - 0.5) / 2.6)));
+      }
+      // мель: светлая вода над песком, который вот-вот покажется (и кайма вокруг косы)
+      g.fillStyle = "#93dccf";
+      for (const [c, a] of shallow) {
+        g.globalAlpha = 0.42 * a;
+        g.beginPath(); g.arc((c.fx + 0.5) * MT, (c.fy + 0.5) * MT, MT * 1.05, 0, 6.283); g.fill();
+      }
+      g.globalAlpha = 1;
+      const isSand = (x, y) => sand.has(key(x, y));
+      const near = (x, y) => [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => isSand(x + dx, y + dy)));
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+      tiles(g, img.flat, { block: [5, 0], v: [8, 0], h: [5, 3], one: [8, 3] },
+        (x, y) => isSand(x, y) || (mapAt(x, y) === "s" && near(x, y)), (x, y) => isSand(x, y) || mapLand(x, y), MT, MAP_W, MAP_H);
+      // мокрый песок темнее и подсыхает
+      g.globalCompositeOperation = "source-atop";
+      g.fillStyle = "#5f5236";
+      for (const [kk, wet] of sand) {
+        if (wet <= 0) continue;
+        g.globalAlpha = 0.5 * wet;
+        g.fillRect((kk % MAP_W) * MT, Math.floor(kk / MAP_W) * MT, MT, MT);
+      }
+      g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+      // пена прибоя у краёв косы (рисуется с морем, под песком)
+      for (const kk of sand.keys()) {
+        const x = kk % MAP_W, y = Math.floor(kk / MAP_W);
+        if ((x + y) % 2) continue;
+        let wet = false;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!isSand(x + dx, y + dy) && !fineSolid(x + dx, y + dy)) wet = true;
+        if (wet) tideFoam.push([x, y, (x * 7 + y * 5) % 16]);
+      }
+    }
+    tideApi.set = (k) => { paintTide(k); frame(performance.now(), true); };
+    // плавно от уровня a до b за ms миллисекунд
+    tideApi.go = (a, b, ms) => new Promise((res) => {
+      const t0 = performance.now();
+      const st = (t) => {
+        const u = Math.min(1, (t - t0) / ms), e = u < 0.5 ? 2 * u * u : 1 - 2 * (1 - u) * (1 - u);
+        paintTide(a + (b - a) * e);
+        if (u < 1) requestAnimationFrame(st); else { frame(t, true); res(); }
+      };
+      requestAnimationFrame(st);
+    });
+
     // Пена прибоя вокруг всего твёрдого: низины и террас
     const solid = (x, y) => fineSolid(x, y);
     // Рябь на открытой воде (версия 94, пользователь: море шумит, а вода стоит неподвижно).
@@ -6770,7 +7150,7 @@ function mapEngine(D) {
       ctx.globalAlpha = 1;
       const ff = Math.floor(t / Math.max(85, MAP_STEP()));   // пена — тоже по порядку кадров
       ctx.imageSmoothingEnabled = true;          // пена в половину размера
-      for (const [x, y, ph] of shore) {
+      for (const [x, y, ph] of shore.concat(tideFoam)) {
         const py = y * MT - MT;
         if (py > bot || py + MT * 3 < top) continue;
         ctx.drawImage(img.foam, ((ff + ph) % 16) * 192, 0, 192, 192, x * MT - MT, py, MT * 3, MT * 3);
@@ -6985,7 +7365,7 @@ function mapEngine(D) {
     if (cx < 0 || cy < 0 || cx >= RW || cy >= RH) return true;          // за краем карты — море
     return !hAt(cx, cy) && !faceAt(cx, cy) && !mapLand(Math.floor(x * 2), Math.floor(y * 2));
   }
-  return { startMapScene, RH, RW, groundAt, roadAt, waterAt, trees: mapTrees() };
+  return { startMapScene, RH, RW, groundAt, roadAt, waterAt, trees: mapTrees(), tide: tideApi };
 }
 
 function showView(v) {
@@ -7010,7 +7390,7 @@ function seeded(seed) {
 // ===== Острова на карте =====
 // Каждый остров — своя карта (свой .mapwrap) со своими уровнями. Острова соединяет мост:
 // с вершины первого — вверх в облака, на втором он приходит снизу.
-const ISLE_NAMES = { 1: tr("Остров программистов"), 2: tr("Остров условий"), 3: tr("Остров рудокопов"), 4: tr("Остров мастеров") };
+const ISLE_NAMES = { 1: tr("Остров программистов"), 2: tr("Остров условий"), 3: tr("Остров рудокопов"), 4: tr("Остров мастеров"), 5: tr("Остров хитрецов") };
 // Переходы между островами (у острова их может быть несколько): где кнопка (единицы карты), куда ведёт.
 // bridge — мост за край карты (dir: -1 вверх, 1 вниз), за облаками; tunnel — дверь (монастырь, шахта),
 // за ней подземный ход.
@@ -7022,7 +7402,8 @@ const GATES = {
   // Уходит влево за край карты (dir: "left"), на острове 4 приходит снизу.
   3: [{ at: [124, 523], door: [124, 507], stand: [176, 503], to: 2, kind: "tunnel", place: "шахта" },
     { at: [130, 50], to: 4, kind: "build", dir: "left" }],
-  4: [{ at: [130, 516], to: 3, kind: "bridge", dir: 1 }],
+  4: [{ at: [130, 516], to: 3, kind: "bridge", dir: 1 }, { at: [264, 466], to: 5, kind: "ebb", dir: "right" }],
+  5: [{ at: [124, 482], to: 4, kind: "ebb", dir: "left" }],
 };
 const gateTo = (from, to) => GATES[from].find((g) => g.to === to);
 const LAST_OF = (n) => LEVELS.filter((lv) => (lv.isle || 1) === n && !lv.side).at(-1);   // дополнительные — не конец острова
@@ -7032,6 +7413,7 @@ const gateOpen = (from, to) => save.dev || to < from || (save.stars[LAST_OF(from
 const bridgeOpen = () => gateOpen(1, 2);
 const gateLockedText = (from) => tr(from === 1 ? "Мост откроется после испытания «{lv}» у ворот крепости"
   : from === 3 ? "Рудокопы построят мост после испытания «{lv}»"
+  : from === 4 ? "Отлив начнётся после испытания «{lv}»"
   : "Монастырь откроется после испытания «{lv}»", { lv: lvName(LAST_OF(from).name) });
 let arrivedFrom = 0;   // с какого острова пришли (рыцарь появится у этих ворот)
 const isleOf = (lv) => lv?.isle || 1;
@@ -7134,10 +7516,11 @@ function renderMap() {
   // Кнопки переходов: на мосту — стрелка туда, куда мост уходит с карты; у двери (монастырь, шахта) — арка входа
   for (const br of GATES[curIsle]) {
     const [bx, by] = br.at, ok = gateOpen(curIsle, br.to), S = 30, H = S * 94 / 88;
-    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${tr(br.kind === "tunnel" ? "Подземный ход" : br.kind === "build" && !bridgeBuilt() ? "Построить мост" : "Мост")} ${tr("на")} ${ISLE_NAMES[br.to]}${ok ? "" : tr(", закрыт")}">`);
+    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${tr(br.kind === "tunnel" ? "Подземный ход" : br.kind === "ebb" ? "Отмель" : br.kind === "build" && !bridgeBuilt() ? "Построить мост" : "Мост")} ${tr("на")} ${ISLE_NAMES[br.to]}${ok ? "" : tr(", закрыт")}">`);
     add(`<use class="ring" href="#im-btnb" x="${bx - S / 2}" y="${by - H / 2}" width="${S}" height="${H}" ${ok ? "" : 'filter="url(#f-gray)"'}/>`);
     const d = br.kind === "tunnel" ? `M${bx - 6} ${by + 6}v-6a6 6 0 0 1 12 0v6M${bx - 8} ${by + 6}h16`
       : br.dir === "left" ? `M${bx + 1} ${by - 6}l-7 6 7 6M${bx - 5} ${by}h12`
+      : br.dir === "right" ? `M${bx - 1} ${by - 6}l7 6-7 6M${bx + 5} ${by}h-12`
       : br.dir < 0 ? `M${bx - 6} ${by + 1}l6-7 6 7M${bx} ${by - 5}v12` : `M${bx - 6} ${by - 3}l6 7 6-7M${bx} ${by - 9}v12`;
     if (ok) add(`<path d="${d}" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`);
     else add(`<use href="#im-lock" x="${bx - 7}" y="${by - 9}" width="14" height="15.6"/>`);
@@ -8025,6 +8408,7 @@ const SKIT_PLAN = {
   4: [
     { name: "лесоруб у мастерской", fn: "lumber", tree: [4.6, 18.3], d: -1, pile: [6.3, 18.35] },
   ],
+  5: [],
 };
 // что проверять у каждой сценки
 const SKIT_GEOM = {
@@ -8058,7 +8442,7 @@ const SKIT_FN = {
 };
 // Запускаются, когда карта острова показана впервые
 const SKITS = {};
-for (const n of [1, 2, 3, 4]) SKITS[n] = (w) => SKIT_PLAN[n].forEach((s) => skStart(n, w, { ...s, ...SKIT_GEOM[s.fn](s) }, SKIT_FN[s.fn]));
+for (const n of [1, 2, 3, 4, 5]) SKITS[n] = (w) => SKIT_PLAN[n].forEach((s) => skStart(n, w, { ...s, ...SKIT_GEOM[s.fn](s) }, SKIT_FN[s.fn]));
 
 // --- Сценки на поле уровня («в углах», как в CodeCombat) ---
 // Только мирные жители — монах, лесоруб, строитель, овечка: гоблин в углу поля можно принять
@@ -8279,9 +8663,10 @@ let floatTimer = 0;
 // поэтому края уменьшенных карт сливаются с морем архипелага. Выше — облака: место для новых островов.
 const ARCHI = { W: 360, H: 2360, sc: 0.5, pad: 34,                 // pad — море над и под картой острова (единицы карты)
   // остров 4 — над третьим и чуть левее: мост с третьего уходит влево, на четвёртом приходит снизу слева
-  isles: { 1: [52, 1760], 2: [168, 1380], 3: [30, 1010], 4: [6, 640] },       // левый верхний угол уменьшенной карты (без pad)
+  isles: { 1: [52, 1760], 2: [168, 1380], 3: [30, 1010], 4: [6, 640], 5: [176, 622] },       // левый верхний угол уменьшенной карты (без pad)
   // облака над местами будущих островов: [картинка, x центра, y верха, ширина в единицах карты]
-  clouds: [["cloud_a", 275, 720, 150], ["cloud_c", 310, 800, 100], ["cloud_d", 262, 870, 80],
+  // остров 5 — справа от четвёртого: коса отлива уходит с четвёртого вправо, на пятый приходит слева
+  clouds: [["cloud_a", 290, 330, 150], ["cloud_c", 330, 400, 100],
     ["cloud_b", 100, 440, 160], ["cloud_d", 165, 505, 100], ["cloud_c", 60, 520, 80],
     ["cloud_a", 255, 150, 170], ["cloud_c", 310, 215, 100], ["cloud_b", 190, 240, 90]] };
 const MINI = {};
@@ -8633,6 +9018,7 @@ async function startIslandRun(to) {
     hero.setAttribute("visibility", "hidden");
     svgEl.querySelectorAll("[data-bridge]").forEach((b) => b.setAttribute("visibility", "hidden"));   // кнопки переходов не мешают бегу
     if (gA.kind === "tunnel") return await tunnelRun(from, to, gA, gB, hx, hy);
+    if (gA.kind === "ebb") return await ebbRun(from, to, gA, gB, hx, hy);
     // 1. Уход: от уровня, где стоит рыцарь, к мосту и за край карты
     const VH = ISLE_MAPS[from].terr.length * 20;
     let a;
@@ -8678,6 +9064,56 @@ async function startIslandRun(to) {
     $("curtain").classList.remove("closed");
     $("curtain").hidden = true;
   }
+}
+
+// ===== Отлив: переход по отмели (остров 4 ↔ остров 5) =====
+// Рыцарь бежит к берегу и ждёт: вода на глазах отступает от берега, из моря встаёт песчаная коса до края карты
+// (сначала светлая мель, потом мокрый тёмный песок, который подсыхает). Рыцарь бежит по косе в облака;
+// на другом острове коса ещё видна — он выходит по ней на берег, и за его спиной вода возвращается.
+// Коса — D.tide карты острова (холст косы в mapEngine), путь рыцаря — по её середине.
+const tidePts = (n) => ISLE_ENG[n].tide.path.map(([x, y]) => [x * 20, y * 20]);
+const tideEdge = (n, g) => { const P = tidePts(n), e = P.at(-1); return [g.dir === "left" ? -70 : 430, e[1]]; };
+async function ebbRun(from, to, gA, gB, hx, hy) {
+  const EA = ISLE_ENG[from];
+  await EA.ready;
+  // 1. к берегу — по дороге; последний кусок от дороги до воды — по песку
+  const a = await runAlong(roadPath(from, [hx, hy], gA.at));
+  await new Promise((r) => { const w = () => (a.run.dataset.done ? r() : setTimeout(w, 50)); w(); });
+  a.run.className = "runner idle" + (gA.dir === "left" ? " flip" : ""); a.run.style.backgroundImage = `url(${TS.kidle})`;
+  // 2. отлив: вода отступает от берега к краю карты
+  sfx("tide");
+  await EA.tide.go(0, 1, 2200);
+  a.run.remove();
+  // 3. по косе — за край, в облака
+  const edgeA = tideEdge(from, gA);
+  const b = await runAlong([gA.at, ...tidePts(from), edgeA], (y, x) => (gA.dir === "left" ? x < 20 : x > 340));
+  await curtain(true);
+  b.run.remove();
+  EA.tide.set(0);                                   // там вода вернулась, пока никто не видел
+  // 4. другой остров: коса ещё над водой, рыцарь выходит по ней на берег
+  arrivedFrom = from; curIsle = to;
+  showView("map");
+  const EB = ISLE_ENG[to];
+  await EB.ready;
+  EB.tide.set(1);
+  const hB = isleSvg().querySelector(".map-hero");
+  const tx = +hB.getAttribute("x") + 2, ty = +hB.getAttribute("y") + 52;
+  hB.setAttribute("visibility", "hidden");
+  isleSvg().querySelectorAll("[data-bridge]").forEach((el) => el.setAttribute("visibility", "hidden"));
+  const [gx] = gB.at;
+  const arrive = runAlong([tideEdge(to, gB), ...tidePts(to).reverse(), ...roadPath(to, gB.at, [tx, ty])],
+    (y, x) => (gB.dir === "left" ? x > gx + 8 : x < gx - 8));     // вышел на берег
+  await sleep(200);
+  await curtain(false);
+  const c = await arrive;
+  // 5. за спиной вода возвращается — с края карты к берегу
+  sfx("tide");
+  const back = EB.tide.go(1, 0, 1800);
+  await new Promise((r) => { const w = () => (c.run.dataset.done ? r() : setTimeout(w, 50)); w(); });
+  await back;
+  c.run.remove();
+  renderMap();
+  sfx("unlock");
 }
 
 // Переход через дверь: рыцарь бежит к монастырю (шахте), из двери выходит монах (шахтёр) и зовёт внутрь;
@@ -9295,7 +9731,8 @@ const hasCommand = () => codeEl.value.split("\n").some((l) => cmdOrCallRe().test
 function drawUndo() {
   const btn = $("undo-cmd");
   if (!btn) return;
-  const frameLine = selLine && /^\s*(while|for|if|elif|else|def)\b.*:\s*$/.test(codeEl.value.split("\n")[selLine - 1] ?? "");
+  const selT = codeEl.value.split("\n")[selLine - 1] ?? "";
+  const frameLine = selLine && (/^\s*(while|for|if|elif|else|def)\b.*:\s*$/.test(selT) || (lang === "js" && JS_FRAME_HEAD.test(selT)));
   $("undo-label").textContent = selLine ? (uiBlocks ? tr(frameLine ? "Убрать рамку" : "Удалить плитку") : tr("Удалить строку {n}", { n: selLine })) : tr("Отменить команду");
   btn.disabled = running || (!selLine && !hasCommand());
   fitText();
@@ -9322,6 +9759,23 @@ $("undo-cmd").addEventListener("click", () => {
       if (els) { out(els.start, els.end); lines.splice(els.start - 1, 1); }
       out(fr.start, fr.end);
       lines.splice(fr.start - 1, 1);
+      selLine = null;
+    });
+  } else if (selLine && lang === "js" && JS_FRAME_HEAD.test(selText)) {
+    // JavaScript: убрать рамку «если» / цикла — заголовок и её закрывающую скобку, команды внутри остаются
+    // (сдвигаются на уровень выше). У «если» с «иначе» уходит и «} else {» со своей скобкой.
+    const frames = findFrames(codeEl.value), fr = frames.find((f) => f.start === selLine);
+    editLines((lines) => {
+      const out = (a, b) => { for (let j = a; j < b - 1; j++) lines[j] = lines[j].replace(/^ {1,2}/, ""); };
+      const drop = [fr.start - 1];
+      out(fr.start, fr.end);
+      if (/^\s*\}\s*else\s*\{\s*$/.test(lines[fr.end - 1] ?? "")) {
+        const els = frames.find((f) => f.start === fr.end);
+        if (els) { out(els.start, els.end); drop.push(els.end - 1); }
+      }
+      drop.push(fr.end - 1);
+      if (fr.closed) [...new Set(drop)].sort((a, b) => b - a).forEach((j) => lines.splice(j, 1));
+      else lines.splice(fr.start - 1, 1);
       selLine = null;
     });
   } else if (selLine) {
@@ -9766,6 +10220,8 @@ function findFrames(code) {
   }
   return out;
 }
+// заголовок рамки JavaScript: while (…) { / for (…) { / if (…) { — без «} else {» и без function
+const JS_FRAME_HEAD = /^\s*(while|for|if)\b.*\{\s*$/;
 const IF_LINE = new RegExp(`^\\s*(?:\\}\\s*)?(?:if|elif|else\\s+if)\\s*\\(?\\s*(not\\s+|!)?(${COND_ANY})\\s*\\(\\s*\\)\\s*\\)?\\s*[:{]?\\s*$`);
 const ELSE_LINE = /^\s*(?:\}\s*)?else\s*[:{]?\s*$/;
 
@@ -11799,6 +12255,8 @@ function toolMissing(code) {
     if (L.requireParam && !fns.some((nm) => { const pm = defParam(c, nm); return pm && defBody(c, nm).some((t) => t.v === pm); })) return "param";
     // nestFns — один приём зовёт другой
     if (L.requireNest && !fns.some((nm) => defBody(c, nm).some((t) => t.call && t.call !== nm && fns.includes(t.call)))) return "nest";
+    // requireFnIf — приём, внутри которого рамка «если» (приём сам решает), и его зовут
+    if (L.requireFnIf && !fns.some((nm) => countCalls(c, [nm]) && defBody(c, nm).some((t) => t.cond))) return "fnif";
   }
   return null;
 }
@@ -11841,6 +12299,7 @@ function win() {
     : missing === "fn2" ? " Получилось! Для ★★★ здесь нужны оба приёма — и А, и Б."
     : missing === "nest" ? " Получилось! Для ★★★ один приём должен позвать другой: выбери заголовок приёма и нажми кнопку другого."
     : missing === "param" ? " Получилось! Для ★★★ здесь нужен приём с числом: внутри приёма вместо цифры поставь n, а число пиши в вызове."
+    : missing === "fnif" ? " Получилось! Для ★★★ рамка «если» должна быть внутри приёма — тогда приём сам решает, что делать."
     : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
   else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
@@ -11852,6 +12311,7 @@ function win() {
   const myIsle = L.isle || 1, lastOfIsle = L.name === LAST_OF(myIsle)?.name && !!gateTo(myIsle, myIsle + 1);
   if (lastOfIsle) note += tr(myIsle === 1 ? " Ты прошёл весь остров! От крепости открылся мост к новому острову."
     : myIsle === 3 ? " Ты прошёл весь остров! Рудокопы ждут у брёвен — сейчас они построят мост на новый остров."
+    : myIsle === 4 ? " Ты прошёл весь остров! Начинается отлив: по отмели можно дойти до нового острова."
     : " Ты прошёл весь остров! Монастырь открыт: из него подземный ход ведёт на новый остров.");
   else if (wasChapterLocked && nextCh && chapterOpen(L.chapter + 1)) note += tr(" Открыта новая глава: {ch}!", { ch: nextCh.name });
   else if (L.challenge && nextCh?.soon) note += tr(" Глава «{ch}» скоро появится.", { ch: nextCh.name });
@@ -12698,6 +13158,13 @@ const SFX = {
     s.buffer = buf; s.playbackRate.value = 0.95 + Math.random() * 0.12;
     g.gain.value = 0.6;
     s.connect(g).connect(sfxBus); s.start();
+  },
+  // отлив / прилив: длинный мягкий шорох воды — плавно нарастает и долго тает, только низкие частоты
+  tide() {
+    const t = actx.currentTime, src = noiseSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+    f.type = "lowpass"; f.frequency.setValueAtTime(500, t); f.frequency.linearRampToValueAtTime(1100, t + 0.9); f.frequency.linearRampToValueAtTime(420, t + 2.6);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.32, t + 0.8); g.gain.setTargetAtTime(0, t + 1.1, 0.5);
+    src.connect(f).connect(g).connect(sfxBus); src.start(t); src.stop(t + 3.6);
   },
   poof()   { note(392, { dur: 0.1, vol: 0.35, slideTo: 784 }); note(988, { dur: 0.25, vol: 0.25, at: 0.1 }); noise({ dur: 0.15, vol: 0.3, freq: 700, at: 0.02 }); },
 };
@@ -13602,10 +14069,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 148;
+const APP_VERSION = 149;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 149, date: "2026-11-15", text: "Новый, пятый остров — Остров хитрецов! После «Ворот замка» начинается отлив: вода отступает, и по песчаной косе можно дойти до нового острова. Первая глава — «Отмель»: приём с «если» внутри. Приём сам решает, что делать: бить гоблина или пройти мимо своих. В JavaScript рамку «если» и цикла теперь можно убрать целиком, вместе с её скобкой.", en: "A new, fifth island — the Island of Wits! After “Castle Gate” the tide goes out: the water drops back, and you can walk along a sandbar to the new island. The first chapter is “Shoal”: a function with an “if” inside. The function decides by itself what to do: strike a goblin or walk past friends. In JavaScript, an “if” or loop frame can now be removed whole, together with its closing bracket.", big: true },
   { v: 148, date: "2026-11-15", text: "Новая глава на Острове мастеров — «Ворота замка»: приём с числом. Пишешь charge(3) — и приём делает 3 шага; внутри приёма вместо цифры стоит n. В блоках — плитка «n», кнопка «n» и число на вызове: «n=3».", en: "A new chapter on the Island of Masters — “Castle Gate”: a function with a number. Write charge(3) — and the function takes 3 steps; inside the function, n stands in place of the digit. In blocks — an “n” tile, an “n” button and the number on the call: “n=3”.", big: true },
   { v: 147, date: "2026-11-15", text: "Новая глава на Острове мастеров — «Стены замка»: два приёма в одной программе, а потом приём, который зовёт другой приём. В блоках у приёмов теперь буквы А и Б. Подписи на карте островов переведены на английский.", en: "A new chapter on the Island of Masters — “Castle Walls”: two functions in one program, and then a function that calls another function. In blocks, functions now have letters A and B. Map labels on the islands are translated into English.", big: true },
   { v: 146, date: "2026-11-14", text: "В JavaScript «если», поставленное внутрь цикла или «иначе», теперь пишется с правильным отступом.", en: "In JavaScript, an “if” placed inside a loop or an “else” now gets the right indentation." },

@@ -1,21 +1,21 @@
 {
- "version": 148,
+ "version": 149,
  "date": "2026-11-15",
  "notes": [
-  "Новая глава на Острове мастеров — «Ворота замка»: приём с числом. Пишешь charge(3) — и приём делает 3 шага; внутри приёма вместо цифры стоит n. В блоках — плитка «n», кнопка «n» и число на вызове: «n=3»."
+  "Новый, пятый остров — Остров хитрецов! После «Ворот замка» начинается отлив: вода отступает, и по песчаной косе можно дойти до нового острова. Первая глава — «Отмель»: приём с «если» внутри. Приём сам решает, что делать: бить гоблина или пройти мимо своих. В JavaScript рамку «если» и цикла теперь можно убрать целиком, вместе с её скобкой."
  ],
  "files": {
   "index.html": {
-   "size": 908032,
-   "hash": "e40d311a29cc67c9"
+   "size": 934310,
+   "hash": "4b24a6f0444a8491"
   },
   "art.js": {
-   "size": 1848735,
-   "hash": "6644bf7489db3a42"
+   "size": 1957150,
+   "hash": "8280758bff213678"
   },
   "lang-en.js": {
-   "size": 105816,
-   "hash": "fe076988a4b960e4"
+   "size": 108509,
+   "hash": "db8c267cc235cecf"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "9b6a336dba4e3041"
+   "hash": "e1e7ba14381dc7c3"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A new chapter on the Island of Masters — “Castle Gate”: a function with a number. Write charge(3) — and the function takes 3 steps; inside the function, n stands in place of the digit. In blocks — an “n” tile, an “n” button and the number on the call: “n=3”."
+  "A new, fifth island — the Island of Wits! After “Castle Gate” the tide goes out: the water drops back, and you can walk along a sandbar to the new island. The first chapter is “Shoal”: a function with an “if” inside. The function decides by itself what to do: strike a goblin or walk past friends. In JavaScript, an “if” or loop frame can now be removed whole, together with its closing bracket."
  ]
 }
