@@ -1617,7 +1617,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
   <p class="map-toast" id="map-toast" role="status"></p>
   <div class="howto">
     <b>Уже умеешь программировать?</b>
-    Пройди два первых уровня, чтобы понять управление, а потом сразу иди на <span class="ch-mark">◆ Испытание</span> главы. Оно открывает следующую главу, и все уровни можно не проходить.
+    Пройди три первых уровня, чтобы понять управление, а потом сразу иди на <span class="ch-mark">◆ Испытание</span> главы. Оно открывает следующую главу, и все уровни можно не проходить.
   </div>
   <p class="credits">Графика: <a href="https://pixelfrog-assets.itch.io/tiny-swords" target="_blank" rel="noopener">Tiny Swords</a> — Pixel Frog</p>
 </div>
@@ -2130,10 +2130,27 @@ const CHAPTERS = [
 // requireLoop — засчитывается, только если в коде есть цикл.
 const LEVELS = [
   // ---------- Глава 1. Берег ----------
+  // Самый первый уровень — сразу бой: одна кнопка, один удар, победа.
+  // slay — двери нет: уровень пройден, когда побеждены все гоблины.
+  {
+    name: "Первый удар",
+    chapter: 0,
+    slay: true,
+    goal: "Гоблин стащил монеты! Нажми [[btn:attack]], потом <b>Запустить</b> — рыцарь ударит гоблина. Кнопка — это команда рыцарю.",
+    commands: ["attack"],
+    par: 1, good: 2,
+    map: [
+      "#####",
+      "#SG.#",
+      "#####",
+    ],
+    starter: { py: "", js: "" },
+  },
   {
     name: "Первые шаги",
     chapter: 0,
-    goal: "Это рыцарь, ему нужно к двери. Нажми кнопку <b>→ moveRight</b> под кодом: в коде появится команда. Потом нажми <b>Запустить</b>. Одна команда — один шаг. Хочешь ★★★? Нажми цифру 4: команда станет <code>moveRight(4)</code>, четыре шага сразу.",
+    after: "Первый удар",
+    goal: "Теперь рыцарю нужно к двери. Нажми кнопку <b>→ moveRight</b> под кодом: в коде появится команда. Потом нажми <b>Запустить</b>. Одна команда — один шаг. Хочешь ★★★? Нажми цифру 4: команда станет <code>moveRight(4)</code>, четыре шага сразу.",
     commands: ["moveRight"],
     par: 1, good: 4,
     map: [
@@ -2472,7 +2489,7 @@ const LEVELS = [
   {
     name: "Гоблин",
     chapter: 3,
-    goal: "Новое: <b>гоблин</b>! Он загородил тропу. Нажми кнопку <b>⚔ attack</b>: рыцарь ударит того, кто стоит рядом. Потом иди к двери: <b>→ moveRight</b> и цифра <b>5</b>. Не мешкай: если стоять рядом и не бить, гоблин ударит сам. У рыцаря три сердечка.",
+    goal: "<b>Гоблин</b> загородил тропу! Нажми кнопку <b>⚔ attack</b>: рыцарь ударит того, кто стоит рядом. Потом иди к двери: <b>→ moveRight</b> и цифра <b>5</b>. Не мешкай: если стоять рядом и не бить, гоблин ударит сам. У рыцаря три сердечка.",
     commands: ["moveRight", "attack"],
     newCommands: ["attack"],
     par: 2, good: 3,
@@ -4874,8 +4891,8 @@ async function paintGround(wrap, terr, themeName, rnd) {
 // зелени: к испытанию Берега уже начинается лес.
 function themeFor(i) {
   const lv = LEVELS[i];
-  const inCh = LEVELS.filter((l) => l.chapter === lv.chapter);
-  const t = inCh.length > 1 ? inCh.indexOf(lv) / (inCh.length - 1) : 0; // 0 — начало главы, 1 — конец
+  const inCh = LEVELS.filter((l) => l.chapter === lv.chapter && !l.slay);
+  const t = inCh.length > 1 && !lv.slay ? inCh.indexOf(lv) / (inCh.length - 1) : 0; // 0 — начало главы, 1 — конец
   if (lv.isle === 2) return { name: "beach", t: 0.85 };
   if (lv.isle === 3) return { name: "cave", t: 0.35 };   // Остров рудокопов — шахты
   if (lv.isle === 4) return { name: "beach", t: 0.7 };   // Остров мастеров — луг у мастерских
@@ -4999,7 +5016,7 @@ const MAP_SHEEP = { sheep: ["sc_sheep", 6, 128, 128, 44, 140], sheepg: ["sc_shee
 const ISLE_MAPS = {};
 // @@isle1@@
 ISLE_MAPS[1] = {
-  nodes: [[90, 1010], [170, 1010], [250, 990], [190, 950], [110, 930], [130, 870], [210, 870], [310, 810], [190, 750], [130, 710], [230, 650], [290, 590], [230, 530], [250, 490], [230, 470], [150, 470], [110, 470], [110, 430], [110, 390], [110, 310], [50, 270], [110, 250], [190, 270], [190, 230], [270, 230], [250, 130]],
+  nodes: [[90, 1010], [150, 1010], [210, 1010], [250, 990], [190, 950], [110, 930], [130, 870], [210, 870], [310, 810], [190, 750], [130, 710], [230, 650], [290, 590], [230, 530], [250, 490], [230, 470], [150, 470], [110, 470], [110, 430], [110, 390], [110, 310], [50, 270], [110, 250], [190, 270], [190, 230], [270, 230], [250, 130]],
   rows: [
     "....................................",
     "....................................",
@@ -8296,6 +8313,7 @@ function buildBoard() {
   if (L.arena) return buildArena();               // арена: свободный бой, а не клетки
   items = [];
   enemies = [];
+  exitPos = exitCell = null;   // на уровне «победи гоблина» (slay) двери нет
   const waterRocks = []; // камни в воде: в луже на одну клетку им не место
   const cellOv = map.map((row) => [...row].map(() => null)); // предмет в клетке (для сценок)
   const cellEl = map.map((row) => [...row].map(() => null)); // сами клетки
@@ -8464,7 +8482,7 @@ function buildBoard() {
   itemsTag = document.createElement("div");
   itemsTag.className = "itemstag";
   itemsTag.id = "itemstag";
-  itemsTag.hidden = !items.length && !enemies.length;
+  itemsTag.hidden = !items.length && (!enemies.length || !!L.slay);
   camEl.parentNode.insertBefore(itemsTag, camEl);
 
   // в пещере в воздухе медленно плавают пылинки
@@ -8514,8 +8532,8 @@ const doorLocked = (got) => (needKey() && !got.key) || got.coins < coinsTotal();
 function drawItems(got) {
   lastGot = got;
   items.forEach((it) => it.el.classList.toggle("taken", got.taken.has(`${it.x},${it.y}`)));
-  exitCell.classList.toggle("locked", doorLocked(got));
-  const hearts = enemies.length || evs().some((e) => e.kind !== "fell");
+  exitCell?.classList.toggle("locked", doorLocked(got));
+  const hearts = !L.slay && enemies.length || evs().some((e) => e.kind !== "fell");
   if (!items.length && !hearts) return;
   let html = "";
   if (hearts) {
@@ -8666,7 +8684,8 @@ function buildChips() {
     mb.setAttribute("aria-expanded", String(moreOpen));
   }
   if (uiBlocks) { const br = document.createElement("span"); br.style.flexBasis = "100%"; chipsEl.appendChild(br); }
-  [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
+  // на самом первом уровне (slay) цифр нет: одна кнопка — один удар
+  if (!L.slay) [1, 2, 3, 4, 5, 6].forEach((n) => add("n" + n, "num", String(n), () => selLine ? setNumberOnLine(n) : setLastNumber(n)));
 }
 
 // ===== «Отменить команду» и «Вернуть» =====
@@ -9378,6 +9397,8 @@ function buildPlan(code) {
       c.to = { ...pos };
       c.got.push({ ...got });
       if (dead || crash) throw STOP;
+      // уровень «победи гоблина»: двери нет, победа — когда не осталось ни одного врага
+      if (L.slay && [...hpLeft.values()].every((v) => v <= 0)) { reachedAt = { cmd: i, step: c.hits.length - 1 }; throw STOP; }
       if (commands.length >= 100) throw new Error("Рыцарь сделал 100 команд и так и не дошёл. Он ходит по кругу?");
       return;
     }
@@ -9394,7 +9415,7 @@ function buildPlan(code) {
         crash = { cmd: i, step: s, at: next, reason: "goblin", hp: hpLeft.get(enemyKey(next.x, next.y)), max: en.hp, shield: en.shield };
         break;
       }
-      const atExit = next.x === exitPos.x && next.y === exitPos.y;
+      const atExit = !!exitPos && next.x === exitPos.x && next.y === exitPos.y;
       // Запертая дверь работает как стена
       if (atExit && doorLocked(got)) { crash = { cmd: i, step: s, at: next, reason: "locked", got: { ...got } }; break; }
       pos = next;
@@ -9555,7 +9576,7 @@ const BLOCK_GOALS = {
   "Уступы вниз": "Уступы вниз, тоже разной высоты. Нажми на [[ifhead]] и кнопку [[btn:moveDown]].",
   "Кривые штольни: испытание": "Испытание: программа пустая, три части карты [[pages:3]], ступени разной высоты. Подсказка: «🔁 повторять», «❓ если» со ступенькой вверх и [[elsebtn]] с шагом вправо.",
   "Шахта: испытание": "Испытание: программа пустая, ступенек четыре, карта длинная [[pages]]. Подсказка: «🔁 повторять», в цикле шаг вправо и «если» со ступенькой вверх.",
-  "Первые шаги": "Это рыцарь, ему нужно к двери. Нажми стрелку <b>→</b>: появится плитка — это один шаг. Потом нажми <b>Запустить</b>. Хочешь ★★★? Нажми цифру <b>4</b>: плитка станет <b>→4</b>, четыре шага сразу.",
+  "Первые шаги": "Теперь рыцарю нужно к двери. Нажми стрелку <b>→</b>: появится плитка — это один шаг. Потом нажми <b>Запустить</b>. Хочешь ★★★? Нажми цифру <b>4</b>: плитка станет <b>→4</b>, четыре шага сразу.",
   "Поворот": "Новая стрелка <b>↓</b>. Плитки уже лежат, но рыцарь не доходит одну клетку. Нажми на плитку <b>↓2</b>, потом цифру <b>3</b> и «Запустить».",
   "Подвал": "Доведи рыцаря до двери сам. Цифра на плитке — сколько шагов: <b>→3</b> — три клетки вправо. Цифры на поле подскажут, сколько нужно.",
   "Починка": "Плитки уже лежат, но в одной ошибка. Нажми «Запустить» и посмотри, где рыцарь остановится: эта плитка подсветится. Нажми на неё и поправь число.",
@@ -9563,7 +9584,7 @@ const BLOCK_GOALS = {
   "Зубцы": "Посмотри на дорогу: какие шаги в ней повторяются? Нажми <b>🔁 повторять</b> — появится пустая рамка. Положи в неё эти шаги стрелками.",
   "Беглянка": "В рамке цикла должны быть две плитки, но одна сбежала: она лежит за рамкой, и рыцарь повторяет только одну. Нажми на беглянку, а потом серую кнопку [[tool:inFrame]].",
   "Перепутанный путь": "Все плитки правильные, но две соседние перепутаны местами. Запусти, посмотри, где рыцарь споткнётся, нажми на эту плитку и передвинь её серой кнопкой [[tool:earlier]] или [[tool:later]].",
-  "Гоблин": "Новое: <b>гоблин</b>! Он загородил тропу. Нажми <b>⚔</b>: рыцарь ударит того, кто стоит рядом. Потом иди к двери: <b>→</b> и цифра <b>5</b>. Не мешкай: если стоять рядом и не бить, гоблин ударит сам. У рыцаря три сердечка.",
+  "Гоблин": "<b>Гоблин</b> загородил тропу! Нажми <b>⚔</b>: рыцарь ударит того, кто стоит рядом. Потом иди к двери: <b>→</b> и цифра <b>5</b>. Не мешкай: если стоять рядом и не бить, гоблин ударит сам. У рыцаря три сердечка.",
   "Крепкий гоблин": "Над этим гоблином два сердечка: ему нужно <b>два удара</b>, и после первого он успеет ударить в ответ. Плитки почти готовы. Нажми на плитку <b>⚔1</b>, потом цифру <b>2</b>: получится <b>⚔2</b>.",
   "Строй гоблинов": "Гоблины стоят через клетку. Удар и два шага повторяются: положи в рамку 🔁 плитки <b>⚔</b> и <b>→2</b>. Если рядом никого нет, рыцарь просто взмахнёт мечом.",
   "Засада в кустах": "Поле стало больше, на нём монеты, а в кустах кто-то прячется! Это не страшно: у рыцаря три сердечка. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
@@ -9699,7 +9720,7 @@ function renderBlocks(active = 0, err = 0) {
   const items = parseBlocks(codeEl.value);
   const lines = codeEl.value.split("\n").length, grew = lines > (box._lines || 0);
   box._lines = lines;
-  if (!items.length) { box.innerHTML = `<span class="empty">${tr("Нажимай стрелки — здесь появятся шаги рыцаря")}</span>`; fitBlocks(); return; }
+  if (!items.length) { box.innerHTML = `<span class="empty">${tr(L.slay ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря")}</span>`; fitBlocks(); return; }
   const top = box.scrollTop;
   box.innerHTML = items.map((it) => blockHtml(it, active, err)).join("");
   box.scrollTop = top;
@@ -9799,7 +9820,7 @@ function fitBoard(force = false) {
   // и поле сжималось (арена «Битва: испытание»: 188 → 137 px высоты на 360×740).
   const box = $("blocks"), realHtml = box.innerHTML, realTop = box.scrollTop;
   const starter = parseBlocks(L.starter?.py || "");
-  box.innerHTML = starter.length ? starter.map((it) => blockHtml(it, 0, 0)).join("") : `<span class="empty">${tr("Нажимай стрелки — здесь появятся шаги рыцаря")}</span>`;
+  box.innerHTML = starter.length ? starter.map((it) => blockHtml(it, 0, 0)).join("") : `<span class="empty">${tr(L.slay ? "Нажми ⚔ — здесь появится команда рыцарю" : "Нажимай стрелки — здесь появятся шаги рыцаря")}</span>`;
   box.style.maxHeight = "";
   const ratio = viewW() / H, vh = sh - 6;
   const bh = camEl.getBoundingClientRect().height;   // у длинной карты меряем окно, а не всё поле
@@ -9933,7 +9954,7 @@ function drawStepHints(p) {
       const w = more ? 0.54 : 0.42;
       svg("rect", { x: x + 0.5 - w / 2, y: y + 0.62, width: w, height: 0.3, rx: 0.15 }, g);
       svg("text", { x: x + 0.5, y: y + 0.775 }, g).textContent = more ? "+" + k : k;
-      if (x === exitPos.x && y === exitPos.y) break;  // дальше двери не считаем
+      if (exitPos && x === exitPos.x && y === exitPos.y) break;  // дальше двери не считаем
     }
   }
 }
@@ -10220,7 +10241,7 @@ function reset() {
   placeHero();
   // длинная карта: рыцарь вернулся на старт — окно к нему (при открытии сразу, после запуска плавно)
   if (camX === null) camFollow("now"); else if (moved) camFollow("page");
-  exitCell.classList.remove("open");
+  exitCell?.classList.remove("open");
   heroEl.classList.remove("atk", "guard", "hurt", "dead");
   boardEl.querySelectorAll(".poof").forEach((el) => el.remove());
   enemies.forEach((e) => e.el.classList.remove("atk-side", "atk-down", "atk-up", "face-r", "windup", "blocking"));
@@ -10229,7 +10250,8 @@ function reset() {
   drawEnemies(fullHp());
   refreshPlan();
   const todo = tr(uiBlocks ? "Нажимай стрелки, потом «Запустить»" : "Напиши код и нажми «Запустить»");
-  setStatus(showSteps() && L.chapter === 0 ? tr("Цифры на поле — сколько шагов до клетки. ") + todo : todo);
+  setStatus(L.slay ? tr(uiBlocks ? "Нажми ⚔, потом «Запустить»" : "Нажми ⚔ attack, потом «Запустить»")
+    : showSteps() && L.chapter === 0 ? tr("Цифры на поле — сколько шагов до клетки. ") + todo : todo);
 }
 
 // Пока игрок пишет код, мы не показываем, где он ошибся: только маршрут.
@@ -10349,7 +10371,7 @@ function boardFloat(cell, text) {
   setTimeout(() => t.remove(), 950);
 }
 // Великан повержен: большое облако, череп и монеты разлетаются
-function giantLoot(cell) {
+function giantLoot(cell, crown = true) {
   for (let k = 0; k < 8; k++) {
     const c = document.createElement("img");
     c.className = "loot"; c.alt = ""; c.src = TS.coin;
@@ -10361,7 +10383,7 @@ function giantLoot(cell) {
     setTimeout(() => c.remove(), 1300);
     setTimeout(() => sfx("coin"), 120 + k * 70);
   }
-  boardFloat(cell, "👑");
+  if (crown) boardFloat(cell, "👑");
 }
 
 // Рыцарь упал: облачко, из него — череп, как у гоблинов
@@ -10464,6 +10486,7 @@ async function run() {
             e.el.classList.remove("windup");
             if (e.giant) { giantLoot(e.el.parentNode); setStatus("Великан повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
             if (e.shield) { giantLoot(e.el.parentNode); setStatus("Щитоносец повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
+            if (L.slay) giantLoot(e.el.parentNode, false);   // гоблин стащил монеты — они разлетаются
             // облачко пыли из набора: проигрывается один раз
             const pf = sprite("poof", e.giant ? 1.6 : e.shield ? 1.3 : 1.1, { bottom: 0, cls: "poof" });
             pf.style.animation = "spr10 0.6s steps(10) 1 forwards";
@@ -10495,6 +10518,16 @@ async function run() {
         await wait(80);
       }
       await wait(120);
+      if (L.slay && p.reachedAt && p.reachedAt.cmd === i) {
+        // гоблин побеждён — это и есть победа: монеты разлетаются
+        await wait(260);
+        drawRoute(p, p.commands.length);
+        drawTape(p, p.commands.length);
+        setStatus("Победа! Гоблин побеждён", "win");
+        sfx("win");
+        finish();
+        return win();
+      }
       continue;
     }
 
@@ -11478,6 +11511,7 @@ const lineText = (n) => codeEl.value.split("\n")[n - 1] ?? "";
 // куда показать рукой «эта строка»: в блоках — на плитку, в тексте — на номер строки
 const lineTarget = (n) => uiBlocks ? $("blocks").querySelector(`[data-line="${n}"]`) : gutterEl.querySelector(`button[data-line="${n}"]`);
 const COACH = {
+  "Первый удар": () => plan.reachedAt ? [runBtn, "Теперь нажми «Запустить»!"] : [$("add-attack"), "Ударь гоблина!"],
   "Первые шаги": () => {
     if (plan.reachedAt) return [runBtn, "Теперь нажми «Запустить»!"];
     return countWrittenCommands(codeEl.value)
@@ -12855,10 +12889,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 137;
+const APP_VERSION = 138;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 138, date: "2026-11-14", text: "Новый первый уровень — «Первый удар»: игра теперь начинается с боя. Одна кнопка ⚔ — и гоблин повержен.", en: "A new first level — “First Strike”: the game now starts with a fight. One ⚔ button — and the goblin is down." },
   { v: 137, date: "2026-11-14", text: "Мелкие исправления.", en: "Small fixes." },
   { v: 136, date: "2026-11-14", text: "Крестик на карте архипелага тоже стал крупным и заметным.", en: "The close button on the archipelago map is big and easy to see now too." },
   { v: 135, date: "2026-11-14", text: "В испытании «Осада» новый враг вместо второго великана — щитоносец. Его корона — отдельная загадка: старый способ не сработает.", en: "The “Siege” challenge has a new enemy instead of a second giant — the shield-bearer. His crown is a puzzle of its own: the old trick won’t work.", big: true },

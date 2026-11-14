@@ -1,21 +1,21 @@
 {
- "version": 137,
+ "version": 138,
  "date": "2026-11-14",
  "notes": [
-  "Мелкие исправления."
+  "Новый первый уровень — «Первый удар»: игра теперь начинается с боя. Одна кнопка ⚔ — и гоблин повержен."
  ],
  "files": {
   "index.html": {
-   "size": 832865,
-   "hash": "39735cf1c96e8187"
+   "size": 835563,
+   "hash": "31b7121e09fb6825"
   },
   "art.js": {
    "size": 1790430,
    "hash": "b296b5d5ffd147ed"
   },
   "lang-en.js": {
-   "size": 96906,
-   "hash": "e35cd9a63944777a"
+   "size": 97469,
+   "hash": "c580624bc124969d"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "28dc419034054b4f"
+   "hash": "40848745d74c9423"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Small fixes."
+  "A new first level — “First Strike”: the game now starts with a fight. One ⚔ button — and the goblin is down."
  ]
 }
