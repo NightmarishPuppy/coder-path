@@ -51,6 +51,8 @@ var EN = {
   "Подземный ход": "Tunnel",
   "Построить мост": "Build a bridge",
   "Отмель": "Shoal",
+  "Новый остров": "New island",
+  "Новый остров! Нажми сюда": "A new island! Tap here",
   "Мост": "Bridge",
   "на": "to",
   "из": "of",

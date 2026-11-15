@@ -1,21 +1,21 @@
 {
- "version": 150,
+ "version": 151,
  "date": "2026-11-15",
  "notes": [
-  "На каждом острове кнопка перехода на следующий остров теперь видна сразу: она крупнее, светится золотом и подписана названием острова. Пока путь закрыт, на табличке замок."
+  "Прошёл остров, но не перешёл на следующий? Вверху карты теперь горит золотая кнопка «Новый остров» — нажми, и карта сама покажет, куда идти, а рука укажет на переход."
  ],
  "files": {
   "index.html": {
-   "size": 937381,
-   "hash": "c8d6fe976187198d"
+   "size": 942159,
+   "hash": "539ed3e4b91c1fff"
   },
   "art.js": {
    "size": 1957150,
    "hash": "8280758bff213678"
   },
   "lang-en.js": {
-   "size": 108509,
-   "hash": "db8c267cc235cecf"
+   "size": 108628,
+   "hash": "a12754a354db1d31"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "696702e7ddcb91ea"
+   "hash": "80b48991e4188d98"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "On every island the button to the next island now stands out: it is bigger, glows gold and shows the island’s name. While the way is still closed, the sign has a lock on it."
+  "Finished an island but haven’t moved on yet? A gold “New island” button now glows at the top of the map — tap it and the map shows where to go, with a hand pointing at the way across."
  ]
 }
