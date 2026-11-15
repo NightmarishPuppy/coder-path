@@ -1,13 +1,13 @@
 {
- "version": 151,
+ "version": 152,
  "date": "2026-11-15",
  "notes": [
-  "Прошёл остров, но не перешёл на следующий? Вверху карты теперь горит золотая кнопка «Новый остров» — нажми, и карта сама покажет, куда идти, а рука укажет на переход."
+  "Золотая кнопка вверху карты теперь горит всегда, когда путь на следующий остров открыт, — на любом острове и на любом устройстве. Нажми её, и рыцарь сразу побежит на следующий остров. Сияние у перехода на карте теперь одинаково видно и на iPad."
  ],
  "files": {
   "index.html": {
-   "size": 942159,
-   "hash": "539ed3e4b91c1fff"
+   "size": 943089,
+   "hash": "a1798d44627e174f"
   },
   "art.js": {
    "size": 1957150,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "80b48991e4188d98"
+   "hash": "07a25543a0d0a57f"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Finished an island but haven’t moved on yet? A gold “New island” button now glows at the top of the map — tap it and the map shows where to go, with a hand pointing at the way across."
+  "The gold button at the top of the map now always shows when the way to the next island is open — on every island and every device. Tap it and the knight runs straight to the next island. The glow on the map crossing now shows the same on iPad too."
  ]
 }
