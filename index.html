@@ -2324,6 +2324,7 @@ const CHAPTERS = [
   // Пятый остров (isle: 5) — Остров хитрецов: приём сам решает, что делать («если» внутри приёма)
   { name: tr("Отмель"), topic: tr("приём с «если»"), isle: 5 },
   { name: tr("Валуны"), topic: tr("«если» выбирает приём"), isle: 5 },
+  { name: tr("Дозор"), topic: tr("приём с числом и «если»"), isle: 5 },
 ];
 
 // Уровни по порядку на карте.
@@ -4790,7 +4791,122 @@ const LEVELS = [
       py: "def upper():\n    move_up()\n    move_right(2)\n    move_down()\n\ndef lower():\n    move_down()\n    move_right(2)\n    move_up()\n\ndef around():\n",
       js: "function upper() {\n  moveUp();\n  moveRight(2);\n  moveDown();\n}\n\nfunction lower() {\n  moveDown();\n  moveRight(2);\n  moveUp();\n}\n\nfunction around() {\n}\n",
     },
+  },  // ===== Остров хитрецов, глава «Дозор»: приём с числом и «если» внутри =====
+  // guard(n) — пройти вправо n клеток и посмотреть вверх (в нише гоблин — удар); climb(n) — вверх на n
+  // и взгляд вправо. Посты — в нишах у дороги, в вариантах поля там то гоблины, то свои.
+  {
+    name: "Дозор",
+    chapter: 19,
+    isle: 5,
+    funcs: true, paramFn: true, requireFn: true, requireParam: true, requireFnIf: true,
+    slay: true,
+    newFn: true,
+    after: "Валуны: испытание",
+    goal: "Новое: приём и с числом, и с «если». Дозорный guard(n) проходит n клеток и смотрит вверх: в нише гоблин — удар, свой — мимо. Нажми [[fnbtn]] и [[num:2]] — третий пост через две клетки.",
+    commands: ["moveRight", "attack"],
+    ifs: ["enemy"],
+    par: 5, good: 6,
+    allies: [{ at: [5, 1], kind: "pawn", v: [0] }, { at: [2, 1], kind: "archer", v: [1] }],
+    maps: [
+      ["#########", "##G####G#", "S.......#", "#########", "#########"],
+      ["#########", "#####G#G#", "S.......#", "#########", "#########"],
+    ],
+    starter: {
+      py: "def guard(n):\n    move_right(n)\n    if enemy_up():\n        attack()\n\nguard(2)\nguard(3)\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nguard(2);\nguard(3);\n",
+    },
   },
+  {
+    name: "Дозор на подъём",
+    chapter: 19,
+    isle: 5,
+    funcs: true, paramFn: true, requireFn: true, requireParam: true, requireFnIf: true,
+    slay: true,
+    ifButton: true,
+    after: "Дозор",
+    goal: "Дорога поворачивает наверх. Второй приём climb(n) шагает вверх на n, но пока никуда не смотрит. Нажми на плитку [[tile:moveUp:n]] в рамке [[fnhead:2]], потом [[ifbtn]] и [[btn:attack]]: на подъёме ниши справа.",
+    commands: ["moveRight", "moveUp", "attack"],
+    ifs: ["enemy"],
+    par: 9, good: 10,
+    allies: [{ at: [4, 3], kind: "pawn", v: [0] }, { at: [6, 0], kind: "archer", v: [0] }, { at: [2, 3], kind: "archer", v: [1] }, { at: [6, 2], kind: "pawn", v: [1] }],
+    maps: [
+      ["#####.###", "#####.###", "#####.G##", "##G##.###", "S.....###"],
+      ["#####.G##", "#####.###", "#####.###", "####G.###", "S.....###"],
+    ],
+    starter: {
+      py: "def guard(n):\n    move_right(n)\n    if enemy_up():\n        attack()\n\ndef climb(n):\n    move_up(n)\n\nguard(2)\nguard(2)\nguard(1)\nclimb(2)\nclimb(2)\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nfunction climb(n) {\n  moveUp(n);\n}\n\nguard(2);\nguard(2);\nguard(1);\nclimb(2);\nclimb(2);\n",
+    },
+  },
+  {
+    name: "Посчитай посты",
+    chapter: 19,
+    isle: 5,
+    funcs: true, paramFn: true, requireFn: true, requireParam: true, requireFnIf: true,
+    slay: true,
+    after: "Дозор на подъём",
+    goal: "Оба приёма готовы, а программа пустая. Посчитай клетки: дозор идёт вправо, поднимается и снова идёт вправо. Позови guard(n) и climb(n) с нужными числами — нажми кнопку приёма и цифру. Стой там, где ниша: проверка — в конце каждого приёма.",
+    commands: ["moveRight", "moveUp", "attack"],
+    ifs: ["enemy"],
+    par: 10, good: 11,
+    allies: [{ at: [5, 2], kind: "pawn", v: [0] }, { at: [8, 0], kind: "archer", v: [0] }, { at: [2, 3], kind: "archer", v: [1] }, { at: [6, 0], kind: "pawn", v: [1] }],
+    maps: [
+      ["######G##", "####.....", "####.####", "##G#.####", "S....####"],
+      ["########G", "####.....", "####.G###", "####.####", "S....####"],
+    ],
+    starter: {
+      py: "def guard(n):\n    move_right(n)\n    if enemy_up():\n        attack()\n\ndef climb(n):\n    move_up(n)\n    if enemy_right():\n        attack()\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nfunction climb(n) {\n  moveUp(n);\n  if (enemyRight()) {\n    attack();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Дозор с двух сторон",
+    chapter: 19,
+    isle: 5,
+    funcs: true, paramFn: true, requireFn: true, requireParam: true, requireFnIf: true,
+    slay: true,
+    ifButton: true, sides: true,
+    after: "Посчитай посты",
+    goal: "Ниши теперь сверху и снизу: где гоблин, а где свой — каждый раз по-разному. Пусть дозорный смотрит и вниз: нажми на плитку [[tile:moveRight:n]] в рамке [[fnhead]], потом [[ifbtn]], [[side:moveDown]] и [[btn:attack]].",
+    commands: ["moveRight", "attack"],
+    ifs: ["enemy"],
+    par: 6, good: 7,
+    allies: [{ at: [2, 3], kind: "pawn", v: [0] }, { at: [5, 1], kind: "archer", v: [0] }, { at: [7, 3], kind: "pawn", v: [0] }, { at: [2, 1], kind: "archer", v: [1] }, { at: [5, 3], kind: "pawn", v: [1] }, { at: [7, 1], kind: "archer", v: [1] }],
+    maps: [
+      ["#########", "##G####G#", "S.......#", "#####G###", "#########"],
+      ["#########", "#####G###", "S.......#", "##G####G#", "#########"],
+    ],
+    starter: {
+      py: "def guard(n):\n    move_right(n)\n    if enemy_up():\n        attack()\n\nguard(2)\nguard(3)\nguard(2)\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nguard(2);\nguard(3);\nguard(2);\n",
+    },
+  },
+  {
+    name: "Дозор: испытание",
+    chapter: 19,
+    isle: 5,
+    funcs: true, paramFn: true, requireFn: true, requireParam: true, requireFnIf: true,
+    slay: true,
+    challenge: true,
+    more: true,
+    ifButton: true, sides: true,
+    after: "Дозор с двух сторон",
+    goal: "Испытание: оба приёма пустые, программа тоже. Собери дозорного guard(n) — вправо на n и взгляд вверх, и climb(n) — вверх на n и взгляд вправо. Потом расставь посты: посчитай клетки до каждой ниши. Три варианта поля — одна программа.",
+    commands: ["moveRight", "moveUp", "attack"],
+    ifs: ["enemy"],
+    par: 10, good: 12,
+    allies: [{ at: [4, 2], kind: "pawn", v: [0] }, { at: [8, 0], kind: "archer", v: [0] }, { at: [1, 3], kind: "archer", v: [1] }, { at: [6, 0], kind: "pawn", v: [1] }, { at: [6, 0], kind: "archer", v: [2] }],
+    maps: [
+      ["######G##", "###......", "###.#####", "#G#.#####", "S...#####"],
+      ["########G", "###......", "###.G####", "###.#####", "S...#####"],
+      ["########G", "###......", "###.G####", "#G#.#####", "S...#####"],
+    ],
+    starter: {
+      py: "def guard(n):\n\ndef climb(n):\n",
+      js: "function guard(n) {\n}\n\nfunction climb(n) {\n}\n",
+    },
+  },
+
 ];
 
 // Переводим текст задания на язык игрока
@@ -4802,7 +4918,7 @@ function btnRefs(html) {
     .replace(/\[\[line:(\d+)\]\]/g, (m, n) => `<span class="lineref">${n}</span>`)
     .replace(/\[\[tool:(\w+)\]\]/g, (m, n) => `<span class="toolref">${TOOL_ICONS[n]}</span>`)
     // [[tile:moveUp:1]] — плитка программы, как в рамке; [[num:2]] — кнопка цифры; [[ifhead]] — заголовок «если»
-    .replace(/\[\[tile:(\w+):(\d+)\]\]/g, (m, n, k) => `<span class="tile tileref ${DIRS[n].axis}"><span class="ar">${DIRS[n].arrow}</span><span class="nn">${k}</span></span>`)
+    .replace(/\[\[tile:(\w+):(\d+|n)\]\]/g, (m, n, k) => `<span class="tile tileref ${DIRS[n].axis}"><span class="ar">${DIRS[n].arrow}</span><span class="nn">${k}</span></span>`)
     .replace(/\[\[num:(\d+)\]\]/g, (m, k) => `<span class="numref">${k}</span>`)
     .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ ${tr("если")} <span class="ar">→</span> ${WHAT_RU[CONDS[levelConds()[0]]?.what || "wall"]}</span>`)
     // [[pages]] или [[pages:3]] — кнопки частей длинной карты, как на поле
@@ -6590,7 +6706,7 @@ ISLE_MAPS[4] = {
 // @@/isle4@@
 // @@isle5@@
 ISLE_MAPS[5] = {
-  nodes: [[150, 490], [190, 490], [230, 490], [250, 450], [210, 430], [150, 430], [90, 410], [90, 350], [150, 350], [210, 350]],
+  nodes: [[150, 490], [190, 490], [230, 490], [250, 450], [210, 430], [150, 430], [90, 410], [90, 350], [150, 350], [210, 350], [270, 330], [270, 250], [230, 230], [190, 190], [230, 170]],
   rows: [
     "....................................",
     "....................................",
@@ -6732,7 +6848,7 @@ ISLE_MAPS[5] = {
     ["wrock4", 15.6, 26.2, 0.8],
     ["duck", 4.6, 28.4, 1.3],
   ],
-  labels: [["ОТМЕЛЬ", 214, 534], ["ВАЛУНЫ", 150, 390]],
+  labels: [["ОТМЕЛЬ", 214, 534], ["ВАЛУНЫ", 150, 390], ["ДОЗОР", 246, 286]],
   bank: [["cloud_c", 40, 1440, 0.9], ["cloud_d", -20, 1530, 0.8]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm4",
@@ -14296,10 +14412,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 154;
+const APP_VERSION = 155;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 155, date: "2026-11-15", text: "Новая глава на Острове хитрецов — «Дозор»: приём и с числом, и с «если». Дозорный проходит нужное число клеток и сам решает, бить ли того, кто в нише: гоблина — да, своего — нет. Дорога поворачивает наверх — появляется второй дозорный, а в конце обоих нужно собрать самому.", en: "A new chapter on the Island of Wits — “Patrol”: a function with both a number and an “if”. The patrol walks the right number of cells and decides by itself whether to strike whoever is in the alcove: a goblin — yes, a friend — no. The road turns upwards — a second patrol appears, and at the end you build both yourself.", big: true },
   { v: 154, date: "2026-11-15", text: "Глава «Валуны» поправлена: на дороге теперь лежат настоящие валуны, а не лужи, и рыцарь не прыгает через них, а обходит сверху или снизу. Звёзды за пройденные уровни главы сохранились.", en: "The “Boulders” chapter is fixed: real boulders now lie on the road instead of puddles, and the knight doesn’t jump over them — he walks around them above or below. Stars for levels you already finished are kept." },
   { v: 153, date: "2026-11-15", text: "На Острове хитрецов новая глава — «Валуны»: теперь «если» выбирает, какой приём позвать. Рыцарь обходит валуны на дороге — сверху или снизу, где есть проход, — и в конце приём сам решает, с какой стороны обойти.", en: "A new chapter on the Island of Wits — “Boulders”: now an “if” picks which function to call. The knight walks around boulders on the road — above or below, wherever there is a way — and in the end the function decides by itself which side to go around.", big: true },
   { v: 152, date: "2026-11-15", text: "Золотая кнопка вверху карты теперь горит всегда, когда путь на следующий остров открыт, — на любом острове и на любом устройстве. Нажми её, и рыцарь сразу побежит на следующий остров. Сияние у перехода на карте теперь одинаково видно и на iPad.", en: "The gold button at the top of the map now always shows when the way to the next island is open — on every island and every device. Tap it and the knight runs straight to the next island. The glow on the map crossing now shows the same on iPad too." },

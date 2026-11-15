@@ -1,21 +1,21 @@
 {
- "version": 154,
+ "version": 155,
  "date": "2026-11-15",
  "notes": [
-  "Глава «Валуны» поправлена: на дороге теперь лежат настоящие валуны, а не лужи, и рыцарь не прыгает через них, а обходит сверху или снизу. Звёзды за пройденные уровни главы сохранились."
+  "Новая глава на Острове хитрецов — «Дозор»: приём и с числом, и с «если». Дозорный проходит нужное число клеток и сам решает, бить ли того, кто в нише: гоблина — да, своего — нет. Дорога поворачивает наверх — появляется второй дозорный, а в конце обоих нужно собрать самому."
  ],
  "files": {
   "index.html": {
-   "size": 954770,
-   "hash": "199fe203d71b933e"
+   "size": 963018,
+   "hash": "d4c4649f49207160"
   },
   "art.js": {
    "size": 1957150,
    "hash": "8280758bff213678"
   },
   "lang-en.js": {
-   "size": 110865,
-   "hash": "c50f9a9cb8890d7d"
+   "size": 112625,
+   "hash": "68ee9dddfcf6f290"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "2766a120fa37dc11"
+   "hash": "d0c4d28e377b7046"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The “Boulders” chapter is fixed: real boulders now lie on the road instead of puddles, and the knight doesn’t jump over them — he walks around them above or below. Stars for levels you already finished are kept."
+  "A new chapter on the Island of Wits — “Patrol”: a function with both a number and an “if”. The patrol walks the right number of cells and decides by itself whether to strike whoever is in the alcove: a goblin — yes, a friend — no. The road turns upwards — a second patrol appears, and at the end you build both yourself."
  ]
 }
