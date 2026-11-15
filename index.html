@@ -2323,6 +2323,7 @@ const CHAPTERS = [
   { name: tr("Ворота замка"), topic: tr("приём с числом"), isle: 4 },
   // Пятый остров (isle: 5) — Остров хитрецов: приём сам решает, что делать («если» внутри приёма)
   { name: tr("Отмель"), topic: tr("приём с «если»"), isle: 5 },
+  { name: tr("Каменная гряда"), topic: tr("«если» выбирает приём"), isle: 5 },
 ];
 
 // Уровни по порядку на карте.
@@ -4677,6 +4678,112 @@ const LEVELS = [
       py: "def step():\n",
       js: "function step() {\n}\n",
     },
+  },  // ===== Остров хитрецов, глава «Каменная гряда»: «если» выбирает, какой приём позвать =====
+  // Камни на дороге в разных местах (варианты поля): если справа препятствие — прыжок (приём), иначе шаг.
+  // requireIfCall — для ★★★ приём зовут внутри рамки «если» / «иначе». Дальше приём сам выбирает
+  // между двумя приёмами (hop: если сверху стена — подкоп, иначе прыжок) — requireFnIf.
+  {
+    name: "Прыжок через камень",
+    chapter: 18,
+    isle: 5,
+    funcs: true, requireFn: true, requireIfCall: true,
+    newFn: true,
+    after: "Отмель: испытание",
+    goal: "Новая глава: «если» решает, какой приём позвать. Приём [[fnhead]] — прыжок через камень. В программе: если справа препятствие — …, иначе шаг. Нажми на рамку «если», потом кнопку приёма [[fnbtn]]. Камни в двух вариантах поля стоят по-разному.",
+    commands: ["moveRight", "moveUp", "moveDown"],
+    ifs: ["wall"],
+    par: 5, good: 6,
+    maps: [
+      ["#########", "##......#", "S..#..#.E", "#########", "#########"],
+      ["#########", "#......##", "S.#..#..E", "#########", "#########"],
+    ],
+    starter: {
+      py: "def hop():\n    move_up()\n    move_right(2)\n    move_down()\n\nwhile True:\n    if obstacle_right():\n    else:\n        move_right()\n",
+      js: "function hop() {\n  moveUp();\n  moveRight(2);\n  moveDown();\n}\n\nwhile (true) {\n  if (obstacleRight()) {\n  } else {\n    moveRight();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Камни и засада",
+    chapter: 18,
+    isle: 5,
+    funcs: true, requireFn: true, requireIfCall: true, requireFnIf: true,
+    elseButton: true,
+    after: "Прыжок через камень",
+    allies: [{ at: [6, 3], kind: "pawn", v: [0] }, { at: [3, 3], kind: "archer", v: [1] }],
+    goal: "Два приёма: прыжок и хитрый шаг (шаг вправо, и если снизу гоблин — удар). Программа прыгает через камни, а «иначе» пока нет. Нажми на рамку «если» в программе, потом [[elsebtn]] и [[fnbtn:2]].",
+    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    ifs: ["wall", "enemy"],
+    par: 7, good: 8,
+    maps: [
+      ["#########", "##...####", "S..#....E", "#####G#G#", "#########"],
+      ["#########", "#####...#", "S.....#.E", "##G#G####", "#########"],
+    ],
+    starter: {
+      py: "def hop():\n    move_up()\n    move_right(2)\n    move_down()\n\ndef step():\n    move_right()\n    if enemy_down():\n        attack()\n\nwhile True:\n    if obstacle_right():\n        hop()\n",
+      js: "function hop() {\n  moveUp();\n  moveRight(2);\n  moveDown();\n}\n\nfunction step() {\n  moveRight();\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nwhile (true) {\n  if (obstacleRight()) {\n    hop();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Высокая скала",
+    chapter: 18,
+    isle: 5,
+    funcs: true, requireFn: true, requireIfCall: true,
+    after: "Камни и засада",
+    goal: "Скалы теперь высокие — в две клетки. Приём прыжка пустой: собери его сам. Нажми [[fnhead]], потом [[btn:moveUp]] и [[num:2]], [[btn:moveRight]] и [[num:2]], [[btn:moveDown]] и [[num:2]]. Программа уже готова.",
+    commands: ["moveRight", "moveUp", "moveDown"],
+    ifs: ["wall"],
+    par: 5, good: 6,
+    maps: [
+      ["#########", "##......#", "##.#..#.#", "S..#..#.E", "#########"],
+      ["#########", "#......##", "#.#..#.##", "S.#..#..E", "#########"],
+    ],
+    starter: {
+      py: "def hop():\n\nwhile True:\n    if obstacle_right():\n        hop()\n    else:\n        move_right()\n",
+      js: "function hop() {\n}\n\nwhile (true) {\n  if (obstacleRight()) {\n    hop();\n  } else {\n    moveRight();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Верх или низ",
+    chapter: 18,
+    isle: 5,
+    funcs: true, nestFns: true, requireFn: true, requireFnIf: true,
+    ifButton: true, elseButton: true, sides: true,
+    after: "Высокая скала",
+    goal: "Над одними камнями проход, под другими — подкоп. Есть прыжок [[fnhead:1]] и подкоп [[fnhead:2]], а приём [[fnhead:3]] пустой — пусть он сам решает. Нажми [[fnhead:3]], потом [[ifbtn]], [[side:moveUp]], [[fnbtn:2]], а затем [[elsebtn]] и [[fnbtn:1]].",
+    commands: ["moveRight", "moveUp", "moveDown"],
+    ifs: ["wall"],
+    par: 10, good: 11,
+    maps: [
+      ["#########", "##...####", "S..#..#.E", "#####...#", "#########"],
+      ["#########", "####...##", "S.#..#..E", "#...#####", "#########"],
+    ],
+    starter: {
+      py: "def jump():\n    move_up()\n    move_right(2)\n    move_down()\n\ndef dive():\n    move_down()\n    move_right(2)\n    move_up()\n\ndef hop():\n\nwhile True:\n    if obstacle_right():\n        hop()\n    else:\n        move_right()\n",
+      js: "function jump() {\n  moveUp();\n  moveRight(2);\n  moveDown();\n}\n\nfunction dive() {\n  moveDown();\n  moveRight(2);\n  moveUp();\n}\n\nfunction hop() {\n}\n\nwhile (true) {\n  if (obstacleRight()) {\n    hop();\n  } else {\n    moveRight();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Гряда: испытание",
+    chapter: 18,
+    isle: 5,
+    funcs: true, nestFns: true, requireFn: true, requireFnIf: true, requireIfCall: true,
+    challenge: true,
+    more: true,
+    loopButton: true, ifButton: true, elseButton: true, sides: true,
+    after: "Верх или низ",
+    goal: "Испытание: вся гряда в камнях, и в каждом варианте поля над камнем то проход, то стена. Прыжок [[fnhead:1]] и подкоп [[fnhead:2]] готовы. Пусть приём [[fnhead:3]] сам выбирает между ними, а программа зовёт его только у камня. Три варианта поля — одна программа.",
+    commands: ["moveRight", "moveUp", "moveDown"],
+    ifs: ["wall"],
+    par: 10, good: 12,
+    maps: [
+      ["#########", "#...#####", "S.#..#..E", "####...##", "#########"],
+      ["#########", "#####...#", "S..#..#.E", "##...####", "#########"],
+      ["#########", "#########", "S.#...#.E", "#...#...#", "#########"],
+    ],
+    starter: {
+      py: "def jump():\n    move_up()\n    move_right(2)\n    move_down()\n\ndef dive():\n    move_down()\n    move_right(2)\n    move_up()\n\ndef hop():\n",
+      js: "function jump() {\n  moveUp();\n  moveRight(2);\n  moveDown();\n}\n\nfunction dive() {\n  moveDown();\n  moveRight(2);\n  moveUp();\n}\n\nfunction hop() {\n}\n",
+    },
   },
 ];
 
@@ -6465,7 +6572,7 @@ ISLE_MAPS[4] = {
 // @@/isle4@@
 // @@isle5@@
 ISLE_MAPS[5] = {
-  nodes: [[150, 490], [190, 490], [230, 490], [250, 450], [210, 430]],
+  nodes: [[150, 490], [190, 490], [230, 490], [250, 450], [210, 430], [150, 430], [90, 410], [90, 350], [150, 350], [210, 350]],
   rows: [
     "....................................",
     "....................................",
@@ -6607,7 +6714,7 @@ ISLE_MAPS[5] = {
     ["wrock4", 15.6, 26.2, 0.8],
     ["duck", 4.6, 28.4, 1.3],
   ],
-  labels: [["ОТМЕЛЬ", 214, 534]],
+  labels: [["ОТМЕЛЬ", 214, 534], ["ГРЯДА", 150, 390]],
   bank: [["cloud_c", 40, 1440, 0.9], ["cloud_d", -20, 1530, 0.8]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm4",
@@ -9919,6 +10026,8 @@ function insertCall(nm) {
   if (host && host === nm) { setStatus(tr("Приём не зовёт сам себя: выбери другой приём или плитку программы"), "fail"); return; }
   if (host && L.nestFns) {
     if (DEF_LINE.test(lines[selLine - 1])) { putIntoDef(nm); return; }   // заголовок приёма — в конец приёма
+    // рамка «если» / «иначе» / цикла внутри приёма — вызов ложится в неё (приём сам выбирает, какой приём позвать)
+    if (/^\s*(\}\s*)?(while|for|if|elif|else)\b/.test(lines[selLine - 1])) { putCommandOnLine(nm); drawCode(); return; }
     const ind = lines[selLine - 1].match(/^ */)[0];
     lines.splice(selLine, 0, ind + call);
     selLine++;
@@ -12292,6 +12401,14 @@ async function runArena() {
 // ===== 14. Победа: звёзды и следующий уровень =====
 // Чего из главного инструмента уровня нет в коде: "loop" / "fn" / null.
 // Победу это не отнимает (v130): рыцарь дошёл — уровень пройден, но не выше ★★, и подсказка.
+// Приём зовут внутри рамки «если» / «иначе» (а не просто в программе или в цикле): строка вызова лежит
+// внутри рамки, заголовок которой — if / elif / else (Python) или if (…) { / } else { (JavaScript).
+function ifCallsFn(c, fns) {
+  const ls = c.split("\n"), frames = findFrames(c);
+  return ls.some((l, i) => !DEF_LINE.test(l) && countCalls(l, fns) > 0 &&
+    frames.some((f) => f.start < i + 1 && i + 1 <= f.end && /^\s*(\}\s*)?(if|elif|else)\b/.test(ls[f.start - 1])));
+}
+
 function toolMissing(code) {
   if (L.requireLoop && !findLoops(code).length) return "loop";
   if (L.requireFn) {
@@ -12303,6 +12420,8 @@ function toolMissing(code) {
     if (L.requireParam && !fns.some((nm) => { const pm = defParam(c, nm); return pm && defBody(c, nm).some((t) => t.v === pm); })) return "param";
     // nestFns — один приём зовёт другой
     if (L.requireNest && !fns.some((nm) => defBody(c, nm).some((t) => t.call && t.call !== nm && fns.includes(t.call)))) return "nest";
+    // requireIfCall — приём зовут внутри рамки «если» или «иначе» (условие выбирает, какой приём позвать)
+    if (L.requireIfCall && !ifCallsFn(c, fns)) return "ifcall";
     // requireFnIf — приём, внутри которого рамка «если» (приём сам решает), и его зовут
     if (L.requireFnIf && !fns.some((nm) => countCalls(c, [nm]) && defBody(c, nm).some((t) => t.cond))) return "fnif";
   }
@@ -12348,6 +12467,7 @@ function win() {
     : missing === "nest" ? " Получилось! Для ★★★ один приём должен позвать другой: выбери заголовок приёма и нажми кнопку другого."
     : missing === "param" ? " Получилось! Для ★★★ здесь нужен приём с числом: внутри приёма вместо цифры поставь n, а число пиши в вызове."
     : missing === "fnif" ? " Получилось! Для ★★★ рамка «если» должна быть внутри приёма — тогда приём сам решает, что делать."
+    : missing === "ifcall" ? " Получилось! Для ★★★ позови приём внутри рамки «если» — пусть условие выбирает, когда его звать."
     : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
   else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
@@ -14154,10 +14274,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 152;
+const APP_VERSION = 153;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 153, date: "2026-11-15", text: "На Острове хитрецов новая глава — «Каменная гряда»: теперь «если» выбирает, какой приём позвать. Рыцарь прыгает через камни, лезет в подкоп, когда над камнем стена, и в конце приём сам решает — прыгнуть или нырнуть.", en: "A new chapter on the Island of Wits — “Stone Ridge”: now an “if” picks which function to call. The knight jumps over rocks, digs under them when there is a wall above, and in the end the function decides by itself — jump or dig.", big: true },
   { v: 152, date: "2026-11-15", text: "Золотая кнопка вверху карты теперь горит всегда, когда путь на следующий остров открыт, — на любом острове и на любом устройстве. Нажми её, и рыцарь сразу побежит на следующий остров. Сияние у перехода на карте теперь одинаково видно и на iPad.", en: "The gold button at the top of the map now always shows when the way to the next island is open — on every island and every device. Tap it and the knight runs straight to the next island. The glow on the map crossing now shows the same on iPad too." },
   { v: 151, date: "2026-11-15", text: "Прошёл остров, но не перешёл на следующий? Вверху карты теперь горит золотая кнопка «Новый остров» — нажми, и карта сама покажет, куда идти, а рука укажет на переход.", en: "Finished an island but haven’t moved on yet? A gold “New island” button now glows at the top of the map — tap it and the map shows where to go, with a hand pointing at the way across." },
   { v: 150, date: "2026-11-15", text: "На каждом острове кнопка перехода на следующий остров теперь видна сразу: она крупнее, светится золотом и подписана названием острова. Пока путь закрыт, на табличке замок.", en: "On every island the button to the next island now stands out: it is bigger, glows gold and shows the island’s name. While the way is still closed, the sign has a lock on it." },

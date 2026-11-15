@@ -1,21 +1,21 @@
 {
- "version": 152,
+ "version": 153,
  "date": "2026-11-15",
  "notes": [
-  "Золотая кнопка вверху карты теперь горит всегда, когда путь на следующий остров открыт, — на любом острове и на любом устройстве. Нажми её, и рыцарь сразу побежит на следующий остров. Сияние у перехода на карте теперь одинаково видно и на iPad."
+  "На Острове хитрецов новая глава — «Каменная гряда»: теперь «если» выбирает, какой приём позвать. Рыцарь прыгает через камни, лезет в подкоп, когда над камнем стена, и в конце приём сам решает — прыгнуть или нырнуть."
  ],
  "files": {
   "index.html": {
-   "size": 943089,
-   "hash": "a1798d44627e174f"
+   "size": 952469,
+   "hash": "f0e1c751dfdaf03a"
   },
   "art.js": {
    "size": 1957150,
    "hash": "8280758bff213678"
   },
   "lang-en.js": {
-   "size": 108628,
-   "hash": "a12754a354db1d31"
+   "size": 110814,
+   "hash": "61dd6bb178087c37"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "07a25543a0d0a57f"
+   "hash": "a96da6dddb4cffbc"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The gold button at the top of the map now always shows when the way to the next island is open — on every island and every device. Tap it and the knight runs straight to the next island. The glow on the map crossing now shows the same on iPad too."
+  "A new chapter on the Island of Wits — “Stone Ridge”: now an “if” picks which function to call. The knight jumps over rocks, digs under them when there is a wall above, and in the end the function decides by itself — jump or dig."
  ]
 }
