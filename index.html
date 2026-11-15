@@ -11954,7 +11954,10 @@ async function run() {
         await wait(260);
         drawRoute(p, p.commands.length);
         drawTape(p, p.commands.length);
-        setStatus("Победа! Гоблин побеждён", "win");
+        // варианты поля: победа на этом — ещё не победа, тот же код должен пройти и остальные
+        if (L.maps && await nextVariant()) return;
+        if (L.maps) setStatus(tr("Победа! Одна программа прошла {n} {w} поля", { n: L.maps.length, w: plural(L.maps.length, "вариант", "варианта", "вариантов") }), "win");
+        else setStatus("Победа! Гоблин побеждён", "win");
         sfx("win");
         finish();
         return win();
@@ -12062,24 +12065,7 @@ async function run() {
         drawTape(p, p.commands.length);
         // Варианты поля: тот же код должен пройти и остальные — запускаем их сами по очереди
         if (L.maps) {
-          variantsDone.add(variant);
-          const nextV = L.maps.findIndex((_, k) => !variantsDone.has(k));
-          if (nextV >= 0) {
-            setStatus(tr("Вариант {n} пройден! Теперь тот же код — на варианте {m}", { n: variant + 1, m: nextV + 1 }), "win");
-            sfx("unlock");
-            finish();
-            drawVariants();
-            setDisabled(true);
-            // за время паузы игрок мог уйти на карту или открыть другой уровень — тогда дальше не идём
-            const here = levelIdx, stay = () => levelIdx === here && !$("levelview").hidden && !running;
-            await wait(1500);
-            setDisabled(false);
-            if (!stay()) return;
-            setVariant(nextV);
-            await wait(900);
-            if (!stay()) return;
-            return run();
-          }
+          if (await nextVariant()) return;
           setStatus(tr("Победа! Одна программа прошла {n} {w} поля", { n: L.maps.length, w: plural(L.maps.length, "вариант", "варианта", "вариантов") }), "win");
         } else setStatus(tr("Победа! {n} {w} пройдено", { n: walkedTotal, w: cellsWord(walkedTotal) }), "win");
         sfx("win");
@@ -12111,7 +12097,7 @@ async function run() {
     sfx("almost");
     return finish();
   }
-  setStatus("Почти! До двери ещё немного — добавь шагов", "fail");
+  setStatus(L.slay ? "Почти! Ещё не все гоблины побеждены — добавь команд" : "Почти! До двери ещё немного — добавь шагов", "fail");
   sfx("almost");
   finish();
 }
@@ -12659,6 +12645,29 @@ function drawVariants() {
   });
 }
 // Показать другой вариант поля: поле строится заново, код тот же
+// Вариант поля пройден: если остались непройденные — через паузу запускаем тот же код на следующем
+// и возвращаем true; все пройдены — false (тогда победа). Общая для двери и для «победи всех» (slay).
+async function nextVariant() {
+  variantsDone.add(variant);
+  const nextV = L.maps.findIndex((_, k) => !variantsDone.has(k));
+  if (nextV < 0) return false;
+  setStatus(tr("Вариант {n} пройден! Теперь тот же код — на варианте {m}", { n: variant + 1, m: nextV + 1 }), "win");
+  sfx("unlock");
+  finish();
+  drawVariants();
+  setDisabled(true);
+  // за время паузы игрок мог уйти на карту или открыть другой уровень — тогда дальше не идём
+  const here = levelIdx, stay = () => levelIdx === here && !$("levelview").hidden && !running;
+  await wait(1500);
+  setDisabled(false);
+  if (!stay()) return true;
+  setVariant(nextV);
+  await wait(900);
+  if (!stay()) return true;
+  await run();
+  return true;
+}
+
 function setVariant(k, flash = true) {
   variant = k;
   L.map = L.maps[k];
@@ -14422,10 +14431,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 156;
+const APP_VERSION = 157;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 157, date: "2026-11-15", text: "Исправлена ошибка: на уровнях «победи всех гоблинов», где у поля несколько вариантов, победа засчитывалась уже на первом варианте. Теперь, как и везде, одна программа должна пройти все варианты поля.", en: "Fixed a bug: on “defeat all the goblins” levels with several versions of the map, the win counted after the first version already. Now, as everywhere else, one program has to get through every version of the map." },
   { v: 156, date: "2026-11-15", text: "Задания в режиме блоков стали проще: в них больше нет слов из Python и JavaScript — только кнопки, плитки и обычные слова. Уровень «Прыжок на n» теперь называется «Прыжок разной длины» (звёзды сохранились).", en: "Tasks in block mode are simpler now: no more words from Python and JavaScript — only buttons, tiles and plain words. The level “Leap by n” is now called “Leaps of Any Length” (your stars are kept)." },
   { v: 155, date: "2026-11-15", text: "Новая глава на Острове хитрецов — «Дозор»: приём и с числом, и с «если». Дозорный проходит нужное число клеток и сам решает, бить ли того, кто в нише: гоблина — да, своего — нет. Дорога поворачивает наверх — появляется второй дозорный, а в конце обоих нужно собрать самому.", en: "A new chapter on the Island of Wits — “Patrol”: a function with both a number and an “if”. The patrol walks the right number of cells and decides by itself whether to strike whoever is in the alcove: a goblin — yes, a friend — no. The road turns upwards — a second patrol appears, and at the end you build both yourself.", big: true },
   { v: 154, date: "2026-11-15", text: "Глава «Валуны» поправлена: на дороге теперь лежат настоящие валуны, а не лужи, и рыцарь не прыгает через них, а обходит сверху или снизу. Звёзды за пройденные уровни главы сохранились.", en: "The “Boulders” chapter is fixed: real boulders now lie on the road instead of puddles, and the knight doesn’t jump over them — he walks around them above or below. Stars for levels you already finished are kept." },

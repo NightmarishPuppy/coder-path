@@ -1,21 +1,21 @@
 {
- "version": 156,
+ "version": 157,
  "date": "2026-11-15",
  "notes": [
-  "Задания в режиме блоков стали проще: в них больше нет слов из Python и JavaScript — только кнопки, плитки и обычные слова. Уровень «Прыжок на n» теперь называется «Прыжок разной длины» (звёзды сохранились)."
+  "Исправлена ошибка: на уровнях «победи всех гоблинов», где у поля несколько вариантов, победа засчитывалась уже на первом варианте. Теперь, как и везде, одна программа должна пройти все варианты поля."
  ],
  "files": {
   "index.html": {
-   "size": 967475,
-   "hash": "ffc31a81f96d46c0"
+   "size": 968942,
+   "hash": "9e6cd7703b17f816"
   },
   "art.js": {
    "size": 1957150,
    "hash": "8280758bff213678"
   },
   "lang-en.js": {
-   "size": 115076,
-   "hash": "121beeafd082db64"
+   "size": 115246,
+   "hash": "e67ba67f32a7b10a"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "0716385a2bc2c0d3"
+   "hash": "fa2c4e7e21fa30e1"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Tasks in block mode are simpler now: no more words from Python and JavaScript — only buttons, tiles and plain words. The level “Leap by n” is now called “Leaps of Any Length” (your stars are kept)."
+  "Fixed a bug: on “defeat all the goblins” levels with several versions of the map, the win counted after the first version already. Now, as everywhere else, one program has to get through every version of the map."
  ]
 }

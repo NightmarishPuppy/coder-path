@@ -351,6 +351,7 @@ var EN = {
   "Цикл ходит по кругу: рыцарь снова пришёл туда, где начал круг (знак ∞), и так будет без конца. Поменяй плитки в рамке 🔁": "The loop goes in circles: the knight came back to where the round began (the ∞ sign), and it will never end. Change the tiles in the 🔁 frame",
   "Цикл ходит по кругу: рыцарь снова пришёл туда, где начал круг (знак ∞), и так будет без конца. Поменяй команды в цикле (строка {n})": "The loop goes in circles: the knight came back to where the round began (the ∞ sign), and it will never end. Change the commands in the loop (line {n})",
   "Почти! До двери ещё немного — добавь шагов": "Almost! The door is a little further — add some steps",
+  "Почти! Ещё не все гоблины побеждены — добавь команд": "Almost! Not all the goblins are defeated yet — add some commands",
   "Собери программу рыцаря и нажми «Запустить» — продержись {n} секунд": "Build the knight's program and press “Run” — hold out for {n} seconds",
   "Напиши программу рыцаря и нажми «Запустить» — продержись {n} секунд": "Write the knight's program and press “Run” — hold out for {n} seconds",
   "Победа! Рыцарь продержался {n} секунд — побеждено гоблинов: {k}": "Victory! The knight held out for {n} seconds — goblins defeated: {k}",
