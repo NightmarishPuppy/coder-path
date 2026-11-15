@@ -1,13 +1,13 @@
 {
- "version": 149,
+ "version": 150,
  "date": "2026-11-15",
  "notes": [
-  "Новый, пятый остров — Остров хитрецов! После «Ворот замка» начинается отлив: вода отступает, и по песчаной косе можно дойти до нового острова. Первая глава — «Отмель»: приём с «если» внутри. Приём сам решает, что делать: бить гоблина или пройти мимо своих. В JavaScript рамку «если» и цикла теперь можно убрать целиком, вместе с её скобкой."
+  "На каждом острове кнопка перехода на следующий остров теперь видна сразу: она крупнее, светится золотом и подписана названием острова. Пока путь закрыт, на табличке замок."
  ],
  "files": {
   "index.html": {
-   "size": 934310,
-   "hash": "4b24a6f0444a8491"
+   "size": 937381,
+   "hash": "c8d6fe976187198d"
   },
   "art.js": {
    "size": 1957150,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "e1e7ba14381dc7c3"
+   "hash": "696702e7ddcb91ea"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A new, fifth island — the Island of Wits! After “Castle Gate” the tide goes out: the water drops back, and you can walk along a sandbar to the new island. The first chapter is “Shoal”: a function with an “if” inside. The function decides by itself what to do: strike a goblin or walk past friends. In JavaScript, an “if” or loop frame can now be removed whole, together with its closing bracket."
+  "On every island the button to the next island now stands out: it is bigger, glows gold and shows the island’s name. While the way is still closed, the sign has a lock on it."
  ]
 }

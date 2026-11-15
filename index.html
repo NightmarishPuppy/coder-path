@@ -1165,6 +1165,14 @@ html.still .mapclouds img.bank { animation: none; }
 #mapview .isle-svg .ngem { font-size: 11px; text-anchor: middle; filter: drop-shadow(0 0 2px #7fe3ff); }
 #mapview .isle-svg .ncrown.on { opacity: 1; filter: drop-shadow(0 0 2px #ffd54a); }
 #mapview .isle-svg .region { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; text-anchor: middle; }
+/* кнопка «на следующий остров»: крупнее, золотое сияние и табличка с названием острова */
+#mapview .isle-svg .gate-label { cursor: pointer; }
+#mapview .isle-svg .gate-glow { fill: #ffd54a; transform-box: fill-box; transform-origin: center; animation: gateglow 1.5s ease-in-out infinite; }
+@keyframes gateglow { 0%, 100% { opacity: 0.85; transform: scale(1); } 50% { opacity: 0.25; transform: scale(1.35); } }
+#mapview .isle-svg .gate-pill { fill: #ffd54a; stroke: #2a1f14; stroke-width: 2; }
+#mapview .isle-svg .gate-pill.off { fill: #2a1f14cc; stroke: #ffd54a88; }
+#mapview .isle-svg .gate-name { font-family: var(--font-body); font-weight: 700; font-size: 11.5px; text-anchor: middle; dominant-baseline: central; fill: #2a1f14; }
+#mapview .isle-svg .gate-name.off { fill: #f3e7c8; }
 #mapview .isle-svg .soon { font-family: var(--font-body); font-weight: 600; font-size: 12px; text-anchor: middle; }
 .mapring { position: absolute; z-index: 1; aspect-ratio: 1; margin: 0; box-sizing: border-box; border: 3px solid #fff3c4; border-radius: 50%; pointer-events: none;
   transform: translate(-50%, -50%); animation: mapring 1.6s ease-in-out infinite; will-change: transform, opacity; }
@@ -6429,7 +6437,7 @@ ISLE_MAPS[4] = {
     ["wrock2", 12.6, 28.4, 0.7],
     ["duck", 15.0, 27.8, 1.3],
   ],
-  labels: [["МАСТЕРСКАЯ", 268, 502], ["ОСАДА", 150, 318], ["СТЕНЫ ЗАМКА", 118, 176], ["ВОРОТА ЗАМКА", 272, 132]],
+  labels: [["МАСТЕРСКАЯ", 200, 526], ["ОСАДА", 150, 318], ["СТЕНЫ ЗАМКА", 118, 176], ["ВОРОТА ЗАМКА", 272, 132]],
   bank: [["cloud_b", 260, 1810, 1.1], ["cloud_a", 600, 1790, 1.3], ["cloud_c", 900, 1830, 1.0], ["cloud_d", 1090, 1820, 1.0], ["cloud_c", 1235, 1420, 0.7]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm2",
@@ -7397,12 +7405,12 @@ const ISLE_NAMES = { 1: tr("Остров программистов"), 2: tr("О
 const GATES = {
   1: [{ at: [290, 66], to: 2, kind: "bridge", dir: -1 }],
   // door — порог двери (там рыцарь входит и выходит), stand — где встать, если на острове ещё нет уровней
-  2: [{ at: [170, 516], to: 1, kind: "bridge", dir: 1 }, { at: [139, 106], door: [139, 93], to: 3, kind: "tunnel", place: "монастырь" }],
+  2: [{ at: [170, 516], to: 1, kind: "bridge", dir: 1 }, { at: [139, 106], door: [139, 93], to: 3, kind: "tunnel", place: "монастырь", label: { side: "left" } }],
   // build — мост, которого ещё нет: его на глазах строят рудокопы (BUILD_BRIDGE), потом он стоит всегда.
   // Уходит влево за край карты (dir: "left"), на острове 4 приходит снизу.
   3: [{ at: [124, 523], door: [124, 507], stand: [176, 503], to: 2, kind: "tunnel", place: "шахта" },
-    { at: [130, 50], to: 4, kind: "build", dir: "left" }],
-  4: [{ at: [130, 516], to: 3, kind: "bridge", dir: 1 }, { at: [264, 466], to: 5, kind: "ebb", dir: "right" }],
+    { at: [130, 50], to: 4, kind: "build", dir: "left", label: { side: "up" } }],
+  4: [{ at: [130, 516], to: 3, kind: "bridge", dir: 1 }, { at: [264, 466], to: 5, kind: "ebb", dir: "right", label: { dx: 40, dy: 2 } }],
   5: [{ at: [124, 482], to: 4, kind: "ebb", dir: "left" }],
 };
 const gateTo = (from, to) => GATES[from].find((g) => g.to === to);
@@ -7514,9 +7522,24 @@ function renderMap() {
   });
 
   // Кнопки переходов: на мосту — стрелка туда, куда мост уходит с карты; у двери (монастырь, шахта) — арка входа
+  // Кнопка «дальше» (на следующий остров) видна издалека: крупнее, с золотым сиянием, когда открыта,
+  // и с табличкой «Остров … ➜» (закрыта — тёмная табличка с замком). Табличка снизу кнопки; у ворот
+  // label: { side: "up" / "left", dx, dy } — сверху / слева и сдвиг, чтобы не закрывать уровни и подписи.
   for (const br of GATES[curIsle]) {
-    const [bx, by] = br.at, ok = gateOpen(curIsle, br.to), S = 30, H = S * 94 / 88;
+    const [bx, by] = br.at, ok = gateOpen(curIsle, br.to), fwd = br.to > curIsle, S = fwd ? 40 : 30, H = S * 94 / 88;
+    if (fwd) {
+      const name = ISLE_NAMES[br.to] + (ok ? " ➜" : ""), w = name.length * 6.4 + (ok ? 18 : 30);
+      const L = br.label || {}, side = L.side || "down";
+      let px = side === "left" ? bx - S / 2 - 6 - w / 2 : bx, py = side === "up" ? by - H / 2 - 13 : side === "left" ? by : by + H / 2 + 13;
+      px = Math.max(w / 2 + 4, Math.min(356 - w / 2, px + (L.dx || 0))); py += L.dy || 0;
+      add(`<g class="gate-label" data-bridge="${br.to}">`);
+      add(`<rect class="gate-pill${ok ? "" : " off"}" x="${px - w / 2}" y="${py - 10}" width="${w}" height="20" rx="10"/>`);
+      add(`<text class="gate-name${ok ? "" : " off"}" x="${px + (ok ? 0 : 6)}" y="${py}">${name}</text>`);
+      if (!ok) add(`<use href="#im-lock" x="${px - w / 2 + 6}" y="${py - 7}" width="12" height="13.4"/>`);
+      add(`</g>`);
+    }
     add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${tr(br.kind === "tunnel" ? "Подземный ход" : br.kind === "ebb" ? "Отмель" : br.kind === "build" && !bridgeBuilt() ? "Построить мост" : "Мост")} ${tr("на")} ${ISLE_NAMES[br.to]}${ok ? "" : tr(", закрыт")}">`);
+    if (fwd && ok) add(`<circle class="gate-glow" cx="${bx}" cy="${by}" r="${S / 2 + 3}"/>`);
     add(`<use class="ring" href="#im-btnb" x="${bx - S / 2}" y="${by - H / 2}" width="${S}" height="${H}" ${ok ? "" : 'filter="url(#f-gray)"'}/>`);
     const d = br.kind === "tunnel" ? `M${bx - 6} ${by + 6}v-6a6 6 0 0 1 12 0v6M${bx - 8} ${by + 6}h16`
       : br.dir === "left" ? `M${bx + 1} ${by - 6}l-7 6 7 6M${bx - 5} ${by}h12`
@@ -7575,7 +7598,7 @@ function renderMap() {
 
 // Нажатие на точку уровня или на мост
 function onMapTap(e) {
-  const g = e.target.closest?.(".node");
+  const g = e.target.closest?.(".node, .gate-label");   // табличка у кнопки «дальше» нажимается так же, как сама кнопка
   if (!g || islandRun) return;
   if (g.dataset.bridge) {
     if (gateOpen(curIsle, +g.dataset.bridge)) startIslandRun(+g.dataset.bridge);
@@ -14069,10 +14092,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 149;
+const APP_VERSION = 150;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 150, date: "2026-11-15", text: "На каждом острове кнопка перехода на следующий остров теперь видна сразу: она крупнее, светится золотом и подписана названием острова. Пока путь закрыт, на табличке замок.", en: "On every island the button to the next island now stands out: it is bigger, glows gold and shows the island’s name. While the way is still closed, the sign has a lock on it." },
   { v: 149, date: "2026-11-15", text: "Новый, пятый остров — Остров хитрецов! После «Ворот замка» начинается отлив: вода отступает, и по песчаной косе можно дойти до нового острова. Первая глава — «Отмель»: приём с «если» внутри. Приём сам решает, что делать: бить гоблина или пройти мимо своих. В JavaScript рамку «если» и цикла теперь можно убрать целиком, вместе с её скобкой.", en: "A new, fifth island — the Island of Wits! After “Castle Gate” the tide goes out: the water drops back, and you can walk along a sandbar to the new island. The first chapter is “Shoal”: a function with an “if” inside. The function decides by itself what to do: strike a goblin or walk past friends. In JavaScript, an “if” or loop frame can now be removed whole, together with its closing bracket.", big: true },
   { v: 148, date: "2026-11-15", text: "Новая глава на Острове мастеров — «Ворота замка»: приём с числом. Пишешь charge(3) — и приём делает 3 шага; внутри приёма вместо цифры стоит n. В блоках — плитка «n», кнопка «n» и число на вызове: «n=3».", en: "A new chapter on the Island of Masters — “Castle Gate”: a function with a number. Write charge(3) — and the function takes 3 steps; inside the function, n stands in place of the digit. In blocks — an “n” tile, an “n” button and the number on the call: “n=3”.", big: true },
   { v: 147, date: "2026-11-15", text: "Новая глава на Острове мастеров — «Стены замка»: два приёма в одной программе, а потом приём, который зовёт другой приём. В блоках у приёмов теперь буквы А и Б. Подписи на карте островов переведены на английский.", en: "A new chapter on the Island of Masters — “Castle Walls”: two functions in one program, and then a function that calls another function. In blocks, functions now have letters A and B. Map labels on the islands are translated into English.", big: true },
