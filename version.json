@@ -1,21 +1,21 @@
 {
- "version": 153,
+ "version": 154,
  "date": "2026-11-15",
  "notes": [
-  "На Острове хитрецов новая глава — «Каменная гряда»: теперь «если» выбирает, какой приём позвать. Рыцарь прыгает через камни, лезет в подкоп, когда над камнем стена, и в конце приём сам решает — прыгнуть или нырнуть."
+  "Глава «Валуны» поправлена: на дороге теперь лежат настоящие валуны, а не лужи, и рыцарь не прыгает через них, а обходит сверху или снизу. Звёзды за пройденные уровни главы сохранились."
  ],
  "files": {
   "index.html": {
-   "size": 952469,
-   "hash": "f0e1c751dfdaf03a"
+   "size": 954770,
+   "hash": "199fe203d71b933e"
   },
   "art.js": {
    "size": 1957150,
    "hash": "8280758bff213678"
   },
   "lang-en.js": {
-   "size": 110814,
-   "hash": "61dd6bb178087c37"
+   "size": 110865,
+   "hash": "c50f9a9cb8890d7d"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "a96da6dddb4cffbc"
+   "hash": "2766a120fa37dc11"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A new chapter on the Island of Wits — “Stone Ridge”: now an “if” picks which function to call. The knight jumps over rocks, digs under them when there is a wall above, and in the end the function decides by itself — jump or dig."
+  "The “Boulders” chapter is fixed: real boulders now lie on the road instead of puddles, and the knight doesn’t jump over them — he walks around them above or below. Stars for levels you already finished are kept."
  ]
 }
