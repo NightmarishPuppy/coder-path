@@ -2202,9 +2202,9 @@ function checkDefs(code, lg) {
     const m = l.match(DEF_LINE); if (!m) return;
     const name = m[1] || m[2];
     if (ALL_COMMANDS.includes(name) || PY_NAMES.includes(name))
-      throw pyError(i + 1, tr("Приём нельзя назвать {c}: так уже зовут команду рыцаря. Придумай другое имя, например stair", { c: name }));
+      throw pyError(i + 1, tr("Приём нельзя назвать {c}: так уже зовут команду рыцаря. Придумай другое имя, например zigzag", { c: name }));
     if (COND_NAMES.includes(name) || COND_NAMES.some((c) => CONDS[c].py === name))
-      throw pyError(i + 1, tr("Приём нельзя назвать {c}: так уже называется вопрос к полю. Придумай другое имя, например stair", { c: name }));
+      throw pyError(i + 1, tr("Приём нельзя назвать {c}: так уже называется вопрос к полю. Придумай другое имя, например zigzag", { c: name }));
     const pm = l.match(DEF_PARAM)?.[2];
     if (pm && (ALL_COMMANDS.includes(pm) || PY_NAMES.includes(pm) || COND_NAMES.includes(pm) || COND_NAMES.some((c) => CONDS[c].py === pm)))
       throw pyError(i + 1, tr("Число приёма нельзя назвать {c}: так зовут команду или вопрос. Назови его n", { c: pm }));
@@ -2319,8 +2319,8 @@ const CHAPTERS = [
   { name: tr("Просека лесорубов"), topic: tr("куда упадёт дерево"), isle: 2 },
   { name: tr("Свои и чужие"), topic: tr("враг в поле зрения"), isle: 2 },
   // Третий остров (isle: 3) — Остров рудокопов, длинные карты
-  { name: tr("Лестницы шахты"), topic: tr("«если» внутри цикла"), isle: 3 },
-  { name: tr("Глубокая шахта"), topic: tr("длинные карты и высокие ступени"), isle: 3 },
+  { name: tr("Повороты шахты"), topic: tr("«если» внутри цикла"), isle: 3 },
+  { name: tr("Глубокая шахта"), topic: tr("длинные карты и стены в две клетки"), isle: 3 },
   { name: tr("Кривые штольни"), topic: tr("«если… иначе»"), isle: 3 },
   { name: tr("Арена"), topic: tr("бой по своей программе"), isle: 3 },
   { name: tr("Битва"), topic: tr("бой вместе с союзниками"), isle: 3 },
@@ -2333,7 +2333,7 @@ const CHAPTERS = [
   { name: tr("Отмель"), topic: tr("приём с «если»"), isle: 5 },
   { name: tr("Валуны"), topic: tr("«если» выбирает приём"), isle: 5 },
   { name: tr("Дозор"), topic: tr("приём с числом и «если»"), isle: 5 },
-  { name: tr("Ступени"), topic: tr("приём зовёт приём с числом"), isle: 5 },
+  { name: tr("Зигзаг"), topic: tr("приём зовёт приём с числом"), isle: 5 },
 ];
 
 // Уровни по порядку на карте.
@@ -2526,9 +2526,9 @@ const LEVELS = [
 
   // ---------- Глава 2. Лес ----------
   {
-    name: "Лестница",
+    name: "Наискосок",
     chapter: 1,
-    goal: "Новое: <b>цикл</b>. Всё, что [[body]], рыцарь повторяет снова и снова, пока не дойдёт до двери. Цикл уже написан, положи в него один шаг лестницы. Кнопки сами вставляют команды внутрь цикла.",
+    goal: "Новое: <b>цикл</b>. Всё, что [[body]], рыцарь повторяет снова и снова, пока не дойдёт до двери. Дорога идёт наискосок, одним и тем же кусочком: шаг вправо, шаг вниз. Цикл уже написан, положи в него этот кусочек. Кнопки сами вставляют команды внутрь цикла.",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     par: 2, good: 4,
     map: [
@@ -2547,7 +2547,7 @@ const LEVELS = [
   {
     name: "Зубцы",
     chapter: 1,
-    after: "Лестница",
+    after: "Наискосок",
     goal: "Посмотри на дорогу: какие шаги в ней повторяются? Нажми <b>↻ повторять</b> — появится пустой цикл. Положи в него эти шаги кнопками команд.",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     loopButton: true,
@@ -2565,7 +2565,7 @@ const LEVELS = [
     name: "Серпантин",
     codeRev: 2, // карту повернули: старый сохранённый код не подходит
     chapter: 1,
-    after: "Лестница",
+    after: "Наискосок",
     goal: "Дорога петляет туда и обратно, но шаги повторяются: вниз, вправо, вверх, вправо. В цикл можно положить сколько угодно команд.",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     loopButton: true,
@@ -2582,7 +2582,7 @@ const LEVELS = [
     name: "Беглянка",
     codeRev: 2, // карту повернули: старый сохранённый код не подходит
     chapter: 1,
-    after: "Лестница",
+    after: "Наискосок",
     bug: true,
     goal: "В цикле должны быть две команды, но одна сбежала: она стоит за пределами цикла, и рыцарь повторяет только одну. Найди беглянку и верни её в цикл. [[fixhow]]",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
@@ -2664,10 +2664,10 @@ const LEVELS = [
     starter: { py: "", js: "" },
   },
   {
-    name: "Монетная лестница",
+    name: "Монеты наискосок",
     chapter: 2,
     after: "Ключ",
-    goal: "Монета лежит на каждой ступеньке. Положи в цикл шаги одной ступеньки — и он соберёт все монеты сам.",
+    goal: "Монета лежит на каждом повороте дороги. Положи в цикл шаги до одного поворота — и он соберёт все монеты сам.",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
     loopButton: true,
     par: 2, good: 4,
@@ -2822,7 +2822,7 @@ const LEVELS = [
     chapter: 3,
     challenge: true,
     requireLoop: true,
-    goal: "Испытание Гор: гоблины стоят на каждой ступеньке перевала. Найди, что повторяется, и пройди его циклом.",
+    goal: "Испытание Гор: гоблины стоят на каждом повороте тропы. Найди, что повторяется, и пройди его циклом.",
     commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"],
     loopButton: true,
     par: 3, good: 4,
@@ -2844,7 +2844,7 @@ const LEVELS = [
     name: "Первое «если»",
     chapter: 4,
     isle: 2,
-    goal: "Новое: <b>if</b> — «если». У поля два варианта (кнопки 1 и 2 в углу), а программа одна — она должна пройти оба. В варианте 1 движение строго по прямой вправо невозможно: нужно спуститься на клетку вниз. В варианте 2 можно идти прямо. Под строкой [[if]] — «если справа препятствие» — пока пусто. Что положишь под неё, рыцарь сделает, только когда справа препятствие; если его нет, это пропускается, и код идёт дальше. Нажми на номер строки [[line:2]] (это строка с <b>if</b>), а потом кнопку команды [[btn:moveDown]] внизу.",
+    goal: "Новое: <b>if</b> — «если». У поля два варианта (кнопки 1 и 2 в углу), а программа одна — она должна пройти оба. В варианте 1 движение строго по прямой вправо невозможно: нужно обойти препятствие: шагнуть на клетку вниз. В варианте 2 можно идти прямо. Под строкой [[if]] — «если справа препятствие» — пока пусто. Что положишь под неё, рыцарь сделает, только когда справа препятствие; если его нет, это пропускается, и код идёт дальше. Нажми на номер строки [[line:2]] (это строка с <b>if</b>), а потом кнопку команды [[btn:moveDown]] внизу.",
     commands: ["moveRight", "moveDown"],
     newCommands: [],
     codeRev: 3,          // уровень переделан (без else, условие obstacle_right) — старый сохранённый код не подхватываем
@@ -3093,7 +3093,7 @@ const LEVELS = [
     chapter: 4,
     isle: 2,
     after: "Сам — и вверх",
-    goal: "Найди ошибку: под <b>if</b> рыцарь спускается на 2 клетки и упирается. Нужна 1. Нажми на номер строки [[line:3]] и цифру [[num:1]].",
+    goal: "Найди ошибку: под <b>if</b> рыцарь шагает вниз на 2 клетки и упирается. Нужна 1. Нажми на номер строки [[line:3]] и цифру [[num:1]].",
     commands: ["moveRight", "moveDown", "moveUp"],
     ifs: ["wall"],
     ifButton: true,
@@ -3496,11 +3496,11 @@ const LEVELS = [
   // ===== Остров рудокопов, глава «Лестницы шахты»: «если» внутри цикла =====
   // view: 9 — окно в 9 клеток, поле 18 — длинная карта в две части (камера едет за рыцарем)
   {
-    name: "Ступеньки вверх",
+    name: "Повороты вверх",
     chapter: 8,
     isle: 3,
     view: 9,
-    goal: "Новое: «если» внутри цикла. Карта длинная — не влезает в экран, поэтому показана частями [[pages]]. Это <b>одна</b> карта, а не варианты: полистай её кнопками или проведи пальцем по полю. Когда рыцарь пойдёт, карта поедет за ним. Рыцарь идёт вправо круг за кругом, а ступеньки вверх — в разных местах. На каждом круге «если» снова смотрит: справа препятствие? Под строкой с <b>if</b> пока пусто. Нажми на номер строки [[line:2]] и кнопку [[btn:moveUp]].",
+    goal: "Новое: «если» внутри цикла. Карта длинная — не влезает в экран, поэтому показана частями [[pages]]. Это <b>одна</b> карта, а не варианты: полистай её кнопками или проведи пальцем по полю. Когда рыцарь пойдёт, карта поедет за ним. Рыцарь идёт вправо круг за кругом, а повороты вверх — в разных местах. На каждом круге «если» снова смотрит: справа препятствие? Под строкой с <b>if</b> пока пусто. Нажми на номер строки [[line:2]] и кнопку [[btn:moveUp]].",
     commands: ["moveRight", "moveUp"],
     ifs: ["wall"],
     par: 2, good: 3,
@@ -3517,12 +3517,12 @@ const LEVELS = [
     },
   },
   {
-    name: "Ступеньки вниз",
+    name: "Повороты вниз",
     chapter: 8,
     isle: 3,
     view: 9,
-    after: "Ступеньки вверх",
-    goal: "Теперь шахта уходит вниз. Карта снова длинная — полистай её [[pages]]. Нажми на номер строки [[line:2]] и кнопку [[btn:moveDown]].",
+    after: "Повороты вверх",
+    goal: "Теперь штольня поворачивает вниз. Карта снова длинная — полистай её [[pages]]. Нажми на номер строки [[line:2]] и кнопку [[btn:moveDown]].",
     commands: ["moveRight", "moveDown"],
     ifs: ["wall"],
     par: 2, good: 3,
@@ -3539,13 +3539,13 @@ const LEVELS = [
     },
   },
   {
-    name: "Не та ступенька",
+    name: "Не тот поворот",
     chapter: 8,
     isle: 3,
     view: 9,
     bug: true,
-    after: "Ступеньки вниз",
-    goal: "Найди ошибку: ступеньки ведут вверх, а у препятствия рыцарь шагает вниз. Нажми на номер строки [[line:3]] и кнопку [[btn:moveUp]].",
+    after: "Повороты вниз",
+    goal: "Найди ошибку: дорога поворачивает вверх, а у препятствия рыцарь шагает вниз. Нажми на номер строки [[line:3]] и кнопку [[btn:moveUp]].",
     commands: ["moveRight", "moveDown", "moveUp"],
     ifs: ["wall"],
     par: 2, good: 3,
@@ -3566,7 +3566,7 @@ const LEVELS = [
     chapter: 8,
     isle: 3,
     view: 9,
-    after: "Не та ступенька",
+    after: "Не тот поворот",
     goal: "Рамки «если» нет — поставь её в цикл сам. Нажми на номер строки [[line:2]], потом [[ifbtn]] — <b>if</b> встанет под ней, внутри цикла, — и кнопку [[btn:moveUp]].",
     commands: ["moveRight", "moveUp"],
     ifs: ["wall"],
@@ -3591,7 +3591,7 @@ const LEVELS = [
     view: 9,
     challenge: true,
     requireLoop: true,
-    goal: "Испытание: программа пустая, ступенек четыре. Карта длинная — не влезает в экран, поэтому показана частями [[pages]]. Это <b>одна</b> карта, а не варианты: полистай её кнопками или проведи пальцем по полю. Когда рыцарь пойдёт, карта поедет за ним. Подсказка: цикл, в нём шаг вправо и «если» со ступенькой вверх.",
+    goal: "Испытание: программа пустая, поворотов четыре. Карта длинная — не влезает в экран, поэтому показана частями [[pages]]. Это <b>одна</b> карта, а не варианты: полистай её кнопками или проведи пальцем по полю. Когда рыцарь пойдёт, карта поедет за ним. Подсказка: цикл, в нём шаг вправо и «если» с шагом вверх.",
     commands: ["moveRight", "moveUp"],
     ifs: ["wall"],
     loopButton: true,
@@ -3612,7 +3612,7 @@ const LEVELS = [
     chapter: 9,
     isle: 3,
     view: 9,
-    goal: "Эта карта ещё длиннее — у неё три части [[pages:3]]. Полистай: ступенек вверх четыре. Цикл с рамкой «если» уже есть. Нажми на номер строки [[line:2]] и кнопку [[btn:moveUp]].",
+    goal: "Эта карта ещё длиннее — у неё три части [[pages:3]]. Полистай: поворотов вверх четыре. Цикл с рамкой «если» уже есть. Нажми на номер строки [[line:2]] и кнопку [[btn:moveUp]].",
     commands: ["moveRight", "moveUp"],
     ifs: ["wall"],
     par: 2, good: 3,
@@ -3629,12 +3629,12 @@ const LEVELS = [
     },
   },
   {
-    name: "Высокие ступени",
+    name: "Сдвиг на две",
     chapter: 9,
     isle: 3,
     view: 9,
     after: "Три части",
-    goal: "Ступени здесь высокие — в две клетки. В рамке «если» рыцарь поднимается только на одну. Нажми на номер строки [[line:3]] и кнопку [[num:2]].",
+    goal: "Стены здесь в две клетки: чтобы обойти, надо шагнуть вверх на две. А в рамке «если» рыцарь шагает вверх только на одну. Нажми на номер строки [[line:3]] и кнопку [[num:2]].",
     commands: ["moveRight", "moveUp"],
     ifs: ["wall"],
     par: 2, good: 3,
@@ -3655,8 +3655,8 @@ const LEVELS = [
     chapter: 9,
     isle: 3,
     view: 9,
-    after: "Высокие ступени",
-    goal: "Теперь высокие ступени ведут вниз, а рамки «если» нет. Выбери строку [[line:2]], нажми [[ifbtn]] и [[btn:moveDown]], потом выбери новую строку [[line:4]] и нажми [[num:2]].",
+    after: "Сдвиг на две",
+    goal: "Теперь стены в две клетки обходят снизу, а рамки «если» нет. Выбери строку [[line:2]], нажми [[ifbtn]] и [[btn:moveDown]], потом выбери новую строку [[line:4]] и нажми [[num:2]].",
     commands: ["moveRight", "moveDown"],
     ifs: ["wall"],
     ifButton: true,
@@ -3674,13 +3674,13 @@ const LEVELS = [
     },
   },
   {
-    name: "Слишком высоко",
+    name: "Слишком далеко",
     chapter: 9,
     isle: 3,
     view: 9,
     bug: true,
     after: "Вниз на две",
-    goal: "Найди ошибку: ступени здесь низкие, в одну клетку, а рыцарь прыгает на две — и бьётся о потолок. Нажми на номер строки [[line:3]] и кнопку [[num:1]].",
+    goal: "Найди ошибку: стены здесь в одну клетку, а рыцарь шагает вверх на две — и упирается в стену. Нажми на номер строки [[line:3]] и кнопку [[num:1]].",
     commands: ["moveRight", "moveUp"],
     ifs: ["wall"],
     par: 2, good: 3,
@@ -3703,7 +3703,7 @@ const LEVELS = [
     view: 9,
     challenge: true,
     requireLoop: true,
-    goal: "Испытание: программа пустая, карта в три части [[pages:3]], ступени высокие и ведут вниз. Подсказка: цикл, в нём шаг вправо и «если» — спуск на две клетки.",
+    goal: "Испытание: программа пустая, карта в три части [[pages:3]], стены в две клетки, обход снизу. Подсказка: цикл, в нём шаг вправо и «если» — шаг вниз на две клетки.",
     commands: ["moveRight", "moveDown"],
     ifs: ["wall"],
     loopButton: true,
@@ -3742,12 +3742,12 @@ const LEVELS = [
     },
   },
   {
-    name: "Ступени разной высоты",
+    name: "Сдвиги разной длины",
     chapter: 10,
     isle: 3,
     view: 9,
     after: "Если… иначе",
-    goal: "Ступени тут разной высоты — в одну и в две клетки. С «иначе» это не страшно: на каждом круге рыцарь смотрит заново и поднимается, пока справа препятствие. Нажми на номер строки [[line:2]] и кнопку [[btn:moveUp]].",
+    goal: "Стены тут разной длины — в одну и в две клетки. С «иначе» это не страшно: на каждом круге рыцарь смотрит заново и шагает вверх, пока справа препятствие. Нажми на номер строки [[line:2]] и кнопку [[btn:moveUp]].",
     commands: ["moveRight", "moveUp"],
     ifs: ["wall"],
     elseButton: true,
@@ -3769,9 +3769,9 @@ const LEVELS = [
     chapter: 10,
     isle: 3,
     view: 9,
-    after: "Ступени разной высоты",
+    after: "Сдвиги разной длины",
     bug: true,
-    goal: "Найди ошибку: в «иначе» тоже шаг вверх — рыцарь лезет вверх всегда и упирается в потолок. Нажми на номер строки [[line:5]] и кнопку [[btn:moveRight]].",
+    goal: "Найди ошибку: в «иначе» тоже шаг вверх — рыцарь шагает вверх всегда и упирается в стену. Нажми на номер строки [[line:5]] и кнопку [[btn:moveRight]].",
     commands: ["moveRight", "moveUp"],
     ifs: ["wall"],
     elseButton: true,
@@ -3812,12 +3812,12 @@ const LEVELS = [
     },
   },
   {
-    name: "Уступы вниз",
+    name: "Сдвиги вниз",
     chapter: 10,
     isle: 3,
     view: 9,
     after: "Сам добавь «иначе»",
-    goal: "Теперь уступы ведут вниз, и тоже разной высоты. В «иначе» — шаг вправо. Нажми на номер строки [[line:2]] и кнопку [[btn:moveDown]].",
+    goal: "Теперь стены обходят снизу, и они тоже разной длины. В «иначе» — шаг вправо. Нажми на номер строки [[line:2]] и кнопку [[btn:moveDown]].",
     commands: ["moveRight", "moveDown"],
     ifs: ["wall"],
     elseButton: true,
@@ -3843,7 +3843,7 @@ const LEVELS = [
     requireLoop: true,
     loopButton: true,
     ifButton: true,
-    goal: "Испытание: программа пустая, карта в три части [[pages:3]], ступени разной высоты. Подсказка: цикл, в нём «если» со ступенькой вверх и «иначе» с шагом вправо.",
+    goal: "Испытание: программа пустая, карта в три части [[pages:3]], стены разной длины. Подсказка: цикл, в нём «если» с шагом вверх и «иначе» с шагом вправо.",
     commands: ["moveRight", "moveUp"],
     ifs: ["wall"],
     elseButton: true,
@@ -4046,7 +4046,7 @@ const LEVELS = [
     funcs: true, requireFn: true,
     newFn: true,
     codeRev: 2,
-    goal: "Нажми [[fnbtn]] 2 раза. Это свой приём: розовая кнопка делает сразу оба шага из рамки [[fnhead]] — целую ступеньку.",
+    goal: "Нажми [[fnbtn]] 2 раза. Это свой приём: розовая кнопка делает сразу оба шага из рамки [[fnhead]] — целый зигзаг.",
     commands: ["moveRight", "moveUp"],
     par: 6, good: 7,
     map: [
@@ -4057,8 +4057,8 @@ const LEVELS = [
       "S..######",
     ],
     starter: {
-      py: "def stair():\n    move_right(2)\n    move_up()\n\nstair()\nmove_right(2)\n",
-      js: "function stair() {\n  moveRight(2);\n  moveUp();\n}\n\nstair();\nmoveRight(2);\n",
+      py: "def zigzag():\n    move_right(2)\n    move_up()\n\nzigzag()\nmove_right(2)\n",
+      js: "function zigzag() {\n  moveRight(2);\n  moveUp();\n}\n\nzigzag();\nmoveRight(2);\n",
     },
   },
   {
@@ -4068,7 +4068,7 @@ const LEVELS = [
     funcs: true, requireFn: true,
     codeRev: 2,
     after: "Готовый приём",
-    goal: "Собери путь: [[fnbtn]] — ступенька, [[btn:moveRight]] и [[num:2]] — дорожка. Приём уже готов, а программа пустая.",
+    goal: "Собери путь: [[fnbtn]] — зигзаг, [[btn:moveRight]] и [[num:2]] — прямой кусок. Приём уже готов, а программа пустая.",
     commands: ["moveRight", "moveDown"],
     par: 6, good: 7,
     map: [
@@ -4079,8 +4079,8 @@ const LEVELS = [
       "#########",
     ],
     starter: {
-      py: "def stair():\n    move_right(2)\n    move_down()\n",
-      js: "function stair() {\n  moveRight(2);\n  moveDown();\n}\n",
+      py: "def zigzag():\n    move_right(2)\n    move_down()\n",
+      js: "function zigzag() {\n  moveRight(2);\n  moveDown();\n}\n",
     },
   },
   {
@@ -4091,7 +4091,7 @@ const LEVELS = [
     bug: true,
     codeRev: 2,
     after: "Вниз по приёму",
-    goal: "Нажми на [[tile:moveRight:1]] в розовой рамке и на [[num:2]]. Ступеньки широкие, а в приёме шаг на одну клетку: поправишь приём — исправятся все три.",
+    goal: "Нажми на [[tile:moveRight:1]] в розовой рамке и на [[num:2]]. Зигзаги широкие, а в приёме шаг вправо на одну клетку: поправишь приём — исправятся все три.",
     commands: ["moveRight", "moveDown"],
     par: 6, good: 7,
     map: [
@@ -4102,8 +4102,8 @@ const LEVELS = [
       "#########",
     ],
     starter: {
-      py: "def stair():\n    move_right()\n    move_down()\n\nstair()\nmove_right(2)\nstair()\nstair()\n",
-      js: "function stair() {\n  moveRight();\n  moveDown();\n}\n\nstair();\nmoveRight(2);\nstair();\nstair();\n",
+      py: "def zigzag():\n    move_right()\n    move_down()\n\nzigzag()\nmove_right(2)\nzigzag()\nzigzag()\n",
+      js: "function zigzag() {\n  moveRight();\n  moveDown();\n}\n\nzigzag();\nmoveRight(2);\nzigzag();\nzigzag();\n",
     },
   },
   {
@@ -4113,7 +4113,7 @@ const LEVELS = [
     funcs: true,
     codeRev: 2,
     after: "Кривой приём",
-    goal: "Нажми [[fnhead]], потом [[btn:moveRight]] и [[btn:moveUp]]. Рамка приёма пустая — рыцарь не знает, что такое ступенька.",
+    goal: "Нажми [[fnhead]], потом [[btn:moveRight]] и [[btn:moveUp]]. Рамка приёма пустая — рыцарь не знает, что такое зигзаг.",
     commands: ["moveRight", "moveUp"],
     par: 7, good: 8,
     map: [
@@ -4124,8 +4124,8 @@ const LEVELS = [
       "S.#######",
     ],
     starter: {
-      py: "def climb():\n\nclimb()\nclimb()\nmove_right(4)\nclimb()\nclimb()\n",
-      js: "function climb() {\n}\n\nclimb();\nclimb();\nmoveRight(4);\nclimb();\nclimb();\n",
+      py: "def zigzag():\n\nzigzag()\nzigzag()\nmove_right(4)\nzigzag()\nzigzag()\n",
+      js: "function zigzag() {\n}\n\nzigzag();\nzigzag();\nmoveRight(4);\nzigzag();\nzigzag();\n",
     },
   },
   {
@@ -4136,7 +4136,7 @@ const LEVELS = [
     challenge: true,
     requireFn: true,
     codeRev: 2,
-    goal: "Испытание: собери приём «ступенька» — вниз и два вправо. Потом [[tool:done]] и собери путь.",
+    goal: "Испытание: собери приём «зигзаг» — вниз и два вправо. Потом [[tool:done]] и собери путь.",
     commands: ["moveRight", "moveDown"],
     par: 7, good: 8, best: 6,
     map: [
@@ -4147,8 +4147,8 @@ const LEVELS = [
       "#########",
     ],
     starter: {
-      py: "def stairs():\n",
-      js: "function stairs() {\n}\n",
+      py: "def zigzag():\n",
+      js: "function zigzag() {\n}\n",
     },
   },
   // ===== Глава «Осада мастерской»: приём, который зовут в цикле — и бой =====
@@ -4273,12 +4273,12 @@ const LEVELS = [
     },
   },
   {
-    name: "Штурм лестницы",
+    name: "Штурм наискосок",
     chapter: 14,
     isle: 4,
     funcs: true, requireFn: true,
     after: "Не тот порядок",
-    goal: "Нажми [[fnhead]], потом [[btn:attack]], [[btn:moveRight]] и [[btn:moveUp]]. На каждой ступеньке гоблин: ударить, шагнуть, подняться — и так до самого верха.",
+    goal: "Нажми [[fnhead]], потом [[btn:attack]], [[btn:moveRight]] и [[btn:moveUp]]. На каждом повороте гоблин: ударить, шагнуть, свернуть вверх — и так до самого конца.",
     commands: ["moveRight", "moveUp", "attack"],
     par: 4, good: 5,
     map: [
@@ -4289,8 +4289,8 @@ const LEVELS = [
       "SG#######",
     ],
     starter: {
-      py: "def climb():\n\nwhile True:\n    climb()\n",
-      js: "function climb() {\n}\n\nwhile (true) {\n  climb();\n}\n",
+      py: "def storm():\n\nwhile True:\n    storm()\n",
+      js: "function storm() {\n}\n\nwhile (true) {\n  storm();\n}\n",
     },
   },
   {
@@ -4304,7 +4304,7 @@ const LEVELS = [
     loopButton: true,
     more: true, moreIfs: ["wall"],
     crownPar: 12, crownGood: 14,
-    goal: "Испытание: прорубись к воротам. Приём пустой, программа пустая, карта длинная [[pages]]. В строю есть крепкий гоблин. А наверху стоит щитоносец — такого врага ты ещё не встречал. За него корона 👑.",
+    goal: "Испытание: прорубись к воротам. Приём пустой, программа пустая, карта длинная [[pages]]. В строю есть крепкий гоблин. А выше дороги стоит щитоносец — такого врага ты ещё не встречал. За него корона 👑.",
     commands: ["moveRight", "attack"],
     par: 3, good: 4,
     map: [
@@ -4334,7 +4334,7 @@ const LEVELS = [
     after: "Осада: испытание",
     more: true, moreIfs: ["enemy"],
     loopButton: true, ifButton: true, elseButton: true,
-    goal: "Дополнительный уровень — для прогресса не нужен. Двери нет: победи всех гоблинов. Карта длинная [[pages]], а двое стоят над дорогой — дотянешься, если поднимешься к ним.",
+    goal: "Дополнительный уровень — для прогресса не нужен. Двери нет: победи всех гоблинов. Карта длинная [[pages]], а двое стоят выше дороги — дотянешься, если свернёшь к ним вверх.",
     commands: ["moveRight", "moveUp", "moveDown", "attack"],
     ifs: ["enemy"],
     par: 6, good: 8,
@@ -4381,7 +4381,7 @@ const LEVELS = [
     isle: 4,
     funcs: true, requireFn: 2,
     newFn: true,
-    goal: "Нажми [[fnbtn:2]], потом два раза [[fnbtn]] и снова [[fnbtn:2]]. Теперь приёмов два: А бьёт гоблина и шагает вперёд, Б перелезает через препятствие сверху.",
+    goal: "Нажми [[fnbtn:2]], потом два раза [[fnbtn]] и снова [[fnbtn:2]]. Теперь приёмов два: А бьёт гоблина и шагает вперёд, Б обходит препятствие сверху.",
     commands: ["moveRight", "moveUp", "moveDown", "attack"],
     par: 10, good: 12,
     map: [
@@ -4392,8 +4392,8 @@ const LEVELS = [
       "#########",
     ],
     starter: {
-      py: "def hit():\n    attack()\n    move_right()\n\ndef hop():\n    move_up()\n    move_right(2)\n    move_down()\n\nhit()\n",
-      js: "function hit() {\n  attack();\n  moveRight();\n}\n\nfunction hop() {\n  moveUp();\n  moveRight(2);\n  moveDown();\n}\n\nhit();\n",
+      py: "def hit():\n    attack()\n    move_right()\n\ndef upper():\n    move_up()\n    move_right(2)\n    move_down()\n\nhit()\n",
+      js: "function hit() {\n  attack();\n  moveRight();\n}\n\nfunction upper() {\n  moveUp();\n  moveRight(2);\n  moveDown();\n}\n\nhit();\n",
     },
   },
   {
@@ -4402,7 +4402,7 @@ const LEVELS = [
     isle: 4,
     funcs: true, requireFn: 2,
     after: "Два приёма",
-    goal: "Нажми [[fnhead:2]], потом [[btn:moveDown]], [[btn:moveRight]] [[num:2]] и [[btn:moveUp]]. Приём Б пустой, а программа уже зовёт его: он должен пронырнуть под препятствием снизу.",
+    goal: "Нажми [[fnhead:2]], потом [[btn:moveDown]], [[btn:moveRight]] [[num:2]] и [[btn:moveUp]]. Приём Б пустой, а программа уже зовёт его: он должен обойти препятствие снизу.",
     commands: ["moveRight", "moveUp", "moveDown", "attack"],
     par: 9, good: 11,
     map: [
@@ -4413,8 +4413,8 @@ const LEVELS = [
       "#########",
     ],
     starter: {
-      py: "def hit():\n    attack()\n    move_right()\n\ndef dive():\n\ndive()\nhit()\nhit()\ndive()\n",
-      js: "function hit() {\n  attack();\n  moveRight();\n}\n\nfunction dive() {\n}\n\ndive();\nhit();\nhit();\ndive();\n",
+      py: "def hit():\n    attack()\n    move_right()\n\ndef lower():\n\nlower()\nhit()\nhit()\nlower()\n",
+      js: "function hit() {\n  attack();\n  moveRight();\n}\n\nfunction lower() {\n}\n\nlower();\nhit();\nhit();\nlower();\n",
     },
   },
   {
@@ -4423,7 +4423,7 @@ const LEVELS = [
     isle: 4,
     funcs: true, requireFn: 2,
     after: "Собери второй",
-    goal: "Собери оба приёма: нажми [[fnhead]] и ↑, →2, ↓ — это путь поверху, потом [[fnhead:2]] и ↓, →2, ↑ — понизу. Программа уже готова: сверху, снизу, сверху, снизу.",
+    goal: "Собери оба приёма: нажми [[fnhead]] и ↑, →2, ↓ — это обход сверху, потом [[fnhead:2]] и ↓, →2, ↑ — обход снизу. Программа уже готова: сверху, снизу, сверху, снизу.",
     commands: ["moveRight", "moveUp", "moveDown"],
     par: 10, good: 12,
     map: [
@@ -4434,8 +4434,8 @@ const LEVELS = [
       "#########",
     ],
     starter: {
-      py: "def hop():\n\ndef dive():\n\nhop()\ndive()\nhop()\ndive()\n",
-      js: "function hop() {\n}\n\nfunction dive() {\n}\n\nhop();\ndive();\nhop();\ndive();\n",
+      py: "def upper():\n\ndef lower():\n\nupper()\nlower()\nupper()\nlower()\n",
+      js: "function upper() {\n}\n\nfunction lower() {\n}\n\nupper();\nlower();\nupper();\nlower();\n",
     },
   },
   {
@@ -4467,7 +4467,7 @@ const LEVELS = [
     challenge: true,
     more: true,
     after: "Приём зовёт приём",
-    goal: "Испытание: поднимись по стене замка к воротам. Приёмы пустые, программа пустая. На стене два дела: ступенька вверх и гоблин на пути — каждому свой приём.",
+    goal: "Испытание: пройди вдоль стены замка к воротам. Приёмы пустые, программа пустая. На пути два дела: поворот вверх и гоблин на дороге — каждому свой приём.",
     commands: ["moveRight", "moveUp", "attack"],
     par: 12, good: 14,
     map: [
@@ -4512,7 +4512,7 @@ const LEVELS = [
     funcs: true, paramFn: true, requireFn: true, requireParam: true,
     slay: true,
     after: "Приём с числом",
-    goal: "Нажми на плитку ↑ в рамке [[fnhead]] и на [[nbtn]], потом так же на ↓. Сейчас приём всегда лезет на 1 клетку, а лучники стоят на башнях разной высоты: с n он поднимется на столько, сколько сказано в вызове. Двери нет — победи всех.",
+    goal: "Нажми на плитку ↑ в рамке [[fnhead]] и на [[nbtn]], потом так же на ↓. Сейчас приём всегда отходит вверх на 1 клетку, а лучники стоят на разном расстоянии от дороги: с n он отойдёт на столько, сколько сказано в вызове. Двери нет — победи всех.",
     commands: ["moveRight", "moveUp", "moveDown", "attack"],
     par: 9, good: 11,
     map: [
@@ -4528,12 +4528,12 @@ const LEVELS = [
     },
   },
   {
-    name: "Прыжок разной длины",
+    name: "Обход разной длины",
     chapter: 16,
     isle: 4,
     funcs: true, paramFn: true, requireFn: true, requireParam: true,
     after: "Число в приёме",
-    goal: "Нажми [[fnhead]], потом [[btn:moveUp]], [[btn:moveRight]], [[nbtn]] и [[btn:moveDown]]. Приём «прыжок» пустой: вверх, вправо на n, вниз — через камни разной ширины. Программа уже зовёт его с нужными числами.",
+    goal: "Нажми [[fnhead]], потом [[btn:moveUp]], [[btn:moveRight]], [[nbtn]] и [[btn:moveDown]]. Приём «обход» пустой: вверх, вправо на n, вниз — вокруг камней разной ширины. Программа уже зовёт его с нужными числами.",
     commands: ["moveRight", "moveUp", "moveDown", "attack"],
     par: 8, good: 10,
     map: [
@@ -4544,8 +4544,8 @@ const LEVELS = [
       "#########",
     ],
     starter: {
-      py: "def leap(n):\n\nleap(2)\nattack()\nmove_right(2)\nleap(3)\nmove_right()\n",
-      js: "function leap(n) {\n}\n\nleap(2);\nattack();\nmoveRight(2);\nleap(3);\nmoveRight();\n",
+      py: "def detour(n):\n\ndetour(2)\nattack()\nmove_right(2)\ndetour(3)\nmove_right()\n",
+      js: "function detour(n) {\n}\n\ndetour(2);\nattack();\nmoveRight(2);\ndetour(3);\nmoveRight();\n",
     },
   },
   {
@@ -4556,8 +4556,8 @@ const LEVELS = [
     challenge: true,
     more: true,
     slay: true,
-    after: "Прыжок разной длины",
-    goal: "Испытание: у ворот замка лучники стоят на башнях разной высоты. Приём и программа пустые. Собери один приём с числом n — и позови его для каждой башни. Двери нет — победи всех.",
+    after: "Обход разной длины",
+    goal: "Испытание: у ворот замка лучники стоят на разном расстоянии от дороги. Приём и программа пустые. Собери один приём с числом n — и позови его для каждого лучника. Двери нет — победи всех.",
     commands: ["moveRight", "moveUp", "moveDown", "attack"],
     par: 8, good: 10,
     map: [
@@ -4626,7 +4626,7 @@ const LEVELS = [
     funcs: true, requireFn: true, requireFnIf: true,
     elseButton: true,
     after: "Проверка в приёме",
-    goal: "Без боя: спуск по уступам к двери. В приёме «если справа препятствие — вниз». Добавь и «иначе — вправо»: нажми на рамку «если» в приёме, потом [[elsebtn]] и [[btn:moveRight]]. Приём шагнёт или вниз, или вправо — одно из двух.",
+    goal: "Без боя: дорога к двери идёт зигзагом вниз. В приёме «если справа препятствие — вниз». Добавь и «иначе — вправо»: нажми на рамку «если» в приёме, потом [[elsebtn]] и [[btn:moveRight]]. Приём шагнёт или вниз, или вправо — одно из двух.",
     commands: ["moveRight", "moveDown"],
     ifs: ["wall"],
     par: 3, good: 4,
@@ -4826,14 +4826,14 @@ const LEVELS = [
     },
   },
   {
-    name: "Дозор на подъём",
+    name: "Дозор поворачивает",
     chapter: 19,
     isle: 5,
     funcs: true, paramFn: true, requireFn: true, requireParam: true, requireFnIf: true,
     slay: true,
     ifButton: true,
     after: "Дозор",
-    goal: "Дорога поворачивает наверх. Второй приём climb(n) шагает вверх на n, но пока никуда не смотрит. Нажми на плитку [[tile:moveUp:n]] в рамке [[fnhead:2]], потом [[ifbtn]] и [[btn:attack]]: на подъёме ниши справа.",
+    goal: "Дорога поворачивает вверх. Второй приём scout(n) шагает вверх на n, но пока никуда не смотрит. Нажми на плитку [[tile:moveUp:n]] в рамке [[fnhead:2]], потом [[ifbtn]] и [[btn:attack]]: на этом отрезке ниши справа.",
     commands: ["moveRight", "moveUp", "attack"],
     ifs: ["enemy"],
     par: 9, good: 10,
@@ -4843,8 +4843,8 @@ const LEVELS = [
       ["#####.G##", "#####.###", "#####.###", "####G.###", "S.....###"],
     ],
     starter: {
-      py: "def guard(n):\n    move_right(n)\n    if enemy_up():\n        attack()\n\ndef climb(n):\n    move_up(n)\n\nguard(2)\nguard(2)\nguard(1)\nclimb(2)\nclimb(2)\n",
-      js: "function guard(n) {\n  moveRight(n);\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nfunction climb(n) {\n  moveUp(n);\n}\n\nguard(2);\nguard(2);\nguard(1);\nclimb(2);\nclimb(2);\n",
+      py: "def guard(n):\n    move_right(n)\n    if enemy_up():\n        attack()\n\ndef scout(n):\n    move_up(n)\n\nguard(2)\nguard(2)\nguard(1)\nscout(2)\nscout(2)\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nfunction scout(n) {\n  moveUp(n);\n}\n\nguard(2);\nguard(2);\nguard(1);\nscout(2);\nscout(2);\n",
     },
   },
   {
@@ -4853,8 +4853,8 @@ const LEVELS = [
     isle: 5,
     funcs: true, paramFn: true, requireFn: true, requireParam: true, requireFnIf: true,
     slay: true,
-    after: "Дозор на подъём",
-    goal: "Оба приёма готовы, а программа пустая. Посчитай клетки: дозор идёт вправо, поднимается и снова идёт вправо. Позови guard(n) и climb(n) с нужными числами — нажми кнопку приёма и цифру. Стой там, где ниша: проверка — в конце каждого приёма.",
+    after: "Дозор поворачивает",
+    goal: "Оба приёма готовы, а программа пустая. Посчитай клетки: дозор идёт вправо, сворачивает вверх и снова идёт вправо. Позови guard(n) и scout(n) с нужными числами — нажми кнопку приёма и цифру. Стой там, где ниша: проверка — в конце каждого приёма.",
     commands: ["moveRight", "moveUp", "attack"],
     ifs: ["enemy"],
     par: 10, good: 11,
@@ -4864,8 +4864,8 @@ const LEVELS = [
       ["########G", "####.....", "####.G###", "####.####", "S....####"],
     ],
     starter: {
-      py: "def guard(n):\n    move_right(n)\n    if enemy_up():\n        attack()\n\ndef climb(n):\n    move_up(n)\n    if enemy_right():\n        attack()\n",
-      js: "function guard(n) {\n  moveRight(n);\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nfunction climb(n) {\n  moveUp(n);\n  if (enemyRight()) {\n    attack();\n  }\n}\n",
+      py: "def guard(n):\n    move_right(n)\n    if enemy_up():\n        attack()\n\ndef scout(n):\n    move_up(n)\n    if enemy_right():\n        attack()\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyUp()) {\n    attack();\n  }\n}\n\nfunction scout(n) {\n  moveUp(n);\n  if (enemyRight()) {\n    attack();\n  }\n}\n",
     },
   },
   {
@@ -4900,7 +4900,7 @@ const LEVELS = [
     more: true,
     ifButton: true, sides: true,
     after: "Дозор с двух сторон",
-    goal: "Испытание: оба приёма пустые, программа тоже. Собери дозорного guard(n) — вправо на n и взгляд вверх, и climb(n) — вверх на n и взгляд вправо. Потом расставь посты: посчитай клетки до каждой ниши. Три варианта поля — одна программа.",
+    goal: "Испытание: оба приёма пустые, программа тоже. Собери дозорного guard(n) — вправо на n и взгляд вверх, и scout(n) — вверх на n и взгляд вправо. Потом расставь посты: посчитай клетки до каждой ниши. Три варианта поля — одна программа.",
     commands: ["moveRight", "moveUp", "attack"],
     ifs: ["enemy"],
     par: 10, good: 12,
@@ -4911,21 +4911,21 @@ const LEVELS = [
       ["########G", "###......", "###.G####", "#G#.#####", "S...#####"],
     ],
     starter: {
-      py: "def guard(n):\n\ndef climb(n):\n",
-      js: "function guard(n) {\n}\n\nfunction climb(n) {\n}\n",
+      py: "def guard(n):\n\ndef scout(n):\n",
+      js: "function guard(n) {\n}\n\nfunction scout(n) {\n}\n",
     },
-  },  // ===== Остров хитрецов, глава «Ступени»: приём зовёт приём с числом =====
-  // stair() — шаг вверх и guard(2): дозорный внутри ступеньки. Ступени — лестница по плоскости (вид сверху):
-  // вверх на 1, вправо на 2 (или 3), ниши под концом каждой ступени. В «Подрывнике» — D (подрывник, корона):
-  // бросает динамит на 2–3 клетки по прямой, путь лестницы его линий не касается; корона — подобраться вплотную мимо красных клеток.
+  },  // ===== Остров хитрецов, глава «Зигзаг»: приём зовёт приём с числом =====
+  // turn() — шаг вверх и guard(2): дозорный внутри поворота. Поле — вид сверху: дорога зигзагом —
+  // вверх на 1, вправо на 2 (или 3), ниши под концом каждого отрезка. В «Подрывнике» — D (подрывник, корона):
+  // бросает динамит на 2–3 клетки по прямой, путь зигзагом его линий не касается; корона — подобраться вплотную.
   {
-    name: "Ступени дозора",
+    name: "Дозор на поворотах",
     chapter: 20,
     isle: 5,
     funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
     newFn: true,
     after: "Дозор: испытание",
-    goal: "Новое: приём зовёт приём с числом. Ступенька stair() — шаг вверх и guard(1): дозорный идёт вправо и смотрит вниз. Но ступени широкие — в две клетки. Поменяй в stair() guard(1) на guard(2).",
+    goal: "Новое: приём зовёт приём с числом. Дорога идёт зигзагом: клетка вверх, две вправо. Поворот turn() — шаг вверх и guard(1): дозорный идёт вправо и смотрит вниз. Но вправо надо пройти две клетки. Поменяй в turn() guard(1) на guard(2).",
     commands: ["moveRight", "moveUp", "attack"],
     ifs: ["enemy"],
     par: 5, good: 6,
@@ -4935,17 +4935,17 @@ const LEVELS = [
       ["######..E", "####...##", "##...####", "...#G####", "S########"],
     ],
     starter: {
-      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef stair():\n    move_up()\n    guard(1)\n\nwhile True:\n    stair()\n",
-      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction stair() {\n  moveUp();\n  guard(1);\n}\n\nwhile (true) {\n  stair();\n}\n",
+      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef turn():\n    move_up()\n    guard(1)\n\nwhile True:\n    turn()\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction turn() {\n  moveUp();\n  guard(1);\n}\n\nwhile (true) {\n  turn();\n}\n",
     },
   },
   {
-    name: "Своя ступенька",
+    name: "Свой поворот",
     chapter: 20,
     isle: 5,
     funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
-    after: "Ступени дозора",
-    goal: "Ступени ещё шире — в три клетки. Приём stair() пустой: допиши в него шаг вверх и guard(3).",
+    after: "Дозор на поворотах",
+    goal: "Отрезки вправо ещё длиннее — в три клетки. Приём turn() пустой: допиши в него шаг вверх и guard(3).",
     commands: ["moveRight", "moveUp", "attack"],
     ifs: ["enemy"],
     par: 5, good: 6,
@@ -4955,18 +4955,18 @@ const LEVELS = [
       ["#########", "######..E", "###....##", "....##G##", "S########"],
     ],
     starter: {
-      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef stair():\n\nwhile True:\n    stair()\n",
-      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction stair() {\n}\n\nwhile (true) {\n  stair();\n}\n",
+      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef turn():\n\nwhile True:\n    turn()\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction turn() {\n}\n\nwhile (true) {\n  turn();\n}\n",
     },
   },
   {
-    name: "Вниз по ступеням",
+    name: "Зигзаг вниз",
     chapter: 20,
     isle: 5,
     funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
     sides: true,
-    after: "Своя ступенька",
-    goal: "Ступени ведут вниз, ниши теперь сверху, а дозорный guard(n) смотрит вниз. Поменяй в guard(n) проверку: не «снизу враг», а «сверху враг».",
+    after: "Свой поворот",
+    goal: "Зигзаг идёт вниз, ниши теперь сверху, а дозорный guard(n) смотрит вниз. Поменяй в guard(n) проверку: не «снизу враг», а «сверху враг».",
     commands: ["moveRight", "moveDown", "attack"],
     ifs: ["enemy"],
     par: 5, good: 6,
@@ -4976,8 +4976,8 @@ const LEVELS = [
       ["#########", "S########", "...#G####", "##...####", "####..E##"],
     ],
     starter: {
-      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef stair():\n    move_down()\n    guard(2)\n\nwhile True:\n    stair()\n",
-      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction stair() {\n  moveDown();\n  guard(2);\n}\n\nwhile (true) {\n  stair();\n}\n",
+      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef turn():\n    move_down()\n    guard(2)\n\nwhile True:\n    turn()\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction turn() {\n  moveDown();\n  guard(2);\n}\n\nwhile (true) {\n  turn();\n}\n",
     },
   },
   {
@@ -4987,8 +4987,8 @@ const LEVELS = [
     funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
     loopButton: true,
     crownPar: 12, crownGood: 14,
-    after: "Вниз по ступеням",
-    goal: "Новый враг — подрывник, фиолетовый гоблин. Красные клетки — куда он докидывает динамит: на одной линии с ним через клетку или две. Путь по ступеням их не задевает: зови stair() в бесконечном цикле. Подрывника можно и победить — кто подберётся к нему вплотную, не наступая на красные клетки, получит корону.",
+    after: "Зигзаг вниз",
+    goal: "Новый враг — подрывник, фиолетовый гоблин. Красные клетки — куда он докидывает динамит: на одной линии с ним через клетку или две. Путь зигзагом их не задевает: зови turn() в бесконечном цикле. Подрывника можно и победить — кто подберётся к нему вплотную, не наступая на красные клетки, получит корону.",
     commands: ["moveRight", "moveUp", "moveDown", "attack"],
     ifs: ["enemy"],
     par: 5, good: 6,
@@ -4998,12 +4998,12 @@ const LEVELS = [
       ["######..E", "####....#", "##....#.#", "...#G...#", "S####..D#"],
     ],
     starter: {
-      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef stair():\n    move_up()\n    guard(2)\n",
-      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction stair() {\n  moveUp();\n  guard(2);\n}\n",
+      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef turn():\n    move_up()\n    guard(2)\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction turn() {\n  moveUp();\n  guard(2);\n}\n",
     },
   },
   {
-    name: "Ступени: испытание",
+    name: "Зигзаг: испытание",
     chapter: 20,
     isle: 5,
     funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
@@ -5011,7 +5011,7 @@ const LEVELS = [
     more: true,
     loopButton: true, ifButton: true, sides: true,
     after: "Подрывник",
-    goal: "Испытание: оба приёма и программа пустые, три варианта поля. Собери guard(n) — вправо на n и «если снизу враг — удар», stair() — шаг вверх и guard(2), и зови stair() в бесконечном цикле.",
+    goal: "Испытание: оба приёма и программа пустые, три варианта поля. Собери guard(n) — вправо на n и «если снизу враг — удар», turn() — шаг вверх и guard(2), и зови turn() в бесконечном цикле.",
     commands: ["moveRight", "moveUp", "attack"],
     ifs: ["enemy"],
     par: 5, good: 7,
@@ -5022,8 +5022,8 @@ const LEVELS = [
       ["######..E", "####...##", "##...#G##", "...######", "S#G######"],
     ],
     starter: {
-      py: "def guard(n):\n\ndef stair():\n",
-      js: "function guard(n) {\n}\n\nfunction stair() {\n}\n",
+      py: "def guard(n):\n\ndef turn():\n",
+      js: "function guard(n) {\n}\n\nfunction turn() {\n}\n",
     },
   },
 
@@ -5190,11 +5190,19 @@ async function cloudSave() {
 }
 
 // Уровни, которые переименовали после выхода: звёзды, 💎 и «где остановился» переезжают на новое имя
-const LEVEL_RENAMES = { "Прыжок на n": "Прыжок разной длины", "Прыжок через камень": "Обход камня", "Высокая скала": "Большой валун", "Верх или низ": "Сверху или снизу", "Гряда: испытание": "Валуны: испытание" };
+const LEVEL_RENAMES = { "Прыжок на n": "Обход разной длины", "Лестница": "Наискосок", "Монетная лестница": "Монеты наискосок", "Ступеньки вверх": "Повороты вверх", "Ступеньки вниз": "Повороты вниз", "Не та ступенька": "Не тот поворот", "Высокие ступени": "Сдвиг на две", "Слишком высоко": "Слишком далеко", "Ступени разной высоты": "Сдвиги разной длины", "Уступы вниз": "Сдвиги вниз", "Штурм лестницы": "Штурм наискосок", "Прыжок разной длины": "Обход разной длины", "Дозор на подъём": "Дозор поворачивает", "Ступени дозора": "Дозор на поворотах", "Своя ступенька": "Свой поворот", "Вниз по ступеням": "Зигзаг вниз", "Ступени: испытание": "Зигзаг: испытание", "Прыжок через камень": "Обход камня", "Высокая скала": "Большой валун", "Верх или низ": "Сверху или снизу", "Гряда: испытание": "Валуны: испытание" };
 function renameLevels(sv) {
   for (const [a, b] of Object.entries(LEVEL_RENAMES)) {
     for (const key of ["stars", "gems", "crowns"]) if (sv?.[key]?.[a]) { sv[key][b] = Math.max(sv[key][b] || 0, sv[key][a]); delete sv[key][a]; }
     if (sv?.currentName === a) sv.currentName = b;
+    // код уровня лежит под «py:имя» / «js:имя» (и «#номер» правки) — переезжает, если под новым именем ещё ничего нет
+    for (const key of Object.keys(sv?.code || {})) {
+      const m = key.match(/^(py|js):(.*?)(#\d+)?$/);
+      if (!m || m[2] !== a) continue;
+      const nk = `${m[1]}:${b}${m[3] || ""}`;
+      if (sv.code[nk] === undefined) { sv.code[nk] = sv.code[key]; if (sv.codeAt?.[key] !== undefined) sv.codeAt[nk] = sv.codeAt[key]; }
+      delete sv.code[key]; if (sv.codeAt) delete sv.codeAt[key];
+    }
   }
   return sv;
 }
@@ -5453,7 +5461,7 @@ const winBox = $("winbox"), nextBtn = $("next");
 
 // Звёзды храним по названию уровня, чтобы новые уровни можно было вставлять в середину.
 // Старые сохранения хранили звёзды по номеру — переводим их один раз.
-const OLD_ORDER = ["Подвал", "Змейка", "Спираль", "Развилка", "Лестница", "Зубцы"];
+const OLD_ORDER = ["Подвал", "Змейка", "Спираль", "Развилка", "Наискосок", "Зубцы"];
 if (!save.starsByName) {
   const byName = {};
   for (const k in save.stars) if (OLD_ORDER[k]) byName[OLD_ORDER[k]] = save.stars[k];
@@ -6672,7 +6680,7 @@ ISLE_MAPS[3] = {
     ["mine", 15.2, 8.1, 0.6],
     ["wood_res", 7.55, 1.55, 0.9],
   ],
-  labels: [[tr("ЛЕСТНИЦЫ"), 258, 469], [tr("ГЛУБИНА"), 62, 400], [tr("ШТОЛЬНИ"), 150, 274], [tr("АРЕНА"), 140, 150], [tr("БИТВА"), 92, 92]],
+  labels: [["ПОВОРОТЫ", 258, 469], ["ГЛУБИНА", 62, 400], ["ШТОЛЬНИ", 150, 274], ["АРЕНА", 140, 150], ["БИТВА", 92, 92]],
   bank: [["cloud_a", 990, 1800, 1.0], ["cloud_c", 1080, 1820, 0.9], ["cloud_b", 28, 96, 0.8], ["cloud_d", 40, 24, 0.55]],
   clouds: [["sc_cloud1", 9, 5, 0.25]],
   tm: "sc_tm5",
@@ -6975,7 +6983,7 @@ ISLE_MAPS[5] = {
     ["wrock4", 15.6, 26.2, 0.8],
     ["duck", 4.6, 28.4, 1.3],
   ],
-  labels: [["ОТМЕЛЬ", 214, 534], ["ВАЛУНЫ", 150, 390], ["ДОЗОР", 300, 214], ["СТУПЕНИ", 124, 112]],
+  labels: [["ОТМЕЛЬ", 214, 534], ["ВАЛУНЫ", 150, 390], ["ДОЗОР", 300, 214], ["ЗИГЗАГ", 124, 112]],
   bank: [["cloud_c", 40, 1440, 0.9], ["cloud_d", -20, 1530, 0.8]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm4",
@@ -11101,42 +11109,42 @@ const BLOCK_GOALS = {
   // без слов из кода (имён приёмов, n, moveUp()): ребёнок в блоках их не видел
   "Змейка": "Новые стрелки: [[btn:moveUp]] и [[btn:moveLeft]]. Здесь вниз до двери не пройти — придётся петлять.",
   "Приём с числом": "Нажми на второй вызов приёма и на [[num:3]], потом на третий и на [[num:2]]. В приёме шаг [[tile:moveRight:n]] — это «столько клеток, сколько написано на вызове»: на вызове 3 — рыцарь пройдёт 3 клетки, на вызове 2 — две.",
-  "Число в приёме": "Нажми на плитку ↑ в рамке [[fnhead]] и на [[nbtn]], потом так же на ↓. Сейчас приём всегда лезет на 1 клетку, а лучники стоят на башнях разной высоты. С [[nbtn]] он поднимется на столько клеток, сколько написано на вызове. Двери нет — победи всех.",
-  "Прыжок разной длины": "Нажми [[fnhead]], потом [[btn:moveUp]], [[btn:moveRight]], [[nbtn]] и [[btn:moveDown]]. Приём «прыжок» пустой: вверх, вправо — столько, сколько написано на вызове, — и вниз. Камни разной ширины, а на вызовах уже стоят нужные числа.",
-  "Ворота замка: испытание": "Испытание: у ворот замка лучники стоят на башнях разной высоты. Приём и программа пустые. Собери один приём с [[nbtn]] — и позови его для каждой башни со своим числом. Двери нет — победи всех.",
+  "Число в приёме": "Нажми на плитку ↑ в рамке [[fnhead]] и на [[nbtn]], потом так же на ↓. Сейчас приём всегда отходит вверх на 1 клетку, а лучники стоят на разном расстоянии от дороги. С [[nbtn]] он отойдёт на столько клеток, сколько написано на вызове. Двери нет — победи всех.",
+  "Обход разной длины": "Нажми [[fnhead]], потом [[btn:moveUp]], [[btn:moveRight]], [[nbtn]] и [[btn:moveDown]]. Приём «обход» пустой: вверх, вправо — столько, сколько написано на вызове, — и вниз. Камни разной ширины, а на вызовах уже стоят нужные числа.",
+  "Ворота замка: испытание": "Испытание: у ворот замка лучники стоят на разном расстоянии от дороги. Приём и программа пустые. Собери один приём с [[nbtn]] — и позови его для каждого лучника со своим числом. Двери нет — победи всех.",
   "Дозор": "Новое: приём и с числом, и с «если». Дозорный [[fnhead]] идёт вправо — столько клеток, сколько написано на вызове, — и смотрит вверх: в нише гоблин — удар, свой — мимо. Нажми [[fnbtn]] и [[num:2]] — третий пост через две клетки.",
-  "Дозор на подъём": "Дорога поворачивает наверх. Второй приём [[fnhead:2]] шагает вверх, но пока никуда не смотрит. Нажми на плитку [[tile:moveUp:n]] в рамке [[fnhead:2]], потом [[ifbtn]] и [[btn:attack]]: на подъёме ниши справа.",
-  "Посчитай посты": "Оба приёма готовы, а программа пустая. Посчитай клетки: дорога идёт вправо, поднимается и снова идёт вправо. Нажимай [[fnbtn:1]] (вправо) или [[fnbtn:2]] (вверх) и после каждой — цифру: сколько клеток до следующей ниши. Останавливайся ровно у ниши: в конце приём смотрит в неё.",
+  "Дозор поворачивает": "Дорога поворачивает вверх. Второй приём [[fnhead:2]] шагает вверх, но пока никуда не смотрит. Нажми на плитку [[tile:moveUp:n]] в рамке [[fnhead:2]], потом [[ifbtn]] и [[btn:attack]]: на этом отрезке ниши справа.",
+  "Посчитай посты": "Оба приёма готовы, а программа пустая. Посчитай клетки: дорога идёт вправо, сворачивает вверх и снова идёт вправо. Нажимай [[fnbtn:1]] (вправо) или [[fnbtn:2]] (вверх) и после каждой — цифру: сколько клеток до следующей ниши. Останавливайся ровно у ниши: в конце приём смотрит в неё.",
   "Дозор: испытание": "Испытание: оба приёма и программа пустые. Собери [[fnhead:1]]: [[btn:moveRight]], [[nbtn]] и «если сверху враг — удар». Собери [[fnhead:2]]: [[btn:moveUp]], [[nbtn]] и «если справа враг — удар». Потом расставь посты: кнопка приёма и цифра — сколько клеток до ниши. Три варианта поля — одна программа.",
-  "Ступени дозора": "Новое: приём зовёт приём с числом. Ступенька [[fnhead:2]] — шаг вверх и дозорный [[fnhead:1]] вправо. Но в ступеньке дозорный идёт на 1 клетку, а ступени широкие — в две. Нажми на вызов дозорного в рамке [[fnhead:2]] и на [[num:2]].",
-  "Своя ступенька": "Ступени ещё шире — в три клетки. Ступенька [[fnhead:2]] пустая: нажми [[fnhead:2]], потом [[btn:moveUp]], [[fnbtn:1]] и [[num:3]].",
-  "Вниз по ступеням": "Ступени ведут вниз, ниши теперь сверху, а дозорный смотрит вниз. Нажми на рамку «если» в [[fnhead:1]] и на [[side:moveUp]].",
+  "Дозор на поворотах": "Новое: приём зовёт приём с числом. Дорога идёт зигзагом: клетка вверх, две вправо. Поворот [[fnhead:2]] — шаг вверх и дозорный [[fnhead:1]] вправо. Но в повороте дозорный идёт только на 1 клетку. Нажми на вызов дозорного в рамке [[fnhead:2]] и на [[num:2]].",
+  "Свой поворот": "Отрезки вправо ещё длиннее — в три клетки. Поворот [[fnhead:2]] пустой: нажми [[fnhead:2]], потом [[btn:moveUp]], [[fnbtn:1]] и [[num:3]].",
+  "Зигзаг вниз": "Зигзаг идёт вниз, ниши теперь сверху, а дозорный смотрит вниз. Нажми на рамку «если» в [[fnhead:1]] и на [[side:moveUp]].",
   "Подрывник": "Новый враг — подрывник, фиолетовый гоблин. Красные клетки — куда он докидывает динамит: на одной линии с ним через клетку или две. Твой путь их не задевает: нажми «🔁 повторять» и [[fnbtn:2]]. Подрывника можно и победить — кто подберётся к нему вплотную, не наступая на красные клетки, получит корону.",
-  "Ступени: испытание": "Испытание: оба приёма и программа пустые, три варианта поля. Собери дозорного [[fnhead:1]] — вправо на [[nbtn]] и «если снизу враг — удар», ступеньку [[fnhead:2]] — шаг вверх и дозорный на две клетки, а в программе нажми «🔁 повторять» и [[fnbtn:2]].",
+  "Зигзаг: испытание": "Испытание: оба приёма и программа пустые, три варианта поля. Собери дозорного [[fnhead:1]] — вправо на [[nbtn]] и «если снизу враг — удар», поворот [[fnhead:2]] — шаг вверх и дозорный на две клетки, а в программе нажми «🔁 повторять» и [[fnbtn:2]].",
   // Остров мастеров: свои приёмы
-  "Готовый приём": "Нажми [[fnbtn]] 2 раза. Это свой приём: розовая кнопка делает сразу оба шага из рамки [[fnhead]] — целую ступеньку.",
-  "Вниз по приёму": "Собери путь: [[fnbtn]] — ступенька, [[btn:moveRight]] и [[num:2]] — дорожка. Приём уже готов, а программа пустая.",
-  "Кривой приём": "Нажми на [[tile:moveRight:1]] в розовой рамке и на [[num:2]]. Ступеньки широкие, а в приёме шаг на одну клетку: поправишь приём — исправятся все три.",
-  "Сам собери приём": "Нажми [[fnhead]], потом [[btn:moveRight]] и [[btn:moveUp]]. Рамка приёма пустая — рыцарь не знает, что такое ступенька.",
-  "Мастерская: испытание": "Испытание: собери приём «ступенька» — вниз и два вправо. Потом [[tool:done]] и собери путь.",
+  "Готовый приём": "Нажми [[fnbtn]] 2 раза. Это свой приём: розовая кнопка делает сразу оба шага из рамки [[fnhead]] — целый зигзаг.",
+  "Вниз по приёму": "Собери путь: [[fnbtn]] — зигзаг, [[btn:moveRight]] и [[num:2]] — прямой кусок. Приём уже готов, а программа пустая.",
+  "Кривой приём": "Нажми на [[tile:moveRight:1]] в розовой рамке и на [[num:2]]. Зигзаги широкие, а в приёме шаг вправо на одну клетку: поправишь приём — исправятся все три.",
+  "Сам собери приём": "Нажми [[fnhead]], потом [[btn:moveRight]] и [[btn:moveUp]]. Рамка приёма пустая — рыцарь не знает, что такое зигзаг.",
+  "Мастерская: испытание": "Испытание: собери приём «зигзаг» — вниз и два вправо. Потом [[tool:done]] и собери путь.",
   // Осада мастерской: приём в цикле
   "Строй у ворот": "Нажми «🔁 повторять», потом [[fnbtn]]. Приём «удар и шаг» уже готов, а цикл будет звать его снова и снова — через весь строй гоблинов до ворот.",
   "Крепкий в строю": "Нажми на [[tile:attack:1]] в розовой рамке и на [[num:2]]. В строю крепкий гоблин: одного удара ему мало. Поправишь приём — каждый удар в цикле станет двойным.",
   "Часовые над дорогой": "Нажми на [[ifhead]] и на [[side:moveUp]]. Гоблины стоят над дорогой, а «если» смотрит вправо и их не видит. Зелёные кнопки поворачивают вопрос: враг справа, сверху, слева или снизу. Бить всё подряд нельзя — рядом свои.",
   "Великан": "Собери, как у ворот: «🔁 повторять» и [[fnbtn]]. Над дорогой стоит великан — у него шесть сердечек. Его можно просто пройти. А кто его победит, получит корону 👑. Говорят, он бьёт медленно…",
   "Не тот порядок": "Нажми на [[tile:attack:1]] в розовой рамке и на [[tool:earlier]]. В приёме рыцарь сначала шагает, а потом бьёт — и с разбегу врезается в гоблина. Карта длинная [[pages]]: строй тянется дальше.",
-  "Штурм лестницы": "Нажми [[fnhead]], потом [[btn:attack]], [[btn:moveRight]] и [[btn:moveUp]]. На каждой ступеньке гоблин: ударить, шагнуть, подняться — и так до самого верха.",
-  "Осада: испытание": "Испытание: прорубись к воротам. Приём пустой, программа пустая, карта длинная [[pages]]. В строю есть крепкий гоблин. А наверху стоит щитоносец — такого врага ты ещё не встречал. За него корона 👑.",
+  "Штурм наискосок": "Нажми [[fnhead]], потом [[btn:attack]], [[btn:moveRight]] и [[btn:moveUp]]. На каждом повороте гоблин: ударить, шагнуть, свернуть вверх — и так до самого конца.",
+  "Осада: испытание": "Испытание: прорубись к воротам. Приём пустой, программа пустая, карта длинная [[pages]]. В строю есть крепкий гоблин. А выше дороги стоит щитоносец — такого врага ты ещё не встречал. За него корона 👑.",
   // Остров рудокопов: длинные карты, «если» внутри цикла
-  "Ступеньки вверх": "Новое: длинная карта! Она не влезает в экран, поэтому показана частями [[pages]] — это <b>одна</b> карта, а не варианты. Полистай её кнопками или проведи пальцем по полю. В цикле 🔁 пустая рамка «если»: она проверяет на каждом круге. Нажми на неё [[ifhead]], потом кнопку [[btn:moveUp]].",
-  "Ступеньки вниз": "Шахта уходит вниз. Полистай карту [[pages]], потом нажми на рамку [[ifhead]] и кнопку [[btn:moveDown]].",
-  "Не та ступенька": "Найди ошибку: ступеньки ведут вверх, а рыцарь у препятствия шагает вниз. Нажми на плитку [[tile:moveDown:1]] и кнопку [[btn:moveUp]].",
+  "Повороты вверх": "Новое: длинная карта! Она не влезает в экран, поэтому показана частями [[pages]] — это <b>одна</b> карта, а не варианты. Полистай её кнопками или проведи пальцем по полю. В цикле 🔁 пустая рамка «если»: она проверяет на каждом круге. Нажми на неё [[ifhead]], потом кнопку [[btn:moveUp]].",
+  "Повороты вниз": "Штольня поворачивает вниз. Полистай карту [[pages]], потом нажми на рамку [[ifhead]] и кнопку [[btn:moveDown]].",
+  "Не тот поворот": "Найди ошибку: дорога поворачивает вверх, а рыцарь у препятствия шагает вниз. Нажми на плитку [[tile:moveDown:1]] и кнопку [[btn:moveUp]].",
   "«Если» в цикл": "Рамки «если» нет — поставь её в цикл сам. Нажми на плитку [[tile:moveRight:1]], потом [[ifbtn]] — рамка встанет за плиткой, — и кнопку [[btn:moveUp]].",
   "Три части": "Эта карта ещё длиннее — три части [[pages:3]]. Полистай её, потом нажми на рамку [[ifhead]] и кнопку [[btn:moveUp]].",
-  "Высокие ступени": "Ступени высокие — в две клетки, а рыцарь в рамке поднимается на одну. Нажми на плитку [[tile:moveUp:1]] и кнопку [[num:2]].",
-  "Вниз на две": "Высокие ступени ведут вниз. Нажми на плитку [[tile:moveRight:1]], потом [[ifbtn]] и [[btn:moveDown]]. Появится плитка [[tile:moveDown:1]] — нажми на неё и на [[num:2]].",
-  "Слишком высоко": "Найди ошибку: ступени низкие, а рыцарь прыгает на две клетки и бьётся о потолок. Нажми на плитку [[tile:moveUp:2]] и кнопку [[num:1]].",
-  "Глубокая шахта: испытание": "Испытание: программа пустая, три части карты [[pages:3]], высокие ступени вниз. Подсказка: «🔁 повторять», в цикле шаг вправо и «если» со спуском на две клетки.",
+  "Сдвиг на две": "Стены в две клетки, а рыцарь в рамке шагает вверх только на одну. Нажми на плитку [[tile:moveUp:1]] и кнопку [[num:2]].",
+  "Вниз на две": "Стены в две клетки теперь обходят снизу. Нажми на плитку [[tile:moveRight:1]], потом [[ifbtn]] и [[btn:moveDown]]. Появится плитка [[tile:moveDown:1]] — нажми на неё и на [[num:2]].",
+  "Слишком далеко": "Найди ошибку: стены в одну клетку, а рыцарь шагает вверх на две и упирается в стену. Нажми на плитку [[tile:moveUp:2]] и кнопку [[num:1]].",
+  "Глубокая шахта: испытание": "Испытание: программа пустая, три части карты [[pages:3]], стены в две клетки, обход снизу. Подсказка: «🔁 повторять», в цикле шаг вправо и «если» с шагом вниз на две клетки.",
   "Арена": "Новое: арена! Не клетки, а настоящий бой: гоблины идут с двух сторон, а рыцарь снова и снова делает то, что в цикле 🔁. Продержись 20 секунд. Нажми на рамку [[ifhead]] и кнопку [[btn:attack]].",
   "Иди навстречу": "Гоблины с динамитом бросают издалека и близко не подходят. Когда врага рядом нет — иди к нему: нажми на [[elsehead]] и кнопку [[btn:goToEnemy]].",
   "Передышка": "Гоблины нападают толпой, между набегами — передышка. Когда врага рядом нет — лечись: нажми на [[elsehead]] и кнопку [[btn:heal]].",
@@ -11148,17 +11156,17 @@ const BLOCK_GOALS = {
   "Два дела": "Гоблины с динамитом бросают издалека. В «иначе» поместятся две команды: [[btn:goToEnemy]] уже есть. Нажми на [[elsehead]] и кнопку [[btn:heal]] — лечение встанет первым: сначала лечись, потом иди к врагу.",
   "Битва: испытание": "Испытание: большая битва на 30 секунд — факелы, динамит, бочки, рядом союзники и лучник. Подсказка: «🔁 повторять», в нём «❓ если» с ⚔, потом «＋ иначе» с ♥ и ➤.",
   "Если… иначе": "Новое: [[elsehead]] — «если нет». Рыцарь делает <b>одно из двух</b>. Нажми на [[ifhead]] и кнопку [[btn:moveUp]].",
-  "Ступени разной высоты": "Ступени разной высоты. С «иначе» рыцарь каждый круг смотрит заново и поднимается, пока справа препятствие. Нажми на [[ifhead]] и кнопку [[btn:moveUp]].",
-  "Вверх без конца": "Найди ошибку: в «иначе» тоже шаг вверх — рыцарь упрётся в потолок. Нажми на плитку под [[elsehead]] и кнопку [[btn:moveRight]].",
+  "Сдвиги разной длины": "Стены разной длины. С «иначе» рыцарь каждый круг смотрит заново и шагает вверх, пока справа препятствие. Нажми на [[ifhead]] и кнопку [[btn:moveUp]].",
+  "Вверх без конца": "Найди ошибку: в «иначе» тоже шаг вверх — рыцарь упрётся в стену. Нажми на плитку под [[elsehead]] и кнопку [[btn:moveRight]].",
   "Сам добавь «иначе»": "У «если» нет «иначе» — без препятствия рыцарь стоит на месте. Нажми на [[ifhead]], потом серую кнопку [[elsebtn]] и кнопку [[btn:moveRight]].",
-  "Уступы вниз": "Уступы вниз, тоже разной высоты. Нажми на [[ifhead]] и кнопку [[btn:moveDown]].",
-  "Кривые штольни: испытание": "Испытание: программа пустая, три части карты [[pages:3]], ступени разной высоты. Подсказка: «🔁 повторять», «❓ если» со ступенькой вверх и [[elsebtn]] с шагом вправо.",
-  "Шахта: испытание": "Испытание: программа пустая, ступенек четыре, карта длинная [[pages]]. Подсказка: «🔁 повторять», в цикле шаг вправо и «если» со ступенькой вверх.",
+  "Сдвиги вниз": "Обход снизу, стены тоже разной длины. Нажми на [[ifhead]] и кнопку [[btn:moveDown]].",
+  "Кривые штольни: испытание": "Испытание: программа пустая, три части карты [[pages:3]], стены разной длины. Подсказка: «🔁 повторять», «❓ если» с шагом вверх и [[elsebtn]] с шагом вправо.",
+  "Шахта: испытание": "Испытание: программа пустая, поворотов четыре, карта длинная [[pages]]. Подсказка: «🔁 повторять», в цикле шаг вправо и «если» с шагом вверх.",
   "Первые шаги": "Теперь рыцарю нужно к двери. Нажми стрелку <b>→</b>: появится плитка — это один шаг. Потом нажми <b>Запустить</b>. Хочешь ★★★? Нажми цифру <b>4</b>: плитка станет <b>→4</b>, четыре шага сразу.",
   "Поворот": "Новая стрелка <b>↓</b>. Плитки уже лежат, но рыцарь не доходит одну клетку. Нажми на плитку <b>↓2</b>, потом цифру <b>3</b> и «Запустить».",
   "Подвал": "Доведи рыцаря до двери сам. Цифра на плитке — сколько шагов: <b>→3</b> — три клетки вправо. Цифры на поле подскажут, сколько нужно.",
   "Починка": "Плитки уже лежат, но в одной ошибка. Нажми «Запустить» и посмотри, где рыцарь остановится: эта плитка подсветится. Нажми на неё и поправь число.",
-  "Лестница": "Новое: <b>цикл</b>. Всё, что лежит в рамке <b>🔁 повторять</b>, рыцарь повторяет снова и снова, пока не дойдёт до двери. Рамка уже есть — положи в неё один шаг лестницы: стрелки сами кладут плитки в рамку.",
+  "Наискосок": "Новое: <b>цикл</b>. Всё, что лежит в рамке <b>🔁 повторять</b>, рыцарь повторяет снова и снова, пока не дойдёт до двери. Дорога идёт наискосок, одним и тем же кусочком: шаг вправо, шаг вниз. Рамка уже есть — положи в неё этот кусочек: стрелки сами кладут плитки в рамку.",
   "Зубцы": "Посмотри на дорогу: какие шаги в ней повторяются? Нажми <b>🔁 повторять</b> — появится пустая рамка. Положи в неё эти шаги стрелками.",
   "Беглянка": "В рамке цикла должны быть две плитки, но одна сбежала: она лежит за рамкой, и рыцарь повторяет только одну. Нажми на беглянку, а потом серую кнопку [[tool:inFrame]].",
   "Перепутанный путь": "Все плитки правильные, но две соседние перепутаны местами. Запусти, посмотри, где рыцарь споткнётся, нажми на эту плитку и передвинь её серой кнопкой [[tool:earlier]] или [[tool:later]].",
@@ -11183,13 +11191,13 @@ const BLOCK_GOALS = {
   "Три варианта": "У поля уже <b>три</b> варианта — кнопки 1, 2, 3 в углу. Программа всё равно одна. Посмотри все три и нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]].",
   "Сам поставь «если»": "Новое: кнопка [[ifbtn]] — ты сам ставишь рамку «если». Нажми на плитку [[tile:moveRight:2]], потом [[ifbtn]] — рамка встанет сразу за плиткой, — а потом кнопку [[btn:moveDown]].",
   "Сам — и вверх": "Ещё раз сам: здесь обходить надо сверху. Нажми на плитку [[tile:moveRight:3]], потом [[ifbtn]], потом [[btn:moveUp]].",
-  "Лишний шаг": "Найди ошибку: в рамке рыцарь спускается на 2 клетки и упирается, а нужна 1. Нажми на плитку [[tile:moveDown:2]] и цифру [[num:1]].",
+  "Лишний шаг": "Найди ошибку: в рамке рыцарь шагает вниз на 2 клетки и упирается, а нужна 1. Нажми на плитку [[tile:moveDown:2]] и цифру [[num:1]].",
   "Деревня: испытание": "Испытание: программа пустая — собери её сама. Три варианта поля. Подсказка: [[btn:moveRight]] и [[num:2]], потом [[ifbtn]] и [[btn:moveDown]] — шаг ляжет в рамку, потом [[tool:done]] и [[btn:moveRight]] с [[num:4]] — этот шаг встанет уже после рамки.",
   "Обход сверху": "Всё как в прошлый раз, только обходить препятствие надо <b>сверху</b>. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveUp]].",
   "Подальше": "Теперь рыцарь сначала идёт на 3 клетки, а препятствие — дальше. Посмотри на вариант 1: где свободно, сверху или снизу? Нажми на зелёную рамку [[ifhead]] и положи в неё шаг в свободную сторону.",
   "Две клетки вниз": "В рамке лежит шаг вниз на 1 клетку, а обходить надо на 2. Нажми на плитку [[tile:moveDown:1]] и цифру [[num:2]] — получится [[tile:moveDown:2]].",
   "Ошибка в рамке": "Найди ошибку: в рамке рыцарь обходит препятствие сверху, а сверху тоже не пройти. Нажми на плитку [[tile:moveUp:1]] и кнопку [[btn:moveDown]] — плитка станет [[tile:moveDown:1]].",
-  "Первое «если»": "Новое: рамка <b>❓ если</b>. У поля два варианта (кнопки <b>1</b> и <b>2</b> в углу), а программа одна — она должна пройти оба. В варианте 1 движение строго по прямой вправо невозможно: нужно спуститься на клетку вниз. В варианте 2 можно идти прямо. Рамка «если → препятствие» пока пустая. Что положишь в неё, рыцарь сделает, только когда справа препятствие; если его нет, рамка пропускается. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]] внизу.",
+  "Первое «если»": "Новое: рамка <b>❓ если</b>. У поля два варианта (кнопки <b>1</b> и <b>2</b> в углу), а программа одна — она должна пройти оба. В варианте 1 движение строго по прямой вправо невозможно: нужно обойти препятствие: шагнуть на клетку вниз. В варианте 2 можно идти прямо. Рамка «если → препятствие» пока пустая. Что положишь в неё, рыцарь сделает, только когда справа препятствие; если его нет, рамка пропускается. Нажми на зелёную рамку [[ifhead]], а потом кнопку [[btn:moveDown]] внизу.",
   "Нехватка удара": "Плитки почти правильные, но одному гоблину не хватает удара. Запусти и посмотри, какой гоблин выдержит удар: сколько у него сердечек? Нажми на нужную плитку <b>⚔</b> и поставь число.",
 };
 
@@ -13222,7 +13230,7 @@ const COACH = {
       ? [$("n2"), "Теперь нажми 2"]
       : [lineTarget(2), uiBlocks ? "Нажми на эту плитку" : "Нажми на номер строки"];
   },
-  "Лестница": () => {
+  "Наискосок": () => {
     const n = countWrittenCommands(codeEl.value);
     if (n === 0) return [$("add-moveRight"), "Положи шаг вправо в цикл"];
     if (n === 1) return [$("add-moveDown"), "И шаг вниз"];
@@ -14622,11 +14630,12 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 158;
+const APP_VERSION = 159;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
-  { v: 158, date: "2026-11-15", text: "Новая глава на Острове хитрецов — «Ступени»: приём зовёт приём с числом. Ступенька — шаг вверх и дозорный на нужное число клеток, а лестницу проходит повторение одной ступеньки. Новый враг — подрывник: он бросает динамит на красные клетки, но если подобраться к нему вплотную мимо них, его можно победить и получить корону.", en: "A new chapter on the Island of Wits — “Steps”: a function calls a function with a number. A step is one move up and the patrol for the right number of cells, and the whole staircase is just one step repeated. A new enemy — the bomber: he throws dynamite onto the red cells, but if you get right next to him without crossing them, you can beat him and win a crown.", big: true },
+  { v: 159, date: "2026-11-15", text: "Поле в игре — это вид сверху, и тексты теперь говорят так же: вместо «ступенек», «лестниц», «прыжков» и «подъёмов» — повороты, зигзаги и обходы. Глава «Ступени» теперь называется «Зигзаг», несколько уровней на других островах тоже получили новые имена — звёзды и код сохранились.", en: "The board in the game is seen from above, and now the texts say so too: instead of “stairs”, “steps up”, “leaps” and “climbing” there are turns, zigzags and detours. The “Steps” chapter is now called “Zigzag”, and a few levels on other islands got new names too — your stars and code are kept." },
+  { v: 158, date: "2026-11-15", text: "Новая глава на Острове хитрецов — «Зигзаг»: приём зовёт приём с числом. Поворот — шаг вверх и дозорный на нужное число клеток, а весь зигзаг — один поворот, повторённый много раз. Новый враг — подрывник: он бросает динамит на красные клетки, но если подобраться к нему вплотную мимо них, его можно победить и получить корону.", en: "A new chapter on the Island of Wits — “Zigzag”: a function calls a function with a number. A turn is one step up and the patrol for the right number of cells, and the whole zigzag is just one turn repeated. A new enemy — the bomber: he throws dynamite onto the red cells, but if you get right next to him without crossing them, you can beat him and win a crown.", big: true },
   { v: 157, date: "2026-11-15", text: "Исправлена ошибка: на уровнях «победи всех гоблинов», где у поля несколько вариантов, победа засчитывалась уже на первом варианте. Теперь, как и везде, одна программа должна пройти все варианты поля.", en: "Fixed a bug: on “defeat all the goblins” levels with several versions of the map, the win counted after the first version already. Now, as everywhere else, one program has to get through every version of the map." },
   { v: 156, date: "2026-11-15", text: "Задания в режиме блоков стали проще: в них больше нет слов из Python и JavaScript — только кнопки, плитки и обычные слова. Уровень «Прыжок на n» теперь называется «Прыжок разной длины» (звёзды сохранились).", en: "Tasks in block mode are simpler now: no more words from Python and JavaScript — only buttons, tiles and plain words. The level “Leap by n” is now called “Leaps of Any Length” (your stars are kept)." },
   { v: 155, date: "2026-11-15", text: "Новая глава на Острове хитрецов — «Дозор»: приём и с числом, и с «если». Дозорный проходит нужное число клеток и сам решает, бить ли того, кто в нише: гоблина — да, своего — нет. Дорога поворачивает наверх — появляется второй дозорный, а в конце обоих нужно собрать самому.", en: "A new chapter on the Island of Wits — “Patrol”: a function with both a number and an “if”. The patrol walks the right number of cells and decides by itself whether to strike whoever is in the alcove: a goblin — yes, a friend — no. The road turns upwards — a second patrol appears, and at the end you build both yourself.", big: true },

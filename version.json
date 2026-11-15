@@ -1,21 +1,21 @@
 {
- "version": 158,
+ "version": 159,
  "date": "2026-11-15",
  "notes": [
-  "Новая глава на Острове хитрецов — «Ступени»: приём зовёт приём с числом. Ступенька — шаг вверх и дозорный на нужное число клеток, а лестницу проходит повторение одной ступеньки. Новый враг — подрывник: он бросает динамит на красные клетки, но если подобраться к нему вплотную мимо них, его можно победить и получить корону."
+  "Поле в игре — это вид сверху, и тексты теперь говорят так же: вместо «ступенек», «лестниц», «прыжков» и «подъёмов» — повороты, зигзаги и обходы. Глава «Ступени» теперь называется «Зигзаг», несколько уровней на других островах тоже получили новые имена — звёзды и код сохранились."
  ],
  "files": {
   "index.html": {
-   "size": 984976,
-   "hash": "96b72a4a34f0ee3a"
+   "size": 988084,
+   "hash": "a6985aca8205c3df"
   },
   "art.js": {
    "size": 1979296,
    "hash": "fc09075012bef868"
   },
   "lang-en.js": {
-   "size": 119294,
-   "hash": "f5fe66e66e4333a4"
+   "size": 119810,
+   "hash": "81dfe3cdd1ff4308"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "e199782e3e73ad8d"
+   "hash": "a6ad00df6e8e3088"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A new chapter on the Island of Wits — “Steps”: a function calls a function with a number. A step is one move up and the patrol for the right number of cells, and the whole staircase is just one step repeated. A new enemy — the bomber: he throws dynamite onto the red cells, but if you get right next to him without crossing them, you can beat him and win a crown."
+  "The board in the game is seen from above, and now the texts say so too: instead of “stairs”, “steps up”, “leaps” and “climbing” there are turns, zigzags and detours. The “Steps” chapter is now called “Zigzag”, and a few levels on other islands got new names too — your stars and code are kept."
  ]
 }
