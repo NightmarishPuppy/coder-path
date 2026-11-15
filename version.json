@@ -1,21 +1,21 @@
 {
- "version": 157,
+ "version": 158,
  "date": "2026-11-15",
  "notes": [
-  "Исправлена ошибка: на уровнях «победи всех гоблинов», где у поля несколько вариантов, победа засчитывалась уже на первом варианте. Теперь, как и везде, одна программа должна пройти все варианты поля."
+  "Новая глава на Острове хитрецов — «Ступени»: приём зовёт приём с числом. Ступенька — шаг вверх и дозорный на нужное число клеток, а лестницу проходит повторение одной ступеньки. Новый враг — подрывник: он бросает динамит на красные клетки, но если подобраться к нему вплотную мимо них, его можно победить и получить корону."
  ],
  "files": {
   "index.html": {
-   "size": 968942,
-   "hash": "9e6cd7703b17f816"
+   "size": 984976,
+   "hash": "96b72a4a34f0ee3a"
   },
   "art.js": {
-   "size": 1957150,
-   "hash": "8280758bff213678"
+   "size": 1979296,
+   "hash": "fc09075012bef868"
   },
   "lang-en.js": {
-   "size": 115246,
-   "hash": "e67ba67f32a7b10a"
+   "size": 119294,
+   "hash": "f5fe66e66e4333a4"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "fa2c4e7e21fa30e1"
+   "hash": "e199782e3e73ad8d"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Fixed a bug: on “defeat all the goblins” levels with several versions of the map, the win counted after the first version already. Now, as everywhere else, one program has to get through every version of the map."
+  "A new chapter on the Island of Wits — “Steps”: a function calls a function with a number. A step is one move up and the patrol for the right number of cells, and the whole staircase is just one step repeated. A new enemy — the bomber: he throws dynamite onto the red cells, but if you get right next to him without crossing them, you can beat him and win a crown."
  ]
 }

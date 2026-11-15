@@ -136,6 +136,11 @@ h1 {
   margin-inline: auto;
 }
 .cell { position: relative; }
+/* куда долетает динамит подрывника */
+.cell .danger { position: absolute; inset: 6%; border-radius: 22%; background: #ff3b3038; box-shadow: inset 0 0 0 2px #ff5a4aaa; pointer-events: none; animation: dangerpulse 1.6s ease-in-out infinite; }
+@keyframes dangerpulse { 50% { background: #ff3b3060; } }
+html.still .cell .danger { animation: none; }
+.cell .danger.gone { transition: opacity 0.6s; opacity: 0; }
 /* Земля (canvas) и пена прибоя лежат под клетками в .groundwrap; клетки прозрачные.
    Цвет поля — вода: он виден там, где на картинке земли ничего нет */
 .board { background-color: var(--t-floor); }
@@ -179,6 +184,9 @@ html.still .ally { animation: none !important; }
 .enemy.blocking .g-def { display: block; }
 .enemy.blocking .g-idle { display: none; }
 .enemy.shield { z-index: 3; }
+/* подрывник замахивается динамитом */
+.enemy.throwing .g-throw { display: block; }
+.enemy.throwing .g-idle { display: none; }
 /* великан: замахнулся — первый кадр удара застыл, над головой мигает «!» */
 .enemy.giant { z-index: 3; }
 .enemy.giant .hp { top: -14%; }
@@ -2325,6 +2333,7 @@ const CHAPTERS = [
   { name: tr("Отмель"), topic: tr("приём с «если»"), isle: 5 },
   { name: tr("Валуны"), topic: tr("«если» выбирает приём"), isle: 5 },
   { name: tr("Дозор"), topic: tr("приём с числом и «если»"), isle: 5 },
+  { name: tr("Ступени"), topic: tr("приём зовёт приём с числом"), isle: 5 },
 ];
 
 // Уровни по порядку на карте.
@@ -4905,7 +4914,119 @@ const LEVELS = [
       py: "def guard(n):\n\ndef climb(n):\n",
       js: "function guard(n) {\n}\n\nfunction climb(n) {\n}\n",
     },
+  },  // ===== Остров хитрецов, глава «Ступени»: приём зовёт приём с числом =====
+  // stair() — шаг вверх и guard(2): дозорный внутри ступеньки. Ступени — лестница по плоскости (вид сверху):
+  // вверх на 1, вправо на 2 (или 3), ниши под концом каждой ступени. В «Подрывнике» — D (подрывник, корона):
+  // бросает динамит на 2–3 клетки по прямой, путь лестницы его линий не касается; корона — подобраться вплотную мимо красных клеток.
+  {
+    name: "Ступени дозора",
+    chapter: 20,
+    isle: 5,
+    funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
+    newFn: true,
+    after: "Дозор: испытание",
+    goal: "Новое: приём зовёт приём с числом. Ступенька stair() — шаг вверх и guard(1): дозорный идёт вправо и смотрит вниз. Но ступени широкие — в две клетки. Поменяй в stair() guard(1) на guard(2).",
+    commands: ["moveRight", "moveUp", "attack"],
+    ifs: ["enemy"],
+    par: 5, good: 6,
+    allies: [{ at: [4, 3], kind: "pawn", v: [0] }, { at: [2, 4], kind: "archer", v: [1] }, { at: [6, 2], kind: "pawn", v: [1] }],
+    maps: [
+      ["######..E", "####...##", "##...#G##", "...######", "S#G######"],
+      ["######..E", "####...##", "##...####", "...#G####", "S########"],
+    ],
+    starter: {
+      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef stair():\n    move_up()\n    guard(1)\n\nwhile True:\n    stair()\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction stair() {\n  moveUp();\n  guard(1);\n}\n\nwhile (true) {\n  stair();\n}\n",
+    },
   },
+  {
+    name: "Своя ступенька",
+    chapter: 20,
+    isle: 5,
+    funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
+    after: "Ступени дозора",
+    goal: "Ступени ещё шире — в три клетки. Приём stair() пустой: допиши в него шаг вверх и guard(3).",
+    commands: ["moveRight", "moveUp", "attack"],
+    ifs: ["enemy"],
+    par: 5, good: 6,
+    allies: [{ at: [6, 3], kind: "archer", v: [0] }, { at: [3, 4], kind: "pawn", v: [1] }],
+    maps: [
+      ["#########", "######..E", "###....##", "....#####", "S##G#####"],
+      ["#########", "######..E", "###....##", "....##G##", "S########"],
+    ],
+    starter: {
+      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef stair():\n\nwhile True:\n    stair()\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction stair() {\n}\n\nwhile (true) {\n  stair();\n}\n",
+    },
+  },
+  {
+    name: "Вниз по ступеням",
+    chapter: 20,
+    isle: 5,
+    funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
+    sides: true,
+    after: "Своя ступенька",
+    goal: "Ступени ведут вниз, ниши теперь сверху, а дозорный guard(n) смотрит вниз. Поменяй в guard(n) проверку: не «снизу враг», а «сверху враг».",
+    commands: ["moveRight", "moveDown", "attack"],
+    ifs: ["enemy"],
+    par: 5, good: 6,
+    allies: [{ at: [4, 2], kind: "pawn", v: [0] }, { at: [2, 1], kind: "archer", v: [1] }],
+    maps: [
+      ["#########", "S#G######", "...######", "##...####", "####..E##"],
+      ["#########", "S########", "...#G####", "##...####", "####..E##"],
+    ],
+    starter: {
+      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef stair():\n    move_down()\n    guard(2)\n\nwhile True:\n    stair()\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction stair() {\n  moveDown();\n  guard(2);\n}\n\nwhile (true) {\n  stair();\n}\n",
+    },
+  },
+  {
+    name: "Подрывник",
+    chapter: 20,
+    isle: 5,
+    funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
+    loopButton: true,
+    crownPar: 12, crownGood: 14,
+    after: "Вниз по ступеням",
+    goal: "Новый враг — подрывник, фиолетовый гоблин. Красные клетки — куда он докидывает динамит: на одной линии с ним через клетку или две. Путь по ступеням их не задевает: зови stair() в бесконечном цикле. Подрывника можно и победить — кто подберётся к нему вплотную, не наступая на красные клетки, получит корону.",
+    commands: ["moveRight", "moveUp", "moveDown", "attack"],
+    ifs: ["enemy"],
+    par: 5, good: 6,
+    allies: [{ at: [4, 3], kind: "pawn", v: [0] }, { at: [6, 2], kind: "archer", v: [0] }, { at: [2, 4], kind: "archer", v: [1] }, { at: [6, 2], kind: "archer", v: [1] }],
+    maps: [
+      ["######..E", "####....#", "##....#.#", "...##...#", "S#G##..D#"],
+      ["######..E", "####....#", "##....#.#", "...#G...#", "S####..D#"],
+    ],
+    starter: {
+      py: "def guard(n):\n    move_right(n)\n    if enemy_down():\n        attack()\n\ndef stair():\n    move_up()\n    guard(2)\n",
+      js: "function guard(n) {\n  moveRight(n);\n  if (enemyDown()) {\n    attack();\n  }\n}\n\nfunction stair() {\n  moveUp();\n  guard(2);\n}\n",
+    },
+  },
+  {
+    name: "Ступени: испытание",
+    chapter: 20,
+    isle: 5,
+    funcs: true, paramFn: true, nestFns: true, requireFn: true, requireParam: true, requireFnIf: true, requireNest: true,
+    challenge: true,
+    more: true,
+    loopButton: true, ifButton: true, sides: true,
+    after: "Подрывник",
+    goal: "Испытание: оба приёма и программа пустые, три варианта поля. Собери guard(n) — вправо на n и «если снизу враг — удар», stair() — шаг вверх и guard(2), и зови stair() в бесконечном цикле.",
+    commands: ["moveRight", "moveUp", "attack"],
+    ifs: ["enemy"],
+    par: 5, good: 7,
+    allies: [{ at: [6, 2], kind: "pawn", v: [0] }, { at: [2, 4], kind: "archer", v: [1] }, { at: [4, 3], kind: "pawn", v: [2] }],
+    maps: [
+      ["######..E", "####...##", "##...####", "...#G####", "S#G######"],
+      ["######..E", "####...##", "##...#G##", "...#G####", "S########"],
+      ["######..E", "####...##", "##...#G##", "...######", "S#G######"],
+    ],
+    starter: {
+      py: "def guard(n):\n\ndef stair():\n",
+      js: "function guard(n) {\n}\n\nfunction stair() {\n}\n",
+    },
+  },
+
 
 ];
 
@@ -5448,10 +5569,14 @@ const HEART_URL = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http:/
 // обычный — гоблин с факелом (стоит, бьёт вбок, вниз, вверх),
 // крепкий (два удара) — гоблин с рюкзаком динамита (стоит, бросает).
 // Все кадры одного гоблина вырезаны одной рамкой, поэтому при ударе он не "прыгает".
-function goblinSprites(hp, giant, shield) {
+function goblinSprites(hp, giant, shield, bomb) {
   const out = document.createDocumentFragment();
   const mk = (key, k, bottom, dur, cls) => out.appendChild(sprite(key, k, { bottom, dur, delay: cls === "g-idle" ? Math.random() : 0, cls }));
-  if (shield) {
+  if (bomb) {
+    // подрывник — фиолетовый гоблин с мешком динамита, крупнее красного; бросок — свой ряд кадров
+    mk("gp_idle", 0.95, 2, 0.9, "g-idle");
+    mk("gp_side", 0.95, 2, 0.6, "g-atk side down up g-throw");
+  } else if (shield) {
     // щитоносец — чёрный рыцарь из набора: стоит, прикрывшись щитом (этим и отличается от великана), бьёт мечом
     mk("bw_guard", 0.72, -15, 1.6, "g-idle");
     mk("bw_side", 0.72, -15, 0.4, "g-atk side down up");
@@ -5478,7 +5603,9 @@ function goblinSprites(hp, giant, shield) {
 const KNIGHT_HP = 3; // столько ударов гоблина выдерживает рыцарь
 const GIANT_HP = 6;  // сердечек у великана (V на поле)
 const SHIELD_HP = 3; // сердечек у щитоносца (H на поле)
-const hasGiant = (lv) => !lv.arena && (lv.maps || [lv.map]).some((m) => m.some((row) => /[VH]/.test(row)));
+const BOMB_HP = 2;   // сердечек у подрывника (D на поле)
+const BOMB_REACH = [2, 3];   // подрывник бросает динамит, если рыцарь на одной линии с ним в 2–3 клетках
+const hasGiant = (lv) => !lv.arena && (lv.maps || [lv.map]).some((m) => m.some((row) => /[VHD]/.test(row)));
 let hero = { x: 0, y: 0 };
 let running = false;
 let showAll = false, loopViewBtn = null;   // кнопка 🔂/🔁 на поле
@@ -6706,7 +6833,7 @@ ISLE_MAPS[4] = {
 // @@/isle4@@
 // @@isle5@@
 ISLE_MAPS[5] = {
-  nodes: [[150, 490], [190, 490], [230, 490], [250, 450], [210, 430], [150, 430], [90, 410], [90, 350], [150, 350], [210, 350], [270, 330], [270, 250], [230, 230], [190, 190], [230, 170]],
+  nodes: [[150, 490], [190, 490], [230, 490], [250, 450], [210, 430], [150, 430], [90, 410], [90, 350], [150, 350], [210, 350], [270, 330], [270, 270], [230, 230], [190, 230], [170, 190], [210, 150], [250, 150], [290, 150], [310, 110], [270, 110]],
   rows: [
     "....................................",
     "....................................",
@@ -6807,13 +6934,13 @@ ISLE_MAPS[5] = {
     "..................",
     "..................",
     "............#.....",
-    "............#.....",
-    "............#.....",
-    "............#.....",
-    ".........####.....",
-    ".........#........",
-    ".........#........",
-    ".........#####....",
+    "............####..",
+    "...............#..",
+    "........########..",
+    "........#.........",
+    "........#.........",
+    "........#.........",
+    "........######....",
     ".............#....",
     ".............#....",
     ".............#....",
@@ -6848,7 +6975,7 @@ ISLE_MAPS[5] = {
     ["wrock4", 15.6, 26.2, 0.8],
     ["duck", 4.6, 28.4, 1.3],
   ],
-  labels: [["ОТМЕЛЬ", 214, 534], ["ВАЛУНЫ", 150, 390], ["ДОЗОР", 246, 286]],
+  labels: [["ОТМЕЛЬ", 214, 534], ["ВАЛУНЫ", 150, 390], ["ДОЗОР", 300, 214], ["СТУПЕНИ", 124, 112]],
   bank: [["cloud_c", 40, 1440, 0.9], ["cloud_d", -20, 1530, 0.8]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm4",
@@ -9622,7 +9749,7 @@ function buildBoard() {
       // дерево, которое повалит лесоруб, — невысокая ель; по бокам от неё пусто (там стоит лесоруб и падает дерево)
       if (allyAt(x, y)) { tl.over = null; if (tl.ground === "water") tl.ground = "grass"; }
       // прямо под врагом не растёт высокое дерево: его крона закрывала бы ноги, будто враг стоит на дереве
-      if (y > 0 && "GBWVH".includes(map[y - 1][x]) && PROPS[tl.over]?.tall) tl.over = "bush1";
+      if (y > 0 && "GBWVHD".includes(map[y - 1][x]) && PROPS[tl.over]?.tall) tl.over = "bush1";
       for (const e of evs().filter((e) => e.kind === "fell")) {
         const f = fellCells(e);
         if (f.tree[0] === x && f.tree[1] === y) { tl.over = "tree1"; tl.ground = "grass"; }
@@ -9673,23 +9800,25 @@ function buildBoard() {
         enemies.push({ x, y, hp: 1, giant: false, shield: false, job, el: en });
       }
       // Гоблины: G — один удар, B — два удара
-      if (ch === "G" || ch === "B" || ch === "W" || ch === "V" || ch === "H") {
+      if (ch === "G" || ch === "B" || ch === "W" || ch === "V" || ch === "H" || ch === "D") {
         // V — великан: шесть сердечек, бьёт только в ответ и с замахом (его можно победить, если отскакивать)
         // H — щитоносец: три сердечка, спереди удар принимает на щит и бьёт в ответ; уязвим со спины,
         // после каждого пропущенного удара поворачивается к рыцарю. Сам не нападает.
-        const giant = ch === "V", shield = ch === "H";
-        const hp = giant ? GIANT_HP : shield ? SHIELD_HP : ch === "W" ? 5 : ch === "B" ? 2 : 1;
+        // D — подрывник: два сердечка, сам рядом не бьёт, но бросает динамит, если рыцарь с ним на одной
+        // линии в 2–3 клетках и между ними нет стены. Красные клетки на поле — куда долетает динамит.
+        const giant = ch === "V", shield = ch === "H", bomb = ch === "D";
+        const hp = giant ? GIANT_HP : shield ? SHIELD_HP : bomb ? BOMB_HP : ch === "W" ? 5 : ch === "B" ? 2 : 1;
         const en = document.createElement("div");
         en.className = "enemy" + (hp >= 5 ? " big" : "") + (giant ? " giant" : "") + (shield ? " shield" : "");
         en.style.setProperty("--heart", `url("${HEART_URL}")`);
         const ew = document.createElement("div");
         ew.className = "ewrap";
-        ew.appendChild(goblinSprites(hp, giant, shield));
+        ew.appendChild(goblinSprites(hp, giant, shield, bomb));
         en.appendChild(ew);
         en.insertAdjacentHTML("beforeend", `<div class="hp">${"<i class=on></i>".repeat(hp)}</div>`);
         if (giant) en.insertAdjacentHTML("beforeend", `<div class="bang" aria-hidden="true">!</div>`);
         cell.appendChild(en);
-        enemies.push({ x, y, hp, giant, shield, el: en });
+        enemies.push({ x, y, hp, giant, shield, bomb, boss: giant || shield || bomb, el: en });
         if (hp < 5 && actx) { soundBuf("goblin-attack.mp3"); soundBuf("goblin-death.mp3"); soundBuf("sword-hit.mp3"); }   // заранее
       }
       if (ch === "E") {
@@ -9709,6 +9838,17 @@ function buildBoard() {
       boardEl.appendChild(cell);
     });
   });
+  // куда долетает динамит подрывника — красные клетки (пока он жив)
+  for (const e of enemies.filter((e) => e.bomb)) {
+    e.danger = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (isWall(x, y) || !bombReach(e, x, y)) continue;
+      const d = document.createElement("div");
+      d.className = "danger";
+      cellEl[y][x].appendChild(d);
+      e.danger.push(d);
+    }
+  }
   routeEl = document.createElementNS(SVG_NS, "svg");
   routeEl.setAttribute("class", "route");
   routeEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
@@ -10275,8 +10415,11 @@ function setNumberOnLine(n) {
     if (hd) {
       const fr = findFrames(lines.join("\n")).find((f) => f.start === selLine), ind = hd[1].length + INDENT();
       let j = fr ? Math.min(fr.end, lines.length) - 1 : i;
-      while (j > i && !(lines[j].match(/^ */)[0].length === ind && CMD_ON_LINE().test(lines[j]))) j--;
+      // последняя плитка рамки — шаг или вызов приёма (приём в приёме: «🧩 дозорный» и сразу цифра)
+      const code = lines.join("\n"), names = defNames(code).filter((nm) => defParam(code, nm));
+      while (j > i && !(lines[j].match(/^ */)[0].length === ind && (CMD_ON_LINE().test(lines[j]) || countCalls(lines[j], names) > 0))) j--;
       if (j <= i) return;
+      if (setCallArg(lines, j, n)) return;
       i = j;
     }
     lines[i] = (lines[i] ?? "").replace(CMD_ON_LINE(), (m, name, open, args, close) => `${name}(${n === 1 ? "" : n})`);
@@ -10429,6 +10572,15 @@ let allyEls = [];
 // от дерева становится препятствием.
 const fellCells = (e) => ({ tree: e.tree, cutter: [e.tree[0] - e.dir, e.tree[1]], away: [e.tree[0] + e.dir, e.tree[1]],
   block: e.onto ? [e.tree[0] + e.dir, e.tree[1] + 1] : null });
+// Подрывник e достаёт клетку (x, y): та же строка или столбец, 2–3 клетки, между ними нет стены
+function bombReach(e, x, y, wall = isWall) {
+  if (e.x !== x && e.y !== y) return false;
+  const d = Math.abs(e.x - x) + Math.abs(e.y - y);
+  if (d < BOMB_REACH[0] || d > BOMB_REACH[1]) return false;
+  const sx = Math.sign(x - e.x), sy = Math.sign(y - e.y);
+  for (let k = 1; k < d; k++) if (wall(e.x + sx * k, e.y + sy * k)) return false;
+  return true;
+}
 function isWall(x, y) {
   if (y < 0 || y >= H || x < 0 || x >= W) return true;
   return L.map[y][x] === "#";
@@ -10698,7 +10850,7 @@ function buildPlan(code) {
     if (L.calm) return list;   // на Берегу гоблин сам не бьёт: стоит и не пускает
     for (const e of enemies) {
       const k = enemyKey(e.x, e.y);
-      if (e.job || e.giant || e.shield || kHp <= 0 || k === except || !goblinAt(e.x, e.y)) continue;
+      if (e.job || e.giant || e.shield || e.bomb || kHp <= 0 || k === except || !goblinAt(e.x, e.y)) continue;
       if (Math.abs(e.x - pos.x) + Math.abs(e.y - pos.y) !== 1) continue;
       do {
         kHp--;
@@ -10774,6 +10926,7 @@ function buildPlan(code) {
             if (d.dx && hpLeft.get(k) > 0) { facing.set(k, -d.dx); c.hits[c.hits.length - 1].turn = -d.dx; }
             continue;
           }
+          if (en0.bomb) continue;   // подрывник вплотную не бьёт — динамит так близко не бросишь
           if (en0.giant) {
             // по великану: сначала его прошлый замах (если был), потом новый замах, пока он жив
             const h = c.hits[c.hits.length - 1];
@@ -10838,7 +10991,14 @@ function buildPlan(code) {
       // Клетку засады ставить ПОСРЕДИ движения, не там, где кончается команда: там рыцарь
       // останавливается (проверка «если», пауза между командами), и выглядит, будто ждёт динамит.
       // или выходит монах и лечит (плюс сердечко). Каждая срабатывает один раз.
-      const ev = evs().find((e) => e.at[0] === pos.x && e.at[1] === pos.y && !firedEv.has(e));
+      // подрывник: рыцарь встал на его линию в 2–3 клетках — летит динамит (минус сердечко)
+      const bomber = enemies.find((e) => e.bomb && goblinAt(e.x, e.y) && bombReach(e, pos.x, pos.y, wallAt));
+      if (bomber) {
+        kHp--;
+        (c.ev ||= [])[s] = { kind: "bomb", from: [bomber.x, bomber.y], hp: kHp };
+        if (kHp <= 0) { dead = { by: "ambush", bomb: true, cmd: i, step: s, after: true }; break; }
+      }
+      const ev = !bomber && evs().find((e) => e.at[0] === pos.x && e.at[1] === pos.y && !firedEv.has(e));
       if (ev?.kind === "fell") {
         // лесоруб валит дерево; если оно падает на дорогу — там теперь препятствие
         firedEv.add(ev);
@@ -10948,6 +11108,11 @@ const BLOCK_GOALS = {
   "Дозор на подъём": "Дорога поворачивает наверх. Второй приём [[fnhead:2]] шагает вверх, но пока никуда не смотрит. Нажми на плитку [[tile:moveUp:n]] в рамке [[fnhead:2]], потом [[ifbtn]] и [[btn:attack]]: на подъёме ниши справа.",
   "Посчитай посты": "Оба приёма готовы, а программа пустая. Посчитай клетки: дорога идёт вправо, поднимается и снова идёт вправо. Нажимай [[fnbtn:1]] (вправо) или [[fnbtn:2]] (вверх) и после каждой — цифру: сколько клеток до следующей ниши. Останавливайся ровно у ниши: в конце приём смотрит в неё.",
   "Дозор: испытание": "Испытание: оба приёма и программа пустые. Собери [[fnhead:1]]: [[btn:moveRight]], [[nbtn]] и «если сверху враг — удар». Собери [[fnhead:2]]: [[btn:moveUp]], [[nbtn]] и «если справа враг — удар». Потом расставь посты: кнопка приёма и цифра — сколько клеток до ниши. Три варианта поля — одна программа.",
+  "Ступени дозора": "Новое: приём зовёт приём с числом. Ступенька [[fnhead:2]] — шаг вверх и дозорный [[fnhead:1]] вправо. Но в ступеньке дозорный идёт на 1 клетку, а ступени широкие — в две. Нажми на вызов дозорного в рамке [[fnhead:2]] и на [[num:2]].",
+  "Своя ступенька": "Ступени ещё шире — в три клетки. Ступенька [[fnhead:2]] пустая: нажми [[fnhead:2]], потом [[btn:moveUp]], [[fnbtn:1]] и [[num:3]].",
+  "Вниз по ступеням": "Ступени ведут вниз, ниши теперь сверху, а дозорный смотрит вниз. Нажми на рамку «если» в [[fnhead:1]] и на [[side:moveUp]].",
+  "Подрывник": "Новый враг — подрывник, фиолетовый гоблин. Красные клетки — куда он докидывает динамит: на одной линии с ним через клетку или две. Твой путь их не задевает: нажми «🔁 повторять» и [[fnbtn:2]]. Подрывника можно и победить — кто подберётся к нему вплотную, не наступая на красные клетки, получит корону.",
+  "Ступени: испытание": "Испытание: оба приёма и программа пустые, три варианта поля. Собери дозорного [[fnhead:1]] — вправо на [[nbtn]] и «если снизу враг — удар», ступеньку [[fnhead:2]] — шаг вверх и дозорный на две клетки, а в программе нажми «🔁 повторять» и [[fnbtn:2]].",
   // Остров мастеров: свои приёмы
   "Готовый приём": "Нажми [[fnbtn]] 2 раза. Это свой приём: розовая кнопка делает сразу оба шага из рамки [[fnhead]] — целую ступеньку.",
   "Вниз по приёму": "Собери путь: [[fnbtn]] — ступенька, [[btn:moveRight]] и [[num:2]] — дорожка. Приём уже готов, а программа пустая.",
@@ -11822,6 +11987,7 @@ async function knightFalls(why) {
   if (why?.shield) return setStatus("Щит не пробить! Щитоносец отбивает удар и колет в ответ. Спереди его не взять…", "fail");
   if (why?.giant) return setStatus("Великан достал рыцаря! Он бьёт медленно, с замахом: после удара не стой рядом с ним", "fail");
   if (n >= 5) return setStatus("Чёрный рыцарь слишком силён — с ним не справиться. Не подходи к нему: если он впереди, обойди подальше", "fail");
+  if (why?.bomb) return setStatus("Динамит подрывника оказался сильнее: у рыцаря кончились сердечки. Не стой с ним на одной линии — красные клетки обходи", "fail");
   if (why?.ambush) return setStatus("Засада оказалась сильнее: у рыцаря кончились сердечки. Найди путь, где после засады рыцаря успеет подлечить монах", "fail");
   setStatus(why?.hurt
     ? tr("Гоблин выдержал удар и победил рыцаря! У него {n} {w} — бей его столько раз: attack({n})", { n, w: plural(n, "сердечко", "сердечка", "сердечек") })
@@ -11917,6 +12083,7 @@ async function run() {
             e.el.classList.remove("windup");
             if (e.giant) { giantLoot(e.el.parentNode); setStatus("Великан повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
             if (e.shield) { giantLoot(e.el.parentNode); setStatus("Щитоносец повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
+            if (e.bomb) { giantLoot(e.el.parentNode); setStatus("Подрывник повержен! Это корона 👑 — осталось дойти до выхода", "win"); (e.danger || []).forEach((d) => d.classList.add("gone")); }
             if (L.first) giantLoot(e.el.parentNode, false);   // гоблин стащил монеты — они разлетаются
             // облачко пыли из набора: проигрывается один раз
             const pf = sprite("poof", e.giant ? 1.6 : e.shield ? 1.3 : 1.1, { bottom: 0, cls: "poof" });
@@ -12043,10 +12210,10 @@ async function run() {
       if (ev?.kind === "fell") {
         // лесоруб валит дерево — рыцарь идёт дальше, а перед проверкой «если» дождётся, пока оно упадёт
         shotPending = Promise.all([shotPending, playFell(ev)]);
-      } else if (ev?.kind === "shot") {
+      } else if (ev?.kind === "shot" || ev?.kind === "bomb") {
         // засада: гоблин бросает динамит на ходу — рыцарь не останавливается
         shotPending = Promise.all([shotPending, playShot(ev)]);
-        if (p.dead?.by === "ambush" && p.dead.cmd === i && p.dead.step === s) { await shotPending; await knightFalls({ ambush: true }); return finish(); }
+        if (p.dead?.by === "ambush" && p.dead.cmd === i && p.dead.step === s) { await shotPending; await knightFalls({ ambush: true, bomb: p.dead.bomb }); return finish(); }
       } else if (ev) {
         // монах лечит — тут рыцарь останавливается: его лечат
         await shotPending;
@@ -12577,7 +12744,7 @@ function win() {
   const wasChapterLocked = L.challenge && !chapterOpen(L.chapter + 1);
   const written = countWrittenCommands(codeEl.value);
   // корона: на уровне был великан, и рыцарь его победил
-  const giants = enemies.filter((e) => e.giant || e.shield), bossShield = giants.some((e) => e.shield);
+  const giants = enemies.filter((e) => e.boss), bossShield = giants.some((e) => e.shield), bossBomb = giants.some((e) => e.bomb);
   const crown = giants.length > 0 && !!plan?.hpLeft && giants.every((e) => (plan.hpLeft.get(enemyKey(e.x, e.y)) || 0) <= 0);
   // путь с победой над великаном длиннее — для него свои пороги звёзд (crownPar / crownGood)
   const par = crown && L.crownPar ? L.crownPar : L.par, good = crown && L.crownGood ? L.crownGood : L.good;
@@ -12605,9 +12772,11 @@ function win() {
     : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
   else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
-  if (crown) note += bossShield ? (newCrown ? tr(" Ты победил щитоносца — у тебя корона!") : tr(" Щитоносец снова повержен."))
+  if (crown) note += bossBomb ? (newCrown ? tr(" Ты победил подрывника — у тебя корона!") : tr(" Подрывник снова повержен."))
+    : bossShield ? (newCrown ? tr(" Ты победил щитоносца — у тебя корона!") : tr(" Щитоносец снова повержен."))
     : newCrown ? tr(" Ты победил великана — у тебя корона!") : tr(" Великан снова повержен.");
-  else if (giants.length && !save.crowns?.[L.name]) note += tr(bossShield ? " Говорят, и щитоносца можно победить. Кто сумеет — получит корону."
+  else if (giants.length && !save.crowns?.[L.name]) note += tr(bossBomb ? " Говорят, и подрывника можно победить — если подобраться к нему вплотную мимо красных клеток. Кто сумеет — получит корону."
+    : bossShield ? " Говорят, и щитоносца можно победить. Кто сумеет — получит корону."
     : " Говорят, великана можно победить. Кто сумеет — получит корону.");
   const nextCh = CHAPTERS[L.chapter + 1];
   const myIsle = L.isle || 1, lastOfIsle = L.name === LAST_OF(myIsle)?.name && !!gateTo(myIsle, myIsle + 1);
@@ -12689,6 +12858,7 @@ const evStage = () => ({ layer: boardEl, before: null, unit: 100 / W, pos: (x, y
 // Выстрел из засады — быстро и на ходу: гоблин выскакивает, швыряет динамит туда, где рыцарь
 // окажется через миг, и прячется. Взрыв большой — задевает рыцаря, даже если упал рядом.
 async function playShot(ev) {
+  if (ev.kind === "bomb") return playBomb(ev);
   const st = evStage(), [bx, by] = ev.from, k = SLOW / speed;
   const g = skActor(st, "tnt", 0.85), dyn = skActor(st, "dyn", 0.9, 0.5), boom = skActor(st, "boom", 1.35, 0.62);
   g.el.classList.add("behind");
@@ -12710,6 +12880,27 @@ async function playShot(ev) {
   await boom.play(0, 9, 32 * k, false);
   boom.el.remove();
 }
+// Подрывник бросает динамит: замах (свои кадры у фигуры на поле), динамит летит дугой к рыцарю, взрыв
+async function playBomb(ev) {
+  const st = evStage(), [bx, by] = ev.from, k = SLOW / speed;
+  const e = enemies.find((e) => e.x === bx && e.y === by);
+  const dyn = skActor(st, "dyn", 0.9, 0.5), boom = skActor(st, "boom", 1.35, 0.62);
+  setStatus("Подрывник бросил динамит! Красные клетки обходи", "", "♥ −1");
+  if (e) { e.el.classList.toggle("face-r", hero.x > bx); e.el.classList.add("throwing"); }
+  await wait(260 * k);
+  const tx = hero.x + 0.5, ty = hero.y + 0.8;
+  dyn.at(bx + 0.5, by + 0.25); dyn.show(true); dyn.play(0, 6, 40);
+  await dyn.arc(tx, ty, 1.1, 240 * k);
+  if (e) e.el.classList.remove("throwing");
+  dyn.el.remove();
+  boom.at(tx, ty + 0.1); boom.show(true);
+  sfx("boom");
+  heroEl.classList.remove("hurt"); void heroEl.offsetWidth; heroEl.classList.add("hurt");
+  drawKnightHp(ev.hp, true);
+  await boom.play(0, 9, 32 * k, false);
+  boom.el.remove();
+}
+
 // Лесоруб валит дерево: последние удары, дерево падает от него. На дорогу — остаётся лежать поперёк
 // неё (опускается в ряд дороги); в другую сторону — ложится в лесу. Лесоруб отходит передохнуть.
 let fellers = [];
@@ -14431,10 +14622,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 157;
+const APP_VERSION = 158;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 158, date: "2026-11-15", text: "Новая глава на Острове хитрецов — «Ступени»: приём зовёт приём с числом. Ступенька — шаг вверх и дозорный на нужное число клеток, а лестницу проходит повторение одной ступеньки. Новый враг — подрывник: он бросает динамит на красные клетки, но если подобраться к нему вплотную мимо них, его можно победить и получить корону.", en: "A new chapter on the Island of Wits — “Steps”: a function calls a function with a number. A step is one move up and the patrol for the right number of cells, and the whole staircase is just one step repeated. A new enemy — the bomber: he throws dynamite onto the red cells, but if you get right next to him without crossing them, you can beat him and win a crown.", big: true },
   { v: 157, date: "2026-11-15", text: "Исправлена ошибка: на уровнях «победи всех гоблинов», где у поля несколько вариантов, победа засчитывалась уже на первом варианте. Теперь, как и везде, одна программа должна пройти все варианты поля.", en: "Fixed a bug: on “defeat all the goblins” levels with several versions of the map, the win counted after the first version already. Now, as everywhere else, one program has to get through every version of the map." },
   { v: 156, date: "2026-11-15", text: "Задания в режиме блоков стали проще: в них больше нет слов из Python и JavaScript — только кнопки, плитки и обычные слова. Уровень «Прыжок на n» теперь называется «Прыжок разной длины» (звёзды сохранились).", en: "Tasks in block mode are simpler now: no more words from Python and JavaScript — only buttons, tiles and plain words. The level “Leap by n” is now called “Leaps of Any Length” (your stars are kept)." },
   { v: 155, date: "2026-11-15", text: "Новая глава на Острове хитрецов — «Дозор»: приём и с числом, и с «если». Дозорный проходит нужное число клеток и сам решает, бить ли того, кто в нише: гоблина — да, своего — нет. Дорога поворачивает наверх — появляется второй дозорный, а в конце обоих нужно собрать самому.", en: "A new chapter on the Island of Wits — “Patrol”: a function with both a number and an “if”. The patrol walks the right number of cells and decides by itself whether to strike whoever is in the alcove: a goblin — yes, a friend — no. The road turns upwards — a second patrol appears, and at the end you build both yourself.", big: true },
