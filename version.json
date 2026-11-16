@@ -1,13 +1,13 @@
 {
- "version": 165,
+ "version": 166,
  "date": "2026-11-16",
  "notes": [
-  "На itch.io на iPad игра больше не выходит из полноэкранного режима, когда прокручиваешь карту острова."
+  "На itch.io на iPad карту острова теперь можно листать пальцем, не выходя из полноэкранного режима."
  ],
  "files": {
   "index.html": {
-   "size": 1051225,
-   "hash": "ae228e229d90fe96"
+   "size": 1053475,
+   "hash": "21ab28b8d8525928"
   },
   "art.js": {
    "size": 1979296,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "cddc64bfed25a2a0"
+   "hash": "2e263c679af316f2"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "On itch.io on iPad, scrolling the island map no longer exits full screen."
+  "On itch.io on iPad you can now swipe the island map without leaving full screen."
  ]
 }

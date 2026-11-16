@@ -54,6 +54,7 @@
 html, body { min-height: 100%; }
 /* во встроенном окне (itch.io) прокручивается body, а не страница — см. EMBED в коде */
 html.embed { height: 100%; overflow: hidden; }
+html.embed #mapview { touch-action: none; }
 html.embed body { height: 100%; margin: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
 body {
   background: var(--bg);
@@ -2153,6 +2154,40 @@ if (EMBED) {
   Object.defineProperty(window, "pageYOffset", y);
   window.scrollTo = (a, b) => box.scrollTo(typeof a === "object" ? a : { left: a, top: b });
   box.addEventListener("scroll", () => window.dispatchEvent(new Event("scroll")), { passive: true });
+  // v166: одного этого мало — на iPad (Safari и Chrome) взмах пальцем по карте Safari всё равно принимает
+  // за жест «свернуть полный экран». Поэтому на карте палец двигаем сами: у карты touch-action: none (свои
+  // жесты прокрутки браузер не запускает), касание тянет body, после отпускания — докатывается и тормозит.
+  // Нажатия на кнопки уровней работают как раньше (touchstart не трогаем).
+  const mv = document.getElementById("mapview");
+  let y0 = null, s0 = 0, trail = [], roll = 0;
+  mv.addEventListener("touchstart", (e) => {
+    cancelAnimationFrame(roll);
+    if (e.touches.length !== 1) { y0 = null; return; }
+    y0 = e.touches[0].clientY; s0 = box.scrollTop; trail = [[y0, performance.now()]];
+  }, { passive: true });
+  mv.addEventListener("touchmove", (e) => {
+    if (y0 === null || e.touches.length !== 1) return;
+    e.preventDefault();
+    const y = e.touches[0].clientY;
+    box.scrollTop = s0 - (y - y0);
+    trail.push([y, performance.now()]);
+    if (trail.length > 6) trail.shift();
+  }, { passive: false });
+  mv.addEventListener("touchend", () => {
+    if (y0 === null) return;
+    y0 = null;
+    const a = trail[0], b = trail[trail.length - 1];
+    let v = b && a && b[1] - a[1] > 0 && performance.now() - b[1] < 80 ? -(b[0] - a[0]) / (b[1] - a[1]) : 0;   // пикс./мс
+    if (Math.abs(v) < 0.15) return;
+    let t = performance.now();
+    const step = (now) => {
+      const dt = Math.min(40, now - t); t = now;
+      box.scrollTop += v * dt;
+      v *= Math.pow(0.996, dt);
+      if (Math.abs(v) > 0.03) roll = requestAnimationFrame(step);
+    };
+    roll = requestAnimationFrame(step);
+  }, { passive: true });
 }
 
 // ===== 0. Язык интерфейса: русский или английский =====
@@ -15274,10 +15309,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 165;
+const APP_VERSION = 166;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 166, date: "2026-11-16", text: "На itch.io на iPad карту острова теперь можно листать пальцем, не выходя из полноэкранного режима.", en: "On itch.io on iPad you can now swipe the island map without leaving full screen." },
   { v: 165, date: "2026-11-16", text: "На itch.io на iPad игра больше не выходит из полноэкранного режима, когда прокручиваешь карту острова.", en: "On itch.io on iPad, scrolling the island map no longer exits full screen." },
   { v: 164, date: "2026-11-16", text: "Новая кнопка на Острове гоблинов теперь называется «＋ другое если», и первый уровень главы «Караулы» — «Другое если».", en: "Small improvements inside the game." },
   { v: 163, date: "2026-11-16", text: "Новый остров — Остров гоблинов! С острова хитрецов туда ведёт коса, но её завалило камнями — посмотри, кто их уберёт. Первая глава «Караулы»: новая кнопка «＋ другое если» — ещё один вопрос, и рыцарь делает одно из трёх: бьёт, сворачивает или идёт дальше.", en: "A new island — Goblin Island! A sandbar leads there from the Island of Wits, but rocks have blocked it — see who clears them. The first chapter, “Sentries”: a new “＋ else if” button asks one more question, and the knight does one of three things: strikes, turns or walks on.", big: true },
