@@ -1343,6 +1343,7 @@ html.still .archi-hero, html.still .archi-cloud { animation: none; }
 }
 .coach-edge[data-dir="down"] { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 .coach-edge[data-dir="up"] { top: calc(14px + env(safe-area-inset-top, 0px)); }
+html.bar-stuck .coach-edge[data-dir="up"] { top: calc(50px + env(safe-area-inset-top, 0px) + var(--tgt, 0px)); }   /* под прилипшей верхней строкой карты */
 .coach-edge[data-dir="up"] svg { rotate: 180deg; }
 .coach-edge svg { width: 18px; height: 18px; fill: none; stroke: var(--torch); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; animation: nudge 1.4s ease-in-out infinite; }
 @keyframes nudge { 0%, 100% { translate: 0 -2px; } 50% { translate: 0 3px; } }
@@ -1373,6 +1374,13 @@ html.still .coach-ring, html.still .coach-hand, html.still .coach-edge svg { ani
   #levelview .snd:not(.gearbtn), #mapview .snd:not(.gearbtn) { padding: 5px 9px; }
 }
 #mapview .toprow { flex-wrap: nowrap; }
+/* Верхняя строка карты (остров, звук, шестерёнка) прилипает к верху экрана: карта открывается там, где стоит рыцарь,
+   а эти кнопки всегда под рукой. Полосы нет — карту ничего не закрывает: когда строка прилипла (класс stuck),
+   кнопки просто становятся плотными и с тенью. В Telegram — ниже его собственных кнопок (--tgt). */
+#mapbar { position: sticky; top: calc(6px + env(safe-area-inset-top, 0px) + var(--tgt, 0px)); z-index: 48; margin-bottom: -14px; pointer-events: none; }
+#mapbar > * { pointer-events: auto; }
+#mapbar.stuck .isle-pick { background: #1c2029f2; border-color: rgba(233, 212, 138, 0.5); box-shadow: 0 4px 12px #0009; }
+#mapbar.stuck .snd { box-shadow: 0 4px 12px #0009; }
 /* Telegram: сверху место занимают кнопки самого Telegram, и полю остаётся меньше. «← Карта» там не нужна —
    у Telegram своя кнопка «Назад», — а кнопки звука и настроек встают справа от названия уровня, без отдельной строки. */
 html.tg #levelview #to-map { display: none; }
@@ -1693,19 +1701,19 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 </div>
 
 <div class="wrap" id="mapview">
-  <header class="map-head">
-    <div class="toprow">
-      <button class="isle-pick" id="isle-pick" aria-label="Карта архипелага: все острова">
-        <svg viewBox="0 0 28 20" aria-hidden="true"><ellipse cx="7" cy="14" rx="6" ry="4" fill="#e9d48a"/><ellipse cx="7" cy="13" rx="4.6" ry="2.9" fill="#6fae4c"/>
-          <ellipse cx="20" cy="8" rx="6.5" ry="4.2" fill="#e9d48a"/><ellipse cx="20" cy="7" rx="5" ry="3.1" fill="#6fae4c"/><ellipse cx="22" cy="16.5" rx="3.6" ry="2.4" fill="#e9d48a"/><ellipse cx="22" cy="16" rx="2.5" ry="1.6" fill="#8fbf5a"/></svg>
-        <span class="isle-txt"><span class="isle-kind">Остров</span><span class="eyebrow" id="isle-name">программистов</span></span><span class="isle-caret" aria-hidden="true">▾</span>
-      </button>
-      <div class="soundbar">
-        <button class="snd snd-music" aria-label="Музыка" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico" d="M9 18V6l10-2v12"/><circle class="ico-fill" cx="7" cy="18" r="2.5"/><circle class="ico-fill" cx="17" cy="16" r="2.5"/><path class="slash" d="M4 4l16 16"/></svg><span>Музыка</span></button>
-        <button class="snd snd-sfx" aria-label="Звуки" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico-fill" d="M4 9h4l5-4v14l-5-4H4z"/><path class="ico" d="M16 9a4 4 0 0 1 0 6"/><path class="slash" d="M4 4l16 16"/></svg><span>Звуки</span></button>
-        <button class="snd gearbtn" aria-label="Настройки"><img class="gear-ic" alt=""><span class="gear-dot" hidden></span></button>
-      </div>
+  <div class="toprow" id="mapbar">
+    <button class="isle-pick" id="isle-pick" aria-label="Карта архипелага: все острова">
+      <svg viewBox="0 0 28 20" aria-hidden="true"><ellipse cx="7" cy="14" rx="6" ry="4" fill="#e9d48a"/><ellipse cx="7" cy="13" rx="4.6" ry="2.9" fill="#6fae4c"/>
+        <ellipse cx="20" cy="8" rx="6.5" ry="4.2" fill="#e9d48a"/><ellipse cx="20" cy="7" rx="5" ry="3.1" fill="#6fae4c"/><ellipse cx="22" cy="16.5" rx="3.6" ry="2.4" fill="#e9d48a"/><ellipse cx="22" cy="16" rx="2.5" ry="1.6" fill="#8fbf5a"/></svg>
+      <span class="isle-txt"><span class="isle-kind">Остров</span><span class="eyebrow" id="isle-name">программистов</span></span><span class="isle-caret" aria-hidden="true">▾</span>
+    </button>
+    <div class="soundbar">
+      <button class="snd snd-music" aria-label="Музыка" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico" d="M9 18V6l10-2v12"/><circle class="ico-fill" cx="7" cy="18" r="2.5"/><circle class="ico-fill" cx="17" cy="16" r="2.5"/><path class="slash" d="M4 4l16 16"/></svg><span>Музыка</span></button>
+      <button class="snd snd-sfx" aria-label="Звуки" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico-fill" d="M4 9h4l5-4v14l-5-4H4z"/><path class="ico" d="M16 9a4 4 0 0 1 0 6"/><path class="slash" d="M4 4l16 16"/></svg><span>Звуки</span></button>
+      <button class="snd gearbtn" aria-label="Настройки"><img class="gear-ic" alt=""><span class="gear-dot" hidden></span></button>
     </div>
+  </div>
+  <header class="map-head">
     <h1 id="map-title">Coder Path</h1>
     <p class="map-progress" id="map-progress"></p>
     <button class="btn reset movebtn" id="sync-move" hidden>📲 Уже играл на другом устройстве? Перенести прогресс</button>
@@ -13384,7 +13392,8 @@ const COACH_SCROLL = 20000;   // если кнопка за краем экра�
 let scrollTimer = null;
 const edgeEl = $("coach-edge");
 
-const offscreen = (r) => (r.bottom < 0 ? "up" : r.top > window.innerHeight ? "down" : r.top < 0 || r.bottom > window.innerHeight ? (r.top < 0 ? "up" : "down") : null);
+const topLine = () => { const bar = $("mapbar"); return !$("mapview").hidden && bar.classList.contains("stuck") ? bar.getBoundingClientRect().bottom : 0; };   // верх видимой карты: под прилипшей строкой
+const offscreen = (r, t = topLine()) => (r.bottom < t ? "up" : r.top > window.innerHeight ? "down" : r.top < t || r.bottom > window.innerHeight ? (r.top < t ? "up" : "down") : null);
 
 function showCoach() {
   const t = coachTarget();
@@ -13430,10 +13439,20 @@ function updateNextIsle() {
   if (!g) return;
   $("next-isle-new").hidden = isleVisited(g.to);
   $("next-isle-text").textContent = ISLE_NAMES[g.to];
-  // в начале страницы — под заголовком и строкой звёзд (ничего не закрывает), при прокрутке — у верхнего края
+  // в начале страницы — под заголовком и строкой звёзд (ничего не закрывает), при прокрутке — под верхней строкой карты
   const head = document.querySelector("#mapview .map-head")?.getBoundingClientRect();
-  btn.style.setProperty("--ni-top", (head ? head.bottom + 4 : 0) + "px");
+  btn.style.setProperty("--ni-top", Math.max(head ? head.bottom + 4 : 0, $("mapbar").getBoundingClientRect().bottom + 6) + "px");
 }
+// Верхняя строка карты прилипла к верху экрана (страница прокручена) — кнопки становятся плотными, с тенью
+function updateMapBar() {
+  const bar = $("mapbar");
+  const stuck = !$("mapview").hidden && scrollY > 4 && bar.getBoundingClientRect().top <= parseFloat(getComputedStyle(bar).top) + 1;
+  bar.classList.toggle("stuck", stuck);
+  document.documentElement.classList.toggle("bar-stuck", stuck);   // плашка «Подсказка выше» встаёт под строку
+}
+window.addEventListener("scroll", updateMapBar, { passive: true });
+window.addEventListener("resize", updateMapBar);
+updateMapBar();
 $("next-isle").addEventListener("click", () => {
   const g = nextGate();
   $("next-isle").hidden = true;
@@ -14733,10 +14752,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 161;
+const APP_VERSION = 162;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 162, date: "2026-11-16", text: "Кнопки вверху карты — острова, звук и настройки — теперь всегда на виду: остаются у верха экрана, когда листаешь карту.", en: "The buttons at the top of the map — islands, sound and settings — now stay in view: they remain at the top of the screen while you scroll the map." },
   { v: 161, date: "2026-11-16", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 160, date: "2026-11-16", text: "На Берегу первого острова теперь идёт бой: войско замка держит укрепление у моста — мечники, копейщики, монах и лучники на башнях, — а гоблины идут на них колонной. Над бойцами видно, что велит им программа. И карта теперь открывается там, где стоит твой рыцарь: искать свой уровень не нужно.", en: "There’s now a battle on the Shore of the first island: the castle’s troops hold a fort by the bridge — swordsmen, lancers, a monk and archers on the towers — while goblins march at them in a column. Above the fighters you can see what their program tells them to do. And the map now opens where your knight stands — no need to look for your level.", big: true },
   { v: 159, date: "2026-11-15", text: "Поле в игре — это вид сверху, и тексты теперь говорят так же: вместо «ступенек», «лестниц», «прыжков» и «подъёмов» — повороты, зигзаги и обходы. Глава «Ступени» теперь называется «Зигзаг», несколько уровней на других островах тоже получили новые имена — звёзды и код сохранились.", en: "The board in the game is seen from above, and now the texts say so too: instead of “stairs”, “steps up”, “leaps” and “climbing” there are turns, zigzags and detours. The “Steps” chapter is now called “Zigzag”, and a few levels on other islands got new names too — your stars and code are kept." },
