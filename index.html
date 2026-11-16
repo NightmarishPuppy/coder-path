@@ -15252,10 +15252,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 168;
+const APP_VERSION = 169;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 169, date: "2026-11-16", text: "Кнопка «Проверить обновление» теперь пишет, что происходит: ищет новую версию, скачивает (сколько и сколько секунд), устанавливает. Если нет интернета или сайт игры не отвечает — так и скажет. А если обновление застряло, игра сама загрузится заново с сайта, прогресс сохранится.", en: "The “Check for update” button now tells you what’s happening: looking for a new version, downloading it (how much and how long), installing. If there’s no internet or the game’s site isn’t responding, it says so. And if an update gets stuck, the game reloads itself from the site, and your progress is kept." },
   { v: 168, date: "2026-11-16", text: "В Telegram обновления игры теперь приходят быстрее: новая версия включается, как только ты на карте острова.", en: "In Telegram, game updates now arrive faster: a new version switches on as soon as you are on the island map." },
   { v: 167, date: "2026-11-16", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 166, date: "2026-11-16", text: "На itch.io на iPad карту острова теперь можно листать пальцем, не выходя из полноэкранного режима.", en: "On itch.io on iPad you can now swipe the island map without leaving full screen." },
@@ -15438,6 +15439,26 @@ addEventListener("keydown", (e) => { if (e.key === "Escape") $("inst-sheet").hid
 let swReg = null, updating = false;
 const fmtSize = (b) => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} ${tr("КБ")}` : `${(b / 1048576).toFixed(1).replace(".", EN_ON ? "." : ",")} ${tr("МБ")}`;
 async function getReg() { if (!swReg && swOk) swReg = await navigator.serviceWorker.getRegistration(); return swReg; }
+// Что лежит на сайте сейчас: version.json мимо всех кэшей. offline — браузер сам знает, что сети нет.
+async function latestInfo(ms = 10000) {
+  if (navigator.onLine === false) return { offline: true };
+  const ctl = typeof AbortController === "function" ? new AbortController() : null;
+  const t = setTimeout(() => ctl?.abort(), ms);
+  try {
+    const r = await fetch(`version.json?check=${Date.now()}`, { cache: "no-store", signal: ctl?.signal });
+    if (!r.ok) throw new Error(r.status);
+    return { info: await r.json() };
+  } catch (e) { return { offline: navigator.onLine === false }; } finally { clearTimeout(t); }
+}
+// Запасной путь, если обычное обновление застряло: убрать фонового помощника и его кэш и загрузить игру
+// с сайта заново (адрес с ?v=… — чтобы и браузер не подсунул старую страницу). Прогресс сохранён заранее.
+const UPD_FAIL_KEY = "coder-path-upd-fail";
+async function hardReload(v) {
+  try { writeSave(); } catch (e) {}
+  try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); } catch (e) {}
+  try { for (const k of await caches.keys()) if (k.startsWith("coder-path-")) await caches.delete(k); } catch (e) {}
+  location.replace(`${location.pathname}?v=${v || Date.now()}${location.hash}`);
+}
 async function installedInfo() {
   try {
     const r = await (await caches.open(`coder-path-v${APP_VERSION}`)).match("version.json", { ignoreSearch: true });
@@ -15500,12 +15521,16 @@ async function applyUpdate() {
   if (!w) { const p = waitInstalled(reg, 90000); reg.update().catch(() => {}); w = await p; }
   if (!w) {
     updating = false;
-    btns.forEach((b) => (b.disabled = false));
-    appStatus("Не получилось загрузить. Проверь интернет и попробуй ещё раз");
-    return;
+    if (navigator.onLine === false) {
+      btns.forEach((b) => (b.disabled = false));
+      return appStatus("Нет интернета. Проверь подключение и попробуй ещё раз");
+    }
+    appStatus("Обычное обновление не прошло — загружаю игру заново с сайта…");
+    return hardReload();
   }
   appStatus("Устанавливаю…");
   w.postMessage("activate"); // новая версия включится, и страница перезагрузится
+  setTimeout(() => { appStatus("Перезапускаю игру…"); hardReload(); }, 8000);   // если сама не перезагрузилась
 }
 document.querySelectorAll(".upd-go").forEach((b) => b.addEventListener("click", () => { sfx("tap"); applyUpdate(); }));
 $("app-check").addEventListener("click", () => { sfx("tap"); checkUpdate(true); });
@@ -16157,28 +16182,66 @@ var tgUpdBusy = false;
 // перезагружается, прогресс сохранён заранее. С v168 и при запуске тоже на карте: раньше, если игрок нажимал
 // «Играть» до конца загрузки, новая версия ждала следующего открытия.
 async function tgAutoUpdate(how = "start") {
-  const say = (t) => { const el = $("tg-upd-msg"); if (el && how === "hand") el.textContent = tr(t); };
-  // самое первое открытие: игра ещё не в кэше, обновлять нечего (иначе лишняя перезагрузка)
-  if (!swOk || !navigator.serviceWorker.controller) return say("Этот браузер не умеет обновлять игру сам — просто обнови страницу");
+  const hand = how === "hand";
+  const say = (t, o) => { const el = $("tg-upd-msg"); if (el && hand) el.textContent = tr(t, o); };
   if (tgUpdBusy) return;
   tgUpdBusy = true;
   try {
-    const reg = await getReg();
-    if (!reg) return;
-    say("Проверяю…");
-    let w = reg.waiting;
-    if (!w && how === "map") return;
-    if (!w) { const p = waitInstalled(reg, how === "hand" ? 40000 : 15000); reg.update().catch(() => {}); w = await p; }
-    if (!w) return say(navigator.onLine === false ? "Нет связи с интернетом. Проверь чуть позже" : tr("У тебя последняя версия игры ({v})", { v: APP_VERSION }));
+    const sw = swOk && !!navigator.serviceWorker.controller;
+    const reg = sw ? await getReg() : null;
+    let w = reg?.waiting || null;
+    if (!w && how === "map") return;   // с уровня на карту — только включить уже скачанное
+    // где игрок: новую версию включаем сами только на заставке или на карте, не посреди уровня
     const onSplash = !$("splash").hidden && !$("splash").classList.contains("gone");
     const onMap = !$("mapview").hidden && $("levelview").hidden && $("archi").hidden && !islandRun && ![...document.querySelectorAll(".sheet")].some((sh) => !sh.hidden);
-    if (how === "hand" || onSplash || onMap) {
-      say("Загружаю обновление…");
-      logEv("set", { b: `Telegram: обновление ставится само (${how})` });
-      writeSave();
-      updating = true; w.postMessage("activate");
+    const can = hand || onSplash || onMap;
+    // 1. есть ли новая версия: спрашиваем сайт напрямую (version.json), а не помощника.
+    // Уже скачанную (w) включаем и без связи — сайт тогда не спрашиваем.
+    let v = 0, got = null;
+    if (!w) {
+      say("Проверяю, есть ли новая версия…");
+      got = await latestInfo(hand ? 15000 : 10000);
+      if (!got.info) return say(got.offline ? "Нет интернета. Проверь подключение и попробуй ещё раз" : "Сайт игры сейчас не отвечает. Попробуй через пару минут");
+      v = got.info.version;
+      if (!(v > APP_VERSION)) return say("У тебя последняя версия игры ({v})", { v: APP_VERSION });
     }
-  } catch (e) {} finally { tgUpdBusy = false; }
+    // без фонового помощника (первое открытие, или Telegram его не дал) — просто загрузить страницу заново
+    if (!reg) { if (can) { say("Загружаю версию {v}…", { v }); hardReload(v); } return; }
+    // 2. скачать новую версию (в фоне, только изменившиеся файлы); вручную — показываем, сколько и как долго
+    if (!w) {
+      const old = await installedInfo();
+      let size = 0;
+      for (const [f, m] of Object.entries(got.info.files || {})) if (old?.files?.[f]?.hash !== m.hash) size += m.size;
+      const t0 = Date.now();
+      const tick = () => say("Нашлась версия {v}. Скачиваю {mb}… {s} с", { v, mb: fmtSize(size), s: Math.round((Date.now() - t0) / 1000) });
+      tick();
+      const timer = hand ? setInterval(tick, 1000) : 0;
+      const p = waitInstalled(reg, hand ? 45000 : 20000);
+      reg.update().catch(() => {});
+      w = await p;
+      clearInterval(timer);
+    }
+    if (!w) {
+      // не скачалось или застряло. Вручную — сразу загружаем игру заново с сайта; само — со второй неудачи подряд
+      let fails = 1;
+      try { fails = (+localStorage.getItem(UPD_FAIL_KEY) || 0) + 1; localStorage.setItem(UPD_FAIL_KEY, fails); } catch (e) {}
+      logEv("set", { b: `Telegram: обновление до ${v} не скачалось (${how}, ${fails})` });
+      if (navigator.onLine === false) return say("Связь с интернетом пропала. Попробуй ещё раз, когда она будет");
+      if (hand || (can && fails >= 2)) { say("Обычное обновление не прошло — загружаю игру заново с сайта…"); hardReload(v); }
+      return;
+    }
+    try { localStorage.removeItem(UPD_FAIL_KEY); } catch (e) {}
+    if (!can) return;   // скачано — включится, когда игрок выйдет на карту
+    // 3. включить: помощник переключается, страница перезагружается (controllerchange → reload).
+    // Если за 8 секунд не перезагрузилась — загружаем заново сами.
+    say("Устанавливаю новую версию…");
+    logEv("set", { b: `Telegram: обновление ставится само (${how})` });
+    writeSave();
+    updating = true; w.postMessage("activate");
+    setTimeout(() => { say("Перезапускаю игру…"); hardReload(v); }, 8000);
+  } catch (e) {
+    say("Что-то пошло не так. Закрой игру и открой снова");
+  } finally { tgUpdBusy = false; }
 }
 // Отступы: в «Fullscreen» сверху вырез экрана и кнопки Telegram (закрыть, «⋯»), снизу — полоска жестов
 function tgInsets() {

@@ -1,21 +1,21 @@
 {
- "version": 168,
+ "version": 169,
  "date": "2026-11-16",
  "notes": [
-  "В Telegram обновления игры теперь приходят быстрее: новая версия включается, как только ты на карте острова."
+  "Кнопка «Проверить обновление» теперь пишет, что происходит: ищет новую версию, скачивает (сколько и сколько секунд), устанавливает. Если нет интернета или сайт игры не отвечает — так и скажет. А если обновление застряло, игра сама загрузится заново с сайта, прогресс сохранится."
  ],
  "files": {
   "index.html": {
-   "size": 1051198,
-   "hash": "21e03b44bb7e2d1a"
+   "size": 1056942,
+   "hash": "202e3047c196b6f3"
   },
   "art.js": {
    "size": 1979296,
    "hash": "fc09075012bef868"
   },
   "lang-en.js": {
-   "size": 124426,
-   "hash": "af6a0fbad0ea2ef9"
+   "size": 125745,
+   "hash": "6baef8f17aa614da"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "eed469ed893bc86a"
+   "hash": "fe067e35c2e2015a"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "In Telegram, game updates now arrive faster: a new version switches on as soon as you are on the island map."
+  "The “Check for update” button now tells you what’s happening: looking for a new version, downloading it (how much and how long), installing. If there’s no internet or the game’s site isn’t responding, it says so. And if an update gets stuck, the game reloads itself from the site, and your progress is kept."
  ]
 }
