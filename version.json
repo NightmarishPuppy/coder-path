@@ -1,21 +1,21 @@
 {
- "version": 163,
+ "version": 164,
  "date": "2026-11-16",
  "notes": [
-  "Новый остров — Остров гоблинов! С острова хитрецов туда ведёт коса, но её завалило камнями — посмотри, кто их уберёт. Первая глава «Караулы»: новая кнопка «＋ иначе если» — ещё один вопрос, и рыцарь делает одно из трёх: бьёт, сворачивает или идёт дальше."
+  "Новая кнопка на Острове гоблинов теперь называется «＋ другое если», и первый уровень главы «Караулы» — «Другое если»."
  ],
  "files": {
   "index.html": {
-   "size": 1048386,
-   "hash": "029caef83aade3d7"
+   "size": 1048832,
+   "hash": "77e8bf03238b9ca3"
   },
   "art.js": {
    "size": 1979296,
    "hash": "fc09075012bef868"
   },
   "lang-en.js": {
-   "size": 124402,
-   "hash": "0111ffa934636a99"
+   "size": 124426,
+   "hash": "af6a0fbad0ea2ef9"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "d47991cba18bafe5"
+   "hash": "428c615f03c3300d"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "A new island — Goblin Island! A sandbar leads there from the Island of Wits, but rocks have blocked it — see who clears them. The first chapter, “Sentries”: a new “＋ else if” button asks one more question, and the knight does one of three things: strikes, turns or walks on."
+  "Small improvements inside the game."
  ]
 }
