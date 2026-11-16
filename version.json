@@ -1,13 +1,13 @@
 {
- "version": 160,
+ "version": 161,
  "date": "2026-11-16",
  "notes": [
-  "На Берегу первого острова теперь идёт бой: войско замка держит укрепление у моста — мечники, копейщики, монах и лучники на башнях, — а гоблины идут на них колонной. Над бойцами видно, что велит им программа. И карта теперь открывается там, где стоит твой рыцарь: искать свой уровень не нужно."
+  "Небольшие улучшения внутри игры."
  ],
  "files": {
   "index.html": {
-   "size": 998315,
-   "hash": "b8b2fdcd15cda50b"
+   "size": 1011235,
+   "hash": "4f7b98b86790b98e"
   },
   "art.js": {
    "size": 1979296,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "c6b7ecf6075f19b2"
+   "hash": "7714c71a90db854b"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "There’s now a battle on the Shore of the first island: the castle’s troops hold a fort by the bridge — swordsmen, lancers, a monk and archers on the towers — while goblins march at them in a column. Above the fighters you can see what their program tells them to do. And the map now opens where your knight stands — no need to look for your level."
+  "Small improvements inside the game."
  ]
 }
