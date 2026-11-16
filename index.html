@@ -306,6 +306,8 @@ html.still .ripple { animation: none; opacity: 0.5; }
 .cbub { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none;
   font: 600 10px/1.2 var(--font-code); color: #e8e4da; padding: 3px 6px; border-radius: 6px;
   background: rgba(15, 17, 23, 0.84); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); animation: cbub 1.7s ease-out forwards; }
+.cbub.tiles { font: 700 13px/1.15 var(--font-body); padding: 2px 5px; letter-spacing: 1px; }
+.cbub.tiles b { margin-right: 3px; } .cbub s { color: #ff8fb3; text-decoration: none; }
 @keyframes cbub { 0% { opacity: 0; transform: translate(-50%, -70%) scale(0.8); } 12% { opacity: 1; transform: translate(-50%, -100%) scale(1); }
   75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -175%); } }
 /* без движения (настройка «Анимация» или просьба системы) */
@@ -6189,12 +6191,12 @@ ISLE_MAPS[1] = {
     "sggggggggggggggggggggggggggggggggs..",
     "sggggggggggggggggggggggggggggggggs..",
     "ssgggggggggggggggggggggggggggggggs..",
-    ".sggggggggggggggggggggggggggggggss..",
-    ".sggggggggggggggggggggggggggggggs...",
-    ".ssgggggggggggggggggggggggggggggs...",
-    "..sssssssssssssssssssssssgggggsss...",
-    "..ssssssssssssssssssssssssssssss....",
-    "...ssssssssssssssssssssssssssss.....",
+    ".sggggggggggggggggggggggggggggggsss.",
+    ".sggggggggggggggggggggggggggggggsss.",
+    ".ssgggggggggggggggggggggggggggggsss.",
+    "..sssssssssssssssssssssssgggggsssss.",
+    "..ssssssssssssssssssssssssssssssss..",
+    "...ssssssssssssssssssssssssssssss...",
     "....ssssssssssssssssssssssssss......",
     ".....ssssssssssssssssssssssss.......",
     ".......sssssssssssssssssssss........",
@@ -6310,29 +6312,28 @@ ISLE_MAPS[1] = {
     ".....#............",
     ".....########.....",
     "............#.....",
-    "............#.....",
-    "....#########.....",
-    "..................",
-    "..................",
-    "..................",
+    "............#..#..",
+    "....#########..=..",
+    "...............=..",
+    "...............=..",
+    "...............=..",
   ],
   ramps: [[13, 37, "r"], [9, 33, "l"]],
   deco: [
     ["castle", 2.8, 49.5, 0.5],
-    ["sheep", 14.6, 46.2, 0.5],
+    ["sheep", 16.7, 42.1, 0.5],
     ["sheepg", 3.2, 43.6, 0.5, true],
-    ["sheep", 15.2, 49.6, 0.45, true],
+    ["sheep", 8.2, 48.9, 0.45, true],
     ["rock2", 7.4, 52.0, 0.8],
     ["stone2", 10.4, 48.7, 0.9],
     ["stone1", 13.0, 51.2, 0.9],
     ["tuft2", 8.1, 45.3, 0.9],
     ["tuft1", 3.8, 48.0, 0.9],
-    ["rock4", 16.0, 44.8, 0.7],
     ["duck", 17.6, 45.8, 1.4],
     ["wrock1", 0.5, 30.0, 0.8],
     ["wrock3", 17.7, 27.3, 0.8],
     ["wrock2", 1.0, 53.0, 0.8],
-    ["wrock4", 16.6, 53.2, 0.8],
+    ["wrock4", 17.3, 51.3, 0.8],
     ["wrock1", 9.0, 18.2, 0.7],
     ["wrock4", 0.5, 17.6, 0.7],
     ["wrock3", 8.6, 21.0, 0.6],
@@ -6372,11 +6373,11 @@ ISLE_MAPS[1] = {
     ["rock1", 10.6, 3.9, 0.5],
     ["gold2", 12.5, 22.1, 0.55],
   ],
-  labels: [[tr("БЕРЕГ"), 300, 1032], [tr("ЛЕС"), 70, 660], [tr("ПЕЩЕРЫ И ШАХТЫ"), 112, 516], [tr("СКАЛЫ ГОБЛИНОВ"), 262, 352]],
-  bank: [["cloud_d", 170, -48, 1.1], ["cloud_b", 520, -70, 1.15], ["cloud_a", 930, -40, 1.25], ["cloud_c", 1110, -30, 1]],
+  labels: [[tr("БЕРЕГ"), 47, 923], [tr("ЛЕС"), 70, 660], [tr("ПЕЩЕРЫ И ШАХТЫ"), 112, 516], [tr("СКАЛЫ ГОБЛИНОВ"), 262, 352]],
+  bank: [["cloud_d", 170, -48, 1.1], ["cloud_b", 520, -70, 1.15], ["cloud_a", 930, -40, 1.25], ["cloud_c", 1110, -30, 1], ["cloud_a", 992, 3372, 0.8], ["cloud_c", 1112, 3404, 0.8]],
   clouds: [["sc_cloud1", 17, 6, 0.1], ["sc_cloud2", 38, 4.5, 0.6]],
   tm: "sc_tm",
-  clear: [],
+  clear: [[13.0, 43.9, 17.6, 51.6]],
 };
 // @@/isle1@@
 // @@isle2@@
@@ -7730,14 +7731,15 @@ function mapEngine(D) {
       frame(t);
     };
     // Прокрутили карту — сразу дорисовать открывшийся кусок (и при «без движения» тоже)
-    let scrollRaf = 0;
+    let scrollRaf = 0, painted = false;               // painted — картинки загружены и карта нарисована первый раз
     addEventListener("scroll", () => {
-      if (scrollRaf || document.getElementById("mapview").hidden || wrap.hidden) return;
+      if (!painted || scrollRaf || document.getElementById("mapview").hidden || wrap.hidden) return;
       scrollRaf = requestAnimationFrame((t) => { scrollRaf = 0; frame(STILL ? 0 : t); });
     }, { passive: true, capture: true });
     return Promise.all([...keys].map((k) => tsImage(k).then((im) => (img[k] = im)))).then(() => {
       paintLand();
       placeBankSides();
+      painted = true;
       frame(0, true);
       requestAnimationFrame(loop);   // при «без движения» цикл ничего не рисует, кадр стоит
       // Суша рисуется один раз. Телефон при нехватке памяти может очистить большой холст
@@ -7770,6 +7772,16 @@ function mapEngine(D) {
   return { startMapScene, RH, RW, groundAt, roadAt, waterAt, trees: mapTrees(), tide: tideApi };
 }
 
+// Карта открывается там, где стоит рыцарь: если его не видно с верха страницы (телефон: остров высокий,
+// а первые уровни внизу), страница сразу прокручена к нему. Виден и так — остаёмся наверху, с заголовком.
+function mapToHero() {
+  const hB = isleSvg()?.querySelector(".map-hero"), wrap = isleWrap();
+  if (!hB || !wrap) return;
+  const r = wrap.getBoundingClientRect(), VH = ISLE_MAPS[curIsle].terr.length * 20;
+  if (!r.height) return;
+  const y = r.top + scrollY + (+hB.getAttribute("y") + 52) * (r.height / VH);   // ноги рыцаря на странице
+  if (y > innerHeight * 0.8) scrollTo(0, Math.max(0, y - innerHeight * 0.55));
+}
 function showView(v) {
   if (v === "map" && !$("levelview").hidden) { logEv("map"); curIsle = isleOf(L); }   // с уровня — на его остров
   $("mapview").hidden = v !== "map";
@@ -7779,6 +7791,7 @@ function showView(v) {
   // фон звучит по месту, где герой: у воды, в лесу, под землёй (см. updatePlace)
   if (typeof updatePlace === "function") updatePlace();
   window.scrollTo(0, 0);
+  if (v === "map") mapToHero();
   if (typeof updateNextIsle === "function") requestAnimationFrame(updateNextIsle);
   if (v === "level" && typeof deskResize === "function") deskResize();   // компьютер: поле — до низа окна
   if ("speechSynthesis" in window) stopSpeech(); // ушли с уровня — замолкаем
@@ -8311,6 +8324,11 @@ const ARCHER = { reach: 5.5, dmg: 1, cd: 1300 };
 //   [{ kind, at, left }]; respawn — откуда выходит подкрепление; spawns — откуда приходят гоблины;
 //   goal — куда идут гоблины, если никого не видят; mount — гора золота { at, sc }; haul — рабочие
 //   { mine, stands, dangerY }; waves — { kinds, min, max, gap: [от, до] }; code — пузыри кода над нашими.
+//   Необязательное: stats — свои сердечки / урон для видов юнитов; talk() — на каком «языке» пузыри
+//   ("blocks" — значки плиток, "py", "js"); smart — лучники сначала бьют по бочкам с динамитом;
+//   skulls — сколько мс лежат черепа; bubPx() — размер шрифта пузыря; bubMax, bubGap() — сколько пузырей сразу
+//   и как далеко друг от друга; bubFit — не вылезать за край карты; zoom — бойцы крупнее; start — гоблины,
+//   которые уже идут, когда бой начинается: [вид, x, y].
 TS.sk_hidle = TS.kidle; TS.sk_hrun = TS.krun; TS.sk_hatk = TS.katk;      // рыцарь-герой (полоски 120×120)
 async function battle(st0, B) {
   const TICK = 120;
@@ -8318,7 +8336,8 @@ async function battle(st0, B) {
   const box = document.createElement("div"); box.className = "skbox";
   st0.layer.insertBefore(box, st0.before || null);
   const st = { ...st0, layer: box, before: null };
-  const A = (k, sc, foot) => skActor(st, k, sc, foot);
+  const ZM = B.zoom || 1;                              // бойцы крупнее обычного (оборона на Берегу)
+  const A = (k, sc, foot) => skActor(st, k, sc * ZM, foot);
   const Z = (a, y, d = 0) => (a.el.style.zIndex = Math.round(y * 10) * 4 + d);
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const walk = B.walk;
@@ -8329,7 +8348,7 @@ async function battle(st0, B) {
   if (B.mount) { mount = A("gmount", B.mount.sc || 0.6, 0.875); mount.at(...B.mount.at); mount.show(true); Z(mount, B.mount.at[1]); }
   const archers = (B.towers || []).map(([tx, ty]) => {
     const tower = A("towerb", 0.75, 232 / 256), a = A("archb", 0.75), front = A("towerbf", 0.75, 232 / 256);
-    const ay = ty - (232 - 118) / 64 * 0.75;                       // площадка башни
+    const ay = ty - (232 - 118) / 64 * 0.75 * ZM;                  // площадка башни
     [[tower, 0], [a, 1], [front, 2]].forEach(([x, d]) => Z(x, ty, d));
     tower.at(tx, ty); front.at(tx, ty); a.at(tx, ay);
     [tower, a, front].forEach((x) => x.show(true));
@@ -8339,7 +8358,8 @@ async function battle(st0, B) {
 
   // ----- эффекты (заготовки, используются по очереди) -----
   const pool = (k, n, sc, foot) => Array.from({ length: n }, () => A(k, sc, foot));
-  const deads = pool("dead", 8, 0.9, 0.75), booms = pool("boom", 4, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5);
+  // черепа — не крупнее голов, даже когда бойцы увеличены
+  const deads = pool("dead", B.skulls ? 16 : 8, ZM > 1 ? 0.95 / ZM : 0.9, 0.75), booms = pool("boom", 4, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5);
   const arrows = pool("arrow", 6, 0.75, 0.5), heals = pool("healfx", 2, 0.8);
   const take = (list) => { const a = list.find((x) => !x.busy) || list[0]; a.busy = true; return a; };
   const free = (a) => { a.busy = false; a.show(false); };
@@ -8348,21 +8368,40 @@ async function battle(st0, B) {
 
   // ----- пузыри кода над нашими: что «программа» юнита сейчас делает -----
   let bubbles = 0;
+  const shown = [];                                   // пузыри на экране: [x, y, до какого времени] — новые не лезут на них
   const say = (u, html, p = 1) => {
-    if (!B.code || bubbles >= 4 || Math.random() > p || now - (u.said || 0) < 2600) return;
+    if (!B.code || bubbles >= (B.bubMax || 4) || Math.random() > p || now - (u.said || 0) < 2600) return;
+    if (B.bubGap) {
+      const [gx, gy] = B.bubGap();
+      for (let i = shown.length - 1; i >= 0; i--) if (shown[i][2] < now) shown.splice(i, 1);
+      if (shown.some(([x, y]) => Math.abs(x - u.x) < gx && Math.abs(y - u.y) < gy)) return;
+      shown.push([u.x, u.y, now + 1500]);
+    }
     u.said = now; bubbles++;
     const el = document.createElement("span");
-    el.className = "cbub"; el.innerHTML = html;
-    const [l, t] = st.pos(B.bubbleX ? Math.min(B.bubbleX[1], Math.max(B.bubbleX[0], u.x)) : u.x, u.y - 1.05);
+    el.className = "cbub" + (talk() === "blocks" ? " tiles" : ""); el.innerHTML = html;
+    if (B.bubPx) el.style.fontSize = B.bubPx() * (talk() === "blocks" ? 1.3 : 1) + "px";
+    const [l, t] = st.pos(B.bubbleX ? Math.min(B.bubbleX[1], Math.max(B.bubbleX[0], u.x)) : u.x, u.y - 1.05 * ZM);
     el.style.left = l + "%"; el.style.top = t + "%"; el.style.zIndex = 9999;
     box.appendChild(el);
+    if (B.bubFit) {                                    // у края карты пузырь сдвигается внутрь — целиком на виду
+      const bw = el.offsetWidth, W = box.clientWidth;
+      el.style.left = Math.min(W - bw / 2 - 3, Math.max(bw / 2 + 3, l / 100 * W)) + "px";
+    }
     setTimeout(() => { el.remove(); bubbles--; }, 1700);
   };
   const SIDE = (dx, dy) => Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
-  const IF = (d) => `<i>if</i> <b>enemy_${d}()</b>:`, CMD = (c) => `<em>${c}()</em>`;
+  // На заставке — строчки Python. На карте — как у игрока на уровнях: в блоках значки плиток
+  // («❓→ ⚔» — если враг справа, бей), в Python и JavaScript — строчки кода.
+  const talk = () => (B.talk ? B.talk() : "py");
+  const ARROW = { right: "→", left: "←", up: "↑", down: "↓" }, ICON = { attack: "⚔", shoot: "🏹", heal: "♥" };
+  const IF = (d) => talk() === "blocks" ? `<b>❓${ARROW[d]}</b><em>⚔</em>`
+    : talk() === "js" ? `<i>if</i> (<b>enemy${d[0].toUpperCase() + d.slice(1)}()</b>)` : `<i>if</i> <b>enemy_${d}()</b>:`;
+  const CMD = (c) => talk() === "blocks" ? (c === "heal" ? `<s>${ICON[c]}</s>` : c === "attack" ? `<em>${ICON[c]}</em>` : ICON[c])
+    : `<em>${c}()</em>${talk() === "js" ? ";" : ""}`;
 
   // ----- юниты -----
-  const units = []; B.units = units;
+  const units = [], TYPES = {}; B.units = units;
   // поставить сразу на место, без плавного переезда с того места, где юнит был раньше (погиб):
   // переход выключен и браузер обязан применить новое место до того, как переход включится снова
   const place = (u) => {
@@ -8371,7 +8410,11 @@ async function battle(st0, B) {
     u.a.show(true);
   };
   const make = (kind, x, y, post) => {
-    const T = SIEGE_UNITS[kind];
+    let T = TYPES[kind];
+    if (!T) {                                          // крупнее боец — дальше достаёт (динамит и лечение — как были)
+      T = TYPES[kind] = { ...SIEGE_UNITS[kind], ...(B.stats && B.stats[kind]) };
+      if (T.dmg && kind !== "tnt") T.reach *= ZM;
+    }
     let u = units.find((v) => v.dead && v.kind === kind && !v.post && !post);
     if (!u) { u = { kind, T, a: A(T.key, T.sc, T.foot) }; units.push(u); }
     Object.assign(u, { x, y, hp: T.hp, dead: false, post, busy: 0, next: 0, anim: "", left: x > 9, fuse: false, tgt: null });
@@ -8412,7 +8455,7 @@ async function battle(st0, B) {
     if (u.kind === "barrel") { boom(u.x, u.y); splash(u.x, u.y, 0.9, u.T.dmg); return; }
     const d = take(deads); d.at(u.x, u.y); Z(d, u.y); d.show(true);
     d.play(0, 7, 110, false);
-    after(2600, () => d.play(1, 7, 120, false).then(() => free(d)));
+    after(B.skulls || 2600, () => d.play(1, 7, 120, false).then(() => free(d)));
     if (u.post) after(8000, () => {                      // подкрепление
       Object.assign(u, { x: B.respawn[0], y: B.respawn[1], hp: u.T.hp, dead: false, busy: 0, anim: "", tgt: null, via: B.via ? [...B.via] : [] });
       place(u);
@@ -8460,7 +8503,7 @@ async function battle(st0, B) {
     u.next = now + u.T.cd; u.busy = now + spec[1] * spec[2];
     anim(u, "atk" + now, spec);
     if (u.T.side === "us") say(u, CMD("attack"), 0.3);
-    after(spec[1] * spec[2] * 0.55, () => { if (!u.dead && dist(u, t) < u.T.reach + 0.45) hurt(t, u.T.dmg); });
+    after(spec[1] * spec[2] * 0.55, () => { if (!u.dead && dist(u, t) < u.T.reach + 0.45 * ZM) hurt(t, u.T.dmg); });
   };
   const throwTnt = (u, t) => {
     if (dist(u, t) > u.T.reach) { if (!stepTo(u, t.x, t.y)) anim(u, "idle"); return; }
@@ -8471,7 +8514,7 @@ async function battle(st0, B) {
     const [x1, y1] = [t.x, t.y];
     after(380, () => {
       if (u.dead) return;
-      const d = take(dyns); d.el.style.transition = "none"; d.at(u.x + (u.left ? -0.3 : 0.3), u.y - 1.0); Z(d, 40); d.show(true); d.play(0, 6, 70);
+      const d = take(dyns); d.el.style.transition = "none"; d.at(u.x + (u.left ? -0.3 : 0.3) * ZM, u.y - 1.0 * ZM); Z(d, 40); d.show(true); d.play(0, 6, 70);
       d.arc(x1, y1, 1.1, 650).then(() => { free(d); boom(x1, y1); splash(x1, y1, 0.75, u.T.dmg); });
     });
   };
@@ -8524,6 +8567,9 @@ async function battle(st0, B) {
     if (now < ar.busy) return;
     let t = null, bd = Infinity;
     for (const v of units) if (!v.dead && v.T.side === "gob") { const d = Math.hypot(v.x - ar.x, v.y - ar.y); if (d < bd) { bd = d; t = v; } }
+    // умный лучник: бочка с динамитом в пределах выстрела — первой, пока она далеко от своих
+    if (B.smart) for (const v of units) if (!v.dead && v.kind === "barrel" && !v.fuse) {
+      const d = Math.hypot(v.x - ar.x, v.y - ar.y); if (d <= AR.reach && (t?.kind !== "barrel" || d < bd)) { bd = d; t = v; } }
     if (!t || bd > AR.reach || now < ar.next) { if (!ar.idle) ar.a.play(0, 6, 150); ar.idle = true; return; }
     ar.idle = false;
     const dx = t.x - ar.x, dy = t.y - ar.y;
@@ -8533,7 +8579,7 @@ async function battle(st0, B) {
     say({ get said() { return ar.said; }, set said(v) { ar.said = v; }, x: ar.x, y: ar.y + 0.2 }, CMD("shoot"), 0.35);
     after(300, () => {
       if (t.dead) return;
-      const a = take(arrows), sx = ar.x + (dx < 0 ? -0.2 : 0.2), sy = ar.y - 0.35, ex = t.x, ey = t.y - 0.35;
+      const a = take(arrows), sx = ar.x + (dx < 0 ? -0.2 : 0.2) * ZM, sy = ar.y - 0.35 * ZM, ex = t.x, ey = t.y - 0.35 * ZM;
       const ax = Math.abs(ex - sx), ay = Math.abs(ey - sy);
       a.sheet(ax >= ay ? "arrow" : ey > sy ? "arrowd" : "arrowu"); a.frame(0, 0); a.face(ax >= ay && ex < sx);
       a.el.style.transition = "none"; a.at(sx, sy); Z(a, 200); a.show(true);
@@ -8543,6 +8589,8 @@ async function battle(st0, B) {
 
   // ----- наши на постах -----
   for (const { kind, at, left } of B.posts) { const u = make(kind, at[0], at[1], at); u.left = u.postLeft = !!left; }
+  // гоблины, которые уже в пути, когда бой начинается (чтобы не ждать первой волны)
+  if (!STILL) for (const [kind, x, y] of B.start || []) make(kind, x, y);
 
   // ----- рабочие: носят самородки на гору, пока гоблинов нет поблизости -----
   if (B.haul) {
@@ -8577,7 +8625,7 @@ async function battle(st0, B) {
     const n = W.min + Math.floor(Math.random() * (W.max - W.min + 1)) + (Math.random() < 0.15 ? 2 : 0);
     B.spawns.forEach((sp, si) => {
       const k = B.spawns.length > 1 ? Math.ceil(n / B.spawns.length) : n;
-      for (let i = 0; i < k; i++) queue.push([now + i * 900 + si * 300, W.kinds[Math.floor(Math.random() * W.kinds.length)], sp]);
+      for (let i = 0; i < k; i++) queue.push([now + i * (W.every || 900) + si * 300, W.kinds[Math.floor(Math.random() * W.kinds.length)], sp]);
     });
     queue.sort((a, b) => a[0] - b[0]);
   };
@@ -8596,8 +8644,8 @@ async function battle(st0, B) {
     const live = units.filter((v) => !v.dead);
     for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
       const a = live[i], b = live[j], d = dist(a, b);
-      if (d > 0.42 || d === 0) continue;
-      const k = (0.42 - d) / d * 0.5, ex = (a.x - b.x) * k, ey = (a.y - b.y) * k;
+      if (d > 0.42 * ZM || d === 0) continue;
+      const k = (0.42 * ZM - d) / d * 0.5, ex = (a.x - b.x) * k, ey = (a.y - b.y) * k;
       if (walk(a.x + ex, a.y + ey)) { a.x += ex; a.y += ey; }
       if (walk(b.x - ex, b.y - ey)) { b.x -= ex; b.y -= ey; }
     }
@@ -8624,6 +8672,43 @@ async function skitSiege(st0, S) {
     haul: { mine: S.mine, stands: S.stands, dangerY: 17 },
     waves: { kinds: ["torch", "torch", "torchp", "torchp", "tnt", "barrel"], min: 2, max: 4, gap: [2500, 6000] } };
   const run = battle(st0, B);
+  S.units = B.units;
+  return run;
+}
+// Оборона у моста на Берегу (первый остров) — то, что игрок видит, как только входит в игру.
+// Войско замка держит укрепление в правом нижнем углу острова: две башни с лучниками, между ними
+// копейщик и мечник, впереди ещё пара, за спиной монах. Гоблины идут колонной по мосту с юга,
+// из-под облака у края карты. Над нашими всплывает то, что «велит программа»: в блоках — значки
+// плиток («❓↓ ⚔» — если враг снизу, бей), в Python / JavaScript — строчки кода.
+// Наши от укрепления не отходят (короткий leash) — встречают врага там, где он сходит с моста;
+// лучники достают до середины моста и первой снимают бочку с динамитом — она взрывается среди гоблинов.
+const BEACH = {
+  zoom: 1.3, towers: [[14.4, 47.2], [16.45, 47.2]], goal: [15.4, 47.6], spawn: [15.5, 53.8], bridgeX: 15.5, respawn: [14.4, 47.5],
+  posts: [{ kind: "war", at: [14.9, 48.25] }, { kind: "lan", at: [16.2, 48.3], left: true },
+    { kind: "lan", at: [14.0, 48.95] }, { kind: "war", at: [16.6, 49.0], left: true }, { kind: "monk", at: [17.0, 47.75], left: true }],
+  rows: [43, 54.5],                                   // какие ряды карты занимает бой (видно ли его на экране)
+};
+async function skitBeach(st0, S) {
+  const E = ISLE_ENG[1], w = st0.layer, RH = ISLE_MAPS[1].terr.length;
+  const onBridge = (x, y) => Math.abs(x - S.bridgeX) < 0.3 && y > 49.3 && y < 54.6;
+  // площадка перед башнями: правее кнопки уровня, южнее башен (они стоят стеной), на земле, не в воде
+  const walk = (x, y) => onBridge(x, y) || (x > 13.45 && y > S.towers[0][1] + 0.2 && y < 50.2
+    && E.groundAt(x, y) === 0 && E.groundAt(x - 0.22, y) === 0 && E.groundAt(x + 0.22, y) === 0);
+  S.walk = walk;
+  // бой идёт, только пока этот угол карты на экране (или рядом) — иначе зря грел бы телефон
+  const mapOn = st0.on;
+  const st = { ...st0, on: () => {
+    if (!mapOn() || !$("splash").hidden) return false;   // под заставкой не идёт: там свой бой
+    const r = w.getBoundingClientRect(), k = r.height / RH;
+    return r.top + S.rows[0] * k < innerHeight + 120 && r.top + S.rows[1] * k > -120;
+  } };
+  const B = { walk, zoom: S.zoom, towers: S.towers, respawn: S.respawn, spawns: [S.spawn], goal: S.goal, posts: S.posts,
+    code: true, talk: () => (uiBlocks ? "blocks" : lang), bubPx: () => Math.min(15, Math.max(10, w.clientWidth / 18 * 0.4)),
+    bubMax: 3, bubGap: () => (uiBlocks ? [3.2, 1.3] : [6, 1.3]), bubFit: true, smart: true, skulls: 6500, archer: { reach: 6.8, cd: 1150 },
+    stats: { war: { hp: 9, leash: 2.3 }, lan: { hp: 9, leash: 2.5 }, monk: { hp: 6 } },
+    waves: { kinds: ["torch", "torch", "torch", "torchp", "torchp", "tnt", "barrel"], min: 5, max: 8, every: 650, gap: [1500, 4000], first: 1200 },
+    start: [["torch", S.bridgeX, 50.5], ["torchp", S.bridgeX, 51.4], ["torch", S.bridgeX, 52.3], ["tnt", S.bridgeX, 53.2]] };
+  const run = battle(st, B);
   S.units = B.units;
   return run;
 }
@@ -8800,7 +8885,8 @@ function skStart(n, w, spec, fn) {
 // Сценки островов — данными: где стоят, куда бегут, куда падает динамит
 const SKIT_PLAN = {
   1: [
-    { name: "бочка-гоблин на лугу", fn: "barrel", at: [15.6, 47.9] },
+    // правый нижний угол: войско замка держит укрепление у моста, гоблины идут по мосту из-под облака
+    { name: "оборона у моста", fn: "beach" },
     // подрывник на вышке скалы гоблинов кидает динамит в уток, которые подплывают по протоке под скалой
     { name: "подрывник на вышке и утки", fn: "ducks", at: [4.25, 12.56],
       lanes: [[[-0.6, 18.3], [2.0, 4.2]], [[18.6, 17.55], [6.5, 7.6]]] },   // мост через протоку — в клетке x 5, под ним не плавают
@@ -8846,6 +8932,9 @@ const SKIT_GEOM = {
   siege: () => { const S = SIEGE, P = S.posts;
     return { stand: [S.mine, ...S.stands, S.mount, [S.mount[0] - 0.8, S.mount[1]], [S.mount[0] + 0.8, S.mount[1]], S.tower, P.war, P.lan, P.monk, S.goal],
       paths: [[S.mine, S.stands[0]], [S.mine, S.stands[1]], [[16.1, 19.7], [16.0, 15.5], S.goal], [P.lan, [15.3, 18.5]], [P.war, [16.4, 18.5]]] }; },
+  beach: () => { const S = BEACH, P = S.posts.map((p) => p.at), head = [S.bridgeX, 49.4];
+    return { stand: [...S.towers, ...S.towers.map(([x, y]) => [x - 0.6, y]), ...S.towers.map(([x, y]) => [x + 0.6, y]), ...P, S.goal, S.respawn, head],
+      paths: [[head, S.goal], [head, P[2]], [head, P[3]], [S.respawn, P[2]], [P[4], P[1]], [[13.8, 49.6], head], [P[0], P[1]]] }; },
   haul: (s) => { const t = haulStand(s); return { stand: [s.door, s.pile, [s.pile[0] - 0.7, s.pile[1]], [s.pile[0] + 0.7, s.pile[1]], [s.pile[0], s.pile[1] - 0.6], t], paths: [[s.door, t]] }; },
   lumber: (s) => { const [tx, ty] = s.tree, cut = [tx - s.d * 0.6, ty], logs = [tx + s.d * 0.6, ty + 0.05];
     return { stand: [s.tree, cut, logs, [tx + s.d * 1.4, ty], s.pile], paths: [[cut, logs], [cut, s.pile]] }; },
@@ -8861,6 +8950,7 @@ const SKIT_FN = {
   ducks: (st, s) => skitDuckHunt(st, s),
   miner: (st, s) => skitMiner(st, s),
   siege: (st) => skitSiege(st, SIEGE),
+  beach: (st) => skitBeach(st, BEACH),
   lumber: (st, s) => skitLumber(st, s),
   builders: (st, s) => skitBuilders(st, s),
 };
@@ -14622,6 +14712,7 @@ $("start-game").addEventListener("click", () => {
   sfx("tap");
   $("splash").classList.add("gone");
   setTimeout(() => { $("splash").hidden = true; stopScene(); }, 600);
+  if (!$("mapview").hidden) { scrollTo(0, 0); mapToHero(); }   // под заставкой страница могла сдвинуться — ставим к рыцарю заново
   scheduleCoach();
 });
 </script>
@@ -14630,10 +14721,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 159;
+const APP_VERSION = 160;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 160, date: "2026-11-16", text: "На Берегу первого острова теперь идёт бой: войско замка держит укрепление у моста — мечники, копейщики, монах и лучники на башнях, — а гоблины идут на них колонной. Над бойцами видно, что велит им программа. И карта теперь открывается там, где стоит твой рыцарь: искать свой уровень не нужно.", en: "There’s now a battle on the Shore of the first island: the castle’s troops hold a fort by the bridge — swordsmen, lancers, a monk and archers on the towers — while goblins march at them in a column. Above the fighters you can see what their program tells them to do. And the map now opens where your knight stands — no need to look for your level.", big: true },
   { v: 159, date: "2026-11-15", text: "Поле в игре — это вид сверху, и тексты теперь говорят так же: вместо «ступенек», «лестниц», «прыжков» и «подъёмов» — повороты, зигзаги и обходы. Глава «Ступени» теперь называется «Зигзаг», несколько уровней на других островах тоже получили новые имена — звёзды и код сохранились.", en: "The board in the game is seen from above, and now the texts say so too: instead of “stairs”, “steps up”, “leaps” and “climbing” there are turns, zigzags and detours. The “Steps” chapter is now called “Zigzag”, and a few levels on other islands got new names too — your stars and code are kept." },
   { v: 158, date: "2026-11-15", text: "Новая глава на Острове хитрецов — «Зигзаг»: приём зовёт приём с числом. Поворот — шаг вверх и дозорный на нужное число клеток, а весь зигзаг — один поворот, повторённый много раз. Новый враг — подрывник: он бросает динамит на красные клетки, но если подобраться к нему вплотную мимо них, его можно победить и получить корону.", en: "A new chapter on the Island of Wits — “Zigzag”: a function calls a function with a number. A turn is one step up and the patrol for the right number of cells, and the whole zigzag is just one turn repeated. A new enemy — the bomber: he throws dynamite onto the red cells, but if you get right next to him without crossing them, you can beat him and win a crown.", big: true },
   { v: 157, date: "2026-11-15", text: "Исправлена ошибка: на уровнях «победи всех гоблинов», где у поля несколько вариантов, победа засчитывалась уже на первом варианте. Теперь, как и везде, одна программа должна пройти все варианты поля.", en: "Fixed a bug: on “defeat all the goblins” levels with several versions of the map, the win counted after the first version already. Now, as everywhere else, one program has to get through every version of the map." },

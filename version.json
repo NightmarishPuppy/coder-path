@@ -1,13 +1,13 @@
 {
- "version": 159,
- "date": "2026-11-15",
+ "version": 160,
+ "date": "2026-11-16",
  "notes": [
-  "Поле в игре — это вид сверху, и тексты теперь говорят так же: вместо «ступенек», «лестниц», «прыжков» и «подъёмов» — повороты, зигзаги и обходы. Глава «Ступени» теперь называется «Зигзаг», несколько уровней на других островах тоже получили новые имена — звёзды и код сохранились."
+  "На Берегу первого острова теперь идёт бой: войско замка держит укрепление у моста — мечники, копейщики, монах и лучники на башнях, — а гоблины идут на них колонной. Над бойцами видно, что велит им программа. И карта теперь открывается там, где стоит твой рыцарь: искать свой уровень не нужно."
  ],
  "files": {
   "index.html": {
-   "size": 988084,
-   "hash": "a6985aca8205c3df"
+   "size": 998315,
+   "hash": "b8b2fdcd15cda50b"
   },
   "art.js": {
    "size": 1979296,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "a6ad00df6e8e3088"
+   "hash": "c6b7ecf6075f19b2"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The board in the game is seen from above, and now the texts say so too: instead of “stairs”, “steps up”, “leaps” and “climbing” there are turns, zigzags and detours. The “Steps” chapter is now called “Zigzag”, and a few levels on other islands got new names too — your stars and code are kept."
+  "There’s now a battle on the Shore of the first island: the castle’s troops hold a fort by the bridge — swordsmen, lancers, a monk and archers on the towers — while goblins march at them in a column. Above the fighters you can see what their program tells them to do. And the map now opens where your knight stands — no need to look for your level."
  ]
 }
