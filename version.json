@@ -1,13 +1,13 @@
 {
- "version": 167,
+ "version": 168,
  "date": "2026-11-16",
  "notes": [
-  "Небольшие улучшения внутри игры."
+  "В Telegram обновления игры теперь приходят быстрее: новая версия включается, как только ты на карте острова."
  ],
  "files": {
   "index.html": {
-   "size": 1049582,
-   "hash": "1394417a40e74f33"
+   "size": 1051198,
+   "hash": "21e03b44bb7e2d1a"
   },
   "art.js": {
    "size": 1979296,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "29b1263410b1b9d7"
+   "hash": "eed469ed893bc86a"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Small improvements inside the game."
+  "In Telegram, game updates now arrive faster: a new version switches on as soon as you are on the island map."
  ]
 }

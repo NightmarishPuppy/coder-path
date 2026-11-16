@@ -8098,7 +8098,10 @@ function mapToHero() {
   if (y > innerHeight * 0.8) scrollTo(0, Math.max(0, y - innerHeight * 0.55));
 }
 function showView(v) {
-  if (v === "map" && !$("levelview").hidden) { logEv("map"); curIsle = isleOf(L); }   // с уровня — на его остров
+  if (v === "map" && !$("levelview").hidden) {   // с уровня — на его остров
+    logEv("map"); curIsle = isleOf(L);
+    if (typeof tg !== "undefined" && tg) setTimeout(() => tgAutoUpdate("map"), 600);   // скачанное обновление в Telegram — сейчас, на карте
+  }
   $("mapview").hidden = v !== "map";
   $("levelview").hidden = v !== "level";
   $("editorview").hidden = v !== "editor";
@@ -15249,10 +15252,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 167;
+const APP_VERSION = 168;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 168, date: "2026-11-16", text: "В Telegram обновления игры теперь приходят быстрее: новая версия включается, как только ты на карте острова.", en: "In Telegram, game updates now arrive faster: a new version switches on as soon as you are on the island map." },
   { v: 167, date: "2026-11-16", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 166, date: "2026-11-16", text: "На itch.io на iPad карту острова теперь можно листать пальцем, не выходя из полноэкранного режима.", en: "On itch.io on iPad you can now swipe the island map without leaving full screen." },
   { v: 165, date: "2026-11-16", text: "На itch.io на iPad игра больше не выходит из полноэкранного режима, когда прокручиваешь карту острова.", en: "On itch.io on iPad, scrolling the island map no longer exits full screen." },
@@ -16103,12 +16107,15 @@ function initTelegram() {
   if ($("splash").hidden || $("splash").classList.contains("gone")) tgWhatsNew();
   else $("start-game").addEventListener("click", tgWhatsNew, { once: true });
   tgAutoUpdate();
-  // Свёрнутая и снова открытая игра не перезапускается — проверяем обновление при возвращении (не чаще раза в минуту)
+  // Свёрнутая и снова открытая игра не перезапускается — проверяем обновление при каждом возвращении
+  // (если свёрнута была хотя бы 15 секунд) и раз в 10 минут, пока игра открыта (Telegram на компьютере
+  // держит её открытой часами). Скачанная новая версия включается, как только игрок на карте — см. tgAutoUpdate.
   let tgHiddenAt = 0;
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) tgHiddenAt = Date.now();
-    else if (tgHiddenAt && Date.now() - tgHiddenAt > 60000) tgAutoUpdate("back");
+    else if (tgHiddenAt && Date.now() - tgHiddenAt > 15000) tgAutoUpdate("back");
   });
+  setInterval(() => { if (!document.hidden) tgAutoUpdate("back"); }, 10 * 60000);
   logEv("set", { b: `Telegram ${tg.platform} ${tg.version}` });
 }
 // Во весь экран на телефонах и планшетах. Настройка «Fullscreen» в BotFather действует не везде:
@@ -16143,8 +16150,12 @@ function tgWhatsNew() {
 // пока на экране заставка (до «Играть»); если игрок уже играет — она включится при следующем открытии.
 var tgUpdBusy = false;
 // how: "start" — при запуске, ставим, пока игрок на заставке;
-//      "back"  — игрок вернулся в свёрнутую игру (Android держит мини-приложение свёрнутым, заставки нет): ставим, если он на карте;
+//      "back"  — игрок вернулся в свёрнутую игру (Android держит мини-приложение свёрнутым, заставки нет) или прошло 10 минут;
+//      "map"   — игрок вышел с уровня на карту: ставим уже скачанную версию, в сеть не ходим;
 //      "hand"  — кнопка «Проверить обновление»: ставим сразу и пишем, что происходит.
+// Кроме «hand», новая версия включается только на заставке или на карте (не посреди уровня) — страница
+// перезагружается, прогресс сохранён заранее. С v168 и при запуске тоже на карте: раньше, если игрок нажимал
+// «Играть» до конца загрузки, новая версия ждала следующего открытия.
 async function tgAutoUpdate(how = "start") {
   const say = (t) => { const el = $("tg-upd-msg"); if (el && how === "hand") el.textContent = tr(t); };
   // самое первое открытие: игра ещё не в кэше, обновлять нечего (иначе лишняя перезагрузка)
@@ -16156,11 +16167,12 @@ async function tgAutoUpdate(how = "start") {
     if (!reg) return;
     say("Проверяю…");
     let w = reg.waiting;
+    if (!w && how === "map") return;
     if (!w) { const p = waitInstalled(reg, how === "hand" ? 40000 : 15000); reg.update().catch(() => {}); w = await p; }
     if (!w) return say(navigator.onLine === false ? "Нет связи с интернетом. Проверь чуть позже" : tr("У тебя последняя версия игры ({v})", { v: APP_VERSION }));
     const onSplash = !$("splash").hidden && !$("splash").classList.contains("gone");
-    const onMap = $("levelview").hidden && $("archi").hidden && ![...document.querySelectorAll(".sheet")].some((sh) => !sh.hidden);
-    if (how === "hand" || (how === "start" && onSplash) || (how === "back" && (onSplash || onMap))) {
+    const onMap = !$("mapview").hidden && $("levelview").hidden && $("archi").hidden && !islandRun && ![...document.querySelectorAll(".sheet")].some((sh) => !sh.hidden);
+    if (how === "hand" || onSplash || onMap) {
       say("Загружаю обновление…");
       logEv("set", { b: `Telegram: обновление ставится само (${how})` });
       writeSave();
