@@ -1,21 +1,21 @@
 {
- "version": 162,
+ "version": 163,
  "date": "2026-11-16",
  "notes": [
-  "Кнопки вверху карты — острова, звук и настройки — теперь всегда на виду: остаются у верха экрана, когда листаешь карту."
+  "Новый остров — Остров гоблинов! С острова хитрецов туда ведёт коса, но её завалило камнями — посмотри, кто их уберёт. Первая глава «Караулы»: новая кнопка «＋ иначе если» — ещё один вопрос, и рыцарь делает одно из трёх: бьёт, сворачивает или идёт дальше."
  ],
  "files": {
   "index.html": {
-   "size": 1013797,
-   "hash": "911b5e27a9e621da"
+   "size": 1048386,
+   "hash": "029caef83aade3d7"
   },
   "art.js": {
    "size": 1979296,
    "hash": "fc09075012bef868"
   },
   "lang-en.js": {
-   "size": 119810,
-   "hash": "81dfe3cdd1ff4308"
+   "size": 124402,
+   "hash": "0111ffa934636a99"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "764881bd2d2a2986"
+   "hash": "d47991cba18bafe5"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The buttons at the top of the map — islands, sound and settings — now stay in view: they remain at the top of the screen while you scroll the map."
+  "A new island — Goblin Island! A sandbar leads there from the Island of Wits, but rocks have blocked it — see who clears them. The first chapter, “Sentries”: a new “＋ else if” button asks one more question, and the knight does one of three things: strikes, turns or walks on."
  ]
 }

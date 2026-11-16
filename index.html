@@ -893,6 +893,8 @@ html.still .tile.err { animation: none; }
 }
 .bif > .ihead .ar { font-family: var(--font-display); font-size: 22px; line-height: 1; }
 .bif > .ihead.else { background: #2c6b55; color: #e9fff6; }
+/* «иначе если» — между «если» (светлая) и «иначе» (тёмная): тоже вопрос, но задаётся, только если ответ выше — «нет» */
+.bif > .ihead.elif { background: #3c9f7b; color: #0c1f17; gap: 4px; padding: 0 8px; font-size: 14px; }
 .bif.err { border-style: dashed; border-color: var(--bad); background: var(--bad-bg); }
 .bif > .ihead.now { box-shadow: 0 0 0 3px var(--torch); }
 .bif > .ihead.yes::before, .bif > .ihead.no::before { position: absolute; top: -9px; right: -6px; padding: 0 5px; border-radius: 8px;
@@ -1087,9 +1089,11 @@ html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation:
 .chipref.h { color: var(--torch); } .chipref.v { color: var(--frost); } .chipref.a { color: var(--sword); } .chipref.g { color: #5fd3a6; } .chipref.l { color: #ff8fb3; }
 .chipref.big { font-family: var(--font-display); font-size: 1.1em; padding: 0 9px; }
 /* картинки кнопок и плиток в тексте задания — ростом со строку текста; строки чуть реже, чтобы картинки не касались соседних */
-#goal:has(.tileref, .chipref, .numref, .ifref, .toolref, .ifbtnref, .elsebtnref, .elseref, .fnref, .fnheadref) { line-height: 1.85; }
+#goal:has(.tileref, .chipref, .numref, .ifref, .toolref, .ifbtnref, .elsebtnref, .elseref, .elifref, .fnref, .fnheadref) { line-height: 1.85; }
 #goal .elsebtnref { display: inline-flex; align-items: center; height: 1.55em; padding: 0 0.6em; border-radius: 999px; background: #3a3e4c; color: #e6e8f0;
   font-size: 0.92em; line-height: 1; white-space: nowrap; vertical-align: middle; }
+#goal .elifref { display: inline-flex; align-items: center; gap: 0.3em; height: 1.55em; padding: 0 0.5em; border-radius: 6px; background: #3c9f7b; color: #0c1f17;
+  font-weight: 700; font-size: 0.92em; line-height: 1; white-space: nowrap; vertical-align: middle; }
 #goal .elseref { display: inline-flex; align-items: center; height: 1.55em; padding: 0 0.5em; border-radius: 6px; background: #2c6b55; color: #e9fff6;
   font-weight: 700; font-size: 0.92em; line-height: 1; white-space: nowrap; vertical-align: middle; }
 #goal .tile.tileref { min-width: 0; height: 1.55em; padding: 0 0.35em 0 0.25em; gap: 2px; border-radius: 6px; font-size: 1em; line-height: 1;
@@ -1194,6 +1198,9 @@ html.still .mapring { animation: none; }
 .isle-bridge i { position: absolute; background-repeat: no-repeat; background-size: 300% 400%; image-rendering: pixelated;
   transform-origin: 100% 50%; transition: transform 0.18s ease-out; }
 .isle-bridge i.off { transform: scaleX(0); }
+/* завал на косе острова 5 (камни набора поверх карты): подрывник его взрывает — камни пропадают */
+.isle-rocks img { position: absolute; image-rendering: pixelated; pointer-events: none; transition: opacity 0.12s; }
+.isle-rocks img.off { opacity: 0; }
 .runner { position: absolute; z-index: 1; width: 12.2%; aspect-ratio: 1; transform: translate(-50%, -82%); background-repeat: no-repeat;
   background-size: 600% 100%; image-rendering: pixelated; pointer-events: none; animation: spr6 0.6s steps(6) infinite; }
 .runner.idle { background-size: 800% 100%; animation: spr8 1s steps(8) infinite; }
@@ -1747,6 +1754,11 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
     <svg class="isle-svg" viewBox="0 0 360 600" role="img" aria-label="Карта Острова хитрецов"></svg>
     <canvas class="map-clouds" aria-hidden="true"></canvas>
   </div>
+  <div class="mapwrap" data-isle="6" hidden>
+    <canvas class="map-canvas" aria-hidden="true"></canvas>
+    <svg class="isle-svg" viewBox="0 0 360 600" role="img" aria-label="Карта Острова гоблинов"></svg>
+    <canvas class="map-clouds" aria-hidden="true"></canvas>
+  </div>
   <p class="map-toast" id="map-toast" role="status"></p>
   <div class="howto">
     <b>Уже умеешь программировать?</b>
@@ -2070,6 +2082,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
             <button class="chip" id="lb-out" aria-label="Уменьшить отступ строки">меньше</button>
             <button class="chip" id="lb-in" aria-label="Увеличить отступ строки">больше</button>
           </span>
+          <button class="chip" id="lb-elif" hidden>＋ иначе если</button>
           <button class="chip" id="lb-else" hidden>＋ иначе</button>
           <button class="chip" id="lb-what" hidden></button>
           <span class="lb-sides" id="lb-sides" hidden></span>
@@ -2344,6 +2357,8 @@ const CHAPTERS = [
   { name: tr("Валуны"), topic: tr("«если» выбирает приём"), isle: 5 },
   { name: tr("Дозор"), topic: tr("приём с числом и «если»"), isle: 5 },
   { name: tr("Зигзаг"), topic: tr("приём зовёт приём с числом"), isle: 5 },
+  // Шестой остров (isle: 6) — Остров гоблинов: «иначе если» — одно из трёх
+  { name: tr("Караулы"), topic: tr("«иначе если»"), isle: 6 },
 ];
 
 // Уровни по порядку на карте.
@@ -5036,6 +5051,124 @@ const LEVELS = [
       js: "function guard(n) {\n}\n\nfunction turn() {\n}\n",
     },
   },
+  // ===== Остров гоблинов, глава «Караулы»: «иначе если» — одно из трёх =====
+  // Вид сверху: дорога поворачивает вниз (справа стена — шаг вниз; стена бывает в две-три клетки), у каждого
+  // поворота караулит гоблин — сразу справа от клетки, куда рыцарь спустился (раньше его не видно: «если справа враг»
+  // смотрит до стены). Программа: «если справа враг — удар, иначе если справа препятствие — вниз, иначе — вправо».
+  // Почему без «иначе если» не выйдет (тест simpler): крепкий гоблин (B) выдерживает два удара — после одного удара
+  // шаг вправо упрётся в него; стена в две клетки — после шага вниз отдельное «если … иначе вправо» шагнёт в стену;
+  // а «удар 2» рядом со своими (в нишах у поворотов с обычным гоблином) второй удар достаётся своему.
+  {
+    name: "Иначе если",
+    chapter: 21,
+    isle: 6,
+    requireElif: true, newElif: true,
+    elifButton: true, elseButton: true,
+    goal: "Новое: «иначе если» — ещё один вопрос. Рыцарь бьёт, если справа враг, иначе шагает вправо — и упирается в стену на повороте. Выбери строку [[line:2]], нажми [[elifbtn]] — появится «иначе если справа препятствие», — и кнопку [[btn:moveDown]]. Теперь рыцарь делает одно из трёх.",
+    commands: ["moveRight", "moveDown", "attack"],
+    ifs: ["enemy", "wall"],
+    par: 3, good: 4,
+    allies: [{ at: [2, 2], kind: "pawn" }],
+    map: [
+      "S..######",
+      "##.G..###",
+      "#####.###",
+      "#####.B.E",
+      "#########",
+    ],
+    starter: {
+      py: "while True:\n    if enemy_right():\n        attack()\n    else:\n        move_right()\n",
+      js: "while (true) {\n  if (enemyRight()) {\n    attack();\n  } else {\n    moveRight();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Крепкий караул",
+    chapter: 21,
+    isle: 6,
+    requireElif: true,
+    elifButton: true, elseButton: true,
+    after: "Иначе если",
+    goal: "Теперь наоборот: рыцарь сворачивает у стен, но бить не умеет. Выбери строку [[line:2]], нажми [[elifbtn]] — появится «иначе если справа враг», — и кнопку [[btn:attack]]. Крепкий гоблин выдерживает два удара: цикл спросит снова и ударит ещё раз.",
+    commands: ["moveRight", "moveDown", "attack"],
+    ifs: ["wall", "enemy"],
+    par: 3, good: 4,
+    allies: [{ at: [3, 3], kind: "archer", v: [0] }, { at: [3, 2], kind: "pawn", v: [1] }],
+    maps: [
+      ["S.#######", "#.B..####", "####.####", "####.G..E", "#########"],
+      ["S...#####", "###.G.###", "#####.###", "#####.B.E", "#########"],
+    ],
+    starter: {
+      py: "while True:\n    if obstacle_right():\n        move_down()\n    else:\n        move_right()\n",
+      js: "while (true) {\n  if (obstacleRight()) {\n    moveDown();\n  } else {\n    moveRight();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Не та половина",
+    chapter: 21,
+    isle: 6,
+    requireElif: true,
+    elifButton: true, elseButton: true,
+    after: "Крепкий караул",
+    bug: true,
+    goal: "Найди ошибку: в «иначе если» стоит шаг вправо — у стены рыцарь шагает в неё. Нажми на номер строки [[line:5]] и кнопку [[btn:moveDown]].",
+    commands: ["moveRight", "moveDown", "attack"],
+    ifs: ["enemy", "wall"],
+    par: 3, good: 4,
+    allies: [{ at: [0, 2], kind: "archer" }],
+    map: [
+      "S.#######",
+      "#.#######",
+      "#.G..####",
+      "####.B..E",
+      "#########",
+    ],
+    starter: {
+      py: "while True:\n    if enemy_right():\n        attack()\n    elif obstacle_right():\n        move_right()\n    else:\n        move_right()\n",
+      js: "while (true) {\n  if (enemyRight()) {\n    attack();\n  } else if (obstacleRight()) {\n    moveRight();\n  } else {\n    moveRight();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Три половины",
+    chapter: 21,
+    isle: 6,
+    requireElif: true,
+    elifButton: true, elseButton: true,
+    after: "Не та половина",
+    goal: "У «если» нет ни «иначе если», ни «иначе» — без гоблина рыцарь стоит на месте. Выбери строку [[line:2]], нажми [[elifbtn]] и [[btn:moveDown]], потом [[elsebtn]] и [[btn:moveRight]].",
+    commands: ["moveRight", "moveDown", "attack"],
+    ifs: ["enemy", "wall"],
+    par: 3, good: 4,
+    allies: [{ at: [5, 4], kind: "pawn", v: [0] }, { at: [0, 1], kind: "archer", v: [1] }],
+    maps: [
+      ["S...#####", "###.B.###", "#####.###", "#####.G.E", "#########"],
+      ["S.#######", "#.G...###", "#####.###", "#####.B.E", "#########"],
+    ],
+    starter: {
+      py: "while True:\n    if enemy_right():\n        attack()\n",
+      js: "while (true) {\n  if (enemyRight()) {\n    attack();\n  }\n}\n",
+    },
+  },
+  {
+    name: "Караулы: испытание",
+    chapter: 21,
+    isle: 6,
+    requireElif: true,
+    challenge: true,
+    more: true, moreIfs: ["enemy"],
+    loopButton: true, ifButton: true, elifButton: true, elseButton: true,
+    after: "Три половины",
+    goal: "Испытание: программа пустая, три варианта поля, стены у поворотов то в одну клетку, то в две, то в три. Собери: повторять, «если справа враг — удар», «иначе если справа препятствие — вниз», «иначе — вправо».",
+    commands: ["moveRight", "moveDown", "attack"],
+    ifs: ["enemy", "wall"],
+    par: 3, good: 5,
+    allies: [{ at: [3, 3], kind: "pawn", v: [0] }, { at: [0, 2], kind: "archer", v: [1] }, { at: [3, 2], kind: "pawn", v: [2] }],
+    maps: [
+      ["S..######", "##.B.####", "####.####", "####.G..E", "#########"],
+      ["S.#######", "#.#######", "#.G...###", "#####.B.E", "#########"],
+      ["S...#####", "###.G.###", "#####.###", "#####.###", "#####.B.E"],
+    ],
+    starter: { py: "", js: "" },
+  },
 
 
 ];
@@ -5052,6 +5185,7 @@ function btnRefs(html) {
     .replace(/\[\[tile:(\w+):(\d+|n)\]\]/g, (m, n, k) => `<span class="tile tileref ${DIRS[n].axis}"><span class="ar">${DIRS[n].arrow}</span><span class="nn">${k}</span></span>`)
     .replace(/\[\[num:(\d+)\]\]/g, (m, k) => `<span class="numref">${k}</span>`)
     .replace(/\[\[ifhead\]\]/g, () => `<span class="ifref">❓ ${tr("если")} <span class="ar">→</span> ${WHAT_RU[CONDS[levelConds()[0]]?.what || "wall"]}</span>`)
+    .replace(/\[\[ifhead:(\w+):(\w+)\]\]/g, (m, d, w) => `<span class="ifref">❓ ${tr("если")} <span class="ar">${DIRS[d].arrow}</span> ${WHAT_RU[w]}</span>`)
     // [[pages]] или [[pages:3]] — кнопки частей длинной карты, как на поле
     .replace(/\[\[pages(?::(\d))?\]\]/g, (m, k) => `<span class="pagesref">${Array.from({ length: +(k || 2) }, (_, i) => `${i ? "<i></i>" : ""}<b>${i + 1}</b>`).join("")}</span>`)
     // [[side:moveUp]] — зелёная кнопка стороны вопроса «❓↑» из панели выбранной рамки «если»
@@ -5060,6 +5194,9 @@ function btnRefs(html) {
     // [[elsebtn]] — кнопка «＋ иначе» серой панели выбранной строки; [[elsehead]] — заголовок половины «иначе» в рамке
     .replace(/\[\[elsebtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("иначе")}</span>`)
     .replace(/\[\[elsehead\]\]/g, () => `<span class="elseref">${tr("иначе")}</span>`)
+    // [[elifbtn]] — кнопка «＋ иначе если» серой панели; [[elifhead:moveRight:wall]] — заголовок половины «иначе если»
+    .replace(/\[\[elifbtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("иначе если")}</span>`)
+    .replace(/\[\[elifhead(?::(\w+):(\w+))?\]\]/g, (m, d, w) => `<span class="elifref">${tr("иначе если")}${d ? ` <span class="ar">${DIRS[d].arrow}</span>${WHAT_RU[w]}` : ""}</span>`)
     // [[fnbtn]] — розовая кнопка своего приёма (с картинкой того, что в нём), [[fnhead]] — заголовок рамки приёма
     // [[nbtn]] — кнопка «n» (число приёма)
     .replace(/\[\[nbtn\]\]/g, () => `<span class="numref nref">n</span>`)
@@ -5954,6 +6091,7 @@ function themeFor(i) {
   if (lv.isle === 3) return { name: "cave", t: 0.35 };   // Остров рудокопов — шахты
   if (lv.isle === 4) return { name: "beach", t: 0.7 };   // Остров мастеров — луг у мастерских
   if (lv.isle === 5) return { name: "beach", t: 0.25 };  // Остров хитрецов — отмели и песок у лагуны
+  if (lv.isle === 6) return { name: "forest", t: 0.55 }; // Остров гоблинов — лагерь в лесу
   return { name: ["beach", "forest", "cave", "mountain"][lv.chapter] || "mountain", t };
 }
 // Что в клетке: ground — земля (sand, grass, mix, water, rock), over — что стоит сверху
@@ -6881,20 +7019,20 @@ ISLE_MAPS[5] = {
     ".....sggggggggggggggggggggggggggggs.",
     ".....sggggggggggggggggggggggggggggss",
     ".....sgggggggggggggggggggggggggggggs",
-    ".....sgggggggggggggggggggggggggggggs",
-    ".....sgggggggggggggggggggggggggggggs",
-    ".....sgggggggggggggggggggggggggggggs",
-    ".....sgggggggggggggggggggggggggggggs",
-    ".....sgggggggggggggggggggggggggggggs",
-    ".....sgggggggggggggggggggggggggggggs",
-    ".....sgggggggggggggggggggggggggggggs",
-    ".....sgggggggggggggggggggggggggggggs",
-    ".....sgggggggggggggggggggggggggggggs",
-    ".....sggggggggggggggggggggggggggggss",
-    ".....sggggggggggggggggggggggggggggs.",
-    ".....sgggggggggggggggggggggggggggss.",
-    ".....sgggggggggggggggggggggggggggs..",
-    ".....sgggggggggggggggggggggggggggs..",
+    ".....sgggggggggggggggggggggggsssssss",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggsssssss",
+    ".....sgggggggggggggggggggggggsssssss",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggs......",
+    ".....sgggggggggggggggggggggggsssss..",
     ".....sggggggggggggggggggggggggggss..",
     ".....sggggggggggggggggggggggggggs...",
     ".....ssgggggggggggggggggggggggggs...",
@@ -6966,7 +7104,7 @@ ISLE_MAPS[5] = {
     ".............#....",
     ".............#....",
     ".............#....",
-    ".............#....",
+    ".............#####",
     ".............#....",
     "....##########....",
     "....#.............",
@@ -6998,14 +7136,171 @@ ISLE_MAPS[5] = {
     ["duck", 4.6, 28.4, 1.3],
   ],
   labels: [["ОТМЕЛЬ", 214, 534], ["ВАЛУНЫ", 150, 390], ["ДОЗОР", 300, 214], ["ЗИГЗАГ", 124, 112]],
-  bank: [["cloud_c", 40, 1440, 0.9], ["cloud_d", -20, 1530, 0.8]],
+  bank: [["cloud_c", 40, 1440, 0.9], ["cloud_d", -20, 1530, 0.8], ["cloud_c", 1215, 902, 0.8], ["cloud_d", 1228, 980, 0.74]],
   clouds: [["sc_cloud1", 8, 5, 0.25]],
   tm: "sc_tm4",
   clear: [],
-  trees: [["tree1", 15.12747, 12.34798, 0.5761, true], ["tree1", 2.89052, 11.5285, 0.6192, true], ["tree2", 10.96382, 1.19528, 0.61979, true], ["tree3", 14.56276, 3.65822, 0.58611, true], ["bush1", 8.71578, 15.26008, 0.79577, false], ["bush1", 11.61266, 14.84944, 0.75966, false], ["bush1", 13.78889, 1.04315, 0.75834, false], ["tree1", 14.65477, 2.57847, 0.60691, false], ["tree1", 6.93237, 10.48962, 0.54341, true], ["tree2", 5.29986, 11.07708, 0.5945, false], ["bush1", 5.46071, 11.76006, 0.71116, true], ["tree3", 11.592, 2.66425, 0.62596, true], ["tree2", 6.85944, 7.56045, 0.54995, false], ["bush1", 15.99355, 19.44938, 0.77824, true], ["tree3", 5.29879, 9.35038, 0.52201, true], ["bush1", 15.92872, 16.78522, 0.7432, false], ["tree4", 13.80615, 2.99757, 0.58847, true], ["tree3", 6.8647, 13.28113, 0.61978, true], ["tree1", 15.64803, 2.16432, 0.60987, true], ["bush3", 5.3435, 15.21664, 0.76634, false], ["tree3", 3.49746, 12.84348, 0.57037, true], ["bush3", 11.77756, 15.72564, 0.76813, false], ["bush1", 6.54086, 8.55073, 0.80514, true], ["tree3", 10.89836, 9.34535, 0.54728, true], ["tree4", 10.44092, 2.26071, 0.54265, false], ["bush1", 16.78741, 14.89069, 0.73616, false], ["bush1", 17.17383, 16.03449, 0.78575, true], ["bush3", 4.35803, 7.11226, 0.7282, true], ["bush1", 3.58731, 8.00414, 0.80138, false], ["tree3", 4.3329, 11.75578, 0.59009, true], ["tree3", 5.18655, 10.38119, 0.5427, true], ["bush3", 3.67736, 8.89134, 0.79386, true], ["tree3", 4.01123, 11.10068, 0.54348, true], ["tree1", 11.38288, 10.01085, 0.53765, false], ["tree2", 2.98656, 10.00034, 0.58178, true], ["bush1", 5.45248, 7.99207, 0.78079, false], ["tree4", 5.27363, 12.98799, 0.5332, true], ["tree1", 16.69528, 12.51377, 0.54626, false], ["bush1", 12.73861, 19.71697, 0.80968, true], ["bush3", 9.468, 5.86317, 0.81478, true], ["tree3", 15.00626, 16.98538, 0.52504, false], ["tree3", 6.46716, 12.65024, 0.58689, true], ["tree1", 12.34146, 1.30926, 0.6238, false], ["tree2", 6.75843, 11.37933, 0.56034, false], ["tree3", 10.74945, 2.98939, 0.57008, false], ["tree1", 2.38874, 9.21884, 0.6082, true], ["tree3", 15.35322, 17.73099, 0.60921, false], ["tree3", 10.22389, 14.94742, 0.56652, false], ["tree1", 12.19205, 9.48202, 0.59916, false], ["bush1", 9.39109, 4.82612, 0.76843, false], ["tree3", 13.98945, 9.36835, 0.59547, false], ["bush1", 7.12879, 15.89644, 0.72679, false], ["tree4", 14.39176, 1.81379, 0.58561, false], ["bush3", 10.31508, 19.24904, 0.74331, false], ["tree4", 2.37472, 13.0174, 0.5933, false], ["tree1", 6.81198, 9.71319, 0.52673, false], ["bush3", 5.45741, 4.26535, 0.7736, false], ["tree1", 4.10322, 9.71158, 0.57747, true], ["bush1", 15.5635, 14.55073, 0.78139, true], ["tree1", 12.66721, 2.69843, 0.57664, true], ["tree1", 8.39507, 13.32214, 0.63874, true], ["tree2", 15.59041, 3.0932, 0.54783, true], ["bush1", 13.44602, 1.70934, 0.70888, false], ["tree4", 15.64395, 1.02534, 0.58365, true], ["bush3", 15.3754, 15.61211, 0.80718, true], ["tree1", 15.536, 9.21469, 0.53028, false]],
+  trees: [["tree1", 15.12747, 12.34798, 0.5761, true], ["tree1", 2.89052, 11.5285, 0.6192, true], ["tree2", 10.96382, 1.19528, 0.61979, true], ["tree3", 14.56276, 3.65822, 0.58611, true], ["bush1", 8.71578, 15.26008, 0.79577, false], ["bush1", 11.61266, 14.84944, 0.75966, false], ["bush1", 13.78889, 1.04315, 0.75834, false], ["tree1", 14.65477, 2.57847, 0.60691, false], ["tree1", 6.93237, 10.48962, 0.54341, true], ["tree2", 5.29986, 11.07708, 0.5945, false], ["bush1", 5.46071, 11.76006, 0.71116, true], ["tree3", 11.592, 2.66425, 0.62596, true], ["tree2", 6.85944, 7.56045, 0.54995, false], ["bush1", 15.99355, 19.44938, 0.77824, true], ["tree3", 5.29879, 9.35038, 0.52201, true], ["tree4", 13.80615, 2.99757, 0.58847, true], ["tree3", 6.8647, 13.28113, 0.61978, true], ["tree1", 15.64803, 2.16432, 0.60987, true], ["bush3", 5.3435, 15.21664, 0.76634, false], ["tree3", 3.49746, 12.84348, 0.57037, true], ["bush3", 11.77756, 15.72564, 0.76813, false], ["bush1", 6.54086, 8.55073, 0.80514, true], ["tree3", 10.89836, 9.34535, 0.54728, true], ["tree4", 10.44092, 2.26071, 0.54265, false], ["bush3", 4.35803, 7.11226, 0.7282, true], ["bush1", 3.58731, 8.00414, 0.80138, false], ["tree3", 4.3329, 11.75578, 0.59009, true], ["tree3", 5.18655, 10.38119, 0.5427, true], ["bush3", 3.67736, 8.89134, 0.79386, true], ["tree3", 4.01123, 11.10068, 0.54348, true], ["tree1", 11.38288, 10.01085, 0.53765, false], ["tree2", 2.98656, 10.00034, 0.58178, true], ["bush1", 5.45248, 7.99207, 0.78079, false], ["tree4", 5.27363, 12.98799, 0.5332, true], ["tree1", 16.69528, 12.51377, 0.54626, false], ["bush1", 12.73861, 19.71697, 0.80968, true], ["bush3", 9.468, 5.86317, 0.81478, true], ["tree3", 6.46716, 12.65024, 0.58689, true], ["tree1", 12.34146, 1.30926, 0.6238, false], ["tree2", 6.75843, 11.37933, 0.56034, false], ["tree3", 10.74945, 2.98939, 0.57008, false], ["tree1", 2.38874, 9.21884, 0.6082, true], ["tree3", 10.22389, 14.94742, 0.56652, false], ["tree1", 12.19205, 9.48202, 0.59916, false], ["bush1", 9.39109, 4.82612, 0.76843, false], ["tree3", 13.98945, 9.36835, 0.59547, false], ["bush1", 7.12879, 15.89644, 0.72679, false], ["tree4", 14.39176, 1.81379, 0.58561, false], ["bush3", 10.31508, 19.24904, 0.74331, false], ["tree4", 2.37472, 13.0174, 0.5933, false], ["tree1", 6.81198, 9.71319, 0.52673, false], ["bush3", 5.45741, 4.26535, 0.7736, false], ["tree1", 4.10322, 9.71158, 0.57747, true], ["tree1", 12.66721, 2.69843, 0.57664, true], ["tree1", 8.39507, 13.32214, 0.63874, true], ["tree2", 15.59041, 3.0932, 0.54783, true], ["bush1", 13.44602, 1.70934, 0.70888, false], ["tree4", 15.64395, 1.02534, 0.58365, true], ["tree1", 15.536, 9.21469, 0.53028, false]],
   tide: {"path": [[6.1, 24.1], [4.4, 24.6], [2.4, 24.4], [-0.9, 24.7]], "w": 1.3},
 };
 // @@/isle5@@
+// @@isle6@@
+ISLE_MAPS[6] = {
+  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410]],
+  rows: [
+    "....................................",
+    "....................................",
+    "........................ss..........",
+    "..................sssssssss.........",
+    "...............ssssgggggggss........",
+    "......ssssssssssgggggggggggss.......",
+    ".....ssgggggggggggggggggggggs.......",
+    ".....sggggggggggggggggggggggss......",
+    "....ssgggggggggggggggggggggggs......",
+    "...ssggggggggggggggggggggggggss.....",
+    "...sggggggggggggggggggggggggggs.....",
+    "...sggggggggggggggggggggggggggss....",
+    "..ssgggggggggggggggggggggggggggs....",
+    "..sggggggggggggggggggggggggggggss...",
+    "..sgggggggggggggggggggggggggggggss..",
+    "..sggggggggggggggggggggggggggggggs..",
+    "..sggggggggggggggggggggggggggggggs..",
+    "..sggggggggggggggggggggggggggggggss.",
+    ".ssgggggggggggggggggggggggggggggggs.",
+    ".sggggggggggggggggggggggggggggggggs.",
+    ".sggggggggggggggggggggggggggggggggs.",
+    ".sggggggggggggggggggggggggggggggggs.",
+    ".sggggggggggggggggggggggggggggggggss",
+    ".ssggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    "..sggggggggggggggggggggggggggggggggs",
+    ".ssggggggggggggggggggggggggggggggggs",
+    ".sgggggggggggggggggggggggggggggggggs",
+    ".sgggggggggggggggggggggggggggggggggs",
+    ".sggggggggggggggggggggggggggggggggss",
+    ".sggggggggggggggggggggggggggggggggs.",
+    ".sggggggggggggggggggggggggggggggggs.",
+    ".sgggggggggggggggggggggggggggggggss.",
+    ".sgggggggggggggggggggggggggggggggs..",
+    ".sggggggggggggggggggggggggggggggss..",
+    ".sggggggggggggggggggggggggggggggs...",
+    ".sggggggggggggggggggggggggggggggs...",
+    ".sggggggggggggggggggggggggggggggs...",
+    ".ssgggggggggggggggggggggggggggggs...",
+    "..sssssssssssssssssssssssgggggsss...",
+    "..ssssssssssssssssssssssssssssss....",
+    "...ssssssssssssssssssssssssssss.....",
+    "...sssssssssssssssssssssssssss......",
+    "....ssssssssssssssssssssssssss......",
+    ".......sssssssssssssssssssss........",
+    ".........sssssssssssssssss..........",
+    "..........sssssssssssssss...........",
+    "............sssssssssss.............",
+    ".................ssss...............",
+    ".................ssss...............",
+    ".................ssss...............",
+    ".................ssss...............",
+    ".................ssss...............",
+    ".................ssss...............",
+    ".................ssss...............",
+    ".................ssss...............",
+    ".................ssss...............",
+    ".................ssss...............",
+  ],
+  terr: [
+    "..................",
+    "..................",
+    "..................",
+    "......LLLLLL......",
+    "......LLLLLL......",
+    "......LLLLLL......",
+    "......LLLLLL......",
+    "......KKKKKK......",
+    "..................",
+    "...1111111111111..",
+    "...1111111111111..",
+    "...1111111111111..",
+    "...1111111111111..",
+    "...1111111111111..",
+    "...1111111111111..",
+    "...1111111111111..",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+  ],
+  road: [
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    ".......#..........",
+    ".......#..........",
+    ".......#..........",
+    ".......#######....",
+    ".............#....",
+    ".............#....",
+    "....##########....",
+    "....#.............",
+    "....#.............",
+    "....#.............",
+    "....#.............",
+    "....#.............",
+    "....#.............",
+    "....###########...",
+    "..............#...",
+    "..............#...",
+    ".........######...",
+    ".........#........",
+    ".........#........",
+    ".........#........",
+    ".........#........",
+    ".........#........",
+    ".........#........",
+    ".........#........",
+  ],
+  ramps: [],
+  deco: [
+    ["ghouse", 7.3, 4.6, 0.42],
+    ["ghouse", 11.0, 4.3, 0.4, true],
+    ["gwtower", 9.4, 3.7, 0.7],
+    ["goblin", 9.45, 2.66, 0.5, false, 3.71],
+    ["gwtower", 14.6, 10.7, 0.66],
+    ["goblin", 14.65, 9.66, 0.48, true, 10.71],
+    ["gwtower", 2.6, 17.6, 0.66],
+    ["goblin", 2.65, 16.56, 0.48, false, 17.61],
+    ["goblin", 6.4, 14.4, 0.5, true],
+    ["wrock1", 3.4, 26.4, 0.8],
+    ["wrock3", 15.2, 27.0, 0.8],
+    ["wrock2", 0.7, 3.6, 0.7],
+    ["duck", 13.5, 28.2, 1.3],
+    ["tnt", 11.5, 17.4, 0.38],
+    ["rock2", 11.6, 23.7, 0.9],
+    ["rock4", 5.6, 23.4, 1.0],
+    ["rock1", 15.0, 21.5, 0.9],
+  ],
+  labels: [["КАРАУЛЫ", 282, 512]],
+  bank: [["cloud_b", 470, 1800, 1.1], ["cloud_a", 760, 1790, 1.25], ["cloud_d", 1020, 1830, 1.0]],
+  clouds: [["sc_cloud2", 7, 5, 0.25]],
+  tm: "sc_tm",
+  clear: [],
+  trees: [["tree1", 15.12747, 12.34798, 0.5761, true], ["bush1", 4.49162, 9.42724, 0.70139, true], ["tree1", 15.57871, 15.64118, 0.59327, false], ["tree2", 8.71578, 15.26008, 0.53205, false], ["bush3", 15.77264, 7.70413, 0.75706, false], ["tree2", 13.27349, 14.11429, 0.58786, false], ["tree3", 15.09621, 14.95835, 0.5419, false], ["tree3", 13.62213, 5.10737, 0.61298, true], ["tree4", 10.61433, 15.21566, 0.55095, true], ["tree3", 4.49259, 8.21816, 0.52806, false], ["tree3", 3.87063, 10.94032, 0.55912, false], ["tree3", 6.56941, 15.00204, 0.61927, false], ["bush3", 14.56383, 5.19882, 0.79565, true], ["bush1", 15.62509, 11.42355, 0.74176, true], ["tree3", 13.7557, 6.5962, 0.54957, true], ["bush3", 3.54276, 6.66696, 0.78667, true], ["tree2", 5.68521, 10.30625, 0.55111, false], ["bush3", 4.6442, 4.91757, 0.7407, false], ["bush1", 16.78741, 14.89069, 0.73616, false], ["tree1", 12.35306, 14.70861, 0.59137, true], ["bush3", 4.35803, 7.11226, 0.7282, true], ["bush1", 3.58731, 8.00414, 0.80138, false], ["bush1", 13.75202, 17.16156, 0.81962, true], ["bush3", 1.7052, 15.59134, 0.79492, true], ["bush1", 16.37155, 10.88053, 0.73677, true], ["tree2", 4.12752, 10.23381, 0.53934, true], ["tree4", 15.12348, 13.85926, 0.57429, false], ["tree3", 2.07823, 9.42624, 0.52405, false], ["bush1", 2.36683, 18.98507, 0.70003, false], ["tree3", 17.23338, 12.16793, 0.6199, true], ["bush1", 12.65, 2.19114, 0.70008, true], ["tree3", 2.83511, 17.98435, 0.57008, false], ["bush3", 2.70672, 19.82377, 0.76797, false], ["bush1", 9.79602, 14.47769, 0.76856, false], ["tree3", 15.35322, 17.73099, 0.60921, false], ["bush3", 3.37986, 5.38669, 0.75532, true], ["tree3", 13.38946, 4.12185, 0.60018, true], ["tree3", 1.8024, 18.20344, 0.59814, true], ["tree3", 11.56724, 17.71183, 0.60096, false], ["bush1", 6.81125, 17.8102, 0.79775, false], ["bush3", 2.1158, 13.84678, 0.7884, false], ["tree3", 1.49264, 11.13272, 0.62345, true], ["tree3", 6.66952, 14.27491, 0.5965, true], ["tree3", 8.0947, 14.29471, 0.54456, true], ["tree3", 9.59329, 2.20338, 0.59977, false], ["bush3", 2.51506, 5.78371, 0.73211, true], ["tree3", 4.3337, 5.64381, 0.57457, false], ["bush3", 9.67577, 17.97228, 0.71066, true], ["tree2", 11.34056, 14.67636, 0.61718, true], ["bush1", 12.85579, 15.46466, 0.76322, false], ["tree4", 3.60252, 9.0678, 0.5787, true], ["bush1", 2.1004, 7.32802, 0.81048, true], ["tree3", 15.69178, 9.47117, 0.54708, false], ["bush1", 9.57561, 17.23912, 0.77495, false], ["bush1", 15.25371, 6.63753, 0.74559, false], ["tree3", 15.20422, 8.61513, 0.62407, true], ["tree3", 10.39543, 2.99167, 0.63251, true], ["tree3", 14.67316, 7.78503, 0.58337, false], ["bush1", 5.26142, 10.97164, 0.73541, false], ["tree3", 16.85513, 13.47913, 0.63074, true], ["bush3", 7.74787, 17.56003, 0.77118, false], ["tree1", 15.13449, 10.65365, 0.56095, false], ["bush3", 1.80119, 12.75087, 0.81245, false], ["bush1", 2.00751, 12.049, 0.75514, true], ["bush1", 1.01244, 18.68841, 0.7675, false], ["bush3", 2.57996, 10.45287, 0.73298, true], ["bush1", 11.87465, 15.38356, 0.79464, false], ["tree3", 3.18056, 4.24783, 0.57614, false], ["bush1", 16.32019, 17.35279, 0.72829, false], ["bush1", 13.32874, 3.37493, 0.75589, false]],
+};
+// @@/isle6@@
 // Островок заставки (не остров игры): поле боя, замок на плато, мосты в облака по краям
 // @@isle0@@
 ISLE_MAPS[0] = {
@@ -7826,7 +8121,7 @@ function seeded(seed) {
 // ===== Острова на карте =====
 // Каждый остров — своя карта (свой .mapwrap) со своими уровнями. Острова соединяет мост:
 // с вершины первого — вверх в облака, на втором он приходит снизу.
-const ISLE_NAMES = { 1: tr("Остров программистов"), 2: tr("Остров условий"), 3: tr("Остров рудокопов"), 4: tr("Остров мастеров"), 5: tr("Остров хитрецов") };
+const ISLE_NAMES = { 1: tr("Остров программистов"), 2: tr("Остров условий"), 3: tr("Остров рудокопов"), 4: tr("Остров мастеров"), 5: tr("Остров хитрецов"), 6: tr("Остров гоблинов") };
 // Переходы между островами (у острова их может быть несколько): где кнопка (единицы карты), куда ведёт.
 // bridge — мост за край карты (dir: -1 вверх, 1 вниз), за облаками; tunnel — дверь (монастырь, шахта),
 // за ней подземный ход.
@@ -7839,9 +8134,17 @@ const GATES = {
   3: [{ at: [124, 523], door: [124, 507], stand: [176, 503], to: 2, kind: "tunnel", place: "шахта" },
     { at: [130, 50], to: 4, kind: "build", dir: "left", label: { side: "up" } }],
   4: [{ at: [130, 516], to: 3, kind: "bridge", dir: 1 }, { at: [264, 466], to: 5, kind: "ebb", dir: "right", label: { dx: 40, dy: 2 } }],
-  5: [{ at: [124, 482], to: 4, kind: "ebb", dir: "left" }],
+  // blast — проход по косе за край карты, который сначала перегораживает завал из камней: его взрывает
+  // гоблин-подрывник (метил в рыцаря — попал в завал; BLAST). Дальше коса открыта всегда (save.built.b56).
+  5: [{ at: [124, 482], to: 4, kind: "ebb", dir: "left" }, { at: [310, 310], to: 6, kind: "blast", dir: "right", label: { side: "left", dx: -4, dy: -3 } }],
+  6: [{ at: [190, 530], to: 5, kind: "blast", dir: 1 }],
 };
 const gateTo = (from, to) => GATES[from].find((g) => g.to === to);
+// завал на косе острова 5 (переход на остров 6): где камни, где взрыв, откуда прибегает подрывник — см. blastRun
+const BLAST = { isle: 5, row: 15.75,
+  rocks: [["rock2", 16.7, 15.45, 1.5], ["rock4", 16.25, 15.88, 1.8], ["rock3", 16.85, 16.12, 1.3], ["rock2", 15.95, 15.42, 0.95]],
+  boom: [16.4, 15.85], tnt: [17.4, 15.72], from: [18.6, 15.72] };
+const blasted = () => !!save.built?.b56 || isleLevels(6).some(([lv]) => save.stars[lv.name]);
 const LAST_OF = (n) => LEVELS.filter((lv) => (lv.isle || 1) === n && !lv.side).at(-1);   // дополнительные — не конец острова
 const LAST_LEVEL = () => LAST_OF(1);   // «Перевал»
 // вперёд — после испытания последней главы острова; назад — всегда
@@ -7850,6 +8153,7 @@ const bridgeOpen = () => gateOpen(1, 2);
 const gateLockedText = (from) => tr(from === 1 ? "Мост откроется после испытания «{lv}» у ворот крепости"
   : from === 3 ? "Рудокопы построят мост после испытания «{lv}»"
   : from === 4 ? "Отлив начнётся после испытания «{lv}»"
+  : from === 5 ? "Путь на новый остров откроется после испытания «{lv}»"
   : "Монастырь откроется после испытания «{lv}»", { lv: lvName(LAST_OF(from).name) });
 let arrivedFrom = 0;   // с какого острова пришли (рыцарь появится у этих ворот)
 const isleOf = (lv) => lv?.isle || 1;
@@ -7966,7 +8270,7 @@ function renderMap() {
       if (!ok) add(`<use href="#im-lock" x="${px - w / 2 + 6}" y="${py - 7}" width="12" height="13.4"/>`);
       add(`</g>`);
     }
-    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${tr(br.kind === "tunnel" ? "Подземный ход" : br.kind === "ebb" ? "Отмель" : br.kind === "build" && !bridgeBuilt() ? "Построить мост" : "Мост")} ${tr("на")} ${ISLE_NAMES[br.to]}${ok ? "" : tr(", закрыт")}">`);
+    add(`<g class="node${ok ? "" : " locked"}" data-bridge="${br.to}" tabindex="0" role="button" aria-label="${tr(br.kind === "tunnel" ? "Подземный ход" : br.kind === "ebb" ? "Отмель" : br.kind === "blast" ? "Коса" : br.kind === "build" && !bridgeBuilt() ? "Построить мост" : "Мост")} ${tr("на")} ${ISLE_NAMES[br.to]}${ok ? "" : tr(", закрыт")}">`);
     // сияние — SVG-анимация (<animate>): одинаково идёт в Safari, Chrome и Firefox
     if (fwd && ok) {
       const r0 = S / 2 + 3, r1 = r0 * 1.4;
@@ -8026,6 +8330,7 @@ function renderMap() {
   $("stats-open").hidden = !save.dev;
   $("editor-open").hidden = !save.dev;
   if (curIsle === 3) showBuiltBridge();
+  if (curIsle === BLAST.isle) showBlastRocks();
   if (!$("mapview").hidden && typeof updatePlace === "function") updatePlace();   // фон — по месту, где теперь рыцарь
   if (typeof updateNextIsle === "function") requestAnimationFrame(updateNextIsle);
 }
@@ -8939,6 +9244,7 @@ const SKIT_PLAN = {
     { name: "лесоруб у мастерской", fn: "lumber", tree: [4.6, 18.3], d: -1, pile: [6.3, 18.35] },
   ],
   5: [],
+  6: [],
 };
 // что проверять у каждой сценки
 const SKIT_GEOM = {
@@ -8976,7 +9282,7 @@ const SKIT_FN = {
 };
 // Запускаются, когда карта острова показана впервые
 const SKITS = {};
-for (const n of [1, 2, 3, 4, 5]) SKITS[n] = (w) => SKIT_PLAN[n].forEach((s) => skStart(n, w, { ...s, ...SKIT_GEOM[s.fn](s) }, SKIT_FN[s.fn]));
+for (const n of [1, 2, 3, 4, 5, 6]) SKITS[n] = (w) => SKIT_PLAN[n].forEach((s) => skStart(n, w, { ...s, ...SKIT_GEOM[s.fn](s) }, SKIT_FN[s.fn]));
 
 // --- Сценки на поле уровня («в углах», как в CodeCombat) ---
 // Только мирные жители — монах, лесоруб, строитель, овечка: гоблин в углу поля можно принять
@@ -9197,12 +9503,13 @@ let floatTimer = 0;
 // поэтому края уменьшенных карт сливаются с морем архипелага. Выше — облака: место для новых островов.
 const ARCHI = { W: 360, H: 2360, sc: 0.5, pad: 34,                 // pad — море над и под картой острова (единицы карты)
   // остров 4 — над третьим и чуть левее: мост с третьего уходит влево, на четвёртом приходит снизу слева
-  isles: { 1: [52, 1760], 2: [168, 1380], 3: [30, 1010], 4: [6, 640], 5: [176, 622] },       // левый верхний угол уменьшенной карты (без pad)
+  isles: { 1: [52, 1760], 2: [168, 1380], 3: [30, 1010], 4: [6, 640], 5: [176, 622], 6: [176, 262] },       // левый верхний угол уменьшенной карты (без pad)
   // облака над местами будущих островов: [картинка, x центра, y верха, ширина в единицах карты]
-  // остров 5 — справа от четвёртого: коса отлива уходит с четвёртого вправо, на пятый приходит слева
-  clouds: [["cloud_a", 290, 330, 150], ["cloud_c", 330, 400, 100],
-    ["cloud_b", 100, 440, 160], ["cloud_d", 165, 505, 100], ["cloud_c", 60, 520, 80],
-    ["cloud_a", 255, 150, 170], ["cloud_c", 310, 215, 100], ["cloud_b", 190, 240, 90]] };
+  // остров 5 — справа от четвёртого: коса отлива уходит с четвёртого вправо, на пятый приходит слева;
+  // остров 6 — над пятым: коса с пятого уходит вправо в облака, на шестой приходит снизу
+  clouds: [["cloud_b", 100, 440, 160], ["cloud_d", 165, 505, 100], ["cloud_c", 60, 520, 80],
+    ["cloud_a", 80, 270, 150], ["cloud_c", 40, 345, 90],
+    ["cloud_a", 255, 95, 170], ["cloud_c", 310, 160, 100], ["cloud_b", 150, 185, 90]] };
 const MINI = {};
 // уменьшенная карта острова: море с пеной, суша, деревья и постройки, облачный берег;
 // для закрытого острова — та же, но суша серая (море остаётся морем)
@@ -9545,7 +9852,11 @@ async function startIslandRun(to) {
     const needBuild = gA.kind === "build" && !bridgeBuilt();
     const markBuilt = () => { save.built = { ...(save.built || {}), b34: true }; writeSave(); delete MINI[3]; };
     if (from === 4 && to === 3 && !bridgeBuilt()) markBuilt();
-    if (STILL) { if (needBuild) markBuilt(); arrivedFrom = from; curIsle = to; showView("map"); return; }
+    if (STILL) {
+      if (needBuild) markBuilt();
+      if (gA.kind === "blast") save.built = { ...(save.built || {}), b56: true };
+      arrivedFrom = from; curIsle = to; showView("map"); return;
+    }
     buildCurtain().hidden = false;              // прозрачный занавес ловит нажатия, пока идёт сцена
     const svgEl = isleSvg(), hero = svgEl.querySelector(".map-hero");
     const hx = +hero.getAttribute("x") + 2, hy = +hero.getAttribute("y") + 52;
@@ -9553,6 +9864,7 @@ async function startIslandRun(to) {
     svgEl.querySelectorAll("[data-bridge]").forEach((b) => b.setAttribute("visibility", "hidden"));   // кнопки переходов не мешают бегу
     if (gA.kind === "tunnel") return await tunnelRun(from, to, gA, gB, hx, hy);
     if (gA.kind === "ebb") return await ebbRun(from, to, gA, gB, hx, hy);
+    if (gA.kind === "blast") return await blastRun(from, to, gA, gB, hx, hy);
     // 1. Уход: от уровня, где стоит рыцарь, к мосту и за край карты
     const VH = ISLE_MAPS[from].terr.length * 20;
     let a;
@@ -9645,6 +9957,106 @@ async function ebbRun(from, to, gA, gB, hx, hy) {
   const back = EB.tide.go(1, 0, 1800);
   await new Promise((r) => { const w = () => (c.run.dataset.done ? r() : setTimeout(w, 50)); w(); });
   await back;
+  c.run.remove();
+  renderMap();
+  sfx("unlock");
+}
+
+// ===== Завал на косе: переход на Остров гоблинов (остров 5 ↔ остров 6) =====
+// Справа на острове 5 от дороги отходит узкая песчаная коса за край карты, но её перегораживает завал из камней.
+// Когда путь открыт и рыцарь подходит к завалу, с той стороны по косе прибегает гоблин-подрывник и бросает динамит
+// в рыцаря — не докидывает: динамит падает на завал, взрыв, камней нет. Подрывник с испугу убегает обратно в облака,
+// рыцарь — за ним. Завал взорван навсегда (save.built.b56, а на другом устройстве — если на острове 6 есть звёзды).
+// На острове 6 коса приходит снизу. Камни — картинки набора поверх карты (x, y — середина низа, в клетках).
+function blastRocks() {
+  const wrap = isleWrap(BLAST.isle);
+  let box = wrap.querySelector(".isle-rocks");
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "isle-rocks";
+    box.setAttribute("aria-hidden", "true");
+    const VH = ISLE_MAPS[BLAST.isle].terr.length * 20;
+    for (const [k, x, y, sc] of BLAST.rocks) {
+      const [, iw, ih] = TS_INFO[k], w = iw * sc / 64 * 20, h = ih * sc / 64 * 20;
+      const im = new Image();
+      im.src = TS[k]; im.alt = "";
+      im.style.cssText = `left:${(x * 20 - w / 2) / 360 * 100}%;top:${(y * 20 - h) / VH * 100}%;width:${w / 360 * 100}%`;
+      box.appendChild(im);
+    }
+    wrap.insertBefore(box, wrap.querySelector(".isle-svg"));
+  }
+  return [...box.children];
+}
+function showBlastRocks() {
+  if (!ISLE_ENG[BLAST.isle]) return;
+  const on = !blasted();
+  for (const im of blastRocks()) im.classList.toggle("off", !on);
+}
+// край карты, за который уходит переход: вправо / влево — по строке ворот, вверх / вниз — по их столбцу
+function gateEdge(n, g) {
+  const VH = ISLE_MAPS[n].terr.length * 20;
+  return g.dir === "right" ? [430, g.at[1]] : g.dir === "left" ? [-70, g.at[1]] : [g.at[0], g.dir < 0 ? -50 : VH + 50];
+}
+const gateGone = (n, g) => (y, x) => g.dir === "right" ? x > 340 : g.dir === "left" ? x < 20 : g.dir < 0 ? y < 40 : y > ISLE_MAPS[n].terr.length * 20 - 40;
+const runDone = (a) => new Promise((r) => { const w = () => (a.run.dataset.done ? r() : setTimeout(w, 50)); w(); });
+// сам взрыв: подрывник прибегает из облаков по косе, бросает динамит, завал разлетается, подрывник убегает
+async function blastScene(a) {
+  const st = mapStage(isleWrap(BLAST.isle)), B = BLAST;
+  const tnt = skActor(st, "tnt", 0.9), dyn = skActor(st, "dyn", 1, 0.5), boom = skActor(st, "boom", 1.35, 0.6);
+  // выходит из-под облака у края карты (за краем его не видно — там море)
+  tnt.at(...B.from); tnt.face(true); tnt.play(1, 6, 90);
+  setTimeout(() => tnt.show(true), 250);
+  await tnt.move(...B.tnt, 900);
+  tnt.play(0, 6, 130);
+  await sleep(450);
+  await tnt.play(2, 7, 85, false);                  // замах — и бросок в рыцаря
+  dyn.at(B.tnt[0] - 0.45, B.tnt[1] - 1.0); dyn.show(true); dyn.play(0, 6, 70);
+  await dyn.arc(...B.boom, 1.4, 620);               // недолёт: динамит падает на завал
+  dyn.show(false);
+  boom.at(...B.boom); boom.show(true);
+  sfx("boom");
+  save.built = { ...(save.built || {}), b56: true };
+  writeSave();
+  showBlastRocks();                                 // камни разлетелись
+  tnt.face(false); tnt.play(1, 6, 70);              // подрывник с испугу — назад, в облака
+  const away = tnt.move(...B.from, 700);
+  setTimeout(() => tnt.show(false), 380);
+  await boom.play(0, 9, 75, false);
+  boom.show(false);
+  await away;
+  for (const x of [tnt, dyn, boom]) x.el.remove();
+  a.run.className = "runner"; a.run.style.backgroundImage = `url(${TS.krun})`;
+}
+async function blastRun(from, to, gA, gB, hx, hy) {
+  // 1. по дороге к косе; завал ещё стоит — взрыв (рыцарь ждёт у завала)
+  const a = await runAlong(roadPath(from, [hx, hy], gA.at));
+  await runDone(a);
+  if (from === BLAST.isle && !blasted()) {
+    a.run.className = "runner idle"; a.run.style.backgroundImage = `url(${TS.kidle})`;
+    await sleep(300);
+    await blastScene(a);
+    await sleep(250);
+  }
+  if (from !== BLAST.isle && !save.built?.b56) { save.built = { ...(save.built || {}), b56: true }; writeSave(); }
+  a.run.remove();
+  // 2. по косе за край карты, в облака
+  const b = await runAlong([gA.at, gateEdge(from, gA)], gateGone(from, gA));
+  await curtain(true);
+  b.run.remove();
+  // 3. другой остров: рыцарь выходит из-за края по косе к ближнему уровню
+  arrivedFrom = from; curIsle = to;
+  showView("map");
+  await ISLE_ENG[to].ready;
+  if (to === BLAST.isle) showBlastRocks();
+  const hB = isleSvg().querySelector(".map-hero");
+  const tx = +hB.getAttribute("x") + 2, ty = +hB.getAttribute("y") + 52;
+  hB.setAttribute("visibility", "hidden");
+  isleSvg().querySelectorAll("[data-bridge]").forEach((el) => el.setAttribute("visibility", "hidden"));
+  const arrive = runAlong([gateEdge(to, gB), ...roadPath(to, gB.at, [tx, ty])]);
+  await sleep(200);
+  await curtain(false);
+  const c = await arrive;
+  await runDone(c);
   c.run.remove();
   renderMap();
   sfx("unlock");
@@ -10152,22 +10564,22 @@ let moreOpen = false;
 const ARENA_ONLY = ["heal", "goToEnemy"];
 function addLearnedTools(lv, i) {
   if (!lv.more || lv._base) return;
-  lv._base = { commands: [...lv.commands], ifs: [...(lv.ifs || [])], ifButton: !!lv.ifButton, elseButton: !!lv.elseButton, loopButton: !!lv.loopButton };
+  lv._base = { commands: [...lv.commands], ifs: [...(lv.ifs || [])], ifButton: !!lv.ifButton, elseButton: !!lv.elseButton, elifButton: !!lv.elifButton, loopButton: !!lv.loopButton };
   const cmds = new Set(lv.commands), ifs = [...(lv.ifs || [])];
-  let ifB = !!lv.ifButton, elseB = !!lv.elseButton, loopB = !!lv.loopButton;
+  let ifB = !!lv.ifButton, elseB = !!lv.elseButton, elifB = !!lv.elifButton, loopB = !!lv.loopButton;
   for (let k = 0; k < i; k++) {
     const o = LEVELS[k]._base || LEVELS[k];
     if (LEVELS[k].arena) continue;                       // на арене свои команды — им тут не место
     o.commands.forEach((c) => { if (!ARENA_ONLY.includes(c)) cmds.add(c); });
     (o.ifs || []).forEach((w) => { if (w !== "near" && !ifs.includes(w)) ifs.push(w); });
-    ifB ||= !!o.ifButton; elseB ||= !!o.elseButton; loopB ||= !!o.loopButton;
+    ifB ||= !!o.ifButton; elseB ||= !!o.elseButton; elifB ||= !!o.elifButton; loopB ||= !!o.loopButton;
   }
   // главные условия уровня — первыми (их ставит кнопка «если»)
   for (const w of lv.moreIfs || []) { const j = ifs.indexOf(w); if (j > 0) { ifs.splice(j, 1); ifs.unshift(w); } }
   if (lv.edAll) ["moveRight", "moveDown", "moveUp", "moveLeft", "attack", "work"].forEach((c) => cmds.add(c));   // свой уровень: в «＋ ещё» — всё
   lv.commands = ALL_COMMANDS.filter((c) => cmds.has(c));
   lv.ifs = ifs;
-  lv.ifButton = ifB; lv.elseButton = elseB; lv.loopButton = loopB;
+  lv.ifButton = ifB; lv.elseButton = elseB; lv.elifButton = elifB; lv.loopButton = loopB;
 }
 // инструмент из «＋ ещё» (не нужен для ★★★)
 const isExtra = (kind, name) => !!L._base && (kind === "cmd" ? !L._base.commands.includes(name) : !L._base[kind]);
@@ -10306,25 +10718,41 @@ $("undo-cmd").addEventListener("click", () => {
     const fr = frames.find((f) => f.start === selLine);
     editLines((lines) => {
       const out = (a, b) => { for (let j = a; j < b; j++) lines[j] = lines[j].replace(/^ {1,4}/, ""); };
-      const els = /^\s*if\b/.test(lines[fr.start - 1]) && frames.find((f) => f.start === fr.end + 1 && /^\s*else\b/.test(lines[f.start - 1]));
-      if (els) { out(els.start, els.end); lines.splice(els.start - 1, 1); }
+      selLine = null;
+      // «иначе если» убирается вместе со своими плитками: его команды посреди рамки сломали бы «иначе» ниже
+      if (/^\s*elif\b/.test(lines[fr.start - 1])) { lines.splice(fr.start - 1, fr.end - fr.start + 1); return; }
+      // у «если» уходит вся рамка: и половины «иначе если» / «иначе» под ним (их команды остаются)
+      const chain = [];
+      for (let e = fr; /^\s*if\b/.test(lines[fr.start - 1]);) {
+        const nx = frames.find((f) => f.start === e.end + 1 && f.indent === fr.indent && /^\s*(elif|else)\b/.test(lines[f.start - 1]));
+        if (!nx) break;
+        chain.push(nx); e = nx;
+      }
+      for (const c of chain.reverse()) { out(c.start, c.end); lines.splice(c.start - 1, 1); }
       out(fr.start, fr.end);
       lines.splice(fr.start - 1, 1);
-      selLine = null;
     });
+  } else if (selLine && lang === "js" && /^\s*\}\s*else\s+if\b.*\{\s*$/.test(selText)) {
+    // JavaScript: «} else if (…) {» — убрать эту половину вместе с её строками; её закрывающая скобка остаётся
+    // и закрывает рамку выше
+    const fr = findFrames(codeEl.value).find((f) => f.start === selLine);
+    editLines((lines) => { if (fr?.closed) lines.splice(fr.start - 1, fr.end - fr.start); selLine = null; });
   } else if (selLine && lang === "js" && JS_FRAME_HEAD.test(selText)) {
     // JavaScript: убрать рамку «если» / цикла — заголовок и её закрывающую скобку, команды внутри остаются
-    // (сдвигаются на уровень выше). У «если» с «иначе» уходит и «} else {» со своей скобкой.
+    // (сдвигаются на уровень выше). У «если» с «иначе если» / «иначе» уходят и «} else … {» со своими скобками.
     const frames = findFrames(codeEl.value), fr = frames.find((f) => f.start === selLine);
     editLines((lines) => {
       const out = (a, b) => { for (let j = a; j < b - 1; j++) lines[j] = lines[j].replace(/^ {1,2}/, ""); };
       const drop = [fr.start - 1];
       out(fr.start, fr.end);
-      if (/^\s*\}\s*else\s*\{\s*$/.test(lines[fr.end - 1] ?? "")) {
-        const els = frames.find((f) => f.start === fr.end);
-        if (els) { out(els.start, els.end); drop.push(els.end - 1); }
+      let cur = fr;
+      while (/^\s*\}\s*else\b.*\{\s*$/.test(lines[cur.end - 1] ?? "")) {
+        const nx = frames.find((f) => f.start === cur.end);
+        if (!nx) break;
+        out(nx.start, nx.end); drop.push(nx.start - 1);
+        cur = nx;
       }
-      drop.push(fr.end - 1);
+      drop.push(cur.end - 1);
       if (fr.closed) [...new Set(drop)].sort((a, b) => b - a).forEach((j) => lines.splice(j, 1));
       else lines.splice(fr.start - 1, 1);
       selLine = null;
@@ -10789,6 +11217,8 @@ function findFrames(code) {
 const JS_FRAME_HEAD = /^\s*(while|for|if)\b.*\{\s*$/;
 const IF_LINE = new RegExp(`^\\s*(?:\\}\\s*)?(?:if|elif|else\\s+if)\\s*\\(?\\s*(not\\s+|!)?(${COND_ANY})\\s*\\(\\s*\\)\\s*\\)?\\s*[:{]?\\s*$`);
 const ELSE_LINE = /^\s*(?:\}\s*)?else\s*[:{]?\s*$/;
+// «иначе если»: elif …: в Python, } else if (…) { в JavaScript (условие — тот же IF_LINE)
+const ELIF_LINE = /^\s*(?:\}\s*)?(?:elif|else\s+if)\b/;
 
 function loopOfLine(loops, line) {
   let best = null;
@@ -11230,6 +11660,11 @@ const BLOCK_GOALS = {
   "Свой поворот": "Отрезки вправо ещё длиннее — в три клетки. Поворот [[fnhead:2]] пустой: нажми [[fnhead:2]], потом [[btn:moveUp]], [[fnbtn:1]] и [[num:3]].",
   "Зигзаг вниз": "Зигзаг идёт вниз, ниши теперь сверху, а дозорный смотрит вниз. Нажми на рамку «если» в [[fnhead:1]] и на [[side:moveUp]].",
   "Подрывник": "Новый враг — подрывник, фиолетовый гоблин. Красные клетки — куда он докидывает динамит: на одной линии с ним через клетку или две. Твой путь их не задевает: нажми «🔁 повторять» и [[fnbtn:2]]. Подрывника можно и победить — кто подберётся к нему вплотную, не наступая на красные клетки, получит корону.",
+  // Остров гоблинов: «иначе если»
+  "Иначе если": "Новое: «иначе если» — ещё один вопрос. Рыцарь бьёт, если справа враг, иначе шагает вправо — и упирается в стену на повороте. Нажми на [[ifhead:moveRight:enemy]], потом [[elifbtn]] и [[btn:moveDown]]. Теперь рыцарь делает одно из трёх.",
+  "Крепкий караул": "Теперь наоборот: рыцарь сворачивает у стен, но бить не умеет. Нажми на [[ifhead:moveRight:wall]], потом [[elifbtn]] и [[btn:attack]]. Крепкий гоблин выдерживает два удара: цикл спросит снова и ударит ещё раз.",
+  "Не та половина": "Найди ошибку: в [[elifhead:moveRight:wall]] стоит шаг вправо — у стены рыцарь шагает в неё. Нажми на плитку под ней и кнопку [[btn:moveDown]].",
+  "Три половины": "У «если» нет ни «иначе если», ни «иначе» — без гоблина рыцарь стоит на месте. Нажми на [[ifhead:moveRight:enemy]], потом [[elifbtn]] и [[btn:moveDown]], потом [[elsebtn]] и [[btn:moveRight]].",
   "Зигзаг: испытание": "Испытание: оба приёма и программа пустые, три варианта поля. Собери дозорного [[fnhead:1]] — вправо на [[nbtn]] и «если снизу враг — удар», поворот [[fnhead:2]] — шаг вверх и дозорный на две клетки, а в программе нажми «🔁 повторять» и [[fnbtn:2]].",
   // Остров мастеров: свои приёмы
   "Готовый приём": "Нажми [[fnbtn]] 2 раза. Это свой приём: розовая кнопка делает сразу оба шага из рамки [[fnhead]] — целый зигзаг.",
@@ -11368,6 +11803,18 @@ function parseBlocks(code) {
     const cm = fnCall && raw.match(fnCall);
     if (cm) { parent.body.push({ call: cm[1], arg: cm[2] || "", line }); return; }
     const im = raw.match(IF_LINE);
+    // «иначе если» — продолжение рамки «если» выше: ещё один вопрос (задаётся, только если ответы выше — «нет»)
+    if (im && ELIF_LINE.test(raw)) {
+      const prev = parent.body[parent.body.length - 1];
+      if (prev && prev.cond && !prev.els) {
+        const node = { cond: condKey(im[2]), neg: !!im[1], line, body: [], indent };
+        (prev.elifs ||= []).push(node);
+        stack.push(node);
+        return;
+      }
+      parent.body.push({ bad: t, line });
+      return;
+    }
     if (im) {
       const node = { cond: condKey(im[2]), neg: !!im[1], line, body: [], indent };
       parent.body.push(node);
@@ -11408,7 +11855,12 @@ function blockHtml(it, active, err) {
       + (curCheck && curCheck.line === line ? (curCheck.yes ? " yes" : " no") : "");
     const head = `<button class="ihead${st(it.line)}" data-line="${it.line}" aria-label="${tr("если")} ${it.neg ? tr("не ") : ""}${EN_ON ? WHAT_RU[k.what] + " " + k.ru : k.ru + " " + WHAT_RU[k.what]}">❓ ${tr("если")} ${it.neg ? tr("не ") : ""}<span class="ar">${k.arrow}</span>${WHAT_RU[k.what]}</button>`;
     const els = it.els ? `<span class="brk"></span><button class="ihead else${st(it.els.line)}" data-line="${it.els.line}">${tr("иначе")}</button>` + body(it.els.body, tr("что делать, если нет"), true) : "";
-    return `<div class="bif${it.line === err ? " err" : ""}">${head}${body(it.body, tr("что делать, если да"), true)}${els}</div>`;
+    const elifs = (it.elifs || []).map((e) => {
+      const ek = CONDS[e.cond], what = `${e.neg ? tr("не ") : ""}<span class="ar">${ek.arrow}</span>${WHAT_RU[ek.what]}`;
+      return `<span class="brk"></span><button class="ihead elif${st(e.line)}" data-line="${e.line}" aria-label="${tr("иначе если")} ${e.neg ? tr("не ") : ""}${EN_ON ? WHAT_RU[ek.what] + " " + ek.ru : ek.ru + " " + WHAT_RU[ek.what]}">${tr("иначе если")} ${what}</button>`
+        + body(e.body, tr("что делать, если да"), true);
+    }).join("");
+    return `<div class="bif${it.line === err ? " err" : ""}">${head}${body(it.body, tr("что делать, если да"), true)}${elifs}${els}</div>`;
   }
   return tileHtml(it, active, err);
 }
@@ -12828,8 +13280,16 @@ function ifCallsFn(c, fns) {
     frames.some((f) => f.start < i + 1 && i + 1 <= f.end && /^\s*(\}\s*)?(if|elif|else)\b/.test(ls[f.start - 1])));
 }
 
+// «Иначе если» в программе: рамка «если» с половиной «иначе если» — или (то же самое, только длиннее)
+// «если» прямо в начале половины «иначе». Ищем по всему дереву плиток: в циклах, приёмах и рамках.
+function hasElif(code) {
+  const walk = (list) => list.some((t) => (t.cond && ((t.elifs || []).length || t.els?.body[0]?.cond)) ||
+    walk(t.body || []) || (t.elifs || []).some((e) => walk(e.body)) || walk(t.els?.body || []));
+  return walk(parseBlocks(stripComments(code)));
+}
 function toolMissing(code) {
   if (L.requireLoop && !findLoops(code).length) return "loop";
+  if (L.requireElif && !hasElif(code)) return "elif";
   if (L.requireFn) {
     const c = stripComments(code), fns = defNames(c).filter((nm) => defBody(c, nm).length);
     if (!fns.length || !countCalls(c, fns)) return "fn";
@@ -12887,6 +13347,7 @@ function win() {
     : missing === "param" ? " Получилось! Для ★★★ здесь нужен приём с числом: внутри приёма вместо цифры поставь n, а число пиши в вызове."
     : missing === "fnif" ? " Получилось! Для ★★★ рамка «если» должна быть внутри приёма — тогда приём сам решает, что делать."
     : missing === "ifcall" ? " Получилось! Для ★★★ позови приём внутри рамки «если» — пусть условие выбирает, когда его звать."
+    : missing === "elif" ? " Получилось! Для ★★★ нужна рамка «если» с половиной «иначе если»: выбери рамку «если» и нажми «＋ иначе если»."
     : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
   else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
@@ -12901,6 +13362,7 @@ function win() {
   if (lastOfIsle) note += tr(myIsle === 1 ? " Ты прошёл весь остров! От крепости открылся мост к новому острову."
     : myIsle === 3 ? " Ты прошёл весь остров! Рудокопы ждут у брёвен — сейчас они построят мост на новый остров."
     : myIsle === 4 ? " Ты прошёл весь остров! Начинается отлив: по отмели можно дойти до нового острова."
+    : myIsle === 5 ? " Ты прошёл весь остров! Справа от дороги коса к новому острову — только её завалило камнями…"
     : " Ты прошёл весь остров! Монастырь открыт: из него подземный ход ведёт на новый остров.");
   else if (wasChapterLocked && nextCh && chapterOpen(L.chapter + 1)) note += tr(" Открыта новая глава: {ch}!", { ch: nextCh.name });
   else if (L.challenge && nextCh?.soon) note += tr(" Глава «{ch}» скоро появится.", { ch: nextCh.name });
@@ -13146,9 +13608,15 @@ function drawLineBar() {
   const ifm = line.match(IF_LINE), isElse = ELSE_LINE.test(line);
   const frames = findFrames(codeEl.value);
   const fr = frames.find((f) => f.start === selLine);
-  // у рамки «если» можно добавить «иначе», если его ещё нет
-  const after = fr ? lines[fr.end] ?? "" : "";
-  $("lb-else").hidden = !ifm || !L.elseButton || ELSE_LINE.test(after) || /^\s*elif\b/.test(after);
+  // у рамки «если» можно добавить «иначе», если его ещё нет. Продолжение рамки («иначе если» / «иначе»):
+  // в Python — следующая строка после её тела, в JavaScript — сама строка с закрывающей скобкой («} else …»)
+  const cont = fr ? (lang === "py" ? lines[fr.end] ?? "" : lines[fr.end - 1] ?? "") : "";
+  const hasNext = lang === "py" ? ELSE_LINE.test(cont) || ELIF_LINE.test(cont) : /^\s*\}\s*else\b/.test(cont);
+  const isElif = !!ifm && ELIF_LINE.test(line);
+  $("lb-else").hidden = !ifm || !L.elseButton || hasNext;
+  // «＋ иначе если» — ещё один вопрос сразу под этой рамкой (и у «если», и у «иначе если»)
+  $("lb-elif").hidden = !ifm || !L.elifButton;
+  $("lb-elif").classList.toggle("new", !!L.newElif);   // на первом уровне главы новая кнопка обведена, как новые кнопки команд
   const whats = L.ifs || [];
   $("lb-what").hidden = !ifm || whats.length < 2;
   // сторона условия: четыре зелёные кнопки «❓→ ❓↑ ❓← ❓↓», выбранная подсвечена — на уровнях с «＋ ещё»
@@ -13176,11 +13644,14 @@ function drawLineBar() {
       }
     }
   }
-  const full = tr(DEF_LINE.test(line) ? "Нажимай кнопки команд — шаги лягут в приём" : ifm ? ($("lb-else").hidden ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»"
-      : "Кнопка команды — шаг внутрь «если»; «＋ иначе» — добавить «иначе»") : isElse ? "Рамка «иначе»: что делать, если нет"
+  const full = tr(DEF_LINE.test(line) ? "Нажимай кнопки команд — шаги лягут в приём"
+    : ifm && !$("lb-elif").hidden ? (isElif ? "Кнопка команды — шаг внутрь «иначе если»; «＋ иначе если» — ещё один вопрос" : "Кнопка команды — шаг внутрь «если»; «＋ иначе если» — ещё один вопрос")
+    : ifm ? ($("lb-else").hidden ? (isElif ? "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «иначе если»" : "Теперь нажми кнопку команды внизу — шаг ляжет внутрь «если»")
+      : isElif ? "Кнопка команды — шаг внутрь «иначе если»; «＋ иначе» — добавить «иначе»" : "Кнопка команды — шаг внутрь «если»; «＋ иначе» — добавить «иначе»")
+    : isElse ? "Рамка «иначе»: что делать, если нет"
     : uiBlocks ? "Стрелка — сменить направление, цифра — шаги" : "Строка {n}", { n: selLine });
   // в полоске на телефоне места мало — те же подсказки короче (полный текст остаётся в title)
-  const brief = tr(DEF_LINE.test(line) ? "Кнопки команд — шаги в приём" : ifm ? "Кнопка команды — шаг в «если»"
+  const brief = tr(DEF_LINE.test(line) ? "Кнопки команд — шаги в приём" : isElif ? "Кнопка команды — шаг в «иначе если»" : ifm ? "Кнопка команды — шаг в «если»"
     : isElse ? "«Иначе»: что делать, если нет" : "Стрелка — куда, цифра — сколько");
   $("lb-label").textContent = float ? brief : full;
   $("lb-label").title = full;
@@ -13219,6 +13690,13 @@ function drawLineBar() {
   // Меряем в самом конце, когда кнопки панели уже приняли свой вид.
   const info = bar.querySelector(".lb-info");
   info.style.display = "";
+  // с «＋ иначе если» полоска на телефоне шире экрана (ещё «＋ иначе», стороны вопроса) — убираем по одной
+  // то, без чего можно обойтись: «раньше / позже», отступ, пустая строка, «враг ⇄ препятствие», стороны вопроса
+  $("lb-add").hidden = false;
+  if (float && !$("lb-elif").hidden) {
+    const over = () => bar.getBoundingClientRect().right > document.documentElement.clientWidth - 2 || bar.scrollWidth > bar.clientWidth + 1;
+    for (const el of [$("lb-up"), $("lb-down"), document.querySelector(".shift"), $("lb-add"), $("lb-what"), sides]) if (!el.hidden && over()) el.hidden = true;
+  }
   if (float && $("lb-label").scrollHeight > $("lb-label").clientHeight + 1) info.style.display = "none";
 }
 
@@ -13239,6 +13717,25 @@ $("lb-else").addEventListener("click", () => {
     const ind = " ".repeat(fr.indent);
     if (lang === "py") { lines.splice(fr.end, 0, ind + "else:"); selLine = fr.end + 1; }
     else { lines[fr.end - 1] = lines[fr.end - 1].replace(/\}\s*$/, "} else {"); lines.splice(fr.end, 0, ind + "}"); selLine = fr.end; }
+  });
+});
+// «＋ иначе если»: ещё один вопрос сразу под выбранной рамкой «если» / «иначе если». Вопрос — другой, чем у рамки
+// (враг ⇄ препятствие, в ту же сторону); его можно сменить зелёными кнопками стороны и «враг ⇄ препятствие».
+// Новая рамка выбрана: следующая кнопка команды кладёт шаг в неё.
+$("lb-elif").addEventListener("click", () => {
+  const code = codeEl.value, fr = findFrames(code).find((f) => f.start === selLine);
+  const m = (code.split("\n")[selLine - 1] ?? "").match(IF_LINE);
+  if (!fr || !m) return;
+  const k = CONDS[condKey(m[2])], other = (L.ifs || []).find((w) => w !== k.what) || k.what;
+  const c = condDisp(COND_NAMES.find((x) => CONDS[x].what === other && CONDS[x].move === k.move) || condKey(m[2]));
+  editLines((lines) => {
+    const ind = " ".repeat(fr.indent);
+    if (lang === "py") { lines.splice(fr.end, 0, `${ind}elif ${c}():`); selLine = fr.end + 1; return; }
+    // JavaScript: «}» рамки становится «} else if (…) {» и закрывается своей скобкой; если за рамкой уже
+    // «} else …», новый вопрос встаёт перед ним (его скобка закрывает тело рамки, а старая — новый вопрос)
+    if (/^\s*\}\s*$/.test(lines[fr.end - 1])) { lines[fr.end - 1] = `${ind}} else if (${c}()) {`; lines.splice(fr.end, 0, ind + "}"); }
+    else lines.splice(fr.end - 1, 0, `${ind}} else if (${c}()) {`);
+    selLine = fr.end;
   });
 });
 $("lb-what").addEventListener("click", () => {
@@ -14752,10 +15249,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 162;
+const APP_VERSION = 163;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 163, date: "2026-11-16", text: "Новый остров — Остров гоблинов! С острова хитрецов туда ведёт коса, но её завалило камнями — посмотри, кто их уберёт. Первая глава «Караулы»: новая кнопка «＋ иначе если» — ещё один вопрос, и рыцарь делает одно из трёх: бьёт, сворачивает или идёт дальше.", en: "A new island — Goblin Island! A sandbar leads there from the Island of Wits, but rocks have blocked it — see who clears them. The first chapter, “Sentries”: a new “＋ else if” button asks one more question, and the knight does one of three things: strikes, turns or walks on.", big: true },
   { v: 162, date: "2026-11-16", text: "Кнопки вверху карты — острова, звук и настройки — теперь всегда на виду: остаются у верха экрана, когда листаешь карту.", en: "The buttons at the top of the map — islands, sound and settings — now stay in view: they remain at the top of the screen while you scroll the map." },
   { v: 161, date: "2026-11-16", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 160, date: "2026-11-16", text: "На Берегу первого острова теперь идёт бой: войско замка держит укрепление у моста — мечники, копейщики, монах и лучники на башнях, — а гоблины идут на них колонной. Над бойцами видно, что велит им программа. И карта теперь открывается там, где стоит твой рыцарь: искать свой уровень не нужно.", en: "There’s now a battle on the Shore of the first island: the castle’s troops hold a fort by the bridge — swordsmen, lancers, a monk and archers on the towers — while goblins march at them in a column. Above the fighters you can see what their program tells them to do. And the map now opens where your knight stands — no need to look for your level.", big: true },
