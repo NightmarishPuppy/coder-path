@@ -1,13 +1,13 @@
 {
- "version": 164,
+ "version": 165,
  "date": "2026-11-16",
  "notes": [
-  "Новая кнопка на Острове гоблинов теперь называется «＋ другое если», и первый уровень главы «Караулы» — «Другое если»."
+  "На itch.io на iPad игра больше не выходит из полноэкранного режима, когда прокручиваешь карту острова."
  ],
  "files": {
   "index.html": {
-   "size": 1048832,
-   "hash": "77e8bf03238b9ca3"
+   "size": 1051225,
+   "hash": "ae228e229d90fe96"
   },
   "art.js": {
    "size": 1979296,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "428c615f03c3300d"
+   "hash": "cddc64bfed25a2a0"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Small improvements inside the game."
+  "On itch.io on iPad, scrolling the island map no longer exits full screen."
  ]
 }

@@ -52,6 +52,9 @@
   color-scheme: dark;
 }
 html, body { min-height: 100%; }
+/* во встроенном окне (itch.io) прокручивается body, а не страница — см. EMBED в коде */
+html.embed { height: 100%; overflow: hidden; }
+html.embed body { height: 100%; margin: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
 body {
   background: var(--bg);
   color: var(--fg);
@@ -2130,6 +2133,28 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 <script src="art.js"></script>
 <script src="lang-en.js"></script>
 <script>
+// ===== Игра во встроенном окне чужой страницы (itch.io): прокручивается не страница, а body =====
+// Safari на iPad во весь экран (кнопка itch.io разворачивает встроенное окно) при первой прокрутке страницы
+// выходит из полноэкранного режима — длинная карта острова выкидывала игрока. Поэтому во встроенном окне
+// страница стоит на месте (html — ровно в экран, без прокрутки), а прокручивается body внутри неё.
+// Остальной код про это не знает: scrollY, scrollTo и событие «scroll» у window подменены на body.
+// В Telegram (на сайте Telegram он тоже во встроенном окне) и на обычном сайте всё как было.
+const EMBED = (() => {
+  try {
+    if (/tgWebApp/.test(location.hash) || window.TelegramWebviewProxy || sessionStorage.getItem("__telegram__initParams")) return false;
+  } catch (e) { /* хранилище недоступно */ }
+  try { return window.top !== window.self; } catch (e) { return true; }
+})();
+if (EMBED) {
+  document.documentElement.classList.add("embed");
+  const box = document.body;
+  const y = { get: () => box.scrollTop, configurable: true };
+  Object.defineProperty(window, "scrollY", y);
+  Object.defineProperty(window, "pageYOffset", y);
+  window.scrollTo = (a, b) => box.scrollTo(typeof a === "object" ? a : { left: a, top: b });
+  box.addEventListener("scroll", () => window.dispatchEvent(new Event("scroll")), { passive: true });
+}
+
 // ===== 0. Язык интерфейса: русский или английский =====
 // Выбор хранится отдельно от сохранения. Если игрок ещё не выбирал:
 // у того, кто уже играл, остаётся русский; новому — язык телефона или Telegram.
@@ -15249,10 +15274,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 164;
+const APP_VERSION = 165;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 165, date: "2026-11-16", text: "На itch.io на iPad игра больше не выходит из полноэкранного режима, когда прокручиваешь карту острова.", en: "On itch.io on iPad, scrolling the island map no longer exits full screen." },
   { v: 164, date: "2026-11-16", text: "Новая кнопка на Острове гоблинов теперь называется «＋ другое если», и первый уровень главы «Караулы» — «Другое если».", en: "Small improvements inside the game." },
   { v: 163, date: "2026-11-16", text: "Новый остров — Остров гоблинов! С острова хитрецов туда ведёт коса, но её завалило камнями — посмотри, кто их уберёт. Первая глава «Караулы»: новая кнопка «＋ другое если» — ещё один вопрос, и рыцарь делает одно из трёх: бьёт, сворачивает или идёт дальше.", en: "A new island — Goblin Island! A sandbar leads there from the Island of Wits, but rocks have blocked it — see who clears them. The first chapter, “Sentries”: a new “＋ else if” button asks one more question, and the knight does one of three things: strikes, turns or walks on.", big: true },
   { v: 162, date: "2026-11-16", text: "Кнопки вверху карты — острова, звук и настройки — теперь всегда на виду: остаются у верха экрана, когда листаешь карту.", en: "The buttons at the top of the map — islands, sound and settings — now stay in view: they remain at the top of the screen while you scroll the map." },
