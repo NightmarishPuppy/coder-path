@@ -1,13 +1,13 @@
 {
- "version": 166,
+ "version": 167,
  "date": "2026-11-16",
  "notes": [
-  "На itch.io на iPad карту острова теперь можно листать пальцем, не выходя из полноэкранного режима."
+  "Небольшие улучшения внутри игры."
  ],
  "files": {
   "index.html": {
-   "size": 1053475,
-   "hash": "21ab28b8d8525928"
+   "size": 1049582,
+   "hash": "1394417a40e74f33"
   },
   "art.js": {
    "size": 1979296,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "2e263c679af316f2"
+   "hash": "29b1263410b1b9d7"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "On itch.io on iPad you can now swipe the island map without leaving full screen."
+  "Small improvements inside the game."
  ]
 }
