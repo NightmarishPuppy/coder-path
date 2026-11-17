@@ -1,21 +1,21 @@
 {
- "version": 172,
+ "version": 173,
  "date": "2026-11-17",
  "notes": [
-  "Небольшие улучшения внутри игры."
+  "Игра обновляется быстрее: уровни и карта каждого острова теперь скачиваются отдельно, только когда они изменились."
  ],
  "files": {
   "index.html": {
-   "size": 1109517,
-   "hash": "fd78401194b3ca8e"
+   "size": 845218,
+   "hash": "69768c82bc9c1d99"
   },
   "art.js": {
    "size": 1979296,
    "hash": "fc09075012bef868"
   },
   "lang-en.js": {
-   "size": 70151,
-   "hash": "c5c5734fa5c82d78"
+   "size": 70427,
+   "hash": "0b36ab96afa89288"
   },
   "fonts.css": {
    "size": 234903,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 3998,
-   "hash": "ffdfe701c01f3b01"
+   "size": 4070,
+   "hash": "d6e4da98a5dd0ae7"
   },
   "icon-192.png": {
    "size": 42164,
@@ -72,9 +72,33 @@
   "tnt-boom.mp3": {
    "size": 10605,
    "hash": "0f2f87cee2ba1966"
+  },
+  "isle1.js": {
+   "size": 45994,
+   "hash": "fd38d62bbecfedb1"
+  },
+  "isle2.js": {
+   "size": 57134,
+   "hash": "0eca30604783b539"
+  },
+  "isle3.js": {
+   "size": 51299,
+   "hash": "a6ffe62163e2ab08"
+  },
+  "isle4.js": {
+   "size": 46629,
+   "hash": "d94a19bc9bb70b74"
+  },
+  "isle5.js": {
+   "size": 49624,
+   "hash": "95cd103e2d23f17d"
+  },
+  "isle6.js": {
+   "size": 19439,
+   "hash": "b364ac5a479c06b5"
   }
  },
  "notes_en": [
-  "Small improvements inside the game."
+  "The game updates faster: each island’s levels and map are now downloaded separately, only when they change."
  ]
 }

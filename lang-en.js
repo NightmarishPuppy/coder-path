@@ -115,6 +115,8 @@ var EN = {
   "{c} пишут со скобками: {c}()": "{c} is written with brackets: {c}()",
   " Получилось! Для ★★★ здесь нужен свой приём (розовая рамка) — попробуй с ним.": " You made it! For ★★★ this level needs your own function (the pink frame) — try it with one.",
   " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.": " You made it! For ★★★ this level needs the “repeat” loop — try it with one.",
+  "Игра загрузилась не полностью. Проверь интернет и обнови страницу.": "The game didn’t load completely. Check your internet connection and reload the page.",
+  "Обновить страницу": "Reload the page",
   " Короче, чем у разработчика (у него {n})! Это 💎.": " Shorter than the developer’s (his is {n})! That’s a 💎.",
   " Снова короче разработчика — 💎.": " Shorter than the developer again — 💎.",
   " Идеально — как у разработчика! Найдёшь короче — получишь 💎.": " Perfect — same as the developer! Find a shorter one and you get a 💎.",
