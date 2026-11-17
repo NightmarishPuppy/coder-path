@@ -4659,6 +4659,10 @@ function skTick(t) {
     const an = a.anim;
     if (!an) continue;
     let f = Math.floor((t - an.t0) / an.ms);
+    if (an.snd) {                                  // кадр со звуком: раз за каждый проход анимации
+      const cyc = an.loop ? Math.floor(f / an.n) : 0;
+      if (cyc !== an.cyc && (f % an.n >= an.snd[0] || f >= an.n)) { an.cyc = cyc; mapSfx(a.stage, an.snd[1], a.x, a.y); }
+    }
     if (f >= an.n) {
       if (an.loop) f %= an.n;
       else { f = an.n - 1; a.anim = null; an.res(); }
@@ -4673,7 +4677,7 @@ requestAnimationFrame(skTick);
 function mapStage(wrap) {
   const VH = ISLE_MAPS[+wrap.dataset.isle].terr.length * 20;
   return { layer: wrap, before: wrap.querySelector(".isle-svg"), unit: 20 / 360 * 100,
-    pos: (x, y) => [x * 20 / 360 * 100, y * 20 / VH * 100], on: () => !$("mapview").hidden && !wrap.hidden, alive: () => true };
+    pos: (x, y) => [x * 20 / 360 * 100, y * 20 / VH * 100], on: () => !$("mapview").hidden && !wrap.hidden, alive: () => true, ear: wrap };   // ear — карта, на которой слышны звуки этой сцены
 }
 // Актёр: x, y — точка, где он стоит (ноги)
 function skActor(stage, key, scale, foot = 0.67) {
@@ -4683,7 +4687,7 @@ function skActor(stage, key, scale, foot = 0.67) {
   el.style.setProperty("--foot", -foot * 100 + "%");
   el.style.opacity = 0;
   stage.layer.insertBefore(el, stage.before || null);
-  const a = { el, anim: null, x: 0, y: 0, key };
+  const a = { el, anim: null, x: 0, y: 0, key, stage };
   // сменить лист (у жителей каждое действие — отдельная картинка)
   a.sheet = (k) => {
     a.key = k;
@@ -4698,7 +4702,7 @@ function skActor(stage, key, scale, foot = 0.67) {
   a.at = (x, y) => { a.x = x; a.y = y; const [l, t] = stage.pos(x, y); el.style.left = l + "%"; el.style.top = t + "%"; };
   a.play = (row, n, ms, loop = true, k) => new Promise((res) => {
     if (k) a.sheet(k);
-    a.anim = { row, n, ms, loop, t0: performance.now(), res };
+    a.anim = { row, n, ms, loop, t0: performance.now(), res, snd: stage.ear && !a.mute ? SK_SND[a.key + ":" + row] : null, cyc: -1 };
     a.frame(0, row);
     if (loop) res();
   });
@@ -4784,7 +4788,7 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
     d.state = "swim"; d.from = [sx, sy];
     d.a.el.style.transition = "none"; d.a.at(sx, sy); void d.a.el.offsetWidth; d.a.show(true);
     await swim(d, x0 + Math.random() * (x1 - x0), sy, 0.9);
-    if (d.state === "swim") { d.state = "wait"; d.a.play(0, 3, 300); }
+    if (d.state === "swim") { d.state = "wait"; d.a.play(0, 3, 300); mapSfx(st, "duck", d.a.x, d.a.y); }
   };
   const throwAt = async (d) => {
     d.state = "target";
@@ -4807,6 +4811,7 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
       d.a.at(d.a.x, d.a.y + 0.25); d.a.show(false);
       await skSleep(st, 600);
     } else {                                                     // мимо — уплывает обратно
+      mapSfx(st, "duck", d.a.x, d.a.y);
       await swim(d, d.from[0], d.from[1], 1.8);
       d.a.show(false);
     }
@@ -5054,6 +5059,7 @@ async function battle(st0, B) {
     u.dead = true; u.a.show(false);
     if (u.kind === "barrel") { boom(u.x, u.y); splash(u.x, u.y, 0.9, u.T.dmg); return; }
     const d = take(deads); d.at(u.x, u.y); Z(d, u.y); d.show(true);
+    d.mute = u.T.side !== "gob";                         // вскрик — только у гоблина
     d.play(0, 7, 110, false);
     after(B.skulls || 2600, () => d.play(1, 7, 120, false).then(() => free(d)));
     if (u.post) after(8000, () => {                      // подкрепление
@@ -5347,6 +5353,7 @@ async function skitLumber(st, { tree: [tx, ty], d, pile }) {
     S.show(true);
     T.el.style.transition = "none";
     await tilt([{ rotate: "0deg", easing: "cubic-bezier(.55,0,1,.45)" }, { rotate: `${d * 86}deg` }], { duration: 750, fill: "forwards" }).finished;
+    mapSfx(st, "thud", tx + d * 0.6, ty);                          // дерево упало
     await tilt([{ rotate: `${d * 86}deg`, opacity: 1 }, { rotate: `${d * 80}deg`, opacity: 1, offset: 0.3 }, { rotate: `${d * 86}deg`, opacity: 0 }],
       { duration: 450, fill: "forwards" }).finished;
     w.at(...logs); w.face(d < 0); w.show(true);
@@ -10680,7 +10687,7 @@ function note(freq, { dur = 0.12, type = "triangle", vol = 1, at = 0, slideTo = 
 
 // Короткий "шорох" из шума — для шагов
 let noiseBuf = null;
-function noise({ dur = 0.05, vol = 0.5, freq = 1200, at = 0 } = {}) {
+function noise({ dur = 0.05, vol = 0.5, freq = 1200, at = 0, bus = sfxBus } = {}) {
   if (!noiseBuf) {
     noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.2, actx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -10696,7 +10703,7 @@ function noise({ dur = 0.05, vol = 0.5, freq = 1200, at = 0 } = {}) {
   const g = actx.createGain();
   g.gain.setValueAtTime(vol, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  s.connect(f).connect(g).connect(sfxBus);
+  s.connect(f).connect(g).connect(bus);
   s.start(t0);
   s.stop(t0 + dur + 0.02);
 }
@@ -10795,6 +10802,75 @@ function sfx(name) {
   if (!save.sfx || !audio()) return;
   try { SFX[name]?.(); } catch (e) {}
 }
+
+// ----- Звуки карты: у каждой сценки и боя — своё место и своя дальность (v180) -----
+// Слушает рыцарь на карте: чем дальше от него место звука, тем звук тише и глуше, а дальше своего радиуса
+// его не слышно совсем. Бой слышен издалека (радиус — 0,4 высоты острова), мелкие дела жителей — только рядом
+// (9 клеток). Звук левее рыцаря слышен слева, правее — справа. Одинаковые звуки не частят (gap), а всего —
+// не больше 7 в секунду: бой не превращается в кашу. Записи — те же, что на уровнях; чего нет — простой синтез.
+const MAP_SND = {
+  hit:    { far: 1, gap: 170, file: "sword-hit.mp3", vol: 0.5 },
+  spear:  { far: 1, gap: 240, file: "spear-thrust.mp3", vol: 0.5 },
+  arrow:  { far: 1, gap: 280, file: "arrow-swish.mp3", vol: 0.4 },
+  gobatk: { far: 1, gap: 450, file: "goblin-attack.mp3", vol: 0.36 },
+  gobdie: { far: 1, gap: 320, file: "goblin-death.mp3", vol: 0.5 },
+  boom:   { far: 1, gap: 500, file: "tnt-boom.mp3", vol: 0.55 },
+  duck:   { gap: 1200, file: "duck.mp3", vol: 0.42 },
+  // молоток по доске, топор по стволу, кирка по камню, всплеск, бревно или дерево упало, монах лечит
+  knock:  { gap: 120, synth: (bus) => { noise({ dur: 0.05, vol: 0.3, freq: 650, bus }); note(210, { dur: 0.07, vol: 0.22, slideTo: 170, bus }); } },
+  chop:   { gap: 220, synth: (bus) => { noise({ dur: 0.07, vol: 0.5, freq: 900, bus }); note(160, { dur: 0.09, vol: 0.3, slideTo: 110, bus }); } },
+  pick:   { gap: 220, synth: (bus) => { noise({ dur: 0.03, vol: 0.35, freq: 4200, bus }); note(1900 + Math.random() * 300, { dur: 0.09, vol: 0.14, type: "sine", bus }); note(300, { dur: 0.05, vol: 0.2, slideTo: 200, bus }); } },
+  splash: { gap: 400, synth: (bus) => { noise({ dur: 0.32, vol: 0.5, freq: 1400, bus }); noise({ dur: 0.5, vol: 0.3, freq: 600, at: 0.05, bus }); } },
+  thud:   { gap: 300, synth: (bus) => { noise({ dur: 0.1, vol: 0.4, freq: 300, bus }); note(120, { dur: 0.16, vol: 0.4, slideTo: 70, bus }); } },
+  heal:   { gap: 1500, synth: (bus) => [784, 988, 1175, 1568].forEach((f, i) => note(f, { dur: 0.3, vol: 0.12, type: "sine", at: i * 0.09, bus })) },
+};
+const mapSndLast = {}, mapSndTimes = [];
+let mapSndCount = {};                                   // сколько раз что прозвучало (для проверки)
+// Где на карте стоит рыцарь (в клетках); на чужом острове (смотрим архипелаг) — середина того, что видно на экране
+function mapEar(wrap) {
+  const h = wrap.querySelector(".map-hero"), n = +wrap.dataset.isle;
+  if (h && h.getAttribute("x") != null) return [(+h.getAttribute("x") + (+h.getAttribute("width") || 40) / 2) / 20, (+h.getAttribute("y") + 52) / 20];
+  const r = wrap.getBoundingClientRect(), top = Math.max(r.top, 0), bot = Math.min(r.bottom, innerHeight);
+  return [9, r.height ? ((top + bot) / 2 - r.top) / r.height * ISLE_MAPS[n].terr.length : 0];
+}
+// Громкость звука в точке (x, y) карты: 1 — рядом с рыцарем, 0 — дальше радиуса
+function mapVol(wrap, name, x, y) {
+  const S = MAP_SND[name], [ex, ey] = mapEar(wrap), R = S.far ? Math.max(14, ISLE_MAPS[+wrap.dataset.isle].terr.length * 0.4) : 9;
+  const d = Math.hypot(x - ex, y - ey);
+  return [d < R ? Math.pow(1 - d / R, 1.5) : 0, Math.max(-0.8, Math.min(0.8, (x - ex) / 10))];
+}
+function mapSfx(stage, name, x, y) {
+  const S = MAP_SND[name];
+  if (!S || !stage.ear || !save.sfx || !actx || actx.state !== "running" || document.hidden || !stage.on()) return;
+  const [v, pan] = mapVol(stage.ear, name, x, y), t = performance.now();
+  if (v < 0.03 || t - (mapSndLast[name] || 0) < S.gap) return;
+  while (mapSndTimes.length && t - mapSndTimes[0] > 1000) mapSndTimes.shift();
+  if (mapSndTimes.length >= 7) return;
+  let buf = null;
+  if (S.file && !(buf = soundBuf(S.file))) return;      // запись ещё качается — прозвучит в следующий раз
+  mapSndLast[name] = t; mapSndTimes.push(t);
+  mapSndCount[name] = (mapSndCount[name] || 0) + 1;
+  try {
+    // цепочка: звук → «даль» (чем дальше, тем глуше) → громкость → лево-право → общие звуки игры
+    const g = actx.createGain(), lp = actx.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 700 + 11000 * v * v;
+    g.gain.value = v * (S.vol || 1) * 0.9;
+    lp.connect(g);
+    if (actx.createStereoPanner) { const p = actx.createStereoPanner(); p.pan.value = pan; g.connect(p).connect(sfxBus); } else g.connect(sfxBus);
+    if (buf) { const s = actx.createBufferSource(); s.buffer = buf; s.playbackRate.value = 0.93 + Math.random() * 0.14; s.connect(lp); s.start(); }
+    else S.synth(lp);
+    setTimeout(() => { try { g.disconnect(); } catch (e) {} }, 2500);
+  } catch (e) {}
+}
+// Какой кадр какой анимации звучит: «лист:ряд» → [кадр, звук]. Срабатывает сам, когда актёр на карте проигрывает этот кадр.
+const SK_SND = {
+  "paxe:0": [3, "chop"], "phammer:0": [2, "knock"], "ppick:0": [3, "pick"],
+  "boom:0": [0, "boom"], "splash:0": [1, "splash"], "heal:0": [3, "heal"], "dead:0": [0, "gobdie"], "hatk:0": [1, "hit"],
+  "lratk:0": [1, "spear"], "ldatk:0": [1, "spear"], "luatk:0": [1, "spear"], "ldratk:0": [1, "spear"], "luratk:0": [1, "spear"],
+};
+for (let r = 2; r <= 7; r++) SK_SND["kwar:" + r] = [2, "hit"];
+for (let r = 2; r <= 6; r++) SK_SND["archer:" + r] = SK_SND["archb:" + r] = [5, "arrow"];
+for (let r = 2; r <= 4; r++) SK_SND["torch:" + r] = SK_SND["torchp:" + r] = [3, "gobatk"];
 
 // ----- Фоновая атмосфера -----
 // Главное правило: неназойливо. Большую часть времени — тишина, а звуки места
@@ -11692,10 +11768,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 179;
+const APP_VERSION = 180;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 180, date: "2026-11-17", text: "На карте острова теперь слышно, что происходит рядом с рыцарем: бой у моста, кирки рудокопов, утки. Чем ближе — тем громче", en: "On the island map you can now hear what happens near the knight: the fight at the bridge, miners’ picks, ducks. The closer, the louder" },
   { v: 179, date: "2026-11-17", text: "Плитки и рамки программы теперь можно перетаскивать: подержи плитку пальцем (или потяни мышью) и неси на новое место", en: "You can now drag tiles and frames of your program: hold a tile with a finger (or drag with the mouse) and move it to a new place", big: true },
   { v: 178, date: "2026-11-17", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
   { v: 177, date: "2026-11-17", text: "На компьютере мост и коса уходят в большие облака, а не обрываются в море. Номер версии в настройках стал крупнее.", en: "On a computer, the bridge and the sandbar now run into big clouds instead of ending in the sea. The version number in settings is bigger." },

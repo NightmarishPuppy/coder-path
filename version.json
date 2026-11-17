@@ -1,13 +1,13 @@
 {
- "version": 179,
+ "version": 180,
  "date": "2026-11-17",
  "notes": [
-  "Плитки и рамки программы теперь можно перетаскивать: подержи плитку пальцем (или потяни мышью) и неси на новое место"
+  "На карте острова теперь слышно, что происходит рядом с рыцарем: бой у моста, кирки рудокопов, утки. Чем ближе — тем громче"
  ],
  "files": {
   "index.html": {
-   "size": 880411,
-   "hash": "a562f076a0117ef6"
+   "size": 887697,
+   "hash": "ffc68a388b0c5171"
   },
   "art.js": {
    "size": 841991,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 4433,
-   "hash": "89f908c6f3d22667"
+   "size": 4445,
+   "hash": "47eec16b59d3ac21"
   },
   "icon-192.png": {
    "size": 42164,
@@ -116,9 +116,13 @@
   "art-isle5.js": {
    "size": 109059,
    "hash": "db93aa9ad97c32b2"
+  },
+  "duck.mp3": {
+   "size": 8301,
+   "hash": "688dd765b9d20a0d"
   }
  },
  "notes_en": [
-  "You can now drag tiles and frames of your program: hold a tile with a finger (or drag with the mouse) and move it to a new place"
+  "On the island map you can now hear what happens near the knight: the fight at the bridge, miners’ picks, ducks. The closer, the louder"
  ]
 }
