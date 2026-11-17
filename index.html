@@ -4777,13 +4777,19 @@ async function skitArcher(st, [ax, ay], [gx0, gx1]) {
 //  · двойной бросок (два динамита подряд — в одну утку или в двух, если ждут обе): второй взрыв большой,
 //    утку уносит далеко за край карты, она бешено вращается.
 // Утка в наборе смотрит влево, поэтому отражаем её, когда плывёт вправо. В полёте — картинка утки без ряби воды (duckair).
-async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
+// Под вышкой стоит копейщик-дозорный (v183): гоблин время от времени кидает динамит и в него. Копейщик бьёт копьём
+// вверх-вбок: отбивает обратно на вышку (гоблин прячется в дыму и вылезает снова), в протоку (а если там ждёт утка —
+// прямо в неё), подбрасывает (взрыв в воздухе) или сбивает на землю (фитиль гаснет). Не успел — взрыв у ног,
+// и через несколько секунд из шахты на южном берегу выходит новый копейщик и идёт по мосту на пост.
+async function skitDuckHunt(st, { at: [tx, ty], lanes, guard }) {
   const ducks = [0, 1].map(() => ({ a: skActor(st, "duck", 1.4, 0.8), state: "off" }));
   const tnt = skActor(st, "tnt", 0.9), dyns = [0, 1].map(() => skActor(st, "dyn", 1, 0.5));
   const spl = skActor(st, "splash", 0.9, 0.5), splBig = skActor(st, "splash", 1.45, 0.5), splLand = skActor(st, "splash", 0.6, 0.5);
   const booms = [skActor(st, "boom", 0.9, 0.6), skActor(st, "boom2", 1.25, 0.55), skActor(st, "boom3", 1.0, 0.55)], boomBig = skActor(st, "boom3", 1.6, 0.55);
   const dusts = [0, 1, 2].map(() => skActor(st, "dust", 1.5, 0.6));
   for (const d of ducks) d.air = skActor(st, "duckair", 1.4, 0.5);
+  const G = guard ? { a: skActor(st, "lidle", 0.8, 0.625), skull: skActor(st, "dead", 0.6), state: "off", next: 0 } : null;
+  if (G) G.skull.mute = true;                                   // вскрик гоблина тут не к месту
   tnt.at(tx, ty); tnt.show(true); tnt.play(0, 6, 130); tnt.face(true);
   const E = ISLE_ENG[1];
   const swim = (d, x, y, speed) => {
@@ -4898,6 +4904,80 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
       d.state = "off";
     }
   };
+  // --- копейщик-дозорный ---
+  const gCome = async () => {                                    // выходит из шахты и идёт на пост
+    const [p0, ...rest] = guard.path, a = G.a;
+    G.state = "walk";
+    a.el.style.transition = "none"; a.at(...p0); void a.el.offsetWidth; a.el.style.transition = "opacity 0.4s"; a.show(true);
+    for (const [x, y] of [...rest, guard.post]) {
+      a.face(x < a.x - 0.05); a.play(0, 6, 90, true, "lrun");
+      await a.move(x, y, Math.hypot(x - a.x, y - a.y) / 1.6 * 1000);
+    }
+    a.face(tx < a.x); a.play(0, 12, 110, true, "lidle");
+    G.state = "post"; G.next = performance.now() + skRnd(3000, 7000);
+  };
+  const landBoom = (x, y) => {                                   // взрыв на суше: огонь и дым, без всплеска
+    pop(booms[Math.floor(Math.random() * booms.length)], x, y - 0.1, 75);
+    setTimeout(() => { const p = dusts[0]; pop(p, x, y - 0.25, 95); p.move(x, y - 1.1, 900); }, 140);
+  };
+  const throwAtGuard = async () => {
+    const a = G.a, gx = a.x, gy = a.y, right = tx > gx, r = Math.random(), dn = dyns[0];
+    G.state = "busy";
+    const swing = () => { if (G.state !== "busy") return; a.face(!right); a.play(0, 3, 120, false, "luratk").then(() => { if (G.state !== "dead") a.play(0, 12, 110, true, "lidle"); }); };
+    if (r < 0.25) {                                              // не заметил или махнул поздно: взрыв у ног
+      if (r > 0.1) setTimeout(swing, 380 + 700);
+      await toss(dn, gx, gy);
+      tnt.play(0, 6, 130);
+      landBoom(gx, gy);
+      G.state = "dead";
+      a.el.style.transition = "none"; a.show(false);
+      const k = G.skull; k.el.style.transition = "none"; k.at(gx, gy); void k.el.offsetWidth; k.show(true);
+      await k.play(0, 7, 110, false);
+      await skSleep(st, 1200);
+      k.el.style.transition = "opacity 0.6s"; k.show(false);
+      skRun(async () => { await skWait(st, skRnd(3000, 6000)); await gCome(); });   // на смену идёт новый
+      return;
+    }
+    const px = gx + (right ? 0.5 : -0.5), py = gy - 0.95;        // остриё копья на кадре удара
+    setTimeout(swing, 380 + 760 - 150);
+    await toss(dn, px, py + 0.1);
+    tnt.play(0, 6, 130);
+    mapSfx(st, "knock", px, py);
+    // отбитый динамит крутится (плоская картинка в своей плоскости); сдвиг актёра повторён в каждом кадре
+    const base = `translate(-50%, ${dn.el.style.getPropertyValue("--foot")})`;
+    const fling = async (x, y, h, ms, turns) => {
+      dn.el.style.transition = "none"; dn.at(px, py); dn.show(true); dn.play(0, 6, 70);
+      const spin = dn.el.animate ? dn.el.animate([{ transform: `${base} rotate(0deg)` }, { transform: `${base} rotate(${turns * 360}deg)` }], { duration: ms }) : null;
+      await dn.arc(x, y, h, ms);
+      dn.show(false); spin?.cancel();
+    };
+    if (r < 0.55) {                                              // обратно на вышку: гоблин прячется в дыму и вылезает снова
+      await fling(tx, ty - 0.9, 1.2, 620, right ? 3 : -3);
+      landBoom(tx, ty - 0.8);
+      tnt.el.style.transition = "opacity 0.15s"; tnt.show(false);
+      await skSleep(st, skRnd(2200, 3500));
+      tnt.el.style.transition = "opacity 0.5s"; tnt.show(true); tnt.play(0, 6, 130);
+    } else if (r < 0.77) {                                       // в протоку; ждёт утка — прямо в неё
+      const d = ducks.find((v) => v.state === "wait");
+      const wx = d ? d.a.x : gx + 0.4, wy = d ? d.a.y : lanes[0][0][1] - 0.4;
+      if (d) d.state = "target";
+      if (d || E.waterAt(wx, wy)) {
+        await fling(wx, wy - 0.1, 1.6, 720, right ? -3 : 3);
+        blast(wx, wy, !!d);
+        if (d) await hitDuck(d, true);
+      } else { await fling(px + 0.3, py - 2.3, 0.25, 430, 2); pop(booms[0], px + 0.3, py - 1.9, 75); }
+    } else if (r < 0.92) {                                       // подбросил: взрыв в воздухе
+      const ax = px + (right ? 0.4 : -0.4), ay = py - 2.3;
+      await fling(ax, ay, 0.25, 430, 2);
+      pop(booms[Math.floor(Math.random() * booms.length)], ax, ay + 0.4, 75);
+    } else {                                                     // сбил на землю: фитиль погас, один пар
+      const fx = gx + (right ? 1.0 : -1.0), fy = gy + 0.1;
+      await fling(fx, fy, 0.2, 300, 1);
+      pop(dusts[1], fx, fy - 0.1, 90);
+    }
+    if (G.state === "busy") { G.state = "post"; G.next = performance.now() + skRnd(5000, 11000); }
+  };
+  if (G) skRun(async () => { await skWait(st, skRnd(800, 2500)); await gCome(); });
   // утки приплывают по одной, иногда две сразу; гоблин кидает в ту, что уже ждёт (ждут обе — по динамиту каждой)
   skRun(async () => {
     for (;;) {
@@ -4909,7 +4989,8 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
   for (;;) {
     await skWait(st, 300);
     const w = ducks.filter((v) => v.state === "wait");
-    if (w.length) await throwAt(w[0], w[1]);
+    if (G && G.state === "post" && performance.now() > G.next && (!w.length || Math.random() < 0.5)) await throwAtGuard();
+    else if (w.length) await throwAt(w[0], w[1]);
   }
 }
 // Рудокоп у золотого камня (раньше рисовался картой; на стыке полос карты на некоторых телефонах
@@ -5611,7 +5692,9 @@ const SKIT_PLAN = {
     { name: "оборона у моста", fn: "beach" },
     // подрывник на вышке скалы гоблинов кидает динамит в уток, которые подплывают по протоке под скалой
     { name: "подрывник на вышке и утки", fn: "ducks", at: [4.25, 12.56],
-      lanes: [[[-0.6, 18.3], [2.0, 4.2]], [[18.6, 17.55], [6.5, 7.6]]] },   // мост через протоку — в клетке x 5, под ним не плавают
+      lanes: [[[-0.6, 18.3], [2.0, 4.2]], [[18.6, 17.55], [6.5, 7.6]]],
+      // копейщик-дозорный: выходит из шахты на южном берегу, идёт по дороге и мосту, встаёт под вышкой слева (вышка — справа-сверху)
+      guard: { post: [1.5, 15.5], path: [[3.3, 20.8], [4.9, 20.75], [5.05, 19.3], [5.05, 15.5]] }, ok: ["mine"] },   // мост через протоку — в клетке x 5, под ним не плавают
     // правое плато у шахты: два гоблина у кучки золота; проигравший убегает к краю плато
     { name: "драка за золото", fn: "fight", a: [11.6, 22.3], b: [13.4, 22.3], awayA: [10.4, 22.3], awayB: [16.3, 22.3], ok: ["gold2"] },
     // левое плато: шахтёр у золота внизу; гоблин приходит справа по нижнему краю,
@@ -5648,7 +5731,7 @@ const SKIT_GEOM = {
   barrel: (s) => ({ stand: [s.at] }),
   miner: (s) => ({ stand: [s.at] }),
   builders: (s) => ({ stand: [s.a, s.b], paths: [[BUILD_BRIDGE.pile, [BUILD_BRIDGE.from + 0.75, BUILD_BRIDGE.row + 0.55]]] }),
-  ducks: (s) => ({ swim: s.lanes.map(([[x, y], [a, b]]) => [[x, y], [Math.abs(a - x) > Math.abs(b - x) ? a : b, y]]) }),
+  ducks: (s) => ({ swim: s.lanes.map(([[x, y], [a, b]]) => [[x, y], [Math.abs(a - x) > Math.abs(b - x) ? a : b, y]]), stand: s.guard ? [s.guard.post] : [] }),
   tnt: (s) => ({ stand: [s.at], water: [s.to] }),
   archer: (s) => ({ stand: [s.at], paths: [[[s.run[0], s.at[1]], [s.run[1], s.at[1]]]] }),
   fight: (s) => ({ stand: [s.a, s.b], paths: [[s.a, s.awayA], [s.b, s.awayB]] }),
@@ -11883,10 +11966,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 182;
+const APP_VERSION = 183;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 183, date: "2026-11-18", text: "У вышки с утками на первом острове появился копейщик: он отбивает динамит гоблина копьём — на вышку, в воду или в воздух. А если не успеет, ему на смену придёт новый", en: "A lancer now stands by the duck tower on the first island: he knocks the goblin’s dynamite away with his spear — back at the tower, into the water or up in the air. If he is too slow, a new lancer comes to replace him" },
   { v: 182, date: "2026-11-17", text: "Бой у моста: копейщик теперь может отбить динамит копьём — обратно в гоблинов, в воздух или на землю", en: "The fight at the bridge: a lancer can now knock dynamite away with his spear — back at the goblins, up into the air or to the ground" },
   { v: 181, date: "2026-11-17", text: "Подрывник и утки на первом острове: взрывы теперь разные, а утку может подбросить так, что она улетит, крутясь", en: "The bomber and the ducks on the first island: explosions now differ, and a duck may be tossed so hard that it flies away spinning" },
   { v: 180, date: "2026-11-17", text: "На карте острова теперь слышно, что происходит рядом с рыцарем: бой у моста, кирки рудокопов, утки. Чем ближе — тем громче", en: "On the island map you can now hear what happens near the knight: the fight at the bridge, miners’ picks, ducks. The closer, the louder" },
