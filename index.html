@@ -5128,6 +5128,10 @@ async function battle(st0, B) {
   // черепа — не крупнее голов, даже когда бойцы увеличены
   const deads = pool("dead", B.skulls ? 16 : 8, ZM > 1 ? 0.95 / ZM : 0.9, 0.75), booms = pool("boom", 4, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5);
   const arrows = pool("arrow", 6, 0.75, 0.5), heals = pool("healfx", 2, 0.8), fizz = pool("dust", 2, 1.1, 0.6);
+  // отбитый динамит должен быть заметен в свалке (v184): вспышка у копья, дымный след, большой взрыв там, куда вернулся
+  const sparks = pool("boom2", 2, 0.6, 0.5), bigBooms = pool("boom3", 2, 1.5, 0.55), trail = pool("dust", 8, 0.5, 0.5);
+  sparks.forEach((a) => (a.mute = true));
+  const fxAt = (list, x, y, ms, z) => { const f = take(list); f.el.style.transition = "none"; f.at(x, y); Z(f, z ?? y + 3); f.show(true); f.play(0, SK[f.key][0], ms, false).then(() => free(f)); };
   const take = (list) => { const a = list.find((x) => !x.busy) || list[0]; a.busy = true; return a; };
   const free = (a) => { a.busy = false; a.show(false); };
   const later = [];                                   // отложенные действия: [время, что сделать]
@@ -5299,16 +5303,19 @@ async function battle(st0, B) {
       d.arc(px, py, 0.8, 520).then(() => {
         if (L.dead) return d.arc(x1, y1, 0.3, 160).then(land);                              // копейщика уже нет — падает, куда летел
         mapSfx(st, "knock", px, py);
-        say(L, CMD("attack"), 0.6);
+        say(L, CMD("attack"));
+        fxAt(sparks, px, py, 45);                                                             // вспышка у острия копья
+        Z(d, py + 4);                                                                         // летит поверх бойцов
+        const smoke = (ms) => { for (let t = 80; t < ms; t += 100) after(t, () => { if (d.busy) fxAt(trail, d.x, d.y + 0.1, 55); }); };
         if (r < 0.60) {                                                                       // подбросил: взрыв высоко в воздухе
-          const ax = px + (px - L.x) * 0.8, ay = py - 2.3 * ZM;
-          spin(2, 430);
-          return d.arc(ax, ay, 0.25, 430).then(() => { free(d); boom(ax, ay + 0.5); });
+          const ax = px + (px - L.x) * 0.8, ay = py - 3.0 * ZM;
+          spin(3, 650); smoke(650);
+          return d.arc(ax, ay, 0.25, 650).then(() => { free(d); fxAt(bigBooms, ax, ay + 0.6, 70); });
         }
         if (r < 0.90) {                                                                       // отбил обратно: в того, кто кинул
-          const bx = u.x, by = u.y;
-          spin(u.x < L.x ? -3 : 3, 620);
-          return d.arc(bx, by, 1.3, 620).then(() => { free(d); boom(bx, by); splash(bx, by, 0.9, u.T.dmg + 1); });
+          const bx = u.x, by = u.y;                                                           // летит высоко и не спеша — видно, куда вернётся
+          spin(u.x < L.x ? -4 : 4, 950); smoke(950);
+          return d.arc(bx, by, 2.3, 950).then(() => { free(d); boom(bx, by); fxAt(bigBooms, bx, by, 75); splash(bx, by, 0.9, u.T.dmg + 1); });
         }
         const gx = px + (px - L.x) * 1.2, gy = L.y + 0.1;                                    // сбил на землю: фитиль погас
         spin(1, 300);
@@ -11966,10 +11973,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 183;
+const APP_VERSION = 184;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 184, date: "2026-11-18", text: "Бой у моста: отбитый копейщиком динамит теперь хорошо видно — вспышка, дымный след и большой взрыв", en: "The fight at the bridge: dynamite knocked away by a lancer is now easy to see — a flash, a smoke trail and a big explosion" },
   { v: 183, date: "2026-11-18", text: "У вышки с утками на первом острове появился копейщик: он отбивает динамит гоблина копьём — на вышку, в воду или в воздух. А если не успеет, ему на смену придёт новый", en: "A lancer now stands by the duck tower on the first island: he knocks the goblin’s dynamite away with his spear — back at the tower, into the water or up in the air. If he is too slow, a new lancer comes to replace him" },
   { v: 182, date: "2026-11-17", text: "Бой у моста: копейщик теперь может отбить динамит копьём — обратно в гоблинов, в воздух или на землю", en: "The fight at the bridge: a lancer can now knock dynamite away with his spear — back at the goblins, up into the air or to the ground" },
   { v: 181, date: "2026-11-17", text: "Подрывник и утки на первом острове: взрывы теперь разные, а утку может подбросить так, что она улетит, крутясь", en: "The bomber and the ducks on the first island: explosions now differ, and a duck may be tossed so hard that it flies away spinning" },

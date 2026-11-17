@@ -1,13 +1,13 @@
 {
- "version": 183,
+ "version": 184,
  "date": "2026-11-18",
  "notes": [
-  "У вышки с утками на первом острове появился копейщик: он отбивает динамит гоблина копьём — на вышку, в воду или в воздух. А если не успеет, ему на смену придёт новый"
+  "Бой у моста: отбитый копейщиком динамит теперь хорошо видно — вспышка, дымный след и большой взрыв"
  ],
  "files": {
   "index.html": {
-   "size": 904481,
-   "hash": "a18ce6f305281b58"
+   "size": 906021,
+   "hash": "f5cd547f5485e133"
   },
   "art.js": {
    "size": 841991,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "f2aa015da7dc122e"
+   "hash": "c6f92dce77784a67"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "A lancer now stands by the duck tower on the first island: he knocks the goblin’s dynamite away with his spear — back at the tower, into the water or up in the air. If he is too slow, a new lancer comes to replace him"
+  "The fight at the bridge: dynamite knocked away by a lancer is now easy to see — a flash, a smoke trail and a big explosion"
  ]
 }
