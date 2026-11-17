@@ -5046,7 +5046,7 @@ async function battle(st0, B) {
   const pool = (k, n, sc, foot) => Array.from({ length: n }, () => A(k, sc, foot));
   // черепа — не крупнее голов, даже когда бойцы увеличены
   const deads = pool("dead", B.skulls ? 16 : 8, ZM > 1 ? 0.95 / ZM : 0.9, 0.75), booms = pool("boom", 4, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5);
-  const arrows = pool("arrow", 6, 0.75, 0.5), heals = pool("healfx", 2, 0.8);
+  const arrows = pool("arrow", 6, 0.75, 0.5), heals = pool("healfx", 2, 0.8), fizz = pool("dust", 2, 1.1, 0.6);
   const take = (list) => { const a = list.find((x) => !x.busy) || list[0]; a.busy = true; return a; };
   const free = (a) => { a.busy = false; a.show(false); };
   const later = [];                                   // отложенные действия: [время, что сделать]
@@ -5202,7 +5202,41 @@ async function battle(st0, B) {
     after(380, () => {
       if (u.dead) return;
       const d = take(dyns); d.el.style.transition = "none"; d.at(u.x + (u.left ? -0.3 : 0.3) * ZM, u.y - 1.0 * ZM); Z(d, 40); d.show(true); d.play(0, 6, 70);
-      d.arc(x1, y1, 1.1, 650).then(() => { free(d); boom(x1, y1); splash(x1, y1, 0.75, u.T.dmg); });
+      const land = () => { free(d); boom(x1, y1); splash(x1, y1, 0.75, u.T.dmg); };
+      // Копейщик рядом с местом падения встречает динамит ударом копья вверх-вбок (v182). Каждый раз по-своему:
+      // не заметил или махнул поздно — взрыв у ног, как раньше; подбросил — взрыв в воздухе, никого не задело;
+      // отбил обратно — динамит летит в того, кто кинул, и взрывается среди гоблинов; сбил на землю — фитиль погас, один пар.
+      const L = units.find((v) => !v.dead && v.kind === "lan" && Math.hypot(v.x - x1, v.y - y1) < 1.0 * ZM && now >= v.busy), r = Math.random();
+      if (!L || r < 0.22) { d.arc(x1, y1, 1.1, 650).then(land); return; }
+      const swing = () => { if (L.dead) return; L.left = u.x < L.x; L.busy = now + 480; L.next = Math.max(L.next || 0, now + 600); anim(L, "atk" + now, ATK.lan.uside); };
+      if (r < 0.38) { after(560, swing); d.arc(x1, y1, 1.1, 650).then(land); return; }        // махнул поздно
+      // динамит крутится в полёте: поворот — вместе с обычным сдвигом актёра (transform у него уже занят)
+      const base = `translate(-50%, ${d.el.style.getPropertyValue("--foot")})`;
+      const spin = (turns, ms) => STILL || !d.el.animate ? null : d.el.animate([{ transform: `${base} rotate(0deg)` }, { transform: `${base} rotate(${turns * 360}deg)` }], { duration: ms });
+      const px = L.x + (u.x < L.x ? -0.5 : 0.5) * ZM, py = L.y - 0.95 * ZM;                  // остриё копья на кадре удара
+      after(370, swing);
+      d.arc(px, py, 0.8, 520).then(() => {
+        if (L.dead) return d.arc(x1, y1, 0.3, 160).then(land);                              // копейщика уже нет — падает, куда летел
+        mapSfx(st, "knock", px, py);
+        say(L, CMD("attack"), 0.6);
+        if (r < 0.60) {                                                                       // подбросил: взрыв высоко в воздухе
+          const ax = px + (px - L.x) * 0.8, ay = py - 2.3 * ZM;
+          spin(2, 430);
+          return d.arc(ax, ay, 0.25, 430).then(() => { free(d); boom(ax, ay + 0.5); });
+        }
+        if (r < 0.90) {                                                                       // отбил обратно: в того, кто кинул
+          const bx = u.x, by = u.y;
+          spin(u.x < L.x ? -3 : 3, 620);
+          return d.arc(bx, by, 1.3, 620).then(() => { free(d); boom(bx, by); splash(bx, by, 0.9, u.T.dmg + 1); });
+        }
+        const gx = px + (px - L.x) * 1.2, gy = L.y + 0.1;                                    // сбил на землю: фитиль погас
+        spin(1, 300);
+        return d.arc(gx, gy, 0.2, 300).then(() => {
+          free(d);
+          const f = take(fizz); f.el.style.transition = "none"; f.at(gx, gy - 0.1); Z(f, gy, 2); f.show(true);
+          f.play(0, 10, 85, false).then(() => free(f));
+        });
+      });
     });
   };
   const barrelGo = (u, t) => {
@@ -11849,10 +11883,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 181;
+const APP_VERSION = 182;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 182, date: "2026-11-17", text: "Бой у моста: копейщик теперь может отбить динамит копьём — обратно в гоблинов, в воздух или на землю", en: "The fight at the bridge: a lancer can now knock dynamite away with his spear — back at the goblins, up into the air or to the ground" },
   { v: 181, date: "2026-11-17", text: "Подрывник и утки на первом острове: взрывы теперь разные, а утку может подбросить так, что она улетит, крутясь", en: "The bomber and the ducks on the first island: explosions now differ, and a duck may be tossed so hard that it flies away spinning" },
   { v: 180, date: "2026-11-17", text: "На карте острова теперь слышно, что происходит рядом с рыцарем: бой у моста, кирки рудокопов, утки. Чем ближе — тем громче", en: "On the island map you can now hear what happens near the knight: the fight at the bridge, miners’ picks, ducks. The closer, the louder" },
   { v: 179, date: "2026-11-17", text: "Плитки и рамки программы теперь можно перетаскивать: подержи плитку пальцем (или потяни мышью) и неси на новое место", en: "You can now drag tiles and frames of your program: hold a tile with a finger (or drag with the mouse) and move it to a new place", big: true },

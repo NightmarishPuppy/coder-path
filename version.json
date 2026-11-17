@@ -1,13 +1,13 @@
 {
- "version": 181,
+ "version": 182,
  "date": "2026-11-17",
  "notes": [
-  "Подрывник и утки на первом острове: взрывы теперь разные, а утку может подбросить так, что она улетит, крутясь"
+  "Бой у моста: копейщик теперь может отбить динамит копьём — обратно в гоблинов, в воздух или на землю"
  ],
  "files": {
   "index.html": {
-   "size": 894065,
-   "hash": "0ae5490781fd1b0d"
+   "size": 897604,
+   "hash": "a00192158697bbab"
   },
   "art.js": {
    "size": 841991,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "c8b286b65a5ac9c8"
+   "hash": "de0084777ba17443"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The bomber and the ducks on the first island: explosions now differ, and a duck may be tossed so hard that it flies away spinning"
+  "The fight at the bridge: a lancer can now knock dynamite away with his spear — back at the goblins, up into the air or to the ground"
  ]
 }
