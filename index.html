@@ -4647,7 +4647,8 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   gmount: [12, 1, 320], towerb: [1, 1, 256], towerbf: [1, 1, 256], arrowd: [1, 1, 64], arrowu: [1, 1, 64], archb: [8, 7, 192], kwar: [6, 8, 192],
   torchp: [7, 5, 192], lidle: [12, 1, 320], lrun: [6, 1, 320], ldatk: [3, 1, 320], lddef: [6, 1, 320],
   lratk: [3, 1, 320], luatk: [3, 1, 320], ldratk: [3, 1, 320], luratk: [3, 1, 320], monkrun: [4, 1, 192], duck: [3, 1, 32], splash: [9, 1, 192], hidle: [8, 1, 120], hrun: [6, 1, 120], hatk: [4, 1, 120],
-  mtree: [8, 1, 192], stump3: [1, 1, 192] };
+  mtree: [8, 1, 192], stump3: [1, 1, 192],
+  duckair: [3, 1, 32], boom2: [8, 1, 192], boom3: [10, 1, 192], dust: [10, 1, 64] };
 let SK_ACTORS = [];
 let skLast = 0;
 function skTick(t) {
@@ -4769,18 +4770,30 @@ async function skitArcher(st, [ax, ay], [gx0, gx1]) {
   }
 }
 // Подрывник на вышке (первый остров, скала гоблинов) и утки: по протоке под скалой к вышке подплывают
-// утки — с левого или правого края карты, мимо камней в воде. Толстый гоблин с динамитом швыряет в них:
-// попал — взрыв, всплеск, утка тонет; промахнулся — утка в панике уплывает обратно. Подплывают новые.
-// Утка в наборе смотрит влево, поэтому отражаем её, когда плывёт вправо.
+// утки — с левого или правого края карты, мимо камней в воде. Толстый гоблин с динамитом швыряет в них.
+// Каждый бросок выходит по-своему (v181):
+//  · взрыв — один из трёх рисунков, со всплеском и облаком пара; промах — утка в панике уплывает обратно;
+//  · попал: утка тонет, или переворачивается кверху брюхом и качается, или её подбрасывает — летит, крутясь, и шлёпается в воду;
+//  · двойной бросок (два динамита подряд — в одну утку или в двух, если ждут обе): второй взрыв большой,
+//    утку уносит далеко за край карты, она бешено вращается.
+// Утка в наборе смотрит влево, поэтому отражаем её, когда плывёт вправо. В полёте — картинка утки без ряби воды (duckair).
 async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
   const ducks = [0, 1].map(() => ({ a: skActor(st, "duck", 1.4, 0.8), state: "off" }));
-  const tnt = skActor(st, "tnt", 0.9), dyn = skActor(st, "dyn", 1, 0.5);
-  const spl = skActor(st, "splash", 0.6, 0.5), boom = skActor(st, "boom", 0.9, 0.6);
+  const tnt = skActor(st, "tnt", 0.9), dyns = [0, 1].map(() => skActor(st, "dyn", 1, 0.5));
+  const spl = skActor(st, "splash", 0.9, 0.5), splBig = skActor(st, "splash", 1.45, 0.5), splLand = skActor(st, "splash", 0.6, 0.5);
+  const booms = [skActor(st, "boom", 0.9, 0.6), skActor(st, "boom2", 1.25, 0.55), skActor(st, "boom3", 1.0, 0.55)], boomBig = skActor(st, "boom3", 1.6, 0.55);
+  const dusts = [0, 1, 2].map(() => skActor(st, "dust", 1.5, 0.6));
+  for (const d of ducks) d.air = skActor(st, "duckair", 1.4, 0.5);
   tnt.at(tx, ty); tnt.show(true); tnt.play(0, 6, 130); tnt.face(true);
   const E = ISLE_ENG[1];
   const swim = (d, x, y, speed) => {
     d.a.face(x > d.a.x); d.a.play(0, 3, speed > 1.2 ? 120 : 220);
     return d.a.move(x, y, Math.abs(x - d.a.x) / speed * 1000);
+  };
+  // поставить эффект в точку и проиграть его один раз
+  const pop = (a, x, y, ms) => {
+    a.el.style.transition = "none"; a.at(x, y); void a.el.offsetWidth; a.show(true);
+    return a.play(0, SK[a.key][0], ms, false).then(() => a.show(false));
   };
   // утка подплывает и ждёт у скалы
   const sail = async (d) => {
@@ -4790,34 +4803,102 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
     await swim(d, x0 + Math.random() * (x1 - x0), sy, 0.9);
     if (d.state === "swim") { d.state = "wait"; d.a.play(0, 3, 300); mapSfx(st, "duck", d.a.x, d.a.y); }
   };
-  const throwAt = async (d) => {
-    d.state = "target";
+  // гоблин замахивается и кидает динамит в точку (x, y); летит 760 мс
+  const toss = async (dn, x, y) => {
+    tnt.face(x < tx); tnt.play(2, 7, 90, false);
+    await skSleep(st, 380);
+    dn.el.style.transition = "none"; dn.at(tx + (x < tx ? -0.45 : 0.45), ty - 1.1); void dn.el.offsetWidth;
+    dn.show(true); dn.play(0, 6, 70);
+    await dn.arc(x, y - 0.1, 1.7, 760);
+    dn.show(false);
+  };
+  // взрыв на воде: огонь, всплеск, пар поднимается вверх; большой — крупнее и с тремя облаками
+  const blast = (x, y, big) => {
+    pop(big ? boomBig : booms[Math.floor(Math.random() * booms.length)], x, y - 0.1, 75);
+    pop(big ? splBig : spl, x, y, big ? 105 : 90);
+    (big ? [-0.55, 0, 0.55] : [0]).forEach((dx, i) => setTimeout(() => {
+      const p = dusts[i];
+      pop(p, x + dx, y - 0.25, 95);
+      p.move(x + dx * 1.5, y - 1.2 - Math.abs(dx) * 0.4, 900);
+    }, 140 + i * 90));
+  };
+  // утку подбросило: летит по дуге и крутится. Слабо — шлёпается в воду неподалёку; сильно — уносится за край карты.
+  const fly = async (d, power) => {
+    const a = d.air, x0 = d.a.x, y0 = d.a.y;
+    let dir = x0 === tx ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(x0 - tx), dist = power ? skRnd(9, 13) : skRnd(3, 5);
+    if (!power && !E.waterAt(x0 + dir * dist, y0)) { dir = -dir; if (!E.waterAt(x0 + dir * dist, y0)) power = true, dist = 10; }   // сесть некуда — улетает совсем
+    const ms = power ? 1500 : 1150, turns = (power ? skRnd(4, 6) : skRnd(1.5, 2.5)) * (Math.random() < 0.5 ? -1 : 1);
+    d.a.el.style.transition = "none"; d.a.show(false);
+    a.el.style.transition = "none"; a.at(x0, y0 - 0.25); void a.el.offsetWidth; a.show(true); a.play(0, 3, 80);
+    mapSfx(st, "duck", x0, y0);
+    // вращение — вместе с обычным сдвигом актёра (transform у него уже занят), поэтому сдвиг повторён в каждом кадре
+    const base = `translate(-50%, ${a.el.style.getPropertyValue("--foot")})`;
+    const spin = a.el.animate([{ transform: `${base} rotate(0deg)` }, { transform: `${base} rotate(${Math.round(turns * 360)}deg)` }], { duration: ms, fill: "forwards", easing: power ? "linear" : "ease-out" });
+    const fade = power ? a.el.animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], { duration: ms, fill: "forwards" }) : null;
+    await a.arc(x0 + dir * dist, power ? y0 - skRnd(2, 4) : y0 - 0.25, power ? skRnd(4.5, 6.5) : skRnd(2.2, 3.2), ms);
+    a.show(false); spin.cancel(); fade?.cancel();
+    if (!power) await pop(splLand, x0 + dir * dist, y0, 80);
+  };
+  // кверху брюхом: подпрыгнула, перевернулась, покачалась и ушла под воду
+  const bellyUp = async (d) => {
+    const a = d.air, x = d.a.x, y = d.a.y;
+    d.a.el.style.transition = "none"; d.a.show(false);
+    a.el.style.transition = "none"; a.at(x, y - 0.15); void a.el.offsetWidth; a.show(true); a.play(0, 3, 260);
+    const base = `translate(-50%, ${a.el.style.getPropertyValue("--foot")})`;
+    const turn = a.el.animate([{ transform: `${base} rotate(0deg)` }, { transform: `${base} rotate(180deg)` }], { duration: 420, fill: "forwards", easing: "ease-out" });
+    await a.arc(x, y - 0.15, 0.7, 420);
+    mapSfx(st, "duck", x, y);
+    await skSleep(st, 1500);
+    a.el.style.transition = "top 0.7s ease-in, opacity 0.7s";
+    a.at(x, y + 0.2); a.show(false);
+    await skSleep(st, 750);
+    turn.cancel();
+  };
+  const sink = async (d) => {
+    d.a.el.style.transition = "top 0.5s ease-in, opacity 0.5s";
+    d.a.at(d.a.x, d.a.y + 0.25); d.a.show(false);
+    await skSleep(st, 600);
+  };
+  // что стало с уткой после попадания
+  const hitDuck = async (d, power) => {
+    const r = Math.random();
+    await (power || r < 0.3 ? fly(d, power) : r < 0.65 ? bellyUp(d) : sink(d));
+    d.state = "off";
+  };
+  const throwAt = async (d, d2) => {
+    const double = !!d2 || Math.random() < 0.22;
+    d.state = "target"; if (d2) d2.state = "target";
     tnt.face(d.a.x < tx);
     await skSleep(st, skRnd(300, 900));
-    tnt.play(2, 7, 90, false);
-    await skSleep(st, 380);
+    if (double) {
+      // два динамита подряд. Одна утка: первый ложится рядом (пристрелка), второй — точно в неё, большим взрывом.
+      // Две утки: первый — в первую, второй (большой) — во вторую.
+      let x1 = d.a.x, y1 = d.a.y;
+      if (!d2) { const ox = x1 + (Math.random() < 0.5 ? -0.8 : 0.8); x1 = E.waterAt(ox, y1) ? ox : x1 + 0.3; }
+      const t2 = d2 || d;
+      const first = toss(dyns[0], x1, y1).then(() => { blast(x1, y1, false); return d2 ? hitDuck(d, false) : mapSfx(st, "duck", d.a.x, d.a.y); });
+      await skSleep(st, 470);
+      await toss(dyns[1], t2.a.x, t2.a.y);
+      tnt.play(0, 6, 130);
+      blast(t2.a.x, t2.a.y, true);
+      await Promise.all([first, hitDuck(t2, true)]);
+      return;
+    }
     const hit = Math.random() < 0.78;
     let bx = d.a.x, by = d.a.y;
     if (!hit) { const ox = bx + (Math.random() < 0.5 ? -0.8 : 0.8); if (E.waterAt(ox, by)) bx = ox; }
-    dyn.el.style.transition = "none"; dyn.at(tx + (d.a.x < tx ? -0.45 : 0.45), ty - 1.1); void dyn.el.offsetWidth;
-    dyn.show(true); dyn.play(0, 6, 70);
-    await dyn.arc(bx, by - 0.1, 1.7, 760);
-    dyn.show(false);
+    await toss(dyns[0], bx, by);
     tnt.play(0, 6, 130);
-    boom.at(bx, by - 0.1); boom.show(true); boom.play(0, 9, 75, false).then(() => boom.show(false));
-    spl.at(bx, by); spl.show(true); spl.play(0, 9, 90, false).then(() => spl.show(false));
-    if (bx === d.a.x) {                                         // попал — утка тонет
-      d.a.el.style.transition = "top 0.5s ease-in, opacity 0.5s";
-      d.a.at(d.a.x, d.a.y + 0.25); d.a.show(false);
-      await skSleep(st, 600);
-    } else {                                                     // мимо — уплывает обратно
+    blast(bx, by, false);
+    if (bx === d.a.x) await hitDuck(d, false);                   // попал
+    else {                                                       // мимо — уплывает обратно
       mapSfx(st, "duck", d.a.x, d.a.y);
       await swim(d, d.from[0], d.from[1], 1.8);
       d.a.show(false);
+      d.state = "off";
     }
-    d.state = "off";
   };
-  // утки приплывают по одной, иногда две сразу; гоблин кидает в ту, что уже ждёт
+  // утки приплывают по одной, иногда две сразу; гоблин кидает в ту, что уже ждёт (ждут обе — по динамиту каждой)
   skRun(async () => {
     for (;;) {
       await skWait(st, skRnd(2500, 7000));
@@ -4827,8 +4908,8 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes }) {
   });
   for (;;) {
     await skWait(st, 300);
-    const d = ducks.find((v) => v.state === "wait");
-    if (d) await throwAt(d);
+    const w = ducks.filter((v) => v.state === "wait");
+    if (w.length) await throwAt(w[0], w[1]);
   }
 }
 // Рудокоп у золотого камня (раньше рисовался картой; на стыке полос карты на некоторых телефонах
@@ -10865,7 +10946,7 @@ function mapSfx(stage, name, x, y) {
 // Какой кадр какой анимации звучит: «лист:ряд» → [кадр, звук]. Срабатывает сам, когда актёр на карте проигрывает этот кадр.
 const SK_SND = {
   "paxe:0": [3, "chop"], "phammer:0": [2, "knock"], "ppick:0": [3, "pick"],
-  "boom:0": [0, "boom"], "splash:0": [1, "splash"], "heal:0": [3, "heal"], "dead:0": [0, "gobdie"], "hatk:0": [1, "hit"],
+  "boom:0": [0, "boom"], "boom2:0": [0, "boom"], "boom3:0": [0, "boom"], "splash:0": [1, "splash"], "heal:0": [3, "heal"], "dead:0": [0, "gobdie"], "hatk:0": [1, "hit"],
   "lratk:0": [1, "spear"], "ldatk:0": [1, "spear"], "luatk:0": [1, "spear"], "ldratk:0": [1, "spear"], "luratk:0": [1, "spear"],
 };
 for (let r = 2; r <= 7; r++) SK_SND["kwar:" + r] = [2, "hit"];
@@ -11768,10 +11849,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 180;
+const APP_VERSION = 181;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 181, date: "2026-11-17", text: "Подрывник и утки на первом острове: взрывы теперь разные, а утку может подбросить так, что она улетит, крутясь", en: "The bomber and the ducks on the first island: explosions now differ, and a duck may be tossed so hard that it flies away spinning" },
   { v: 180, date: "2026-11-17", text: "На карте острова теперь слышно, что происходит рядом с рыцарем: бой у моста, кирки рудокопов, утки. Чем ближе — тем громче", en: "On the island map you can now hear what happens near the knight: the fight at the bridge, miners’ picks, ducks. The closer, the louder" },
   { v: 179, date: "2026-11-17", text: "Плитки и рамки программы теперь можно перетаскивать: подержи плитку пальцем (или потяни мышью) и неси на новое место", en: "You can now drag tiles and frames of your program: hold a tile with a finger (or drag with the mouse) and move it to a new place", big: true },
   { v: 178, date: "2026-11-17", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },

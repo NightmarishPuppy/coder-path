@@ -1,13 +1,13 @@
 {
- "version": 180,
+ "version": 181,
  "date": "2026-11-17",
  "notes": [
-  "На карте острова теперь слышно, что происходит рядом с рыцарем: бой у моста, кирки рудокопов, утки. Чем ближе — тем громче"
+  "Подрывник и утки на первом острове: взрывы теперь разные, а утку может подбросить так, что она улетит, крутясь"
  ],
  "files": {
   "index.html": {
-   "size": 887697,
-   "hash": "ffc68a388b0c5171"
+   "size": 894065,
+   "hash": "0ae5490781fd1b0d"
   },
   "art.js": {
    "size": 841991,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "47eec16b59d3ac21"
+   "hash": "c8b286b65a5ac9c8"
   },
   "icon-192.png": {
    "size": 42164,
@@ -98,8 +98,8 @@
    "hash": "b364ac5a479c06b5"
   },
   "art-scenes.js": {
-   "size": 801983,
-   "hash": "8d4d08579bb667a6"
+   "size": 831208,
+   "hash": "fa6407c5bac9a85f"
   },
   "art-isle2.js": {
    "size": 80017,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "On the island map you can now hear what happens near the knight: the fight at the bridge, miners’ picks, ducks. The closer, the louder"
+  "The bomber and the ducks on the first island: explosions now differ, and a duck may be tossed so hard that it flies away spinning"
  ]
 }
