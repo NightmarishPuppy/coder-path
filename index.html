@@ -827,6 +827,16 @@ textarea#code:focus-visible { box-shadow: inset 0 0 0 2px var(--torch); }
 #levelview.blk .scroll { border: 0; background: none; }
 #levelview.blk .scroll-head { padding: 0 0 6px; border: 0; }
 .blocks .empty { color: var(--muted); font-size: 14px; padding: 12px 6px; }
+/* Перетаскивание плиток и рамок: «в руке» — копия куска (едет за пальцем), на его будущем месте — пунктир */
+.blocks { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.bdsrc { opacity: 0.3; }
+.bdmark { position: fixed; z-index: 96; pointer-events: none; border-radius: 3px; background: #ffd54a; box-shadow: 0 0 0 2px #13151b, 0 0 10px 3px #ffd54acc; }
+.bdmark.slot { background: #ffd54a40; border: 3px solid #ffd54a; border-radius: 10px; box-sizing: border-box; }
+.bdmark[hidden] { display: none; }
+.bdghost { position: fixed !important; z-index: 95; margin: 0 !important; pointer-events: none; opacity: 0.96; box-shadow: 0 12px 26px #000b, 0 0 0 3px #ffd54a; transform-origin: 50% 50%; animation: none !important; }
+.bdghost.wide { opacity: 0.8; }
+.bddrop { animation: bd-drop 0.5s ease-out; }
+@keyframes bd-drop { 0% { box-shadow: 0 0 0 7px #ffd54acc; } 100% { box-shadow: 0 0 0 0 #ffd54a00; } }
 .tile {
   position: relative;
   display: inline-flex; align-items: center; gap: 4px;
@@ -8103,6 +8113,234 @@ $("blocks").addEventListener("click", (e) => {
   const n = Number(b.dataset.line);
   if (selLine === n) { selLine = null; drawCode(); } else selectLine(n);
 });
+// Перетаскивание плиток и рамок пальцем или мышью. ПРОТОТИП: пока только в режиме для взрослых (save.dev).
+// Тащим кусок программы — это строки текста: плитка — одна строка; рамка (взялись за её заголовок) — заголовок
+// со всем, что внутри (рамка «если» — вместе с половинами «другое если» и «иначе»). Пока тащим, программа стоит
+// на месте (ничего не убегает из-под пальца): кусок бледнеет, его копия едет за пальцем, а жёлтая черта показывает,
+// куда он встанет. Отпустили — строки переезжают, получают сдвиг нового места, плитки съезжаются. Палец: подержать плитку ~0,2 с (быстрое движение — прокрутка), мышь: просто потянуть.
+const BD_HOLD = 220, BD_SLOP = 8;
+let bdS = null, bdWait = null, bdClick = 0;
+// Дерево программы с концами кусков: у каждого узла — рамка-хозяин (cont), место в ней (k), последняя строка (end);
+// у половин рамки «если» — owner (вся рамка)
+function bdTree() {
+  const code = codeEl.value, frames = findFrames(code), endOf = (ln) => frames.find((f) => f.start === ln)?.end ?? ln;
+  const byLine = new Map(), root = { body: parseBlocks(code), root: true };
+  const walk = (cont) => cont.body.forEach((n, k) => {
+    n.cont = cont; n.k = k; n.end = n.line; byLine.set(n.line, n);
+    if (!n.body) return;
+    const halves = [n, ...(n.elifs || []), ...(n.els ? [n.els] : [])];
+    n.end = endOf(halves[halves.length - 1].line);
+    for (const hf of halves) { hf.owner = n; byLine.set(hf.line, hf); walk(hf); }
+  });
+  walk(root);
+  return { root, byLine };
+}
+const bdBtn = (line) => $("blocks").querySelector(`button[data-line="${line}"]`);
+const bdEl = (n) => (n.body ? bdBtn(n.line).parentElement : bdBtn(n.line));
+// Куда встанет кусок, если отпустить палец в точке (x, y): { cont — рамка (или вся программа), k — перед каким куском в ней }
+function bdSlotAt(S, x, y) {
+  const br = S.box.getBoundingClientRect();
+  if (x < br.left - 40 || x > br.right + 40 || y < br.top - 70 || y > br.bottom + 70) return null;   // унёс далеко — вернётся на место
+  const hit = document.elementFromPoint(x, y), T = S.T;
+  if (hit && S.el.contains(hit)) return null;                                        // над самим куском — остаётся, где был
+  // плитку ставим слева или справа от соседки, рамку (она во всю ширину) — выше или ниже
+  const after = (n) => { const r = bdEl(n).getBoundingClientRect(); return n.body ? y > r.top + r.height / 2 : x > r.left + r.width / 2; };
+  const near = (cont) => {
+    let best = null, bestD = 1e9;
+    for (const n of cont.body) {
+      const r = bdEl(n).getBoundingClientRect(), dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom), d = dx * dx + dy * dy * 4;
+      if (d < bestD) { bestD = d; best = n; }
+    }
+    return best ? { cont, k: best.k + (after(best) ? 1 : 0) } : { cont, k: 0 };
+  };
+  let s;
+  const b = hit?.closest?.("#blocks button[data-line]"), fr = hit?.closest?.("#blocks .bloop, #blocks .bif, #blocks .bdef");
+  if (b) {
+    const n = T.byLine.get(Number(b.dataset.line));
+    if (!n) return S.slot;
+    if (!n.body) s = { cont: n.cont, k: n.k + (after(n) ? 1 : 0) };
+    else {
+      // заголовок рамки: верхний край — «перед рамкой», иначе — в начало рамки
+      const r = b.getBoundingClientRect(), o = n.owner;
+      s = n === o && y < r.top + r.height * 0.3 ? { cont: o.cont, k: o.k } : { cont: n, k: 0 };
+    }
+  } else if (fr) {
+    const heads = [...fr.children].filter((c) => c.matches("button[data-line]:not(.tile)"));
+    const o = T.byLine.get(Number(heads[0].dataset.line)), r = fr.getBoundingClientRect();
+    if (y < r.top + 5) s = { cont: o.cont, k: o.k };
+    else if (y > r.bottom - 5) s = { cont: o.cont, k: o.k + 1 };
+    else {
+      let h = heads[0];
+      for (const c of heads) if (c.getBoundingClientRect().top <= y) h = c;     // половина рамки, в чьих рядах палец
+      s = near(T.byLine.get(Number(h.dataset.line)));
+    }
+  } else s = near(T.root);
+  // приём описывают только в самой программе, не внутри рамок
+  if (S.unit.def) while (!s.cont.root) { const o = s.cont.owner, r = bdEl(o).getBoundingClientRect(); s = { cont: o.cont, k: o.k + (y > r.top + r.height / 2 ? 1 : 0) }; }
+  return s;
+}
+// Жёлтая черта — куда встанет кусок: между плитками — стоячая, между рамками — лежачая, в пустой рамке — обводка места
+function bdMark(S) {
+  const s = S.slot, m = S.mark, u = S.unit;
+  if (!s || (s.cont === u.cont && (s.k === u.k || s.k === u.k + 1))) { m.hidden = true; return; }   // то же место — черты нет
+  const body = s.cont.body, R = (n) => bdEl(n).getBoundingClientRect();
+  let box;
+  if (s.k < body.length) { const r = R(body[s.k]); box = body[s.k].body ? [r.left, r.top - 5, r.width, 4] : [r.left - 5, r.top, 4, r.height]; }
+  else if (body.length) { const n = body[body.length - 1], r = R(n); box = n.body ? [r.left, r.bottom + 1, r.width, 4] : [r.right + 1, r.top, 4, r.height]; }
+  else {
+    const h = bdBtn(s.cont.line), e = h.nextElementSibling, r = (e?.classList.contains("lempty") ? e : h).getBoundingClientRect();
+    box = e?.classList.contains("lempty") ? [r.left, r.top, r.width, r.height] : [r.right + 1, r.top, 4, r.height];
+    m.classList.toggle("slot", !!e?.classList.contains("lempty"));
+  }
+  if (s.k < body.length || body.length) m.classList.remove("slot");
+  m.hidden = false;
+  Object.assign(m.style, { left: box[0] + S.fx + "px", top: box[1] + S.fy + "px", width: box[2] + "px", height: box[3] + "px" });
+}
+// Где стоят плитки и рамки: { строка: [элемент, место на экране] } — чтобы после броска они съехали на новые места, а не прыгнули
+function bdRects() {
+  const m = new Map();
+  for (const b of $("blocks").querySelectorAll("button[data-line]")) {
+    const e = b.classList.contains("tile") ? b : b.parentElement.firstElementChild === b ? b.parentElement : null;
+    if (e) m.set(Number(b.dataset.line), [e, e.getBoundingClientRect()]);
+  }
+  return m;
+}
+function bdStart(b, x, y, touch) {
+  if (bdS || running || !uiBlocks || !b.isConnected) return;
+  const T = bdTree(), node = T.byLine.get(Number(b.dataset.line));
+  if (!node) return;
+  const unit = node.owner || node, el = bdEl(unit), r = el.getBoundingClientRect(), box = $("blocks");
+  const ghost = el.cloneNode(true), mark = document.createElement("i");
+  [ghost, ...ghost.querySelectorAll(".sel, .now, .err")].forEach((e) => e.classList.remove("sel", "now", "err"));
+  ghost.classList.add("bdghost");
+  Object.assign(ghost.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" });
+  mark.className = "bdmark"; mark.hidden = true;
+  $("levelview").append(ghost, mark);
+  // «призрак» должен лечь точно поверх куска, откуда бы ни отсчитывались его координаты
+  const g = ghost.getBoundingClientRect(), fx = r.left - g.left, fy = r.top - g.top;
+  ghost.style.left = r.left + fx + "px"; ghost.style.top = r.top + fy + "px";
+  if (unit.body) { ghost.classList.add("wide"); ghost.style.transformOrigin = `${x - r.left}px ${y - r.top}px`; }
+  el.classList.add("bdsrc");
+  bdS = { T, unit, el, box, ghost, mark, fx, fy, lift: touch ? 42 : 0, x0: x, y0: y, x, y, slot: null, raf: 0, scroll: 0 };
+  bdDraw();
+  sfx("tap");
+  try { tg?.HapticFeedback?.impactOccurred("light"); } catch (e) {}
+  bdS.scroll = setInterval(bdAuto, 30);
+}
+// плитка «в руке» чуть крупнее; рамка — меньше и полупрозрачная (сжимается к пальцу), чтобы не закрывать программу под собой
+// Под пальцем ничего не видно, поэтому на телефоне кусок едет чуть выше пальца (lift), и место выбирает он, а не палец.
+function bdDraw() { const S = bdS; S.ghost.style.transform = `translate(${S.x - S.x0}px, ${S.y - S.y0 - S.lift - 6}px) scale(${S.unit.body ? 0.66 : 1.06})`; }
+function bdMove(x, y) {
+  const S = bdS;
+  S.x = x; S.y = y;
+  bdDraw();
+  if (S.raf) return;
+  S.raf = requestAnimationFrame(() => {
+    S.raf = 0;
+    if (bdS !== S) return;
+    S.slot = bdSlotAt(S, S.x, S.y - S.lift);
+    bdMark(S);
+  });
+}
+// палец у края окна программы или экрана — прокручиваем
+function bdAuto() {
+  const S = bdS;
+  if (!S) return;
+  const br = S.box.getBoundingClientRect(), vh = window.visualViewport?.height || innerHeight;
+  let moved = false;
+  if (S.box.scrollHeight > S.box.clientHeight + 1 && S.x > br.left && S.x < br.right) {
+    const t = S.box.scrollTop;
+    if (S.y < br.top + 30) S.box.scrollTop -= 8; else if (S.y > br.bottom - 30) S.box.scrollTop += 8;
+    moved = S.box.scrollTop !== t;
+  }
+  if (!moved) { const t = scrollY; if (S.y < 46) scrollBy(0, -8); else if (S.y > vh - 46) scrollBy(0, 8); moved = scrollY !== t; }
+  if (moved) bdMove(S.x, S.y);
+}
+function bdEnd(cancel) {
+  const S = bdS;
+  if (!S) return;
+  bdS = null;
+  clearInterval(S.scroll); cancelAnimationFrame(S.raf);
+  if (!cancel) S.slot = bdSlotAt(S, S.x, S.y - S.lift);
+  const s = cancel ? null : S.slot, u = S.unit, lines = codeEl.value.split("\n"), ind = (t) => t.match(/^ */)[0].length;
+  const anim = !STILL && !!S.ghost.animate;
+  let newLine = u.line, changed = false, was = null, map = null;
+  if (s) {
+    const body = s.cont.body, a = u.line, b = u.end, i0 = ind(lines[a - 1]), ic = s.cont.root ? 0 : ind(lines[s.cont.line - 1]) + 4;
+    const at = s.k < body.length ? body[s.k].line : body.length ? body[body.length - 1].end + 1 : s.cont.line + 1;   // перед какой строкой
+    if (!(at >= a && at <= b + 1 && ic === i0)) {
+      const blk = lines.slice(a - 1, b).map((t) => (t.trim() ? " ".repeat(Math.max(0, ind(t) - i0 + ic)) + t.trimStart() : t)), len = blk.length;
+      newLine = at > b ? at - len : at;
+      map = (l) => (l >= a && l <= b ? newLine + l - a : at > b ? (l > b && l < at ? l - len : l) : l >= at && l < a ? l + len : l);   // старая строка → новая
+      if (anim) was = bdRects();
+      changed = true;
+      selLine = null;
+      editLines((ls) => { ls.splice(a - 1, len); ls.splice(newLine - 1, 0, ...blk); });
+    }
+  }
+  S.mark.remove(); S.el.classList.remove("bdsrc");
+  if (changed) drawCode();
+  const head = bdBtn(newLine), el = head ? (u.body ? head.parentElement : head) : null;
+  const done = () => { S.ghost.remove(); if (el) { el.style.visibility = ""; if (changed) { el.classList.add("bddrop"); setTimeout(() => el.classList.remove("bddrop"), 500); } } };
+  if (!el || !anim) { done(); return; }
+  // остальные плитки и рамки съезжают на новые места…
+  if (was) {
+    const now = bdRects(), d = new Map();
+    for (const [l, [, r]] of was) { const n = now.get(map(l)); if (n) d.set(n[0], [r.left - n[1].left, r.top - n[1].top]); }
+    for (const [e, [dx0, dy0]] of d) {
+      if (el.contains(e)) continue;
+      const p = e.parentElement.closest(".bloop, .bif, .bdef"), q = p && d.get(p), dx = dx0 - (q ? q[0] : 0), dy = dy0 - (q ? q[1] : 0);   // рамка едет сама — плитки едут в ней
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) e.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], { duration: 180, easing: "ease-out" });
+    }
+  }
+  // …а сам кусок долетает до своего места и вспыхивает
+  const r = el.getBoundingClientRect(), gx = parseFloat(S.ghost.style.left) - S.fx, gy = parseFloat(S.ghost.style.top) - S.fy;
+  el.style.visibility = "hidden";
+  S.ghost.animate([{ transform: S.ghost.style.transform }, { transform: `translate(${r.left - gx}px, ${r.top - gy}px) scale(1)` }], { duration: 180, easing: "ease-out", fill: "forwards" }).onfinish = done;
+  setTimeout(done, 400);
+  if (changed) sfx("tap");
+}
+// Палец: подержал плитку — она «в руке»; сдвинул раньше — это прокрутка
+$("blocks").addEventListener("touchstart", (e) => {
+  clearTimeout(bdWait?.timer); bdWait = null;
+  const b = e.target.closest?.("button[data-line]"), t = e.touches[0];
+  if (!save.dev || !b || e.touches.length !== 1 || running || bdS) return;
+  bdWait = { b, x: t.clientX, y: t.clientY, id: t.identifier, timer: setTimeout(() => { const w = bdWait; if (w) { bdStart(w.b, w.x, w.y, true); } }, BD_HOLD) };
+}, { passive: true });
+document.addEventListener("touchmove", (e) => {
+  const w = bdWait;
+  if (!w) return;
+  const t = [...e.touches].find((q) => q.identifier === w.id);
+  if (!t) return;
+  if (bdS) { e.preventDefault(); bdMove(t.clientX, t.clientY); }
+  else if (Math.hypot(t.clientX - w.x, t.clientY - w.y) > BD_SLOP) { clearTimeout(w.timer); bdWait = null; }
+}, { passive: false });
+for (const ev of ["touchend", "touchcancel"]) document.addEventListener(ev, (e) => {
+  const w = bdWait;
+  if (!w) return;
+  clearTimeout(w.timer); bdWait = null;
+  if (bdS) { if (e.cancelable) e.preventDefault(); bdClick = Date.now(); bdEnd(ev === "touchcancel"); }
+}, { passive: false });
+// Мышь: нажал и потянул
+$("blocks").addEventListener("pointerdown", (e) => {
+  const b = e.target.closest?.("button[data-line]");
+  if (!save.dev || e.pointerType === "touch" || e.button !== 0 || !b || running || bdS) return;
+  bdWait = { b, x: e.clientX, y: e.clientY, mouse: true };
+});
+document.addEventListener("pointermove", (e) => {
+  const w = bdWait;
+  if (!w?.mouse || e.pointerType === "touch") return;
+  if (bdS) bdMove(e.clientX, e.clientY);
+  else if (Math.hypot(e.clientX - w.x, e.clientY - w.y) > 6) bdStart(w.b, w.x, w.y), bdS && bdMove(e.clientX, e.clientY);
+});
+document.addEventListener("pointerup", (e) => {
+  if (!bdWait?.mouse || e.pointerType === "touch") return;
+  bdWait = null;
+  if (bdS) { bdClick = Date.now(); bdEnd(false); }
+});
+// после перетаскивания «нажатие» на плитку не считается (иначе она бы выбралась)
+$("blocks").addEventListener("click", (e) => { if (Date.now() - bdClick < 350) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+$("blocks").addEventListener("contextmenu", (e) => { if (save.dev) e.preventDefault(); });   // долгое нажатие не открывает меню
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 // Поле на телефоне — сколько влезает: меряем, сколько места занимают шапка, программа
 // и кнопки до «Запустить», и отдаём полю всю остальную видимую высоту экрана
@@ -11422,10 +11660,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 177;
+const APP_VERSION = 178;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 178, date: "2026-11-17", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
   { v: 177, date: "2026-11-17", text: "На компьютере мост и коса уходят в большие облака, а не обрываются в море. Номер версии в настройках стал крупнее.", en: "On a computer, the bridge and the sandbar now run into big clouds instead of ending in the sea. The version number in settings is bigger." },
   { v: 176, date: "2026-11-17", text: "На широком экране соседние острова скрыты за грядами облаков: мосты и косы уходят под них, а не обрываются в море. Маленькие облака над морем плывут совсем медленно.", en: "On a wide screen the neighbouring islands are hidden behind banks of clouds: bridges and sandbars go under them instead of ending in the open sea. The small clouds over the sea drift very slowly." },
   { v: 175, date: "2026-11-17", text: "На широком экране рыцарь больше не идёт по воде, когда уходит на соседний остров: он скрывается под облаком у края карты. На медленной связи обновление игры теперь спокойно докачивается, а не начинается заново.", en: "On a wide screen the knight no longer walks on water when leaving for the next island: he slips under the cloud at the edge of the map. On a slow connection a game update now finishes downloading calmly instead of starting over." },

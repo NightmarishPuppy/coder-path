@@ -1,13 +1,13 @@
 {
- "version": 177,
+ "version": 178,
  "date": "2026-11-17",
  "notes": [
-  "На компьютере мост и коса уходят в большие облака, а не обрываются в море. Номер версии в настройках стал крупнее."
+  "Небольшие улучшения внутри игры"
  ],
  "files": {
   "index.html": {
-   "size": 860919,
-   "hash": "549a512948b30115"
+   "size": 877452,
+   "hash": "844f41521b6ac305"
   },
   "art.js": {
    "size": 841991,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4433,
-   "hash": "a044d68c1ade97ec"
+   "hash": "6e5c751a8ae47a75"
   },
   "icon-192.png": {
    "size": 42164,
@@ -119,6 +119,6 @@
   }
  },
  "notes_en": [
-  "On a computer, the bridge and the sandbar now run into big clouds instead of ending in the sea. The version number in settings is bigger."
+  "Small improvements inside the game"
  ]
 }
