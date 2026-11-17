@@ -10215,9 +10215,10 @@ async function playParry(h) {
   await wait(200 * k);
   dyn.at(bx + 0.5, by + 0.25); dyn.show(true); dyn.play(0, 6, 40);
   const fl = dyn.arc(tx, ty, 1.1, 300 * k);
-  await wait(190 * k);
+  await sleep(Math.max(0, 300 * k - 150));                         // настоящие миллисекунды: взмах длится 0,36 с при любой скорости
   heroEl.classList.toggle("low", by > hero.y);                     // подрывник ниже — удар копьём вниз-вбок
   heroEl.classList.add("parry");                                   // замах начинается чуть раньше, чем динамит долетит
+  sleep(345).then(() => heroEl.classList.remove("parry"));         // один взмах (три кадра) — и копейщик снова стоит, а не бьёт воздух
   await fl;
   if (e) e.el.classList.remove("throwing");
   sfx("spear");
@@ -12069,10 +12070,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 185;
+const APP_VERSION = 186;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 186, date: "2026-11-18", text: "Копейщик отбивает динамит одним взмахом копья — больше не машет по воздуху", en: "The lancer knocks dynamite back with one swing — no more extra jabs at the air" },
   { v: 185, date: "2026-11-18", text: "Новая глава на Острове гоблинов — «Обстрел»: идёт копейщик. Подрывник кидает в него динамит, а копьё 🔱 отбивает его обратно", en: "A new chapter on Goblin Island — “Under Fire”: you lead a lancer. The bomber throws dynamite at him, and the spear 🔱 knocks it back", big: true },
   { v: 184, date: "2026-11-18", text: "Бой у моста: отбитый копейщиком динамит теперь хорошо видно — вспышка, дымный след и большой взрыв", en: "The fight at the bridge: dynamite knocked away by a lancer is now easy to see — a flash, a smoke trail and a big explosion" },
   { v: 183, date: "2026-11-18", text: "У вышки с утками на первом острове появился копейщик: он отбивает динамит гоблина копьём — на вышку, в воду или в воздух. А если не успеет, ему на смену придёт новый", en: "A lancer now stands by the duck tower on the first island: he knocks the goblin’s dynamite away with his spear — back at the tower, into the water or up in the air. If he is too slow, a new lancer comes to replace him" },

@@ -1,13 +1,13 @@
 {
- "version": 185,
+ "version": 186,
  "date": "2026-11-18",
  "notes": [
-  "Новая глава на Острове гоблинов — «Обстрел»: идёт копейщик. Подрывник кидает в него динамит, а копьё 🔱 отбивает его обратно"
+  "Копейщик отбивает динамит одним взмахом копья — больше не машет по воздуху"
  ],
  "files": {
   "index.html": {
-   "size": 915135,
-   "hash": "1c12aea820847bc6"
+   "size": 915751,
+   "hash": "0fde74d89ee78ff9"
   },
   "art.js": {
    "size": 841991,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "f1154b32293213a8"
+   "hash": "699bbb69ccb321da"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "A new chapter on Goblin Island — “Under Fire”: you lead a lancer. The bomber throws dynamite at him, and the spear 🔱 knocks it back"
+  "The lancer knocks dynamite back with one swing — no more extra jabs at the air"
  ]
 }
