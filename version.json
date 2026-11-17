@@ -1,21 +1,21 @@
 {
- "version": 178,
+ "version": 179,
  "date": "2026-11-17",
  "notes": [
-  "Небольшие улучшения внутри игры"
+  "Плитки и рамки программы теперь можно перетаскивать: подержи плитку пальцем (или потяни мышью) и неси на новое место"
  ],
  "files": {
   "index.html": {
-   "size": 877452,
-   "hash": "844f41521b6ac305"
+   "size": 880411,
+   "hash": "a562f076a0117ef6"
   },
   "art.js": {
    "size": 841991,
    "hash": "db9006b00fa9d46b"
   },
   "lang-en.js": {
-   "size": 71067,
-   "hash": "c68a4c38747ccaeb"
+   "size": 71235,
+   "hash": "8ce050bef4743507"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4433,
-   "hash": "6e5c751a8ae47a75"
+   "hash": "89f908c6f3d22667"
   },
   "icon-192.png": {
    "size": 42164,
@@ -119,6 +119,6 @@
   }
  },
  "notes_en": [
-  "Small improvements inside the game"
+  "You can now drag tiles and frames of your program: hold a tile with a finger (or drag with the mouse) and move it to a new place"
  ]
 }

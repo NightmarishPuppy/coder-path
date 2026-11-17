@@ -409,6 +409,8 @@ var EN = {
   "Запусти!": "Run it!",
   "Теперь нажми 3": "Now press 3",
   "Нажми на эту плитку": "Tap this tile",
+  "Подержи плитку — и тащи": "Hold a tile, then drag it",
+  "Плитку можно тащить мышью": "You can drag tiles with the mouse",
   "Нажми на номер строки": "Tap the line number",
   "Запускай!": "Run it!",
   "Ударь гоблина!": "Hit the goblin!",

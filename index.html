@@ -835,6 +835,8 @@ textarea#code:focus-visible { box-shadow: inset 0 0 0 2px var(--torch); }
 .bdmark[hidden] { display: none; }
 .bdghost { position: fixed !important; z-index: 95; margin: 0 !important; pointer-events: none; opacity: 0.96; box-shadow: 0 12px 26px #000b, 0 0 0 3px #ffd54a; transform-origin: 50% 50%; animation: none !important; }
 .bdghost.wide { opacity: 0.8; }
+.bdtip { position: fixed; inset: 0; pointer-events: none; z-index: 51; }
+.bdtip-hand { position: fixed; width: 40px; height: 48px; filter: drop-shadow(0 3px 4px #0008); }
 .bddrop { animation: bd-drop 0.5s ease-out; }
 @keyframes bd-drop { 0% { box-shadow: 0 0 0 7px #ffd54acc; } 100% { box-shadow: 0 0 0 0 #ffd54a00; } }
 .tile {
@@ -8111,9 +8113,9 @@ $("blocks").addEventListener("click", (e) => {
   if (!b || running) return;
   sfx("tap");
   const n = Number(b.dataset.line);
-  if (selLine === n) { selLine = null; drawCode(); } else selectLine(n);
+  if (selLine === n) { selLine = null; drawCode(); bdTipOff(); } else { selectLine(n); if (selLine === n) bdTip(n); }
 });
-// Перетаскивание плиток и рамок пальцем или мышью. ПРОТОТИП: пока только в режиме для взрослых (save.dev).
+// Перетаскивание плиток и рамок пальцем или мышью (v178 — проба в режиме для взрослых, с v179 — у всех).
 // Тащим кусок программы — это строки текста: плитка — одна строка; рамка (взялись за её заголовок) — заголовок
 // со всем, что внутри (рамка «если» — вместе с половинами «другое если» и «иначе»). Пока тащим, программа стоит
 // на месте (ничего не убегает из-под пальца): кусок бледнеет, его копия едет за пальцем, а жёлтая черта показывает,
@@ -8275,6 +8277,7 @@ function bdEnd(cancel) {
       if (anim) was = bdRects();
       changed = true;
       selLine = null;
+      if (!save.dragged) { save.dragged = 1; writeSave(); }
       editLines((ls) => { ls.splice(a - 1, len); ls.splice(newLine - 1, 0, ...blk); });
     }
   }
@@ -8300,11 +8303,39 @@ function bdEnd(cancel) {
   setTimeout(done, 400);
   if (changed) sfx("tap");
 }
+// Подсказка новичку: выбрал плитку нажатием, а таскать ещё не пробовал — рука «берёт» эту плитку и везёт её в сторону.
+// Не больше трёх раз и не на уровнях, где рука учит другому (COACH); любое касание её убирает.
+let bdTipEl = null, bdTipTimer = 0;
+function bdTipOff() { clearTimeout(bdTipTimer); bdTipEl?.remove(); bdTipEl = null; }
+function bdTip(line) {
+  bdTipOff();
+  if (save.dragged || (save.dragTip || 0) >= 3 || COACH[L.name] || running || !uiBlocks) return;
+  const T = bdTree(), n = T.byLine.get(line), b = bdBtn(line);
+  if (!n || !b || T.byLine.size < 2) return;                                  // таскать некуда
+  const r = b.getBoundingClientRect(), box = $("blocks").getBoundingClientRect();
+  const dx = r.left + r.width / 2 > box.left + box.width / 2 ? -70 : 70, x = r.left + r.width / 2 - 14, y = r.top + r.height / 2 - 4;
+  const el = bdTipEl = document.createElement("div");
+  el.className = "bdtip";
+  el.innerHTML = `<div class="bdtip-hand">${$("coach-hand").innerHTML}</div><div class="coach-bubble"></div>`;
+  const hand = el.firstChild, bub = el.lastChild;
+  bub.textContent = tr(matchMedia("(pointer: coarse)").matches ? "Подержи плитку — и тащи" : "Плитку можно тащить мышью");
+  hand.style.left = x + "px"; hand.style.top = y + "px";
+  document.body.appendChild(el);
+  bub.style.left = Math.max(8, Math.min(innerWidth - bub.offsetWidth - 8, x + 4)) + "px"; bub.style.top = Math.min(innerHeight - 50, y + 56) + "px";
+  // прижал (рука чуть меньше) → повёз → отпустил → вернулся; два раза
+  if (!STILL && hand.animate) hand.animate([
+    { transform: "translate(0, 0) scale(1)", offset: 0 }, { transform: "translate(0, 0) scale(0.82)", offset: 0.2 },
+    { transform: `translate(${dx}px, 0) scale(0.82)`, offset: 0.6 }, { transform: `translate(${dx}px, 0) scale(1)`, offset: 0.75 },
+    { transform: "translate(0, 0) scale(1)", offset: 1 }], { duration: 2000, iterations: 2, easing: "ease-in-out" });
+  save.dragTip = (save.dragTip || 0) + 1; writeSave();
+  bdTipTimer = setTimeout(bdTipOff, 4200);
+}
 // Палец: подержал плитку — она «в руке»; сдвинул раньше — это прокрутка
 $("blocks").addEventListener("touchstart", (e) => {
   clearTimeout(bdWait?.timer); bdWait = null;
   const b = e.target.closest?.("button[data-line]"), t = e.touches[0];
-  if (!save.dev || !b || e.touches.length !== 1 || running || bdS) return;
+  bdTipOff();
+  if (!b || e.touches.length !== 1 || running || bdS) return;
   bdWait = { b, x: t.clientX, y: t.clientY, id: t.identifier, timer: setTimeout(() => { const w = bdWait; if (w) { bdStart(w.b, w.x, w.y, true); } }, BD_HOLD) };
 }, { passive: true });
 document.addEventListener("touchmove", (e) => {
@@ -8324,7 +8355,8 @@ for (const ev of ["touchend", "touchcancel"]) document.addEventListener(ev, (e) 
 // Мышь: нажал и потянул
 $("blocks").addEventListener("pointerdown", (e) => {
   const b = e.target.closest?.("button[data-line]");
-  if (!save.dev || e.pointerType === "touch" || e.button !== 0 || !b || running || bdS) return;
+  bdTipOff();
+  if (e.pointerType === "touch" || e.button !== 0 || !b || running || bdS) return;
   bdWait = { b, x: e.clientX, y: e.clientY, mouse: true };
 });
 document.addEventListener("pointermove", (e) => {
@@ -8340,7 +8372,7 @@ document.addEventListener("pointerup", (e) => {
 });
 // после перетаскивания «нажатие» на плитку не считается (иначе она бы выбралась)
 $("blocks").addEventListener("click", (e) => { if (Date.now() - bdClick < 350) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
-$("blocks").addEventListener("contextmenu", (e) => { if (save.dev) e.preventDefault(); });   // долгое нажатие не открывает меню
+$("blocks").addEventListener("contextmenu", (e) => e.preventDefault());   // долгое нажатие не открывает меню
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 // Поле на телефоне — сколько влезает: меряем, сколько места занимают шапка, программа
 // и кнопки до «Запустить», и отдаём полю всю остальную видимую высоту экрана
@@ -11660,10 +11692,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 178;
+const APP_VERSION = 179;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 179, date: "2026-11-17", text: "Плитки и рамки программы теперь можно перетаскивать: подержи плитку пальцем (или потяни мышью) и неси на новое место", en: "You can now drag tiles and frames of your program: hold a tile with a finger (or drag with the mouse) and move it to a new place", big: true },
   { v: 178, date: "2026-11-17", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
   { v: 177, date: "2026-11-17", text: "На компьютере мост и коса уходят в большие облака, а не обрываются в море. Номер версии в настройках стал крупнее.", en: "On a computer, the bridge and the sandbar now run into big clouds instead of ending in the sea. The version number in settings is bigger." },
   { v: 176, date: "2026-11-17", text: "На широком экране соседние острова скрыты за грядами облаков: мосты и косы уходят под них, а не обрываются в море. Маленькие облака над морем плывут совсем медленно.", en: "On a wide screen the neighbouring islands are hidden behind banks of clouds: bridges and sandbars go under them instead of ending in the open sea. The small clouds over the sea drift very slowly." },
