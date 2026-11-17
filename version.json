@@ -1,21 +1,21 @@
 {
- "version": 171,
+ "version": 172,
  "date": "2026-11-17",
  "notes": [
-  "Кнопка «если» теперь ставит новую рамку в конец выбранной рамки — так же, как стрелки. Две рамки «если» подряд можно собрать по порядку."
+  "Небольшие улучшения внутри игры."
  ],
  "files": {
   "index.html": {
-   "size": 1057220,
-   "hash": "cbefbe1215c253ed"
+   "size": 1109517,
+   "hash": "fd78401194b3ca8e"
   },
   "art.js": {
    "size": 1979296,
    "hash": "fc09075012bef868"
   },
   "lang-en.js": {
-   "size": 125745,
-   "hash": "6baef8f17aa614da"
+   "size": 70151,
+   "hash": "c5c5734fa5c82d78"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "9a2caa2250e33454"
+   "hash": "ffdfe701c01f3b01"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "The “if” button now puts a new frame at the end of the selected frame — just like the arrows. Two “if” frames in a row can be built in order."
+  "Small improvements inside the game."
  ]
 }
