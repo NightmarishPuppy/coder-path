@@ -6,7 +6,7 @@
 // (страница присылает сообщение "activate"). Старый кэш после этого удаляется.
 
 // Меняй номер версии при каждом обновлении игры (и в version.json, и APP_VERSION в index.html)
-const VERSION = "coder-path-v174";
+const VERSION = "coder-path-v175";
 const FILES = ["./", "index.html", "art.js", "art-scenes.js", "art-isle2.js", "art-isle3.js", "art-isle4.js", "art-isle5.js", "lang-en.js", "isle1.js", "isle2.js", "isle3.js", "isle4.js", "isle5.js", "isle6.js", "fonts.css", "manifest.webmanifest", "version.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "water.mp3", "leafsteps.mp3", "goblin-attack.mp3", "goblin-death.mp3", "sword-hit.mp3", "spear-thrust.mp3", "arrow-swish.mp3", "tnt-boom.mp3"];
 
 // 1. Установка: скачиваем только то, что изменилось. В version.json у каждого файла есть отпечаток;
@@ -23,15 +23,18 @@ async function install() {
     if (r) { old = c; oldInfo = await r.json().catch(() => null); }
   }
   await cache.put("version.json", fresh);
-  await Promise.all(FILES.filter((f) => f !== "version.json").map(async (f) => {
-    const name = f === "./" ? "index.html" : f;
-    const same = oldInfo?.files?.[name] && info.files?.[name] && oldInfo.files[name].hash === info.files[name].hash;
+  await Promise.all(FILES.filter((f) => f !== "version.json" && f !== "./").map(async (f) => {
+    const same = oldInfo?.files?.[f] && info.files?.[f] && oldInfo.files[f].hash === info.files[f].hash;
     if (same) {
       const r = await old.match(f);
       if (r) return cache.put(f, r);
     }
     await cache.add(new Request(f, { cache: "reload" }));
   }));
+  // Стартовый адрес ("./") — это тот же index.html: второй раз его не качаем, кладём копию уже скачанного
+  const page = await cache.match("index.html");
+  if (page) await cache.put("./", page);
+  else await cache.add(new Request("./", { cache: "reload" }));
 }
 self.addEventListener("install", (e) => {
   e.waitUntil(install());

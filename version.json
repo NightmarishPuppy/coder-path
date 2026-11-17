@@ -1,21 +1,21 @@
 {
- "version": 174,
+ "version": 175,
  "date": "2026-11-17",
  "notes": [
-  "Картинки игры теперь тоже скачиваются по частям: при обновлении — только те, что изменились."
+  "На широком экране рыцарь больше не идёт по воде, когда уходит на соседний остров: он скрывается под облаком у края карты. На медленной связи обновление игры теперь спокойно докачивается, а не начинается заново."
  ],
  "files": {
   "index.html": {
-   "size": 846184,
-   "hash": "49f4058281c96ce7"
+   "size": 850392,
+   "hash": "44be4825e7ffc6a9"
   },
   "art.js": {
    "size": 824869,
    "hash": "5ac2d60a480bb8e0"
   },
   "lang-en.js": {
-   "size": 70427,
-   "hash": "0b36ab96afa89288"
+   "size": 71067,
+   "hash": "c68a4c38747ccaeb"
   },
   "fonts.css": {
    "size": 234903,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 4151,
-   "hash": "c4ad5765e457fb64"
+   "size": 4433,
+   "hash": "1828723f28a6a857"
   },
   "icon-192.png": {
    "size": 42164,
@@ -119,6 +119,6 @@
   }
  },
  "notes_en": [
-  "The game’s pictures are now downloaded in parts too: an update fetches only the ones that changed."
+  "On a wide screen the knight no longer walks on water when leaving for the next island: he slips under the cloud at the edge of the map. On a slow connection a game update now finishes downloading calmly instead of starting over."
  ]
 }

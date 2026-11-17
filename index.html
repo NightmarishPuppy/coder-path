@@ -5872,8 +5872,17 @@ function runAlong(pts, near) {
   const run = document.createElement("div");
   run.className = "runner";
   run.style.backgroundImage = `url(${TS.krun})`;
+  run.style.opacity = 0;                          // до первого кадра его не видно (иначе мелькал в углу карты)
   wrap.insertBefore(run, wrap.querySelector(".mapclouds"));
-  const put = (x, y) => { run.style.left = (x / 360 * 100) + "%"; run.style.top = (y / VH * 100) + "%"; };
+  // Путь уходит за боковой край карты (коса, мост): за краем рыцаря не рисуем. На телефоне там край экрана,
+  // а на широком экране — открытое море, и рыцарь шёл бы по воде. У самого края он уходит под облако:
+  // гаснет на последней клетке суши (и так же появляется, когда приходит на остров).
+  const offL = pts.some((q) => q[0] < 0), offR = pts.some((q) => q[0] > 360);
+  const put = (x, y) => {
+    run.style.left = (x / 360 * 100) + "%"; run.style.top = (y / VH * 100) + "%";
+    const e = Math.min(offL ? x : 999, offR ? 360 - x : 999);
+    run.style.opacity = e >= 24 ? "" : String(Math.max(0, Math.min(1, (e - 6) / 18)));
+  };
   const camFor = (y) => {
     const r = wrap.getBoundingClientRect();
     return Math.max(0, r.top + scrollY + y * (r.height / VH) - innerHeight * 0.55);
@@ -6000,10 +6009,11 @@ async function buildBridgeScene() {
     b.move(ax + 0.8, y, 240);
     await a.move(ax, y, 240);
   }
-  // уходят по мосту за край — домой, на остров 4 (рудокопы его и строили)
+  // уходят по мосту домой, на остров 4 (рудокопы его и строили): скрываются под облаком на последней доске.
+  // Дальше досок нет — на широком экране там открытое море, по нему не ходят.
   a.play(0, 6, 90, true, "prun"); b.play(0, 6, 80, true, "prun");
-  a.move(-2.5, y, 600); await b.move(-2, y, 700);
-  a.show(false); b.show(false);
+  setTimeout(() => { a.show(false); b.show(false); }, 140);
+  a.move(B.to + 0.15, y, 420); await b.move(B.to + 0.45, y, 480);
   save.built = { ...(save.built || {}), b34: true };
   writeSave();
   delete MINI[3];
@@ -6176,7 +6186,7 @@ async function blastScene(a) {
   const tnt = skActor(st, "tnt", 0.9), dyn = skActor(st, "dyn", 1, 0.5), boom = skActor(st, "boom", 1.35, 0.6);
   // выходит из-под облака у края карты (за краем его не видно — там море)
   tnt.at(...B.from); tnt.face(true); tnt.play(1, 6, 90);
-  setTimeout(() => tnt.show(true), 250);
+  setTimeout(() => tnt.show(true), 400);            // появляется уже на косе, у края карты (за краем — море)
   await tnt.move(...B.tnt, 900);
   tnt.play(0, 6, 130);
   await sleep(450);
@@ -6191,7 +6201,7 @@ async function blastScene(a) {
   showBlastRocks();                                 // камни разлетелись
   tnt.face(false); tnt.play(1, 6, 70);              // подрывник с испугу — назад, в облака
   const away = tnt.move(...B.from, 700);
-  setTimeout(() => tnt.show(false), 380);
+  setTimeout(() => tnt.show(false), 120);           // скрывается под облаком ещё на косе: за краем карты — море
   await boom.play(0, 9, 75, false);
   boom.show(false);
   await away;
@@ -11320,10 +11330,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 174;
+const APP_VERSION = 175;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 175, date: "2026-11-17", text: "На широком экране рыцарь больше не идёт по воде, когда уходит на соседний остров: он скрывается под облаком у края карты. На медленной связи обновление игры теперь спокойно докачивается, а не начинается заново.", en: "On a wide screen the knight no longer walks on water when leaving for the next island: he slips under the cloud at the edge of the map. On a slow connection a game update now finishes downloading calmly instead of starting over." },
   { v: 174, date: "2026-11-17", text: "Картинки игры теперь тоже скачиваются по частям: при обновлении — только те, что изменились.", en: "The game’s pictures are now downloaded in parts too: an update fetches only the ones that changed." },
   { v: 173, date: "2026-11-17", text: "Игра обновляется быстрее: уровни и карта каждого острова теперь скачиваются отдельно, только когда они изменились.", en: "The game updates faster: each island’s levels and map are now downloaded separately, only when they change." },
   { v: 172, date: "2026-11-17", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
@@ -11583,6 +11594,21 @@ function waitInstalled(reg, ms) {
     else reg.addEventListener("updatefound", () => watch(reg.installing), { once: true });
   });
 }
+// Дождаться, пока новая версия скачается. Пока помощник ещё качает файлы (состояние «installing») — это не сбой,
+// а медленная связь: ждём дальше, до max мс. first — сколько ждать начала; tick — раз в секунду показать игроку,
+// что дело идёт. Вернёт скачанного помощника или null (не скачалось либо всё ещё качается — смотри reg.installing).
+async function waitDownload(reg, first, max, tick) {
+  const t0 = Date.now(), timer = tick ? setInterval(tick, 1000) : 0;
+  let w = reg.waiting || null;
+  if (!w) { const p = waitInstalled(reg, first); reg.update().catch(() => {}); w = await p; }
+  while (!w && Date.now() - t0 < max) {
+    if (reg.waiting) { w = reg.waiting; break; }
+    if (!reg.installing) break;
+    w = await waitInstalled(reg, 5000);
+  }
+  clearInterval(timer);
+  return w || reg.waiting || null;
+}
 async function applyUpdate() {
   const btns = document.querySelectorAll(".upd-go");
   btns.forEach((b) => (b.disabled = true));
@@ -11590,8 +11616,13 @@ async function applyUpdate() {
   const reg = await getReg();
   if (!reg) return location.reload();
   updating = true;
-  let w = reg.waiting;
-  if (!w) { const p = waitInstalled(reg, 90000); reg.update().catch(() => {}); w = await p; }
+  const t0 = Date.now();
+  const w = await waitDownload(reg, 90000, 10 * 60000, () => appStatus(tr("Загружаю обновление… {s} с", { s: Math.round((Date.now() - t0) / 1000) })));
+  if (!w && reg.installing) {            // всё ещё качается: связь медленная — не ломаем загрузку, пусть идёт в фоне
+    updating = false;
+    btns.forEach((b) => (b.disabled = false));
+    return appStatus("Связь медленная: обновление ещё скачивается. Не закрывай игру и нажми «Обновить» чуть позже");
+  }
   if (!w) {
     updating = false;
     if (navigator.onLine === false) {
@@ -12288,11 +12319,14 @@ async function tgAutoUpdate(how = "start") {
       const t0 = Date.now();
       const tick = () => say("Нашлась версия {v}. Скачиваю {mb}… {s} с", { v, mb: fmtSize(size), s: Math.round((Date.now() - t0) / 1000) });
       tick();
-      const timer = hand ? setInterval(tick, 1000) : 0;
-      const p = waitInstalled(reg, hand ? 45000 : 20000);
-      reg.update().catch(() => {});
-      w = await p;
-      clearInterval(timer);
+      // вручную ждём до 5 минут, пока файлы качаются (секунды на экране идут); само — 20 секунд
+      w = await waitDownload(reg, hand ? 45000 : 20000, hand ? 5 * 60000 : 20000, hand && tick);
+      if (!w && reg.installing) {
+        // связь медленная, файлы ещё качаются — это не сбой: пусть докачается в фоне и включится, когда будет готово
+        say("Связь медленная: версия {v} ещё скачивается. Не закрывай игру — она включится сама", { v });
+        waitInstalled(reg, 20 * 60000).then((sw) => { if (sw) tgAutoUpdate("back"); });
+        return;
+      }
     }
     if (!w) {
       // не скачалось или застряло. Вручную — сразу загружаем игру заново с сайта; само — со второй неудачи подряд
