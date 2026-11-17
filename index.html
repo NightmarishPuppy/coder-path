@@ -1159,6 +1159,7 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 .mapclouds img.bank { opacity: 1; animation: bank 9s ease-in-out infinite alternate; }
 @keyframes bank { from { transform: translateX(-1.5%); } to { transform: translateX(1.5%); } }
 html.still .mapclouds img.bank { animation: none; }
+.mapclouds img.fog { animation: none; will-change: auto; }   /* гряда над соседним островом стоит на месте */
 .mapwrap { position: relative; aspect-ratio: 360 / 1080; }
 .mapwrap[hidden] { display: none; }
 /* актёры сценок на карте: лист кадров, кадр — сдвиг фона */
@@ -3633,7 +3634,7 @@ ISLE_MAPS[20] = {
 };
 // @@/isle20@@
 
-function mapEngine(D) {
+function mapEngine(D, FOG = []) {   // FOG — где сбоку от острова лежат соседние острова (см. fogOf)
   const NODE_POS = D.nodes, MAP_ROWS = D.rows, TERR = D.terr, ROAD = D.road, RAMPS = D.ramps, MAP_DECO = D.deco, MAP_LABELS = D.labels;
   const MAP_W = MAP_ROWS[0].length, MAP_H = MAP_ROWS.length, MT = 32, OU = 64;
   const RW = TERR[0].length, RH = TERR.length;
@@ -4149,10 +4150,40 @@ function mapEngine(D) {
     let bankKey = "";
     function placeBankSides() {
       bankSide.forEach((im) => im.remove()); bankSide.length = 0; bankKey = "";
-      if (!isWide() || !BANK.length) return;
+      if (!isWide() || (!BANK.length && !FOG.length)) return;
       const r = wrap.getBoundingClientRect(), k = r.width / canvas.width, cw = canvas.width;
       if (!r.width) return;                          // карта скрыта (другой остров) — посчитаем, когда покажут
       bankKey = document.documentElement.clientWidth + "|" + Math.round(r.width) + "|" + Math.round(r.left);
+      // Соседний остров под облаками. Мост или коса уходят вбок за край карты — на соседний остров. На телефоне
+      // за краем карты край экрана, а на широком экране там открытое море, и путь обрывался бы в воде. Поэтому
+      // место, где лежит сосед (с запасом), закрыто грядой облаков: путь уходит под неё. Гряда стоит на месте
+      // и не покачивается (класс fog); на саму карту не заходит — конец пути у края прикрывают облака из раскладки.
+      // Сосед сверху или снизу (мост уходит за верхний или нижний край): сама карта там кончается, поэтому гряда
+      // лежит вдоль края по бокам от острова — над морем, широкой полосой с центром напротив моста.
+      const FK = ["cloud_a", "cloud_b", "cloud_c", "cloud_d"];
+      const fog = [];
+      FOG.forEach((f, fi) => {
+        const right = f.side === "right", vert = f.side === "up" || f.side === "down";
+        const RX = vert ? 1500 : 570, RY = vert ? 370 : 620;   // половины ширины и высоты гряды, в точках холста
+        const cx = vert ? (f.col * (cw / D.terr[0].length) + cw / 2) / 2 : right ? cw + RX + 24 : -(RX + 24);
+        const cy = vert ? (f.side === "up" ? -90 : canvas.height + 90) : f.row * (canvas.height / D.terr.length) - (f.up ? RY * 0.42 : 0);   // up — сосед лежит выше
+        let i = 0;
+        for (let y = -RY, j = 0; y <= RY; y += 66, j++) for (let x = -RX + (j % 2 ? 95 : 0); x <= RX; x += 190, i++) {
+          const u = Math.abs(x / RX), v = Math.abs(y / RY), d = u ** 2.4 + v ** 2.4;         // «скруглённый прямоугольник»
+          if (d > 0.82 + hsh(i, fi, 71) * 0.3) continue;                                        // край гряды неровный
+          const key = FK[Math.floor(hsh(i, fi, 72) * 4)], [, w, h] = TS_INFO[key];
+          const sc = (d > 0.6 ? 0.95 : 1.3) + hsh(i, fi, 73) * 0.45;                         // по краям облака мельче
+          const px = cx + x + (hsh(i, fi, 74) - 0.5) * 70, py = cy + y + (hsh(i, fi, 75) - 0.5) * 34;
+          // на остров гряда не заходит (конец пути у края карты прикрывают облака из раскладки)
+          if (vert ? px + w * sc / 2 > -24 && px - w * sc / 2 < cw + 24 : right ? px - w * sc / 2 < cw - 24 : px + w * sc / 2 > 24) continue;
+          const im = new Image(); im.src = TS[key]; im.alt = ""; im.className = "bank fog";
+          im.style.cssText = `left:${((px - w * sc / 2) / cw * 100).toFixed(2)}%;top:${((py - h * sc / 2) / canvas.height * 100).toFixed(3)}%;width:${(w * sc / cw * 100).toFixed(2)}%`;
+          fog.push(im);
+        }
+      });
+      // ряды кладём сверху вниз: у облака снизу тень, и нижний ряд закрывает тень верхнего — гряда выходит сплошной
+      fog.reverse().forEach((im) => { cloudLayer.prepend(im); bankSide.push(im); });
+      if (!BANK.length) return;
       const wl = -r.left / k, wr = (document.documentElement.clientWidth - r.left) / k;
       const rows = [BANK.filter((b) => b[2] < 400), BANK.filter((b) => b[2] > canvas.height - 500)].filter((g) => g.length);
       const KEYS = ["cloud_a", "cloud_c", "cloud_b", "cloud_d"];
@@ -4192,7 +4223,7 @@ function mapEngine(D) {
       const span = x1 - x0;
       clouds.forEach((c, i) => {
         cloudEls[i].hidden = !!c.wide && !wide;
-        const x = ((c.x0 * span + (t / 1000) * c.v * 4) % span) + x0;
+        const x = ((c.x0 * span + (t / 1000) * c.v * 1.5) % span) + x0;   // плывут очень медленно: экран телефона — минуты за три
         cloudEls[i].style.transform = `translateX(${Math.round(x * k)}px)`;
       });
     }
@@ -4311,6 +4342,12 @@ const GATES = {
   6: [{ at: [190, 530], to: 5, kind: "blast", dir: 1 }],
 };
 const gateTo = (from, to) => GATES[from].find((g) => g.to === to);
+// Где вокруг острова лежат соседи: переходы, которые уходят за край карты (подземный ход не в счёт). Сбоку:
+// row — ряд, где путь уходит за край; up — сосед лежит выше (на него приходят снизу). Сверху и снизу: col — столбец
+// моста. По этим данным карта на широком экране закрывает место соседнего острова грядой облаков.
+const fogOf = (n) => (GATES[n] || []).filter((g) => g.dir).map((g) => typeof g.dir === "number"
+  ? { side: g.dir < 0 ? "up" : "down", col: g.at[0] / 20 }
+  : { side: g.dir, row: g.at[1] / 20, up: typeof gateTo(g.to, n)?.dir === "number" });
 // завал на косе острова 5 (переход на остров 6): где камни, где взрыв, откуда прибегает подрывник — см. blastRun
 const BLAST = { isle: 5, row: 15.75,
   rocks: [["rock2", 16.7, 15.45, 1.5], ["rock4", 16.25, 15.88, 1.8], ["rock3", 16.85, 16.12, 1.3], ["rock2", 15.95, 15.42, 0.95]],
@@ -4347,7 +4384,7 @@ function ensureIsle(n) {
   const D = ISLE_MAPS[n], w = isleWrap(n);
   w.style.aspectRatio = `360 / ${D.terr.length * 20}`;
   isleSvg(n).setAttribute("viewBox", `0 0 360 ${D.terr.length * 20}`);
-  ISLE_ENG[n] = mapEngine(D);
+  ISLE_ENG[n] = mapEngine(D, fogOf(n));
   ISLE_ENG[n].ready = ISLE_ENG[n].startMapScene(w.querySelector(".map-canvas"));
   SKITS[n]?.(w);
   return ISLE_ENG[n];
@@ -11330,10 +11367,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 175;
+const APP_VERSION = 176;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 176, date: "2026-11-17", text: "На широком экране соседние острова скрыты за грядами облаков: мосты и косы уходят под них, а не обрываются в море. Маленькие облака над морем плывут совсем медленно.", en: "On a wide screen the neighbouring islands are hidden behind banks of clouds: bridges and sandbars go under them instead of ending in the open sea. The small clouds over the sea drift very slowly." },
   { v: 175, date: "2026-11-17", text: "На широком экране рыцарь больше не идёт по воде, когда уходит на соседний остров: он скрывается под облаком у края карты. На медленной связи обновление игры теперь спокойно докачивается, а не начинается заново.", en: "On a wide screen the knight no longer walks on water when leaving for the next island: he slips under the cloud at the edge of the map. On a slow connection a game update now finishes downloading calmly instead of starting over." },
   { v: 174, date: "2026-11-17", text: "Картинки игры теперь тоже скачиваются по частям: при обновлении — только те, что изменились.", en: "The game’s pictures are now downloaded in parts too: an update fetches only the ones that changed." },
   { v: 173, date: "2026-11-17", text: "Игра обновляется быстрее: уровни и карта каждого острова теперь скачиваются отдельно, только когда они изменились.", en: "The game updates faster: each island’s levels and map are now downloaded separately, only when they change." },
