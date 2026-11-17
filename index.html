@@ -1617,7 +1617,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 .tg-more-body { display: flex; flex-direction: column; gap: 10px; padding: 0 14px 14px; }
 .tg-more-body .synccard { align-self: stretch; justify-content: center; margin-top: 0; }
 .tg-more-body .app-report { border-bottom: 0; padding-bottom: 0; }
-.tg-ver > summary { list-style: none; cursor: pointer; text-align: center; font-size: 12px; color: var(--muted); padding: 6px; }
+.tg-ver > summary { list-style: none; cursor: pointer; text-align: center; font-size: 14px; font-weight: 600; color: var(--muted); padding: 6px; }   /* мельче и тоньше нельзя: на Windows у цифры 7 пропадала верхняя черта */
 .tg-ver > summary::-webkit-details-marker { display: none; }
 .tg-ver > summary::after { content: " ›"; }
 .tg-ver[open] > summary::after { content: " ⌄"; }
@@ -4058,7 +4058,7 @@ function mapEngine(D, FOG = []) {   // FOG — где сбоку от остро
     // Облачный берег у верхнего края карты: мост от крепости уходит в облака.
     // Облака стоят на месте и только чуть покачиваются (CSS), их не перерисовываем.
     // [картинка, x центра, y верха в пикселях холста, масштаб]
-    const BANK = D.bank || [];
+    const BANK = D.bank || [], bankEls = [];
     BANK.forEach(([k, x, y, sc], i) => {
       const im = new Image();
       im.src = TS[k]; im.alt = "";
@@ -4067,6 +4067,7 @@ function mapEngine(D, FOG = []) {   // FOG — где сбоку от остро
       im.style.cssText = `left:${((x - w * sc / 2) / canvas.width * 100).toFixed(2)}%;top:${(y / canvas.height * 100).toFixed(3)}%;`
         + `width:${(w * sc / canvas.width * 100).toFixed(2)}%;animation-delay:${-i * 2.3}s`;
       cloudLayer.appendChild(im);
+      bankEls.push([im, k, x, y + h * sc / 2]);
     });
     // ===== Море вокруг острова на широком экране (компьютер, версия 121) =====
     // Отдельный холст под картой во всю ширину окна, но высотой только в видимую часть карты (так он маленький
@@ -4150,39 +4151,89 @@ function mapEngine(D, FOG = []) {   // FOG — где сбоку от остро
     let bankKey = "";
     function placeBankSides() {
       bankSide.forEach((im) => im.remove()); bankSide.length = 0; bankKey = "";
-      if (!isWide() || (!BANK.length && !FOG.length)) return;
+      // облако из раскладки у конца пути на широком экране входит в гряду: без тени и не покачивается
+      const wide = isWide();
+      for (const [im, k, x, y] of bankEls) {
+        const inFog = wide && FOG.some((f) => {
+          const gx = f.at[0] * canvas.width / 360, gy = f.at[1] * canvas.width / 360;
+          return f.side === "up" || f.side === "down" ? Math.abs(x - gx) < 420 && (f.side === "up" ? y < 330 : y > canvas.height - 330)
+            : Math.abs(y - gy) < 300 && (f.side === "right" ? x > canvas.width - 330 : x < 330);
+        });
+        if (im.classList.contains("fog") !== inFog) { im.classList.toggle("fog", inFog); im.src = TS[k + (inFog ? "_f" : "")]; }
+      }
+      if (!wide || (!BANK.length && !FOG.length)) return;
       const r = wrap.getBoundingClientRect(), k = r.width / canvas.width, cw = canvas.width;
       if (!r.width) return;                          // карта скрыта (другой остров) — посчитаем, когда покажут
       bankKey = document.documentElement.clientWidth + "|" + Math.round(r.width) + "|" + Math.round(r.left);
-      // Соседний остров под облаками. Мост или коса уходят вбок за край карты — на соседний остров. На телефоне
-      // за краем карты край экрана, а на широком экране там открытое море, и путь обрывался бы в воде. Поэтому
-      // место, где лежит сосед (с запасом), закрыто грядой облаков: путь уходит под неё. Гряда стоит на месте
-      // и не покачивается (класс fog); на саму карту не заходит — конец пути у края прикрывают облака из раскладки.
-      // Сосед сверху или снизу (мост уходит за верхний или нижний край): сама карта там кончается, поэтому гряда
-      // лежит вдоль края по бокам от острова — над морем, широкой полосой с центром напротив моста.
-      const FK = ["cloud_a", "cloud_b", "cloud_c", "cloud_d"];
+      // Соседний остров под облаками. Мост или коса уходят за край карты — на соседний остров. На телефоне
+      // за краем карты край экрана, а на широком экране там открытое море, и путь обрывался бы в воде. Поэтому:
+      //  1) место, где лежит сосед, закрыто большой грядой облаков — такой, что под ней поместится остров;
+      //     она начинается прямо у края карты (сбоку) или идёт полосой вдоль края по бокам от острова (сверху, снизу);
+      //  2) конец пути тонет в облаках: гряда заходит на карту вдоль моста или косы (reach) и там гуще,
+      //     так что не видно ни конца пути, ни того, куда он идёт дальше. Кнопки и подписи облака не закрывают.
+      // Гряда стоит на месте и не покачивается (класс fog).
+      const FK = ["cloud_a", "cloud_b", "cloud_c", "cloud_d"], U = cw / 360, cell = 20 * U;
+      // что нельзя закрывать (в единицах карты): кнопки уровней и переходов — круги, подписи глав — прямоугольники
+      const keepR = [...D.nodes, ...FOG.map((f) => f.at)].map(([x, y]) => [x - 21, y - 24, x + 21, y + 26])
+        .concat((D.labels || []).map(([t, x, y]) => [x - t.length * 6.2 - 10, y - 12, x + t.length * 6.2 + 10, y + 12]));
       const fog = [];
+      const add = (key, px, py, sc, inside) => {
+        const [, w, h] = TS_INFO[key];
+        if (inside) {   // на карте: середина облака (без прозрачных краёв) не должна лечь на кнопку или подпись
+          const a = [(px - w * sc * 0.36) / U, (py - h * sc * 0.3) / U, (px + w * sc * 0.36) / U, (py + h * sc * 0.34) / U];
+          if (keepR.some((r) => a[0] < r[2] && a[2] > r[0] && a[1] < r[3] && a[3] > r[1])) return;
+        }
+        fog.push({ key, px, py, sc, w: w * sc, h: h * sc });
+      };
+      const fogImg = (c, suf) => {
+        const im = new Image(); im.src = TS[c.key + suf]; im.alt = ""; im.className = "bank fog";
+        im.style.cssText = `left:${((c.px - c.w / 2) / cw * 100).toFixed(2)}%;top:${((c.py - c.h / 2) / canvas.height * 100).toFixed(3)}%;width:${(c.w / cw * 100).toFixed(2)}%`;
+        return im;
+      };
       FOG.forEach((f, fi) => {
-        const right = f.side === "right", vert = f.side === "up" || f.side === "down";
-        const RX = vert ? 1500 : 570, RY = vert ? 370 : 620;   // половины ширины и высоты гряды, в точках холста
-        const cx = vert ? (f.col * (cw / D.terr[0].length) + cw / 2) / 2 : right ? cw + RX + 24 : -(RX + 24);
-        const cy = vert ? (f.side === "up" ? -90 : canvas.height + 90) : f.row * (canvas.height / D.terr.length) - (f.up ? RY * 0.42 : 0);   // up — сосед лежит выше
+        const right = f.side === "right", up = f.side === "up", vert = up || f.side === "down";
+        const gx = f.at[0] * U, gy = f.at[1] * U;
+        const reach = f.reach * U;   // на сколько гряда заходит на карту вдоль пути
+        const RX = vert ? 1700 : 690, RY = vert ? 470 : 830;   // половины ширины и высоты гряды, в точках холста
+        const cx = vert ? (gx + cw / 2) / 2 : right ? cw + RX - 70 : -(RX - 70);
+        const cy = vert ? (up ? -120 : canvas.height + 120) : gy - (f.up ? RY * 0.4 : 0);   // f.up — сосед лежит выше
         let i = 0;
-        for (let y = -RY, j = 0; y <= RY; y += 66, j++) for (let x = -RX + (j % 2 ? 95 : 0); x <= RX; x += 190, i++) {
-          const u = Math.abs(x / RX), v = Math.abs(y / RY), d = u ** 2.4 + v ** 2.4;         // «скруглённый прямоугольник»
-          if (d > 0.82 + hsh(i, fi, 71) * 0.3) continue;                                        // край гряды неровный
-          const key = FK[Math.floor(hsh(i, fi, 72) * 4)], [, w, h] = TS_INFO[key];
-          const sc = (d > 0.6 ? 0.95 : 1.3) + hsh(i, fi, 73) * 0.45;                         // по краям облака мельче
+        for (let y = -RY, j = 0; y <= RY; y += 62, j++) for (let x = -RX + (j % 2 ? 90 : 0); x <= RX; x += 180, i++) {
+          const u = Math.abs(x / RX), v = Math.abs(y / RY), d = u ** 2.6 + v ** 2.6;         // «скруглённый прямоугольник»
+          if (d > 0.9 + hsh(i, fi, 71) * 0.2) continue;                                        // край гряды неровный
+          const key = FK[Math.floor(hsh(i, fi, 72) * 4)], [, w] = TS_INFO[key];
+          const sc = (d > 0.65 ? 0.95 : 1.3) + hsh(i, fi, 73) * 0.45;                        // по краям облака мельче
           const px = cx + x + (hsh(i, fi, 74) - 0.5) * 70, py = cy + y + (hsh(i, fi, 75) - 0.5) * 34;
-          // на остров гряда не заходит (конец пути у края карты прикрывают облака из раскладки)
-          if (vert ? px + w * sc / 2 > -24 && px - w * sc / 2 < cw + 24 : right ? px - w * sc / 2 < cw - 24 : px + w * sc / 2 > 24) continue;
-          const im = new Image(); im.src = TS[key]; im.alt = ""; im.className = "bank fog";
-          im.style.cssText = `left:${((px - w * sc / 2) / cw * 100).toFixed(2)}%;top:${((py - h * sc / 2) / canvas.height * 100).toFixed(3)}%;width:${(w * sc / cw * 100).toFixed(2)}%`;
-          fog.push(im);
+          // на сам остров большая гряда не заходит: только встаёт вплотную к краю карты
+          const over = vert ? (px + w * sc * 0.4 > 0 && px - w * sc * 0.4 < cw) : (right ? px - w * sc * 0.4 < cw + 6 : px + w * sc * 0.4 > -6);
+          if (over) continue;
+          add(key, px, py, sc, false);
+        }
+        // конец пути: густые облака вдоль моста или косы — от края карты внутрь на reach и немного за край
+        // reach — докуда доходит край облаков (не их середина), поэтому середину каждого облака отодвигаем на его полширины
+        const SK2 = ["cloud_c", "cloud_d", "cloud_b"], deep = Math.ceil((reach + 2.5 * cell) / 46);
+        for (let j = 0; j <= deep; j++) for (let b = -1.25 * cell + (j % 2 ? 18 : 0); b <= 1.25 * cell; b += 36, i++) {
+          const key = SK2[Math.floor(hsh(i, fi, 76) * 3)], sc = 0.62 + hsh(i, fi, 77) * 0.3, half = TS_INFO[key][1] * sc * 0.38;
+          const along = reach - half - j * 46 - hsh(i, fi, 78) * 10, across = b + (hsh(i, fi, 79) - 0.5) * 14;
+          // along — расстояние от края карты внутрь (отрицательное — уже за краем)
+          const px = vert ? gx + across : right ? cw - along : along;
+          const py = vert ? (up ? along : canvas.height - along) : gy + across;
+          add(key, px, py, sc, true);
         }
       });
-      // ряды кладём сверху вниз: у облака снизу тень, и нижний ряд закрывает тень верхнего — гряда выходит сплошной
-      fog.reverse().forEach((im) => { cloudLayer.prepend(im); bankSide.push(im); });
+      // У облака снизу тень. В гряде облака лежат внахлёст, и тень на соседнем облаке была бы серой полосой.
+      // Поэтому гряда в два слоя: снизу только тени (cloud_X_s), сверху облака без теней (cloud_X_f) —
+      // тень видна лишь там, где под ней море или земля. Тень, целиком закрытую облаками, не кладём вовсе.
+      fog.sort((a, b) => a.py - b.py);
+      const hid = (x, y) => fog.some((c) => Math.abs(x - c.px) < c.w * 0.36 && y > c.py - c.h * 0.3 && y < c.py + c.h * 0.08);
+      const els = [];
+      for (const c of fog) {
+        let seen = false;
+        for (const dx of [-0.36, -0.18, 0, 0.18, 0.36]) for (const dy of [0.22, 0.4]) if (!hid(c.px + dx * c.w, c.py + dy * c.h)) seen = true;
+        if (seen) els.push(fogImg(c, "_s"));
+      }
+      for (const c of fog) els.push(fogImg(c, "_f"));
+      els.reverse().forEach((im) => { cloudLayer.prepend(im); bankSide.push(im); });
       if (!BANK.length) return;
       const wl = -r.left / k, wr = (document.documentElement.clientWidth - r.left) / k;
       const rows = [BANK.filter((b) => b[2] < 400), BANK.filter((b) => b[2] > canvas.height - 500)].filter((g) => g.length);
@@ -4338,16 +4389,20 @@ const GATES = {
   4: [{ at: [130, 516], to: 3, kind: "bridge", dir: 1 }, { at: [264, 466], to: 5, kind: "ebb", dir: "right", label: { dx: 40, dy: 2 } }],
   // blast — проход по косе за край карты, который сначала перегораживает завал из камней: его взрывает
   // гоблин-подрывник (метил в рыцаря — попал в завал; BLAST). Дальше коса открыта всегда (save.built.b56).
-  5: [{ at: [124, 482], to: 4, kind: "ebb", dir: "left" }, { at: [310, 310], to: 6, kind: "blast", dir: "right", label: { side: "left", dx: -4, dy: -3 } }],
+  5: [{ at: [124, 482], to: 4, kind: "ebb", dir: "left" }, { at: [310, 310], to: 6, kind: "blast", dir: "right", fog: 6, label: { side: "left", dx: -4, dy: -3 } }],
   6: [{ at: [190, 530], to: 5, kind: "blast", dir: 1 }],
 };
 const gateTo = (from, to) => GATES[from].find((g) => g.to === to);
-// Где вокруг острова лежат соседи: переходы, которые уходят за край карты (подземный ход не в счёт). Сбоку:
-// row — ряд, где путь уходит за край; up — сосед лежит выше (на него приходят снизу). Сверху и снизу: col — столбец
-// моста. По этим данным карта на широком экране закрывает место соседнего острова грядой облаков.
-const fogOf = (n) => (GATES[n] || []).filter((g) => g.dir).map((g) => typeof g.dir === "number"
-  ? { side: g.dir < 0 ? "up" : "down", col: g.at[0] / 20 }
-  : { side: g.dir, row: g.at[1] / 20, up: typeof gateTo(g.to, n)?.dir === "number" });
+// Где вокруг острова лежат соседи: переходы, которые уходят за край карты (подземный ход не в счёт).
+// at — кнопка перехода (от неё путь идёт к краю карты); up — сосед лежит выше (на него приходят снизу);
+// reach — на сколько единиц карты облака заходят на карту вдоль пути (поле fog у перехода; по умолчанию считается
+// сам: почти до кнопки). У завала на острове 5 fog: 6 — у самого края стоит гоблин с бочкой, его закрывать нельзя.
+// По этим данным карта на широком экране закрывает место соседнего острова грядой облаков.
+const fogOf = (n) => (GATES[n] || []).filter((g) => g.dir).map((g) => {
+  const vert = typeof g.dir === "number", side = vert ? (g.dir < 0 ? "up" : "down") : g.dir;
+  const dist = side === "up" ? g.at[1] : side === "down" ? ISLE_MAPS[n].terr.length * 20 - g.at[1] : side === "right" ? 360 - g.at[0] : g.at[0];
+  return { side, at: g.at, to: g.to, reach: g.fog ?? Math.max(8, Math.min(80, dist - 30)), up: !vert && typeof gateTo(g.to, n)?.dir === "number" };
+});
 // завал на косе острова 5 (переход на остров 6): где камни, где взрыв, откуда прибегает подрывник — см. blastRun
 const BLAST = { isle: 5, row: 15.75,
   rocks: [["rock2", 16.7, 15.45, 1.5], ["rock4", 16.25, 15.88, 1.8], ["rock3", 16.85, 16.12, 1.3], ["rock2", 15.95, 15.42, 0.95]],
@@ -11367,10 +11422,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 176;
+const APP_VERSION = 177;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 177, date: "2026-11-17", text: "На компьютере мост и коса уходят в большие облака, а не обрываются в море. Номер версии в настройках стал крупнее.", en: "On a computer, the bridge and the sandbar now run into big clouds instead of ending in the sea. The version number in settings is bigger." },
   { v: 176, date: "2026-11-17", text: "На широком экране соседние острова скрыты за грядами облаков: мосты и косы уходят под них, а не обрываются в море. Маленькие облака над морем плывут совсем медленно.", en: "On a wide screen the neighbouring islands are hidden behind banks of clouds: bridges and sandbars go under them instead of ending in the open sea. The small clouds over the sea drift very slowly." },
   { v: 175, date: "2026-11-17", text: "На широком экране рыцарь больше не идёт по воде, когда уходит на соседний остров: он скрывается под облаком у края карты. На медленной связи обновление игры теперь спокойно докачивается, а не начинается заново.", en: "On a wide screen the knight no longer walks on water when leaving for the next island: he slips under the cloud at the edge of the map. On a slow connection a game update now finishes downloading calmly instead of starting over." },
   { v: 174, date: "2026-11-17", text: "Картинки игры теперь тоже скачиваются по частям: при обновлении — только те, что изменились.", en: "The game’s pictures are now downloaded in parts too: an update fetches only the ones that changed." },

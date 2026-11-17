@@ -1,17 +1,17 @@
 {
- "version": 176,
+ "version": 177,
  "date": "2026-11-17",
  "notes": [
-  "На широком экране соседние острова скрыты за грядами облаков: мосты и косы уходят под них, а не обрываются в море. Маленькие облака над морем плывут совсем медленно."
+  "На компьютере мост и коса уходят в большие облака, а не обрываются в море. Номер версии в настройках стал крупнее."
  ],
  "files": {
   "index.html": {
-   "size": 855647,
-   "hash": "b421cb3371020ab1"
+   "size": 860919,
+   "hash": "549a512948b30115"
   },
   "art.js": {
-   "size": 824869,
-   "hash": "5ac2d60a480bb8e0"
+   "size": 841991,
+   "hash": "db9006b00fa9d46b"
   },
   "lang-en.js": {
    "size": 71067,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4433,
-   "hash": "1f9cba830f0b8217"
+   "hash": "a044d68c1ade97ec"
   },
   "icon-192.png": {
    "size": 42164,
@@ -119,6 +119,6 @@
   }
  },
  "notes_en": [
-  "On a wide screen the neighbouring islands are hidden behind banks of clouds: bridges and sandbars go under them instead of ending in the open sea. The small clouds over the sea drift very slowly."
+  "On a computer, the bridge and the sandbar now run into big clouds instead of ending in the sea. The version number in settings is bigger."
  ]
 }
