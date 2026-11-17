@@ -2128,6 +2128,12 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 </button>
 
 <script src="art.js"></script>
+<!-- Графика по частям: сценки и бои, потом то, что есть только на карте одного острова. Новый файл — сюда и в FILES в sw.js. -->
+<script src="art-scenes.js"></script>
+<script src="art-isle2.js"></script>
+<script src="art-isle3.js"></script>
+<script src="art-isle4.js"></script>
+<script src="art-isle5.js"></script>
 <script src="lang-en.js"></script>
 <!-- Острова: уровни и карта каждого острова — в своём файле. Новый остров — новый файл здесь и в FILES в sw.js. -->
 <script src="isle1.js"></script>
@@ -2372,10 +2378,12 @@ const CHAPTERS = [
 // chapter — номер главы; after — какой уровень нужно пройти, чтобы этот открылся;
 // challenge — испытание главы: его прохождение открывает следующую главу;
 // requireLoop — засчитывается, только если в коде есть цикл.
-// Файл какого-то острова не загрузился (обрыв связи при первом входе): без него игра молча сломалась бы.
-// Один раз загружаем страницу заново; не помогло — говорим об этом игроку и останавливаемся.
+// Какой-то файл игры не загрузился (обрыв связи при первом входе): файл острова или графики.
+// Без него игра молча сломалась бы или осталась без картинок. Один раз загружаем страницу заново;
+// не помогло — говорим об этом игроку и останавливаемся.
 {
-  const need = document.querySelectorAll('script[src^="isle"]').length, got = Object.keys(self.ISLES || {}).length;
+  const need = document.querySelectorAll('script[src^="isle"], script[src^="art"]').length;
+  const got = Object.keys(self.ISLES || {}).length + (self.TS ? 1 : 0) + (self.ART_FILES || []).length;
   let tries = 0;
   try { tries = +sessionStorage.getItem("coder-path-isle-retry") || 0; } catch (e) {}
   if (got < need) {
@@ -2384,7 +2392,7 @@ const CHAPTERS = [
     else document.body.innerHTML = `<div id="isle-miss" style="padding:48px 24px;text-align:center;font:18px/1.5 system-ui,sans-serif;color:#ece7dc">`
       + `<p>${tr("Игра загрузилась не полностью. Проверь интернет и обнови страницу.")}</p>`
       + `<p><button onclick="location.reload()" style="font:inherit;padding:10px 22px;border-radius:10px;border:0;background:#f2a541;color:#13151b">${tr("Обновить страницу")}</button></p></div>`;
-    throw new Error("не загрузился файл острова");
+    throw new Error("не загрузился файл игры (остров или графика)");
   }
   try { sessionStorage.removeItem("coder-path-isle-retry"); } catch (e) {}
 }
@@ -3009,7 +3017,7 @@ const KEY_SVG = `
 // монета — иконка из набора Tiny Swords (ссылка на картинку подставится, когда загрузится TS)
 const COIN_SVG = `<img class="coinimg" alt="" src="">`;
 
-// Графика Tiny Swords (TS — картинки, TS_INFO — кадры и размеры) лежит в art.js: она меняется редко,
+// Графика Tiny Swords (TS — картинки, TS_INFO — кадры и размеры) лежит в art.js и art-….js (сценки, острова): она меняется редко,
 // и обновление игры не скачивает её заново, если картинки не трогали.
 
 // ===== Спрайты =====
@@ -11312,10 +11320,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 173;
+const APP_VERSION = 174;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 174, date: "2026-11-17", text: "Картинки игры теперь тоже скачиваются по частям: при обновлении — только те, что изменились.", en: "The game’s pictures are now downloaded in parts too: an update fetches only the ones that changed." },
   { v: 173, date: "2026-11-17", text: "Игра обновляется быстрее: уровни и карта каждого острова теперь скачиваются отдельно, только когда они изменились.", en: "The game updates faster: each island’s levels and map are now downloaded separately, only when they change." },
   { v: 172, date: "2026-11-17", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 171, date: "2026-11-17", text: "Кнопка «если» теперь ставит новую рамку в конец выбранной рамки — так же, как стрелки. Две рамки «если» подряд можно собрать по порядку.", en: "The “if” button now puts a new frame at the end of the selected frame — just like the arrows. Two “if” frames in a row can be built in order." },

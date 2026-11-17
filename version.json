@@ -1,17 +1,17 @@
 {
- "version": 173,
+ "version": 174,
  "date": "2026-11-17",
  "notes": [
-  "Игра обновляется быстрее: уровни и карта каждого острова теперь скачиваются отдельно, только когда они изменились."
+  "Картинки игры теперь тоже скачиваются по частям: при обновлении — только те, что изменились."
  ],
  "files": {
   "index.html": {
-   "size": 845218,
-   "hash": "69768c82bc9c1d99"
+   "size": 846184,
+   "hash": "49f4058281c96ce7"
   },
   "art.js": {
-   "size": 1979296,
-   "hash": "fc09075012bef868"
+   "size": 824869,
+   "hash": "5ac2d60a480bb8e0"
   },
   "lang-en.js": {
    "size": 70427,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 4070,
-   "hash": "d6e4da98a5dd0ae7"
+   "size": 4151,
+   "hash": "c4ad5765e457fb64"
   },
   "icon-192.png": {
    "size": 42164,
@@ -96,9 +96,29 @@
   "isle6.js": {
    "size": 19439,
    "hash": "b364ac5a479c06b5"
+  },
+  "art-scenes.js": {
+   "size": 801983,
+   "hash": "8d4d08579bb667a6"
+  },
+  "art-isle2.js": {
+   "size": 80017,
+   "hash": "32734770173bc6b8"
+  },
+  "art-isle3.js": {
+   "size": 50610,
+   "hash": "f9d9601afea33337"
+  },
+  "art-isle4.js": {
+   "size": 116123,
+   "hash": "0b19eef9a1853028"
+  },
+  "art-isle5.js": {
+   "size": 109059,
+   "hash": "db93aa9ad97c32b2"
   }
  },
  "notes_en": [
-  "The game updates faster: each island’s levels and map are now downloaded separately, only when they change."
+  "The game’s pictures are now downloaded in parts too: an update fetches only the ones that changed."
  ]
 }
