@@ -219,7 +219,9 @@ html.still .loot, html.still .bfloat { animation-duration: 0.01s; }
 .hero .khp i.off { opacity: 0.25; filter: grayscale(1); }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .hero.hurt .kwrap { animation: none; }
-.hero .k-atk { display: none; }
+.hero .k-atk, .hero .k-parry { display: none; }
+.hero.parry:not(.low) .k-parry.pup, .hero.parry.low .k-parry.pdown { display: block; }
+.hero.parry .k-idle, .hero.parry .k-run, .hero.parry .k-atk { display: none !important; }
 .hero.atk .k-atk { display: block; }
 .hero.atk .k-idle, .hero.atk .k-run { display: none !important; }
 /* без движения (настройка «Анимация» или просьба системы) */
@@ -2213,6 +2215,8 @@ const DIRS = {
   attack:    { dx: 0, dy: 0, arrow: "⚔", axis: "a", py: "attack" },
   // Работа: то же, что удар, только для работника — срубить дерево, расколоть камень, прогнать овцу.
   work:      { dx: 0, dy: 0, arrow: "🪓", axis: "a", py: "work" },
+  // Копьё (v185): удар копейщика. Летит динамит подрывника — отбивает его обратно; рядом гоблин — бьёт его, как удар.
+  parry:     { dx: 0, dy: 0, arrow: "🔱", axis: "a", py: "parry" },
   // Арена: идти к ближайшему врагу и лечиться (рыцарь сам решает куда — команда без числа)
   goToEnemy: { dx: 0, dy: 0, arrow: "➤", axis: "g", py: "go_to_enemy" },
   heal:      { dx: 0, dy: 0, arrow: "♥", axis: "l", py: "heal" },
@@ -2385,6 +2389,7 @@ const CHAPTERS = [
   { name: tr("Зигзаг"), topic: tr("приём зовёт приём с числом"), isle: 5 },
   // Шестой остров (isle: 6) — Остров гоблинов: «другое если» — одно из трёх
   { name: tr("Караулы"), topic: tr("«другое если»"), isle: 6 },
+  { name: tr("Обстрел"), topic: tr("копьё против динамита"), isle: 6 },
 ];
 
 // Уровни по порядку на карте.
@@ -2880,7 +2885,7 @@ function suggested() {
   return i === -1 ? indexOf(LAST_LEVEL().name) : i;
 }
 const indexOf = (name) => LEVELS.findIndex((lv) => lv.name === name);
-const isHit = (name) => name === "attack" || name === "work";   // удар рыцаря и работа работника — одно действие
+const isHit = (name) => name === "attack" || name === "work" || name === "parry";   // удар рыцаря, работа работника и копьё копейщика — одно действие
 
 // ===== Роли: кто идёт на уровень =====
 // Урок и порядок уровней одни для всех; на уровне с ролями игрок выбирает, КТО пойдёт:
@@ -2927,10 +2932,10 @@ function skinGoal(text) {
 }
 // в текстах уровня «рыцарь» — это тот, кто идёт: у работника и монаха слово меняется (с падежами)
 function roleText(t) {
-  const r = L?.skin;
-  if ((r !== "work" && r !== "monk") || typeof t !== "string") return t;
-  if (EN_ON) return t.replace(/\bknight\b/g, r === "work" ? "worker" : "monk").replace(/\bKnight\b/g, r === "work" ? "Worker" : "Monk");
-  const stem = r === "work" ? "аботник" : "онах", up = r === "work" ? "Р" : "М", low = r === "work" ? "р" : "м";
+  const r = L?.lancer ? "lance" : L?.skin;
+  if ((r !== "work" && r !== "monk" && r !== "lance") || typeof t !== "string") return t;
+  if (EN_ON) return t.replace(/\bknight\b/g, r === "work" ? "worker" : r === "lance" ? "lancer" : "monk").replace(/\bKnight\b/g, r === "work" ? "Worker" : r === "lance" ? "Lancer" : "Monk");
+  const stem = r === "work" ? "аботник" : r === "lance" ? "опейщик" : "онах", up = r === "work" ? "Р" : r === "lance" ? "К" : "М", low = r === "work" ? "р" : r === "lance" ? "к" : "м";
   return t.replace(/([Рр])ыцар(ь|я|ю|ем|е)(?![а-яё])/g, (m, c, e) => (c === "Р" ? up : low) + stem + { "ь": "", "я": "а", "ю": "у", "ем": "ом", "е": "е" }[e]);
 }
 const goalHtml = () => roleText(uiBlocks && BLOCK_GOALS[L.name] ? btnRefs(skinGoal(BLOCK_GOALS[L.name])) : btnRefs(langify(btnRefs(skinGoal(L.goal)))));
@@ -3040,11 +3045,15 @@ const COIN_SVG = `<img class="coinimg" alt="" src="">`;
 (() => {
   const st = document.createElement("style");
   // для каждого числа кадров — своя анимация: сдвиг от первого кадра до последнего
-  st.textContent = [4, 6, 7, 8, 10, 16].map((n) =>
+  st.textContent = [3, 4, 6, 7, 8, 10, 12, 16].map((n) =>
     `@keyframes spr${n}{from{background-position-x:0%}to{background-position-x:${(n / (n - 1) * 100).toFixed(4)}%}}`).join("\n");
   document.head.appendChild(st);
 })();
 
+// Копейщик на поле уровня (v185): те же листы, что у копейщиков сценок (кадр 320×320), под своими именами
+// и с числом кадров — так sprite() умеет их показывать. LN_BOTTOM — на сколько опустить кадр, чтобы ноги встали на клетку.
+for (const [a, b, n] of [["ln_idle", "sk_lidle", 12], ["ln_run", "sk_lrun", 6], ["ln_atk", "sk_lratk", 3], ["ln_up", "sk_luratk", 3], ["ln_down", "sk_ldratk", 3]]) { TS[a] = TS[b]; TS_INFO[a] = [n, 320, 320]; }
+const LN_BOTTOM = -108;
 // Сделать элемент-спрайт. Размеры — в процентах от клетки, ноги/основание — у нижнего края клетки.
 function sprite(key, k = 1, { bottom = 4, dur = 0.9, delay = 0, cls = "" } = {}) {
   const inf = TS_INFO[key];
@@ -6776,7 +6785,7 @@ function buildBoard() {
       // дерево, которое повалит лесоруб, — невысокая ель; по бокам от неё пусто (там стоит лесоруб и падает дерево)
       if (allyAt(x, y)) { tl.over = null; if (tl.ground === "water") tl.ground = "grass"; }
       // прямо под врагом не растёт высокое дерево: его крона закрывала бы ноги, будто враг стоит на дереве
-      if (y > 0 && "GBWVHD".includes(map[y - 1][x]) && PROPS[tl.over]?.tall) tl.over = "bush1";
+      if (y > 0 && "GBWVHDY".includes(map[y - 1][x]) && PROPS[tl.over]?.tall) tl.over = "bush1";
       for (const e of evs().filter((e) => e.kind === "fell")) {
         const f = fellCells(e);
         if (f.tree[0] === x && f.tree[1] === y) { tl.over = "tree1"; tl.ground = "grass"; }
@@ -6827,14 +6836,15 @@ function buildBoard() {
         enemies.push({ x, y, hp: 1, giant: false, shield: false, job, el: en });
       }
       // Гоблины: G — один удар, B — два удара
-      if (ch === "G" || ch === "B" || ch === "W" || ch === "V" || ch === "H" || ch === "D") {
+      if (ch === "G" || ch === "B" || ch === "W" || ch === "V" || ch === "H" || ch === "D" || ch === "Y") {
         // V — великан: шесть сердечек, бьёт только в ответ и с замахом (его можно победить, если отскакивать)
         // H — щитоносец: три сердечка, спереди удар принимает на щит и бьёт в ответ; уязвим со спины,
         // после каждого пропущенного удара поворачивается к рыцарю. Сам не нападает.
         // D — подрывник: два сердечка, сам рядом не бьёт, но бросает динамит, если рыцарь с ним на одной
         // линии в 2–3 клетках и между ними нет стены. Красные клетки на поле — куда долетает динамит.
-        const giant = ch === "V", shield = ch === "H", bomb = ch === "D";
-        const hp = giant ? GIANT_HP : shield ? SHIELD_HP : bomb ? BOMB_HP : ch === "W" ? 5 : ch === "B" ? 2 : 1;
+        // Y — подрывник попроще (уровни копейщика): одно сердечко, не «босс» — короны за него нет
+        const giant = ch === "V", shield = ch === "H", bomb = ch === "D" || ch === "Y";
+        const hp = giant ? GIANT_HP : shield ? SHIELD_HP : ch === "D" ? BOMB_HP : ch === "W" ? 5 : ch === "B" ? 2 : 1;
         const en = document.createElement("div");
         en.className = "enemy" + (hp >= 5 ? " big" : "") + (giant ? " giant" : "") + (shield ? " shield" : "");
         en.style.setProperty("--heart", `url("${HEART_URL}")`);
@@ -6845,7 +6855,7 @@ function buildBoard() {
         en.insertAdjacentHTML("beforeend", `<div class="hp">${"<i class=on></i>".repeat(hp)}</div>`);
         if (giant) en.insertAdjacentHTML("beforeend", `<div class="bang" aria-hidden="true">!</div>`);
         cell.appendChild(en);
-        enemies.push({ x, y, hp, giant, shield, bomb, boss: giant || shield || bomb, el: en });
+        enemies.push({ x, y, hp, giant, shield, bomb, boss: giant || shield || ch === "D", el: en });
         if (hp < 5 && actx) { soundBuf("goblin-attack.mp3"); soundBuf("goblin-death.mp3"); soundBuf("sword-hit.mp3"); }   // заранее
       }
       if (ch === "E") {
@@ -6903,12 +6913,15 @@ function buildBoard() {
   // кто идёт: рыцарь, работник (за дело берётся топором или киркой) или монах — кадры одной рамки, место то же
   const job = L.skin === "work" ? jobOf(L) : null;
   const HK = L.skin === "work" ? ["pw_idle", "pw_run", job === "rock" ? "pw_pick" : job === "sheep" ? "pw_run" : "pw_axe", "pw_idle"]
-    : L.skin === "monk" ? ["mk_idle", "mk_run", "mk_idle", "mk_idle"] : ["kidle", "krun", "katk", "kguard"];
-  const kIdle = sprite(HK[0], 0.66, { bottom: -14, dur: 0.8, cls: "k-idle" });
-  const kRun = sprite(HK[1], 0.66, { bottom: -14, dur: 0.5, cls: "k-run" });
-  const kAtk = sprite(HK[2], 0.66, { bottom: -14, dur: job ? 0.5 : 0.4, cls: "k-atk" });
-  const kGuard = sprite(HK[3], 0.66, { bottom: -14, dur: 0.5, cls: "k-guard" });
+    : L.skin === "monk" ? ["mk_idle", "mk_run", "mk_idle", "mk_idle"]
+    : L.lancer ? ["ln_idle", "ln_run", "ln_atk", "ln_idle"] : ["kidle", "krun", "katk", "kguard"];
+  const kb = L.lancer ? LN_BOTTOM : -14;
+  const kIdle = sprite(HK[0], 0.66, { bottom: kb, dur: L.lancer ? 1.2 : 0.8, cls: "k-idle" });
+  const kRun = sprite(HK[1], 0.66, { bottom: kb, dur: 0.5, cls: "k-run" });
+  const kAtk = sprite(HK[2], 0.66, { bottom: kb, dur: job ? 0.5 : L.lancer ? 0.36 : 0.4, cls: "k-atk" });
+  const kGuard = sprite(HK[3], 0.66, { bottom: kb, dur: 0.5, cls: "k-guard" });
   kw.append(kIdle, kRun, kAtk, kGuard);
+  if (L.lancer) kw.append(sprite("ln_up", 0.66, { bottom: LN_BOTTOM, dur: 0.36, cls: "k-parry pup" }), sprite("ln_down", 0.66, { bottom: LN_BOTTOM, dur: 0.36, cls: "k-parry pdown" }));   // удар копьём вверх-вбок — отбивает динамит
   heroEl.appendChild(kw);
   // сердечки рыцаря — только на уровнях с гоблинами
 
@@ -7017,7 +7030,8 @@ function drawItems(got) {
   lastGot = got;
   items.forEach((it) => it.el.classList.toggle("taken", got.taken.has(`${it.x},${it.y}`)));
   exitCell?.classList.toggle("locked", doorLocked(got));
-  const hearts = !L.first && !L.calm && enemies.some((e) => !e.job) || evs().some((e) => e.kind !== "fell");
+  // у копейщика сердечек нет: динамит либо отбит, либо нет
+  const hearts = !L.lancer && (!L.first && !L.calm && enemies.some((e) => !e.job) || evs().some((e) => e.kind !== "fell"));
   if (!items.length && !hearts) return;
   let html = "";
   if (hearts) {
@@ -7870,6 +7884,16 @@ function buildPlan(code) {
   //  • рыцарь рядом и НЕ бьёт (шагает, упёрся, код кончился) — гоблин бьёт, пока рыцарь не упадёт;
   //  • рыцарь бьёт одного гоблина, а рядом стоит второй — второй успевает ударить один раз.
   let kHp = KNIGHT_HP, dead = null;
+  // Уровни копейщика (L.lancer, v185): встал на красную клетку — подрывник бросил динамит (fly). Следующая команда —
+  // копьё: динамит летит обратно, подрывник повержен. Любая другая (или программа кончилась) — взрыв там, где стоит.
+  let fly = null;
+  const flyBlow = () => {
+    const from = [fly.e.x, fly.e.y];
+    kHp = 0;
+    if (fly.hit) fly.c.hits[fly.s].boom = from; else (fly.c.ev ||= [])[fly.s] = { kind: "bomb", from, hp: 0 };
+    dead = { by: "ambush", bomb: true, lance: true, cmd: fly.i, step: fly.s, after: true };
+    fly = null;
+  };
   const firedEv = new Set();   // засады, которые уже сработали
   const fallen = new Set();    // клетки, куда упало дерево: теперь это препятствие
   const wallAt = (x, y) => isWall(x, y) || fallen.has(x + "," + y);
@@ -7930,6 +7954,7 @@ function buildPlan(code) {
     if (!Number.isInteger(n) || n < 1 || n > MAX_STEPS) {
       throw pyError(line, `${disp(name)}(${n}): ` + tr(isHit(name) ? "число ударов должно быть целым от 1 до {max}" : "число шагов должно быть целым от 1 до {max}", { max: MAX_STEPS }));
     }
+    if (fly && name !== "parry") { flyBlow(); throw STOP; }       // динамит летел, а копья не было
     const lp = loopOfLine(loops, line) || (callStack[0] ? loopOfLine(loops, callStack[0]) : null);   // шаг приёма, позванного из цикла
     const c = { name, n, line, via: callStack[0] || 0, ...DIRS[name], from: { ...pos }, cells: [], got: [],
                 loop: lp ? { line: lp.start, round: rounds[lp.start] || 1 } : null };
@@ -7939,6 +7964,19 @@ function buildPlan(code) {
       // Удар: бьём гоблина впереди; если впереди никого — того, кто стоит рядом с другой стороны
       c.hits = [];
       for (let s = 0; s < n; s++) {
+        if (fly && name === "parry") {
+          // копьё встречает динамит: он летит обратно в подрывника
+          const b = fly.e, bk = enemyKey(b.x, b.y);
+          hpLeft.set(bk, 0);
+          if (b.x !== pos.x) face = { dx: Math.sign(b.x - pos.x), dy: 0 };
+          const h = { target: bk, at: { x: b.x, y: b.y }, face: { ...face }, hp: new Map(hpLeft), pre: [], parry: [b.x, b.y] };
+          c.hits.push(h);
+          fly = null;
+          // на эту клетку докидывает ещё один подрывник — теперь бросает он
+          const nb = enemies.find((e) => e.bomb && goblinAt(e.x, e.y) && bombReach(e, pos.x, pos.y, wallAt));
+          if (nb) { fly = { e: nb, c, i, s, hit: true }; h.next = [nb.x, nb.y]; }
+          continue;
+        }
         const around = [face, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 0, dy: -1 }];
         const d = around.find((d) => goblinAt(pos.x + d.dx, pos.y + d.dy));
         // врага рядом нет, а рядом стоит свой — удар достался бы ему
@@ -8037,7 +8075,13 @@ function buildPlan(code) {
       // или выходит монах и лечит (плюс сердечко). Каждая срабатывает один раз.
       // подрывник: рыцарь встал на его линию в 2–3 клетках — летит динамит (минус сердечко)
       const bomber = enemies.find((e) => e.bomb && goblinAt(e.x, e.y) && bombReach(e, pos.x, pos.y, wallAt));
-      if (bomber) {
+      if (bomber && L.lancer) {
+        if (!atExit) {
+          fly = { e: bomber, c, i, s };
+          if (s < n - 1) { flyBlow(); break; }     // идёт дальше, не отбив, — взрыв
+          (c.ev ||= [])[s] = { kind: "bombfly", from: [bomber.x, bomber.y] };
+        }
+      } else if (bomber) {
         kHp--;
         (c.ev ||= [])[s] = { kind: "bomb", from: [bomber.x, bomber.y], hp: kHp };
         if (kHp <= 0) { dead = { by: "ambush", bomb: true, cmd: i, step: s, after: true }; break; }
@@ -8086,6 +8130,7 @@ function buildPlan(code) {
     if (e === STOP) return { commands, crash, reachedAt, hpLeft, dead, endless, checks };
     return { commands: [], error: explainError(e), errorLine: e.line };
   }
+  if (fly) { flyBlow(); return { commands, crash, reachedAt, hpLeft, dead, endless, checks }; }   // код кончился, а динамит летел
   // Код кончился, а рыцарь стоит рядом с гоблином — гоблин бьёт, пока рыцарь не упадёт
   // (и великан доводит свой замах, если рыцарь остался рядом)
   const last = settle();
@@ -9212,6 +9257,8 @@ async function knightFalls(why) {
   if (why?.shield) return setStatus("Щит не пробить! Щитоносец отбивает удар и колет в ответ. Спереди его не взять…", "fail");
   if (why?.giant) return setStatus("Великан достал рыцаря! Он бьёт медленно, с замахом: после удара не стой рядом с ним", "fail");
   if (n >= 5) return setStatus("Чёрный рыцарь слишком силён — с ним не справиться. Не подходи к нему: если он впереди, обойди подальше", "fail");
+  if (why?.bomb && L.lancer) return setStatus(uiBlocks ? "Динамит взорвался у ног! Встал на красную клетку — следующей плиткой ставь копьё: 🔱"
+    : tr("Динамит взорвался у ног! Встал на красную клетку — следующей командой отбивай: {cmd}", { cmd: disp("parry") + "()" }), "fail");
   if (why?.bomb) return setStatus("Динамит подрывника оказался сильнее: у рыцаря кончились сердечки. Не стой с ним на одной линии — красные клетки обходи", "fail");
   if (why?.ambush) return setStatus("Засада оказалась сильнее: у рыцаря кончились сердечки. Найди путь, где после засады рыцаря успеет подлечить монах", "fail");
   setStatus(why?.hurt
@@ -9261,10 +9308,13 @@ async function run() {
         const where = cmd.loop ? tr("круг {n}", { n: cmd.loop.round }) : `${i + 1}/${p.commands.length}`;
         setStatus(label, "", `${where} · ${tr("удар")} ${s + 1}/${cmd.n}`);
         if (h.face.dx) heroEl.classList.toggle("flip", h.face.dx < 0);
-        heroEl.classList.add("atk");
         const tgt = h.target && enemies.find((e) => enemyKey(e.x, e.y) === h.target);
-        sfx(h.blocked ? "bump" : tgt?.job ? "knock" : h.target ? "hit" : "swish");
-        await wait(200);
+        if (h.parry) await playParry(h);                            // динамит прилетел — копьё отправило его обратно
+        else {
+          heroEl.classList.add("atk");
+          sfx(h.blocked ? "bump" : tgt?.job ? "knock" : h.target ? (L.lancer ? "spear" : "hit") : "swish");
+          await wait(200);
+        }
         if (h.ally) {
           const al = allyEls.find((x) => x.a.at[0] === h.ally.x && x.a.at[1] === h.ally.y);
           al?.el.classList.remove("ouch"); void al?.el.offsetWidth; al?.el.classList.add("ouch");
@@ -9308,7 +9358,11 @@ async function run() {
             e.el.classList.remove("windup");
             if (e.giant) { giantLoot(e.el.parentNode); setStatus("Великан повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
             if (e.shield) { giantLoot(e.el.parentNode); setStatus("Щитоносец повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
-            if (e.bomb) { giantLoot(e.el.parentNode); setStatus("Подрывник повержен! Это корона 👑 — осталось дойти до выхода", "win"); (e.danger || []).forEach((d) => d.classList.add("gone")); }
+            if (e.bomb) {
+              if (e.boss) { giantLoot(e.el.parentNode); setStatus("Подрывник повержен! Это корона 👑 — осталось дойти до выхода", "win"); }
+              else setStatus(h.parry ? "Отбил! Динамит вернулся к подрывнику — красные клетки погасли" : "Подрывник повержен — красные клетки погасли", "");
+              (e.danger || []).forEach((d) => d.classList.add("gone"));
+            }
             if (L.first) giantLoot(e.el.parentNode, false);   // гоблин стащил монеты — они разлетаются
             // облачко пыли из набора: проигрывается один раз
             const pf = sprite("poof", e.giant ? 1.6 : e.shield ? 1.3 : 1.1, { bottom: 0, cls: "poof" });
@@ -9324,7 +9378,17 @@ async function run() {
           }
         }
         await wait(220);
-        heroEl.classList.remove("atk");
+        heroEl.classList.remove("atk", "parry");
+        if (h.next) {                                               // сюда докидывает ещё один подрывник — теперь бросает он
+          const e2 = enemies.find((e) => e.x === h.next[0] && e.y === h.next[1]);
+          if (e2) { e2.el.classList.toggle("face-r", hero.x > e2.x); e2.el.classList.add("throwing"); }
+          setStatus("Ещё один подрывник бросает динамит! Отбивай снова", "", "🧨");
+        }
+        if (h.boom) {                                               // второй динамит остался без копья
+          await playBomb({ from: h.boom, hp: 0 });
+          await knightFalls({ ambush: true, bomb: true });
+          return finish();
+        }
         if (h.post) {
           await wait(120);
           await playStrikes(h.post); // гоблин устоял и бьёт в ответ
@@ -9435,6 +9499,11 @@ async function run() {
       if (ev?.kind === "fell") {
         // лесоруб валит дерево — рыцарь идёт дальше, а перед проверкой «если» дождётся, пока оно упадёт
         shotPending = Promise.all([shotPending, playFell(ev)]);
+      } else if (ev?.kind === "bombfly") {
+        // копейщик встал на красную клетку: подрывник замахивается — динамит полетит, отбивать его следующей командой
+        const e = enemies.find((e) => e.x === ev.from[0] && e.y === ev.from[1]);
+        if (e) { e.el.classList.toggle("face-r", hero.x > e.x); e.el.classList.add("throwing"); }
+        setStatus(uiBlocks ? "Подрывник бросает динамит! Отбей его копьём: 🔱" : tr("Подрывник бросает динамит! Отбей его копьём: {cmd}", { cmd: disp("parry") + "()" }), "", "🧨");
       } else if (ev?.kind === "shot" || ev?.kind === "bomb") {
         // засада: гоблин бросает динамит на ходу — рыцарь не останавливается
         shotPending = Promise.all([shotPending, playShot(ev)]);
@@ -10120,7 +10189,7 @@ async function playBomb(ev) {
   const st = evStage(), [bx, by] = ev.from, k = SLOW / speed;
   const e = enemies.find((e) => e.x === bx && e.y === by);
   const dyn = skActor(st, "dyn", 0.9, 0.5), boom = skActor(st, "boom", 1.35, 0.62);
-  setStatus("Подрывник бросил динамит! Красные клетки обходи", "", "♥ −1");
+  setStatus(L.lancer ? "Динамит! Копьё не успело" : "Подрывник бросил динамит! Красные клетки обходи", "", L.lancer ? "🧨" : "♥ −1");
   if (e) { e.el.classList.toggle("face-r", hero.x > bx); e.el.classList.add("throwing"); }
   await wait(260 * k);
   const tx = hero.x + 0.5, ty = hero.y + 0.8;
@@ -10134,6 +10203,33 @@ async function playBomb(ev) {
   drawKnightHp(ev.hp, true);
   await boom.play(0, 9, 32 * k, false);
   boom.el.remove();
+}
+
+// Копейщик отбивает динамит (v185): динамит летит к острию копья, удар вверх-вбок, динамит, крутясь, летит обратно
+// в подрывника и взрывается у него. Сам подрывник гаснет дальше — как любой побеждённый гоблин.
+async function playParry(h) {
+  const st = evStage(), [bx, by] = h.parry, k = SLOW / speed, e = enemies.find((e) => e.x === bx && e.y === by);
+  const dyn = skActor(st, "dyn", 0.9, 0.5), boom = skActor(st, "boom", 1.35, 0.62);
+  const left = heroEl.classList.contains("flip"), tx = hero.x + 0.5 + (left ? -0.55 : 0.55), ty = by > hero.y ? hero.y + 1.0 : hero.y - 0.05;
+  if (e) { e.el.classList.toggle("face-r", hero.x > bx); e.el.classList.add("throwing"); }
+  await wait(200 * k);
+  dyn.at(bx + 0.5, by + 0.25); dyn.show(true); dyn.play(0, 6, 40);
+  const fl = dyn.arc(tx, ty, 1.1, 300 * k);
+  await wait(190 * k);
+  heroEl.classList.toggle("low", by > hero.y);                     // подрывник ниже — удар копьём вниз-вбок
+  heroEl.classList.add("parry");                                   // замах начинается чуть раньше, чем динамит долетит
+  await fl;
+  if (e) e.el.classList.remove("throwing");
+  sfx("spear");
+  const base = `translate(-50%, ${dyn.el.style.getPropertyValue("--foot")})`;
+  const spin = dyn.el.animate ? dyn.el.animate([{ transform: `${base} rotate(0deg)` }, { transform: `${base} rotate(${left ? -1080 : 1080}deg)` }], { duration: 420 * k }) : null;
+  await dyn.arc(bx + 0.5, by + 0.55, 1.5, 420 * k);
+  spin?.cancel();
+  dyn.el.remove();
+  boom.at(bx + 0.5, by + 0.65); boom.show(true);
+  sfx("boom");
+  boom.play(0, 9, 32 * k, false).then(() => boom.el.remove());
+  await wait(120 * k);
 }
 
 // Лесоруб валит дерево: последние удары, дерево падает от него. На дорогу — остаётся лежать поперёк
@@ -10642,8 +10738,8 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ===== 17. Прочитать задание вслух =====
-const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work" }
-  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа" };
+const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear" }
+  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё" };
 function speakGoal() {
   try {
     let t = $("title").textContent + ". " + $("goal").textContent;
@@ -11973,10 +12069,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 184;
+const APP_VERSION = 185;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 185, date: "2026-11-18", text: "Новая глава на Острове гоблинов — «Обстрел»: идёт копейщик. Подрывник кидает в него динамит, а копьё 🔱 отбивает его обратно", en: "A new chapter on Goblin Island — “Under Fire”: you lead a lancer. The bomber throws dynamite at him, and the spear 🔱 knocks it back", big: true },
   { v: 184, date: "2026-11-18", text: "Бой у моста: отбитый копейщиком динамит теперь хорошо видно — вспышка, дымный след и большой взрыв", en: "The fight at the bridge: dynamite knocked away by a lancer is now easy to see — a flash, a smoke trail and a big explosion" },
   { v: 183, date: "2026-11-18", text: "У вышки с утками на первом острове появился копейщик: он отбивает динамит гоблина копьём — на вышку, в воду или в воздух. А если не успеет, ему на смену придёт новый", en: "A lancer now stands by the duck tower on the first island: he knocks the goblin’s dynamite away with his spear — back at the tower, into the water or up in the air. If he is too slow, a new lancer comes to replace him" },
   { v: 182, date: "2026-11-17", text: "Бой у моста: копейщик теперь может отбить динамит копьём — обратно в гоблинов, в воздух или на землю", en: "The fight at the bridge: a lancer can now knock dynamite away with his spear — back at the goblins, up into the air or to the ground" },

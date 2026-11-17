@@ -148,13 +148,89 @@ levels: [
     ],
     starter: { py: "", js: "" },
   },
+  // ===== Остров гоблинов, глава «Обстрел»: копейщик и команда «копьё» (v185) =====
+  // Идёт копейщик (lancer). Подрывник (Y — попроще, чем D: одно сердечко, без короны) бросает динамит в того, кто встал
+  // на красную клетку (на одной линии с ним через клетку или две). Следующая команда — копьё (parry): динамит летит обратно,
+  // подрывник повержен, его красные клетки гаснут. Любая другая команда, шаг дальше в той же команде или конец программы —
+  // взрыв. Обойти красные клетки нельзя — кругом стены, поэтому без копья уровни не проходятся (тест simpler).
+  {
+    name: "Копьё",
+    chapter: 22,
+    isle: 6,
+    lancer: true,
+    newCommands: ["parry"],
+    goal: "Встань на красную клетку и сразу отбей динамит: [[btn:parry]]. Здесь идёт копейщик: подрывник бросает динамит в того, кто встал на красную клетку, а копьё отправляет его обратно.",
+    en: {
+      name: "The Spear",
+      goal: "Step onto the red cell and knock the dynamite back right away: [[btn:parry]]. A lancer walks here: the bomber throws dynamite at whoever steps on a red cell, and the spear sends it back.",
+    },
+    commands: ["moveRight", "parry"],
+    par: 3, good: 4,
+    map: [
+      "###Y###",
+      "###.###",
+      "S.....E",
+      "#######",
+    ],
+    starter: { py: "", js: "" },
+  },
+  {
+    name: "С двух сторон",
+    chapter: 22,
+    isle: 6,
+    lancer: true,
+    goal: "Подрывников двое: отбей динамит на каждой красной клетке — [[btn:parry]]. Пробежать красную клетку насквозь не выйдет: команда должна кончаться на ней.",
+    en: {
+      name: "From Both Sides",
+      goal: "Two bombers: knock the dynamite back on each red cell — [[btn:parry]]. You can’t run straight through a red cell: the command has to end on it.",
+    },
+    commands: ["moveRight", "moveDown", "parry"],
+    par: 6, good: 7,
+    map: [
+      "#Y#######",
+      "#.#######",
+      "S.....###",
+      "#####.###",
+      "#####...Y",
+      "#####.###",
+      "#####E###",
+    ],
+    starter: { py: "", js: "" },
+  },
+  {
+    name: "Обстрел: испытание",
+    chapter: 22,
+    isle: 6,
+    lancer: true,
+    challenge: true,
+    requireLoop: true,
+    loopButton: true,
+    after: "С двух сторон",
+    goal: "Испытание: вся дорога под обстрелом. Шаг — копьё [[btn:parry]], шаг — копьё: положи эту пару в бесконечный цикл.",
+    block: "Испытание: вся дорога под обстрелом. Шаг — копьё [[btn:parry]], шаг — копьё: нажми «🔁 повторять» и положи эту пару внутрь.",
+    en: {
+      name: "Under Fire: Challenge",
+      goal: "Challenge: the whole road is under fire. Step — spear [[btn:parry]], step — spear: put this pair into an endless loop.",
+      block: "Challenge: the whole road is under fire. Step — spear [[btn:parry]], step — spear: tap “🔁 repeat” and put this pair inside.",
+    },
+    commands: ["moveRight", "parry"],
+    par: 2, good: 4,
+    map: [
+      "#Y#Y#Y##",
+      "#.#.#.##",
+      "S......E",
+      "##.#.#.#",
+      "##Y#Y#Y#",
+    ],
+    starter: { py: "", js: "" },
+  },
 ],
 };
 
 // Карта острова. Руками не править: её целиком пишет tools/gen3.py из файла раскладки.
 // @@isle6@@
 ISLES[6].map = {
-  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410]],
+  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [190, 390], [130, 390]],
   rows: [
     "....................................",
     "....................................",
@@ -301,7 +377,7 @@ ISLES[6].map = {
     ["rock4", 5.6, 23.4, 1.0],
     ["rock1", 15.0, 21.5, 0.9],
   ],
-  labels: [["КАРАУЛЫ", 282, 512]],
+  labels: [["КАРАУЛЫ", 282, 512], ["ОБСТРЕЛ", 200, 412]],
   bank: [["cloud_b", 470, 1800, 1.1], ["cloud_a", 760, 1790, 1.25], ["cloud_d", 1020, 1830, 1.0]],
   clouds: [["sc_cloud2", 7, 5, 0.25]],
   tm: "sc_tm",
