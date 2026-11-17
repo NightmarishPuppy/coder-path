@@ -1,13 +1,13 @@
 {
- "version": 170,
+ "version": 171,
  "date": "2026-11-17",
  "notes": [
-  "На девяти уровнях игра больше не зовёт вернуться за 💎: чтобы его взять, там нужен был цикл, которого на этих уровнях ещё нет."
+  "Кнопка «если» теперь ставит новую рамку в конец выбранной рамки — так же, как стрелки. Две рамки «если» подряд можно собрать по порядку."
  ],
  "files": {
   "index.html": {
-   "size": 1056608,
-   "hash": "97e49b413c3e2cb2"
+   "size": 1057220,
+   "hash": "cbefbe1215c253ed"
   },
   "art.js": {
    "size": 1979296,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 3998,
-   "hash": "e6f6811fa5044795"
+   "hash": "9a2caa2250e33454"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,6 +75,6 @@
   }
  },
  "notes_en": [
-  "Nine levels no longer invite you to come back for a 💎: getting it needed a loop, which those levels don’t have yet."
+  "The “if” button now puts a new frame at the end of the selected frame — just like the arrows. Two “if” frames in a row can be built in order."
  ]
 }

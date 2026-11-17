@@ -10608,21 +10608,20 @@ function buildChips() {
       const conds = levelConds();
       const c = condDisp(conds.find((x) => CONDS[x].what === L.ifs[0] && CONDS[x].move === "moveRight") || conds[0]);
       const lines = codeEl.value.replace(/\s+$/, "").split("\n").filter((l, i, a) => a.length > 1 || l.trim());
-      let at = selLine ? Math.min(selLine, lines.length) : lines.length;   // после выбранной строки или в конец
-      let ind = at ? (lines[at - 1].match(/^ */)[0]) : "";
-      // JavaScript: программа кончается циклом — рамка встаёт внутрь него, перед закрывающей }
-      if (!selLine && lang === "js") {
-        const lp = findFrames(lines.join("\n")).filter((f) => f.end === lines.length && /^\s*(while|for)\b/.test(lines[f.start - 1])).sort((a, b) => b.start - a.start)[0];
-        if (lp) {
-          at = lp.end - 1;
-          while (at > lp.start && lines[at - 1].trim() === "") lines.splice(--at, 1);   // пустая строка в пустом цикле не нужна
-          ind = " ".repeat(lp.indent + INDENT());
-        }
-      }
-      // после заголовка цикла или рамки (while True: / if …: / else:) рамка встаёт внутрь — с отступом;
-      // в JavaScript то же после строки, которая открывает блок «{» (while (true) { / if (…) { / } else {)
-      if (at && lang === "py" && /^\s*(while|for|if|elif|else|def)\b.*:\s*$/.test(lines[at - 1])) ind += " ".repeat(INDENT());
-      else if (at && lang === "js" && selLine && /\{\s*$/.test(lines[at - 1])) ind += " ".repeat(INDENT());
+      // Куда встаёт рамка — то же правило, что у стрелок, одинаково в блоках, Python и JavaScript:
+      // выбрана рамка (цикл, приём, «если», «иначе») — в конец этой рамки; выбрана плитка — сразу после неё;
+      // ничего не выбрано — в конец программы (или внутрь цикла, которым она кончается).
+      const frames = findFrames(lines.join("\n")), sel = selLine && selLine <= lines.length ? selLine : 0;
+      const head = sel && (lang === "py" ? /^\s*(while|for|if|elif|else|def)\b.*:\s*$/ : /\{\s*$/).test(lines[sel - 1]);
+      const fr = head ? frames.find((f) => f.start === sel)
+        : sel ? null : frames.filter((f) => f.end === lines.length && /^\s*(while|for)\b/.test(lines[f.start - 1])).sort((a, b) => b.start - a.start)[0];
+      let at = sel || lines.length, ind = sel ? lines[sel - 1].match(/^ */)[0] : "";
+      if (fr) {
+        at = lang === "js" ? fr.end - 1 : fr.end;                           // в JavaScript — перед закрывающей }
+        // пустые строки в конце рамки — не тело (в JavaScript пустую строку пустого цикла убираем)
+        while (at > fr.start && lines[at - 1].trim() === "") { at--; if (lang === "js") lines.splice(at, 1); }
+        ind = " ".repeat(fr.indent + INDENT());
+      } else if (head) ind += " ".repeat(INDENT());
       const add = lang === "py" ? [`${ind}if ${c}():`] : [`${ind}if (${c}()) {`, `${ind}}`];
       lines.splice(at, 0, ...add);
       codeEl.value = lines.join("\n") + "\n";
@@ -15244,10 +15243,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 170;
+const APP_VERSION = 171;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 171, date: "2026-11-17", text: "Кнопка «если» теперь ставит новую рамку в конец выбранной рамки — так же, как стрелки. Две рамки «если» подряд можно собрать по порядку.", en: "The “if” button now puts a new frame at the end of the selected frame — just like the arrows. Two “if” frames in a row can be built in order." },
   { v: 170, date: "2026-11-17", text: "На девяти уровнях игра больше не зовёт вернуться за 💎: чтобы его взять, там нужен был цикл, которого на этих уровнях ещё нет.", en: "Nine levels no longer invite you to come back for a 💎: getting it needed a loop, which those levels don’t have yet." },
   { v: 169, date: "2026-11-16", text: "Кнопка «Проверить обновление» теперь пишет, что происходит: ищет новую версию, скачивает (сколько и сколько секунд), устанавливает. Если нет интернета или сайт игры не отвечает — так и скажет. А если обновление застряло, игра сама загрузится заново с сайта, прогресс сохранится.", en: "The “Check for update” button now tells you what’s happening: looking for a new version, downloading it (how much and how long), installing. If there’s no internet or the game’s site isn’t responding, it says so. And if an update gets stuck, the game reloads itself from the site, and your progress is kept." },
   { v: 168, date: "2026-11-16", text: "В Telegram обновления игры теперь приходят быстрее: новая версия включается, как только ты на карте острова.", en: "In Telegram, game updates now arrive faster: a new version switches on as soon as you are on the island map." },
