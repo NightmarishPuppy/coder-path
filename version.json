@@ -1,13 +1,13 @@
 {
- "version": 196,
+ "version": 197,
  "date": "2026-11-18",
  "notes": [
-  "Призрак-подсказка теперь на всех уровнях Острова программистов, кроме испытаний. И видно, что у него получается: гоблин падает, овца убегает, дерево валится, ключ взлетает"
+  "Призрак-подсказка теперь и на Острове условий. А если уровень не выходит десять раз подряд — призрак придёт на помощь через пару секунд"
  ],
  "files": {
   "index.html": {
-   "size": 979472,
-   "hash": "1fa5f15c32222172"
+   "size": 981951,
+   "hash": "d49c570ad7ad8a3d"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "d64a2b805057f29b"
+   "hash": "8aecba809e9a73db"
   },
   "icon-192.png": {
    "size": 42164,
@@ -78,8 +78,8 @@
    "hash": "9c6d80618ff16710"
   },
   "isle2.js": {
-   "size": 57134,
-   "hash": "0eca30604783b539"
+   "size": 58901,
+   "hash": "88ac29bf4f77d1ae"
   },
   "isle3.js": {
    "size": 51299,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The ghost hint now works on every level of Programmers’ Island except the challenges. And you can see it succeed: the goblin falls, the sheep runs off, the tree comes down, the key floats up"
+  "The ghost hint now works on Island of Conditions too. And if a level fails ten times in a row, the ghost comes to help within a couple of seconds"
  ]
 }

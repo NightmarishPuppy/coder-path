@@ -6379,8 +6379,12 @@ function boardSparkle(st, cellOv) {
 // Любое действие игрока (нажатие, клавиша, прокрутка) — призрак и код плавно тают; ещё 15 секунд тишины — появятся снова.
 // Программа — поле уровня hint (у уровней с выбором роли — hints по ролям): эталонное решение, вписывает tools/hints.py.
 // Только простые программы (шаги, удар, дело — по строке на команду); на пройденных уровнях и на испытаниях призрака нет.
-const GHOST_IDLE = 15000;
-let ghostIdleAt = performance.now(), ghost = null;
+// Десять неудачных запусков на уровне — игрок застрял: призрак приходит уже через 2 секунды тишины (в том числе
+// сразу после частых нажатий — как только они прекратились).
+const GHOST_IDLE = 15000, GHOST_IDLE_STUCK = 2000, GHOST_FAILS = 10;
+let ghostIdleAt = performance.now(), ghost = null, ghostWon = false;
+const ghostFails = {};                       // название уровня → сколько запусков подряд не кончились победой (до перезагрузки страницы)
+const ghostWait = () => (ghostFails[L.name] >= GHOST_FAILS ? GHOST_IDLE_STUCK : GHOST_IDLE);
 const ghostHint = () => (L.hints && L.hints[L.skin || "fight"]) || L.hint || "";
 function ghostStop(now) {
   if (!ghost) return;
@@ -6393,7 +6397,7 @@ function ghostStop(now) {
 function ghostPoke() { ghostIdleAt = performance.now(); ghostStop(); }
 for (const ev of ["pointerdown", "keydown", "wheel", "touchmove", "input"]) document.addEventListener(ev, ghostPoke, { capture: true, passive: true });
 setInterval(() => {
-  if (ghost || running || STILL || $("levelview").hidden || document.hidden || performance.now() - ghostIdleAt < GHOST_IDLE) return;
+  if (ghost || running || STILL || $("levelview").hidden || document.hidden || performance.now() - ghostIdleAt < ghostWait()) return;
   if (!ghostHint() || L.challenge || save.stars[L.name] > 0 || !heroEl || !heroEl.isConnected) return;
   ghostStart();
 }, 500);
@@ -6404,18 +6408,27 @@ async function ghostStart() {
   lang = "py";
   try { p = buildPlan(code); } catch (e) {} finally { lang = keepLang; }
   if (!p || p.error || !p.commands.length || !p.reachedAt || p.dead) return;
-  // строки программы для показа: «повторяй» и команды (в блоках — плитки, в Python и JavaScript — код)
-  const js = !uiBlocks && lang === "js", rows = [];
-  let bad = false, looped = false;
+  // строки программы для показа: «повторяй», «если», «иначе» и команды с отступами
+  // (в блоках — плитки и слова, в Python — как написано, в JavaScript — со скобками)
+  const js = !uiBlocks && lang === "js", rows = [], gi = (n) => '<span class="gi"></span>'.repeat(n);
+  let bad = false, depth = 0;
   code.split("\n").forEach((t, i) => {
     if (!t.trim() || /^\s*#/.test(t)) return;
-    const m = /^\s*(\w+)\((\d*)\)\s*$/.exec(t), k = m && Object.keys(DIRS).find((k) => DIRS[k].py === m[1]), pad = /^\s/.test(t) ? '<span class="gi"></span>' : "";
-    if (/^while True:\s*$/.test(t)) { rows.push({ ln: i + 1, html: uiBlocks ? "<i>🔁</i>" : js ? "<i>while</i> (true) {" : "<i>while</i> True:" }); looped = true; }
-    else if (k) rows.push({ ln: i + 1, html: pad + skCodeHtml([["cmd", k, +m[2] || 1]]) });
-    else bad = true;
+    const lvl = Math.floor(/^\s*/.exec(t)[0].length / 4), body = t.trim(), isElse = body === "else:";
+    if (js) while (depth > lvl + (isElse ? 1 : 0)) rows.push({ ln: -1, html: gi(--depth) + "}" });
+    const m = /^(\w+)\((\d*)\)$/.exec(body), k = m && Object.keys(DIRS).find((k) => DIRS[k].py === m[1]);
+    const q = /^if (\w+)\(\):$/.exec(body), ck = q && Object.keys(CONDS).find((k) => CONDS[k].py === q[1]);
+    let html = "";
+    if (body === "while True:") html = uiBlocks ? "<i>🔁</i>" : js ? "<i>while</i> (true) {" : "<i>while</i> True:";
+    else if (ck) html = uiBlocks ? `<b>❓</b> ${CONDS[ck].arrow} <small>${WHAT_RU[CONDS[ck].what]}</small>` : js ? `<i>if</i> (<b>${ck}()</b>) {` : `<i>if</i> <b>${q[1]}()</b>:`;
+    else if (isElse) html = uiBlocks ? tr("иначе") : js ? "} <i>else</i> {" : "<i>else</i>:";
+    else if (k) html = skCodeHtml([["cmd", k, +m[2] || 1]]);
+    else { bad = true; return; }
+    if (!k) depth = lvl + 1;
+    rows.push({ ln: i + 1, html: gi(lvl) + html });
   });
+  if (js) while (depth > 0) rows.push({ ln: -1, html: gi(--depth) + "}" });
   if (bad || !rows.length) return;
-  if (js && looped) rows.push({ ln: -1, html: "}" });
   const el = heroEl.cloneNode(true), panel = document.createElement("div"), g = { el, panel, objs: [] };
   el.className = "hero ghost";
   el.querySelectorAll(".hearts, .hp, .herohp").forEach((e) => e.remove());
@@ -6430,7 +6443,9 @@ async function ghostStart() {
   const corner = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([cx, cy]) => {
     const x0 = cx ? bw - pw : 0, y0 = cy ? bh - ph : 0;
     const hit = new Set(cells.filter((c) => (c.x + 1) * bw / W > x0 && c.x * bw / W < x0 + pw && (c.y + 1) * bh / H > y0 && c.y * bh / H < y0 + ph).map((c) => c.x + "," + c.y)).size;
-    return { cx, cy, hit, d: Math.min(...cells.map((c) => Math.abs(c.x - cx * (W - 1)) / W + Math.abs(c.y - cy * (H - 1)) / H)) };
+    // в левом верхнем углу — кнопки вариантов поля, в правом верхнем — кнопка кругов цикла: туда только если больше некуда
+    const busy = !cy && ((!cx && L.maps) || (cx && loopViewBtn && !loopViewBtn.hidden)) ? 100 : 0;
+    return { cx, cy, hit: hit + busy, d: Math.min(...cells.map((c) => Math.abs(c.x - cx * (W - 1)) / W + Math.abs(c.y - cy * (H - 1)) / H)) };
   }).sort((a, b) => a.hit - b.hit || b.d - a.d)[0];
   panel.style[corner.cx ? "right" : "left"] = "5px"; panel.style[corner.cy ? "bottom" : "top"] = "5px";
   ghost = g;
@@ -10066,6 +10081,7 @@ async function run() {
   if (L.arena) return runArena();
   if (running) return;
   shotPending = Promise.resolve();
+  ghostWon = false;
   logEv("run", { code: oneLine(codeEl.value) });
   winBox.hidden = true;
   reset();
@@ -10856,6 +10872,7 @@ function win() {
   save.stars[L.name] = Math.max(save.stars[L.name] || 0, stars);
   writeSave();
   logEv("win", { stars, written, crown, gem, missing });
+  ghostWon = true; delete ghostFails[L.name];
 
   $("win-stars").innerHTML = starsHtml(stars) + (crown ? ` <span class="win-crown">👑</span>` : "") + (gem ? ` <span class="win-crown">💎</span>` : "");
   let note = tr("В коде {n} {w}.", { n: written, w: plural(written, "команда", "команды", "команд") });
@@ -11087,6 +11104,8 @@ async function showChecks(p, before) {
 
 function finish() {
   running = false;
+  if (!ghostWon) ghostFails[L.name] = (ghostFails[L.name] || 0) + 1;   // запуск без победы — неудача (победа сама сотрёт счёт)
+  ghostIdleAt = performance.now();
   drawLoopView(plan);
   heroEl.classList.remove("run");
   setDisabled(false);
@@ -12882,10 +12901,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 196;
+const APP_VERSION = 197;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 197, date: "2026-11-18", text: "Призрак-подсказка теперь и на Острове условий. А если уровень не выходит десять раз подряд — призрак придёт на помощь через пару секунд", en: "The ghost hint now works on Island of Conditions too. And if a level fails ten times in a row, the ghost comes to help within a couple of seconds" },
   { v: 196, date: "2026-11-18", text: "Призрак-подсказка теперь на всех уровнях Острова программистов, кроме испытаний. И видно, что у него получается: гоблин падает, овца убегает, дерево валится, ключ взлетает", en: "The ghost hint now works on every level of Programmers’ Island except the challenges. And you can see it succeed: the goblin falls, the sheep runs off, the tree comes down, the key floats up" },
   { v: 195, date: "2026-11-18", text: "Не знаешь, что делать? Подожди 15 секунд — на первых уровнях появится призрак героя и покажет, как пройти, а рядом будет его программа", en: "Not sure what to do? Wait 15 seconds — on the first levels a ghost of your hero appears and shows the way, with its program right beside it", big: true },
   { v: 194, date: "2026-11-18", text: "На уровнях Острова программистов появились живые подсказки: утка или житель рядом с дорогой делают то же, что нужно рыцарю, — над ними команда и счёт шагов", en: "Levels on Programmers’ Island now have living hints: a duck or a villager next to the road does what the knight needs to do, with the command and a step count above them", big: true },
