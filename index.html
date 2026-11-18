@@ -10849,7 +10849,7 @@ function win() {
     $("win-note").textContent = tr("Пройдено: в коде {n} {w}. Записал как порог ★★★.", { n, w: plural(n, "команда", "команды", "команд") });
     nextBtn.hidden = true; $("win-isle").hidden = true; $("win-taste").hidden = true;
     winBox.hidden = false;
-    fitBlocks();
+    fitBlocks(); winIntoView();
     return;
   }
   const missing = toolMissing(codeEl.value);
@@ -10915,7 +10915,16 @@ function win() {
   }
   $("win-note").textContent = note;
   winBox.hidden = false;
-  fitBlocks();
+  fitBlocks(); winIntoView();
+}
+// Окошко победы с кнопками «Дальше» и «Карта» стоит под полем. На невысоком экране компьютера (ноутбук 1366×650) оно
+// оказывалось ниже края экрана: уровень пройден, а кнопок не видно (отзыв с DTF, v198). Если окошко не видно целиком —
+// страница сама плавно прокручивается к нему.
+function winIntoView() {
+  requestAnimationFrame(() => {
+    const r = winBox.getBoundingClientRect();
+    if (r.bottom > innerHeight - 6 || r.top < 0) winBox.scrollIntoView({ block: "end", behavior: STILL ? "auto" : "smooth" });
+  });
 }
 
 function drawVariants() {
@@ -12901,10 +12910,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 197;
+const APP_VERSION = 198;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 198, date: "2026-11-18", text: "На ноутбуке после победы сразу видно кнопки «Дальше» и «Карта» — раньше они прятались под краем экрана", en: "On laptops the “Next” and “Map” buttons are now visible right after you win — they used to hide below the edge of the screen" },
   { v: 197, date: "2026-11-18", text: "Призрак-подсказка теперь и на Острове условий. А если уровень не выходит десять раз подряд — призрак придёт на помощь через пару секунд", en: "The ghost hint now works on Island of Conditions too. And if a level fails ten times in a row, the ghost comes to help within a couple of seconds" },
   { v: 196, date: "2026-11-18", text: "Призрак-подсказка теперь на всех уровнях Острова программистов, кроме испытаний. И видно, что у него получается: гоблин падает, овца убегает, дерево валится, ключ взлетает", en: "The ghost hint now works on every level of Programmers’ Island except the challenges. And you can see it succeed: the goblin falls, the sheep runs off, the tree comes down, the key floats up" },
   { v: 195, date: "2026-11-18", text: "Не знаешь, что делать? Подожди 15 секунд — на первых уровнях появится призрак героя и покажет, как пройти, а рядом будет его программа", en: "Not sure what to do? Wait 15 seconds — on the first levels a ghost of your hero appears and shows the way, with its program right beside it", big: true },

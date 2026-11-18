@@ -1,13 +1,13 @@
 {
- "version": 197,
+ "version": 198,
  "date": "2026-11-18",
  "notes": [
-  "Призрак-подсказка теперь и на Острове условий. А если уровень не выходит десять раз подряд — призрак придёт на помощь через пару секунд"
+  "На ноутбуке после победы сразу видно кнопки «Дальше» и «Карта» — раньше они прятались под краем экрана"
  ],
  "files": {
   "index.html": {
-   "size": 981951,
-   "hash": "d49c570ad7ad8a3d"
+   "size": 983089,
+   "hash": "12f47b4b7d2d7602"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "8aecba809e9a73db"
+   "hash": "b5c80454fbd54058"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The ghost hint now works on Island of Conditions too. And if a level fails ten times in a row, the ghost comes to help within a couple of seconds"
+  "On laptops the “Next” and “Map” buttons are now visible right after you win — they used to hide below the edge of the screen"
  ]
 }
