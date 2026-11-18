@@ -1,13 +1,13 @@
 {
- "version": 189,
+ "version": 190,
  "date": "2026-11-18",
  "notes": [
-  "В пещерах на уровнях поблёскивает золото"
+  "Стрелу лучника теперь видно в полёте"
  ],
  "files": {
   "index.html": {
-   "size": 947386,
-   "hash": "d420906da2c3eb81"
+   "size": 947933,
+   "hash": "fe0d2090fe2af1df"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "7d96b0d120b98e1d"
+   "hash": "2dc951cbdb5acaf7"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Gold now glints in the cave levels"
+  "The archer’s arrow is now visible in flight"
  ]
 }

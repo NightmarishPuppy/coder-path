@@ -4721,7 +4721,11 @@ function skActor(stage, key, scale, foot = 0.67) {
     if (loop) res();
   });
   a.face = (left) => el.classList.toggle("flip", left);
-  a.show = (on) => (el.style.opacity = on ? 1 : 0);
+  // show(да/нет) — плавно, за 0,3 с; show(да/нет, true) — сразу: для того, что летит (стрела за 0,3 с уже долетает — её было не видно)
+  a.show = (on, now) => {
+    if (now) { el.style.transition = "none"; el.style.opacity = on ? 1 : 0; void el.offsetWidth; el.style.transition = ""; }
+    else el.style.opacity = on ? 1 : 0;
+  };
   a.move = (x, y, ms) => new Promise((res) => {
     el.style.transition = `left ${ms}ms linear, top ${ms}ms linear, opacity 0.3s`;
     a.at(x, y);
@@ -4769,7 +4773,7 @@ async function skitArcher(st, [ax, ay], [gx0, gx1]) {
     await sleep(1300);
     archer.play(4, 8, 85, false);                 // стреляет (отражён — влево)
     await sleep(430);
-    arrow.at(ax - 0.9, ay - 0.62); arrow.frame(0, 0); arrow.show(true);
+    arrow.at(ax - 0.9, ay - 0.62); arrow.frame(0, 0); arrow.show(true, true);
     await arrow.move(gx1 + 0.4, ay - 0.62, 380);
     arrow.show(false);
     await run;
@@ -5802,9 +5806,9 @@ async function skitRange(st, { at: [ax, ay], dummy: [dx, dy] }) {
     await skSleep(st, 430);
     mapSfx(st, "shot", ax, ay);
     const h = [-0.6, -0.42, -0.85][n] + skRnd(-0.04, 0.04);    // куда в чучело: грудь, пояс, голова
-    fly.at(ax + f * 0.9, ay - 0.62); fly.frame(0, 0); fly.show(true);
-    await fly.move(dx - f * 0.52, dy + h, Math.abs(dx - ax) * 75);
-    fly.show(false);
+    fly.at(ax + f * 0.9, ay - 0.62); fly.frame(0, 0); fly.show(true, true);
+    await fly.move(dx - f * 0.52, dy + h, Math.abs(dx - ax) * 115);
+    fly.show(false, true);
     stuck[n].at(dx - f * 0.34, dy + h); stuck[n].frame(0, 1); stuck[n].show(true);   // второй кадр листа — стрела без наконечника: воткнулась
     mapSfx(st, "thunk", dx, dy);
     puff.at(dx - f * 0.2, dy + h + 0.25); puff.show(true); puff.play(0, 10, 45, false).then(() => puff.show(false));
@@ -6165,8 +6169,8 @@ async function boardArcher(st, x, y, left) {
     for (let k = joy ? 2 : 1; k > 0; k--) {
       a.play(2, 8, 80, false);
       await skSleep(st, 430);
-      ar.at(x, y - 1.1); ar.show(true);
-      ar.move(x, y - 5.5, 520).then(() => ar.show(false));
+      ar.at(x, y - 1.1); ar.show(true, true);
+      ar.move(x, y - 5.5, 650).then(() => ar.show(false));
       await skSleep(st, 330);
     }
     a.play(0, 6, 150);
@@ -12501,10 +12505,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 189;
+const APP_VERSION = 190;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 190, date: "2026-11-18", text: "Стрелу лучника теперь видно в полёте", en: "The archer’s arrow is now visible in flight" },
   { v: 189, date: "2026-11-18", text: "В пещерах на уровнях поблёскивает золото", en: "Gold now glints in the cave levels" },
   { v: 188, date: "2026-11-18", text: "У замка плавают утки (тронь — крякнет), к стройке носят брёвна, а на самых первых уровнях появились овечка и утки", en: "Ducks swim by the castle (poke one — it quacks), logs are carried to the building site, and the very first levels now have a sheep and ducks" },
   { v: 187, date: "2026-11-18", text: "Остров программистов ожил. На карте: овцы и пастух (овцу можно тронуть!), стройка у замка, лучник стреляет по чучелу, воин и копейщик учатся биться, в лесу — костёр и лесоруб. На уровнях: больше жителей, утки на воде, и все радуются твоей победе. Когда звуков много, они сами становятся тише", en: "Programmers’ Island has come alive. On the map: sheep and a shepherd (try poking a sheep!), a building site by the castle, an archer shooting at a scarecrow, a warrior and a lancer sparring, a campfire and a lumberjack in the forest. On the levels: more villagers, ducks on the water, and everyone cheers when you win. When many sounds play at once, they get quieter on their own", big: true },
