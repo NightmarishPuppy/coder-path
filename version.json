@@ -1,13 +1,13 @@
 {
- "version": 190,
+ "version": 191,
  "date": "2026-11-18",
  "notes": [
-  "Стрелу лучника теперь видно в полёте"
+  "Стрелы в бою у моста теперь видно в полёте"
  ],
  "files": {
   "index.html": {
-   "size": 947933,
-   "hash": "fe0d2090fe2af1df"
+   "size": 948252,
+   "hash": "34310ab4e8ca5655"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "2dc951cbdb5acaf7"
+   "hash": "aaa1758385ba4f68"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The archer’s arrow is now visible in flight"
+  "Arrows in the battle by the bridge are now visible in flight"
  ]
 }
