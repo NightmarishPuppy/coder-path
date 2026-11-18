@@ -1,13 +1,13 @@
 {
- "version": 198,
+ "version": 199,
  "date": "2026-11-18",
  "notes": [
-  "На ноутбуке после победы сразу видно кнопки «Дальше» и «Карта» — раньше они прятались под краем экрана"
+  "На планшетах вокруг острова теперь море до краёв экрана, а сам остров стал крупнее"
  ],
  "files": {
   "index.html": {
-   "size": 983089,
-   "hash": "12f47b4b7d2d7602"
+   "size": 984038,
+   "hash": "24c9271f86318a7a"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "b5c80454fbd54058"
+   "hash": "818cbf2db73ef085"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "On laptops the “Next” and “Map” buttons are now visible right after you win — they used to hide below the edge of the screen"
+  "On tablets the sea now reaches the edges of the screen around the island, and the island itself is bigger"
  ]
 }

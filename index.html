@@ -1715,12 +1715,16 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
    поле уровня — до низа экрана (deskH), программа справа шире; на карте остров крупнее, а море — до краёв окна. */
 @media (min-width: 1200px) {
   .wrap { max-width: min(1680px, 94vw); }
+  .credits { max-width: 760px; }
+}
+/* Море по бокам острова — на любом экране, который шире карты (с 820 px: планшеты лёжа и стоя, ноутбуки, компьютеры; v199).
+   Раньше — только с 1200 px, и на планшете по бокам карты были чёрные полосы. Число то же, что MAP_WIDE в коде. */
+@media (min-width: 820px) {
   .mapwrap { max-width: min(760px, 100%); border-radius: 0; border: 0;
     box-shadow: 0 0 0 100vmax #47aba9; clip-path: inset(0 -100vmax); }
   #mapview .mapwrap, #mapview .mapclouds { overflow: visible; }   /* облака и море — через весь экран */
   .oceanside { position: absolute; display: block; image-rendering: pixelated; pointer-events: none; }
   html, body { overflow-x: clip; }   /* облака за краем окна не дают прокрутки вбок */
-  .credits { max-width: 760px; }
 }
 </style>
 
@@ -3674,6 +3678,7 @@ ISLE_MAPS[20] = {
 };
 // @@/isle20@@
 
+const MAP_WIDE = 820;   // с какой ширины окна вокруг карты острова рисуется море и стоят гряды облаков (то же число — в стилях)
 function mapEngine(D, FOG = []) {   // FOG — где сбоку от острова лежат соседние острова (см. fogOf)
   const NODE_POS = D.nodes, MAP_ROWS = D.rows, TERR = D.terr, ROAD = D.road, RAMPS = D.ramps, MAP_DECO = D.deco, MAP_LABELS = D.labels;
   const MAP_W = MAP_ROWS[0].length, MAP_H = MAP_ROWS.length, MT = 32, OU = 64;
@@ -4113,7 +4118,7 @@ function mapEngine(D, FOG = []) {   // FOG — где сбоку от остро
     // Отдельный холст под картой во всю ширину окна, но высотой только в видимую часть карты (так он маленький
     // и быстро рисуется). На нём та же вода, что на карте: рябь, камни в пене, утки поближе к острову.
     // Где что стоит — не список, а «кубик» по номеру клетки (hsh): море бесконечное, а картинка всегда одна и та же.
-    const isWide = () => innerWidth >= 1200 && !!wrap.closest("#mapview");
+    const isWide = () => innerWidth >= MAP_WIDE && !!wrap.closest("#mapview");
     let ocean = null, oc = null;
     if (wrap.closest("#mapview")) {
       ocean = document.createElement("canvas");
@@ -12910,10 +12915,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 198;
+const APP_VERSION = 199;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 199, date: "2026-11-18", text: "На планшетах вокруг острова теперь море до краёв экрана, а сам остров стал крупнее", en: "On tablets the sea now reaches the edges of the screen around the island, and the island itself is bigger" },
   { v: 198, date: "2026-11-18", text: "На ноутбуке после победы сразу видно кнопки «Дальше» и «Карта» — раньше они прятались под краем экрана", en: "On laptops the “Next” and “Map” buttons are now visible right after you win — they used to hide below the edge of the screen" },
   { v: 197, date: "2026-11-18", text: "Призрак-подсказка теперь и на Острове условий. А если уровень не выходит десять раз подряд — призрак придёт на помощь через пару секунд", en: "The ghost hint now works on Island of Conditions too. And if a level fails ten times in a row, the ghost comes to help within a couple of seconds" },
   { v: 196, date: "2026-11-18", text: "Призрак-подсказка теперь на всех уровнях Острова программистов, кроме испытаний. И видно, что у него получается: гоблин падает, овца убегает, дерево валится, ключ взлетает", en: "The ghost hint now works on every level of Programmers’ Island except the challenges. And you can see it succeed: the goblin falls, the sheep runs off, the tree comes down, the key floats up" },
