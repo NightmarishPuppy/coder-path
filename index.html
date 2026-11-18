@@ -490,6 +490,12 @@ html.still .route .fight .sw { animation: none; }
 .cbub.ghostcode .gl { display: block; padding: 1px 5px 1px 3px; border-radius: 5px; border-left: 3px solid transparent; }
 .cbub.ghostcode .gl.on { background: rgba(255, 211, 90, 0.28); border-left-color: #ffd35a; }
 .cbub.ghostcode .gl.done { opacity: 0.55; }
+.cbub.ghostcode .gi { display: inline-block; width: 1.1em; }
+/* призрачные копии того, с чем призрак что-то сделал: гоблин падает, овца убегает, дерево — в пень, ключ взлетает */
+.ghostobj { pointer-events: none; z-index: 3; filter: brightness(1.3) saturate(0.5) drop-shadow(0 0 5px #7fe3ff) drop-shadow(0 0 2px #7fe3ff); }
+.ghostobj:not(.gone):not(.fade):not(.up) { opacity: 0.8; }
+.ghostobj.fade { opacity: 0 !important; transition: opacity 0.45s; }
+.ghostobj.up { transition: transform 0.5s ease-out, opacity 0.5s ease-in; transform: translateY(-75%); opacity: 0; }
 /* рыцарь: kwrap — для разворота и "отскока" от стены, внутри два спрайта: стоит и бежит */
 .hero .kwrap { position: absolute; inset: 0; }
 .hero .k-run { display: none; }
@@ -6381,6 +6387,7 @@ function ghostStop(now) {
   const g = ghost;
   ghost = null; g.off = true;
   g.el.classList.remove("show"); g.panel.classList.remove("show");
+  (g.objs || []).forEach((o) => o.remove());
   setTimeout(() => { g.el.remove(); g.panel.remove(); }, now ? 0 : 700);
 }
 function ghostPoke() { ghostIdleAt = performance.now(); ghostStop(); }
@@ -6391,45 +6398,96 @@ setInterval(() => {
   ghostStart();
 }, 500);
 async function ghostStart() {
-  const items = ghostHint().split("\n").filter((ln) => ln.trim() && !/^\s*#/.test(ln)).map((ln) => { const m = /^(\w+)\((\d*)\)$/.exec(ln.trim()), k = m && Object.keys(DIRS).find((k) => DIRS[k].py === m[1]); return k ? ["cmd", k, +m[2] || 1] : null; });
-  if (!items.length || items.some((it) => !it)) return;
-  const el = heroEl.cloneNode(true), panel = document.createElement("div"), g = { el, panel };
+  // программа призрака считается тем же расчётом, что и программа игрока (buildPlan): шаги, удары, круги цикла
+  const code = ghostHint(), keepLang = lang;
+  let p = null;
+  lang = "py";
+  try { p = buildPlan(code); } catch (e) {} finally { lang = keepLang; }
+  if (!p || p.error || !p.commands.length || !p.reachedAt || p.dead) return;
+  // строки программы для показа: «повторяй» и команды (в блоках — плитки, в Python и JavaScript — код)
+  const js = !uiBlocks && lang === "js", rows = [];
+  let bad = false, looped = false;
+  code.split("\n").forEach((t, i) => {
+    if (!t.trim() || /^\s*#/.test(t)) return;
+    const m = /^\s*(\w+)\((\d*)\)\s*$/.exec(t), k = m && Object.keys(DIRS).find((k) => DIRS[k].py === m[1]), pad = /^\s/.test(t) ? '<span class="gi"></span>' : "";
+    if (/^while True:\s*$/.test(t)) { rows.push({ ln: i + 1, html: uiBlocks ? "<i>🔁</i>" : js ? "<i>while</i> (true) {" : "<i>while</i> True:" }); looped = true; }
+    else if (k) rows.push({ ln: i + 1, html: pad + skCodeHtml([["cmd", k, +m[2] || 1]]) });
+    else bad = true;
+  });
+  if (bad || !rows.length) return;
+  if (js && looped) rows.push({ ln: -1, html: "}" });
+  const el = heroEl.cloneNode(true), panel = document.createElement("div"), g = { el, panel, objs: [] };
   el.className = "hero ghost";
   el.querySelectorAll(".hearts, .hp, .herohp").forEach((e) => e.remove());
   panel.className = "cbub skc ghostcode" + (uiBlocks ? " tiles" : "");
-  panel.innerHTML = items.map((it) => `<span class="gl">${skCodeHtml([it])}</span>`).join("");
+  panel.innerHTML = rows.map((r) => `<span class="gl">${r.html}</span>`).join("");
   panel.style.fontSize = Math.min(14, Math.max(10, boardEl.clientWidth / W * 0.26)) * (uiBlocks ? 1.3 : 1) + "px";
   // код — в том углу поля, который дальше всего от дороги призрака
-  const cells = [{ ...start }];
-  for (const [, k, n] of items) if (!isHit(k)) for (let j = 0; j < n; j++) { const c = cells[cells.length - 1]; cells.push({ x: c.x + DIRS[k].dx, y: c.y + DIRS[k].dy }); }
-  const corner = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([cx, cy]) => ({ cx, cy, d: Math.min(...cells.map((c) => Math.abs(c.x - cx * (W - 1)) / W + Math.abs(c.y - cy * (H - 1)) / H)) })).sort((a, b) => b.d - a.d)[0];
-  panel.style[corner.cx ? "right" : "left"] = "5px"; panel.style[corner.cy ? "bottom" : "top"] = "5px";
+  const cells = [{ ...start }, ...p.commands.flatMap((c) => c.cells)];
   boardEl.append(el, panel);
+  // …примеряем код во все четыре угла и берём тот, где он закрывает меньше всего клеток дороги (при равенстве — дальний от неё)
+  const bw = boardEl.clientWidth, bh = boardEl.clientHeight, pw = panel.offsetWidth + 5, ph = panel.offsetHeight + 5;
+  const corner = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([cx, cy]) => {
+    const x0 = cx ? bw - pw : 0, y0 = cy ? bh - ph : 0;
+    const hit = new Set(cells.filter((c) => (c.x + 1) * bw / W > x0 && c.x * bw / W < x0 + pw && (c.y + 1) * bh / H > y0 && c.y * bh / H < y0 + ph).map((c) => c.x + "," + c.y)).size;
+    return { cx, cy, hit, d: Math.min(...cells.map((c) => Math.abs(c.x - cx * (W - 1)) / W + Math.abs(c.y - cy * (H - 1)) / H)) };
+  }).sort((a, b) => a.hit - b.hit || b.d - a.d)[0];
+  panel.style[corner.cx ? "right" : "left"] = "5px"; panel.style[corner.cy ? "bottom" : "top"] = "5px";
   ghost = g;
   const pause = (ms) => new Promise((r) => setTimeout(r, ms)), lines = [...panel.children];
+  const lineOf = (ln) => lines[rows.findIndex((r) => r.ln === ln)];
   const put = (c) => (el.style.transform = `translate(${c.x * 100}%, ${c.y * 100}%)`);
+  // призрачная копия предмета поля: живёт ms, потом тает
+  const phantom = (src, ms) => { const o = src.cloneNode(true); o.classList.add("ghostobj"); o.querySelectorAll(".hp").forEach((e) => e.remove()); src.parentNode.appendChild(o); g.objs.push(o); setTimeout(() => { o.classList.add("fade"); setTimeout(() => o.remove(), 500); }, ms); return o; };
+  const extra = (host, key, k, opt, ms) => { const o = sprite(key, k, opt); o.classList.add("ghostobj"); host.appendChild(o); g.objs.push(o); setTimeout(() => { o.classList.add("fade"); setTimeout(() => o.remove(), 500); }, ms); return o; };
   while (!g.off) {
-    let pos = { ...start };
-    el.style.transition = "none"; put(pos); el.classList.remove("flip", "run", "atk"); void el.offsetWidth; el.style.transition = "";
+    el.style.transition = "none"; put(start); el.classList.remove("flip", "run", "atk"); void el.offsetWidth; el.style.transition = "";
     lines.forEach((l) => (l.className = "gl"));
     el.classList.add("show"); panel.classList.add("show");
+    const taken = new Set();
     await pause(1100);
-    for (let i = 0; i < items.length && !g.off; i++) {
-      const [, k, n] = items[i];
-      lines[i].className = "gl on";
-      for (let j = 0; j < n && !g.off; j++) {
-        if (isHit(k)) { el.classList.add("atk"); await pause(430); el.classList.remove("atk"); await pause(200); }
-        else {
-          if (DIRS[k].dx) el.classList.toggle("flip", DIRS[k].dx < 0);
-          pos = { x: pos.x + DIRS[k].dx, y: pos.y + DIRS[k].dy };
-          el.classList.add("run"); put(pos);
+    for (const cmd of p.commands) {
+      if (g.off) return;
+      const line = lineOf(cmd.line);
+      if (line) line.className = "gl on";
+      if (isHit(cmd.name)) {
+        for (let s = 0; s < cmd.n && !g.off; s++) {
+          const h = cmd.hits[s] || {}, e = h.target && enemies.find((e) => enemyKey(e.x, e.y) === h.target);
+          if (h.face && h.face.dx) el.classList.toggle("flip", h.face.dx < 0);
+          el.classList.add("atk");
+          await pause(230);
+          if (e && !h.blocked) {
+            // тот, кого ударил призрак, отвечает призрачной копией: гоблин падает (пыль и череп), дерево — в пень,
+            // камень — в осколки, овца убегает; крепкий гоблин от первого удара только вздрагивает
+            const dead = h.hp.get(h.target) <= 0, o = phantom(e.el, dead ? 900 : 450), host = e.el.parentNode;
+            void o.offsetWidth;
+            if (!dead) o.classList.add("hit");
+            else if (e.job === "sheep") { o.classList.add("gone"); o.classList.toggle("flee-l", h.face.dx > 0); }
+            else {
+              o.classList.add("gone");
+              extra(host, "poof", 1.1, { bottom: 0, cls: "poof" }, 600).style.animation = "spr10 0.6s steps(10) 1 forwards";
+              if (e.job === "tree") extra(host, "stump1", 0.8, { bottom: 8, cls: "poof stump" }, 1500);
+              else if (e.job === "rock") extra(host, "stone2", 0.9, { bottom: 10, cls: "poof stump" }, 1500);
+              else { const sk = extra(host, "skull", 0.8, { bottom: 10, cls: "poof skull" }, 1500); sk.style.animation = "spr7 0.7s steps(7) 1 forwards"; }
+            }
+          }
+          await pause(230);
+          el.classList.remove("atk");
+          await pause(200);
+        }
+      } else {
+        if (cmd.dx) el.classList.toggle("flip", cmd.dx < 0);
+        for (const c of cmd.cells) {
+          if (g.off) return;
+          el.classList.add("run"); put(c);
           await pause(430);
           el.classList.remove("run");
+          for (const it of items) if (it.x === c.x && it.y === c.y && !taken.has(it) && it.el.isConnected) { taken.add(it); const o = phantom(it.el, 500); void o.offsetWidth; o.classList.add("up"); }   // ключ, монета, гриб: призрачная копия взлетает
           await pause(110);
         }
       }
-      await pause(260);
-      lines[i].className = "gl done";
+      await pause(240);
+      if (line) line.className = cmd.loop ? "gl" : "gl done";
     }
     if (g.off) return;
     await pause(1600);
@@ -12824,10 +12882,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 195;
+const APP_VERSION = 196;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 196, date: "2026-11-18", text: "Призрак-подсказка теперь на всех уровнях Острова программистов, кроме испытаний. И видно, что у него получается: гоблин падает, овца убегает, дерево валится, ключ взлетает", en: "The ghost hint now works on every level of Programmers’ Island except the challenges. And you can see it succeed: the goblin falls, the sheep runs off, the tree comes down, the key floats up" },
   { v: 195, date: "2026-11-18", text: "Не знаешь, что делать? Подожди 15 секунд — на первых уровнях появится призрак героя и покажет, как пройти, а рядом будет его программа", en: "Not sure what to do? Wait 15 seconds — on the first levels a ghost of your hero appears and shows the way, with its program right beside it", big: true },
   { v: 194, date: "2026-11-18", text: "На уровнях Острова программистов появились живые подсказки: утка или житель рядом с дорогой делают то же, что нужно рыцарю, — над ними команда и счёт шагов", en: "Levels on Programmers’ Island now have living hints: a duck or a villager next to the road does what the knight needs to do, with the command and a step count above them", big: true },
   { v: 193, date: "2026-11-18", text: "Над жителями Острова программистов всплывает их код: лесоруб, строитель, лучник, копейщик и другие работают по своим программам", en: "Code now pops up above the villagers of Programmers’ Island: the lumberjack, the builder, the archer, the lancer and others all follow their own programs", big: true },
