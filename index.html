@@ -309,6 +309,10 @@ html.still .ripple { animation: none; opacity: 0.5; }
   font: 600 10px/1.2 var(--font-code); color: #e8e4da; padding: 3px 6px; border-radius: 6px;
   background: rgba(15, 17, 23, 0.84); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); animation: cbub 1.7s ease-out forwards; }
 .cbub.tiles { font: 700 13px/1.15 var(--font-body); padding: 2px 5px; letter-spacing: 1px; }
+/* отсчёт шагов в подсказке на поле: 1 2 3 — сделанные шаги горят */
+.cbub u.cnt { text-decoration: none; display: inline-flex; gap: 3px; margin-top: 2px; }
+.cbub u.cnt q { quotes: none; min-width: 1.25em; text-align: center; border-radius: 4px; background: rgba(255, 255, 255, 0.12); color: #8f98ad; font: 700 0.85em/1.3 var(--font-body); letter-spacing: 0; }
+.cbub u.cnt q.on { background: #ffd35a; color: #2a2114; }
 .cbub.tiles b { margin-right: 3px; } .cbub s { color: #ff8fb3; text-decoration: none; }
 @keyframes cbub { 0% { opacity: 0; transform: translate(-50%, -70%) scale(0.8); } 12% { opacity: 1; transform: translate(-50%, -100%) scale(1); }
   75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -175%); } }
@@ -5080,20 +5084,23 @@ function skCodeHtml(code) {
   return out.join("<br>");
 }
 // Пузырь с кодом над актёром (или над точкой { x, y }). ms — сколько висит.
-function skSay(st, a, code, ms = 2600) {
-  if (!st.ear || STILL || st.layer.querySelectorAll(".cbub.skc").length >= 6) return;
+function skSay(st, a, code, ms = 2600, extra = "") {
+  if (!(st.ear || st.board) || STILL || st.layer.querySelectorAll(".cbub.skc").length >= 6) return null;
   a.said = performance.now();
-  const el = document.createElement("span"), tiles = uiBlocks, W = st.layer.clientWidth;
+  const el = document.createElement("span"), tiles = uiBlocks, LW = st.layer.clientWidth;
   el.className = "cbub skc" + (tiles ? " tiles" : "");
-  el.innerHTML = skCodeHtml(code);
-  el.style.fontSize = Math.min(15, Math.max(10, W / 18 * 0.4)) * (tiles ? 1.3 : 1) + "px";
+  el.innerHTML = skCodeHtml(code) + extra;
+  // на карте — от ширины клетки карты; на поле уровня — от клетки поля (она крупнее, но пузырь не должен закрывать соседей)
+  el.style.fontSize = (st.board ? Math.min(13, Math.max(9.5, LW / W * 0.24)) : Math.min(15, Math.max(10, LW / 18 * 0.4))) * (tiles ? 1.3 : 1) + "px";
   el.style.textAlign = "left"; el.style.animationDuration = ms + "ms"; el.style.zIndex = 9999;
   const [l, t] = st.pos(a.x, a.y - (a.high || 1.05));
   el.style.left = l + "%"; el.style.top = t + "%";
   st.layer.appendChild(el);
   const bw = el.offsetWidth;                         // у края карты пузырь сдвигается внутрь — целиком на виду
-  el.style.left = Math.min(W - bw / 2 - 3, Math.max(bw / 2 + 3, l / 100 * W)) + "px";
+  el.style.left = Math.min(LW - bw / 2 - 3, Math.max(bw / 2 + 3, l / 100 * LW)) + "px";
+  if (st.board && el.offsetTop - el.offsetHeight < 2) el.style.top = el.offsetHeight + 2 + "px";   // у верхнего края поля — не вылезает за него
   setTimeout(() => el.remove(), ms);
+  return el;
 }
 // «Иду на n клеток»: команда шага в сторону движения
 const skSayMove = (st, a, to) => {
@@ -6167,7 +6174,7 @@ function boardStage() {
   const gen = ++boardGen;
   return { layer: boardEl, before: null, unit: 100 / W,
     pos: (x, y) => [x / W * 100, y / H * 100],
-    on: () => !$("levelview").hidden, alive: () => gen === boardGen && boardEl.isConnected };
+    on: () => !$("levelview").hidden, alive: () => gen === boardGen && boardEl.isConnected, board: true };
 }
 function boardSkits(terr, cellOv) {
   if (STILL) return;
@@ -6193,7 +6200,11 @@ function boardSkits(terr, cellOv) {
     if ([..."SE"].some((ch) => map.some((row, yy) => [...row].some((cc, xx) => cc === ch && Math.abs(xx - x) <= 1 && Math.abs(yy - y) <= 1)))) continue;
     cand.push({ x, y, score: (floorNear(x, y, 1) ? 0 : 2) + (y === H - 1 ? 1 : 0) + ((x === 0 || x === W - 1) && y === H - 1 ? 1 : 0) });
   }
-  if (isleOf(L) === 1) { boardDucks(st, terr, cellOv); boardSparkle(st, cellOv); }   // на воде — утки (v187), на золоте — блики (v189)
+  // живая подсказка (v194): утка или житель рядом с дорогой делают то же, что нужно рыцарю, — и над ними код
+  boardEl.dataset.demo = "";
+  const demo = isleOf(L) === 1 && !L.challenge ? boardDemo(st, terr, cellOv, wall) : new Set();
+  if (demo.size) for (let i = cand.length - 1; i >= 0; i--) if ([...demo].some((k) => { const [x, y] = k.split(",").map(Number); return Math.abs(x - cand[i].x) <= 1 && Math.abs(y - cand[i].y) <= 1; })) cand.splice(i, 1);
+  if (isleOf(L) === 1) { boardDucks(st, terr, cellOv, demo); boardSparkle(st, cellOv); }   // на воде — утки (v187), на золоте — блики (v189)
   if (!cand.length) return;
   // Остров рудокопов: шахтёр — у золотой глыбы в стене (слева или справа от него)
   const goldAt = (x, y) => /^gold[123]$/.test(cellOv[y]?.[x]?.dataset.kind || "");
@@ -6346,13 +6357,134 @@ function boardSparkle(st, cellOv) {
     }
   }));
 }
+// ===== Живые подсказки на поле уровня (v194) =====
+// Рядом с дорогой рыцаря кто-нибудь делает то же, что нужно ему: утка плывёт (если рядом вода) или житель идёт (по земле)
+// на столько же клеток в ту же сторону — и над ним эта команда кодом, с отсчётом шагов. Если первым делом надо ударить
+// гоблина — копейщик в сторонке колет чучело, над ним «удар». Дорога рыцаря считается по полю (кратчайший путь от старта
+// к выходу), подсказка показывает её первые один-два отрезка. Возвращает клетки, которые заняла (жители туда не встанут).
+function boardDemo(st, terr, cellOv, wall) {
+  const map = L.map, used = new Set(), key = (x, y) => x + "," + y;
+  boardEl.dataset.demo = "";                                    // что показывает подсказка — для тестов
+  let S = null, E = null;
+  map.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "S") S = [x, y]; if (ch === "E") E = [x, y]; }));
+  // выхода нет («победи гоблина») — идём к ближайшему врагу
+  if (S && !E) map.forEach((row, y) => [...row].forEach((ch, x) => { if ("GBWVHDY".includes(ch) && (!E || Math.abs(x - S[0]) + Math.abs(y - S[1]) < Math.abs(E[0] - S[0]) + Math.abs(E[1] - S[1]))) E = [x, y]; }));
+  if (!S || !E) return used;
+  // кратчайший путь по проходимым клеткам
+  const prev = new Map([[key(...S), null]]), q = [S];
+  for (let i = 0; i < q.length && !prev.has(key(...E)); i++) for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+    const x = q[i][0] + dx, y = q[i][1] + dy;
+    if (!wall(x, y) && !prev.has(key(x, y))) { prev.set(key(x, y), q[i]); q.push([x, y]); }
+  }
+  if (!prev.has(key(...E))) return used;
+  const path = [];
+  for (let c = E; c; c = prev.get(key(...c))) path.unshift(c);
+  const wet = (x, y) => terr[y]?.[x] === "water";
+  const inside = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
+  const topOk = (y) => y > 0 || (L.chapter === 0 && !L.maps && !isLong());      // в верхнем ряду — кнопки (кроме Берега)
+  const kind = (x, y) => cellOv[y]?.[x]?.dataset.kind || "";
+  const evNear = (x, y) => evs().some((e) => e.from && Math.abs(e.from[0] - x) <= 1 && Math.abs(e.from[1] - y) <= 1) || (L.events || []).some((e) => e.tree && Math.abs(e.tree[0] - x) <= 1 && Math.abs(e.tree[1] - y) <= 1);
+  // куст или камень с клетки подсказки убираем (как под жителем в углу); дерево ниже по полю закрыло бы идущего
+  const landOk = (x, y) => inside(x, y) && wall(x, y) && !wet(x, y) && topOk(y) && !evNear(x, y) && !(y < H - 1 && /^tree/.test(kind(x, y + 1)));
+  const waterOk = (x, y) => inside(x, y) && wall(x, y) && wet(x, y) && topOk(y);
+  // --- сначала надо ударить? воин и чучело ---
+  if (path.length > 1 && "GBWVHDY".includes(map[path[1][1]][path[1][0]]) && (L.commands || []).includes("attack") && !L.lancer) {
+    let best = null;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W - 1; x++) {
+      if (!landOk(x, y) || !landOk(x + 1, y)) continue;
+      const d = Math.min(...path.map(([px, py]) => Math.max(Math.abs(px - x), Math.abs(py - y), Math.abs(px - x - 1))));
+      if (!best || d > best.d) best = { x, y, d };
+    }
+    if (!best) return used;
+    for (const x of [best.x, best.x + 1]) { cellOv[best.y][x]?.remove(); cellOv[best.y][x] = null; used.add(key(x, best.y)); }
+    skRun(() => boardDemoHit(st, best.x + 0.5, best.x + 1.5, best.y + 0.92));
+    boardEl.dataset.demo = "hit";
+    return used;
+  }
+  // --- отрезки пути: [сторона, сколько шагов, клетка начала] ---
+  const segs = [];
+  for (let i = 1; i < path.length; i++) {
+    const d = [path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]], last = segs[segs.length - 1];
+    if (last && last.d[0] === d[0] && last.d[1] === d[1]) last.n++; else segs.push({ d, n: 1, from: path[i - 1] });
+  }
+  // куда сдвинуть отрезок, чтобы он лёг на стены или воду: сначала вплотную к дороге, потом дальше
+  const OFF = [];
+  for (let oy = -H + 1; oy < H; oy++) for (let ox = -W + 1; ox < W; ox++) if (ox || oy) OFF.push([ox, oy]);
+  OFF.sort((a, b) => Math.abs(a[0]) + Math.abs(a[1]) - Math.abs(b[0]) - Math.abs(b[1]) || b[1] - a[1]);
+  for (let i = 0; i < segs.length; i++) for (const k of [2, 1]) {
+    const part = segs.slice(i, i + k);
+    if (part.length < k || part.some((g) => g.n > 6)) continue;
+    for (const [ox, oy] of OFF) {
+      const cells = [[part[0].from[0] + ox, part[0].from[1] + oy]];
+      for (const g of part) for (let j = 0; j < g.n; j++) { const c = cells[cells.length - 1]; cells.push([c[0] + g.d[0], c[1] + g.d[1]]); }
+      const duck = cells.every(([x, y]) => waterOk(x, y)), walk = !duck && cells.every(([x, y]) => landOk(x, y));
+      if (!duck && !walk) continue;
+      if (walk && cells.some(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => wet(x + dx, y + dy)))) continue;   // у самой воды житель будто в озере
+      for (const [x, y] of cells) { cellOv[y][x]?.remove(); cellOv[y][x] = null; used.add(key(x, y)); }
+      skRun(() => boardDemoWalk(st, cells, part, duck));
+      boardEl.dataset.demo = (duck ? "duck " : "walk ") + part.map((g) => DEMO_DIR(g.d) + " " + g.n).join(", ") + " @" + i;
+      return used;
+    }
+  }
+  return used;
+}
+const DEMO_DIR = (d) => d[0] > 0 ? "moveRight" : d[0] < 0 ? "moveLeft" : d[1] > 0 ? "moveDown" : "moveUp";
+// Утка (или житель) проходит свои отрезки клетка за клеткой; над ней — команды и отсчёт шагов текущей команды
+async function boardDemoWalk(st, cells, part, duck) {
+  const a = duck ? skActor(st, "duck", 1.3, 0.7) : skActor(st, "pidle", 0.72);
+  const at = ([x, y]) => [x + 0.5, y + (duck ? 0.62 : 0.92)];
+  a.high = duck ? 0.75 : 1.2;
+  const dots = (g, done) => `<br><u class="cnt">${[...Array(g.n)].map((_, i) => `<q class="${i < done ? "on" : ""}">${i + 1}</q>`).join("")}</u>`;
+  for (;;) {
+    a.at(...at(cells[0])); a.face(duck ? part[0].d[0] > 0 : part[0].d[0] < 0);
+    a.play(0, duck ? 3 : 8, duck ? 240 : 130, true, duck ? "duck" : "pidle");
+    a.show(true);
+    await skWait(st, 1300);
+    let ci = 0;
+    for (const g of part) {
+      const total = g.n * 640 + 500;
+      let bub = skSay(st, a, [["cmd", DEMO_DIR(g.d), g.n]], total, dots(g, 0));
+      if (g.d[0]) a.face(duck ? g.d[0] > 0 : g.d[0] < 0);
+      for (let j = 1; j <= g.n; j++) {
+        if (!duck) a.play(0, 6, 85, true, "prun");
+        const to = at(cells[++ci]);
+        const [l, t] = [to[0] - a.x, to[1] - a.y];
+        if (bub) { bub.style.transition = "margin 410ms linear"; bub.style.marginLeft = (parseFloat(bub.style.marginLeft) || 0) + l * st.layer.clientWidth / W + "px"; bub.style.marginTop = (parseFloat(bub.style.marginTop) || 0) + t * st.layer.clientHeight / H + "px"; }
+        await a.move(to[0], to[1], 410);
+        if (!duck) a.play(0, 8, 130, true, "pidle");
+        const u = bub?.querySelector("u"); if (u) u.outerHTML = dots(g, j).slice(4);      // отсчёт: шаг j сделан
+        await skSleep(st, 230);
+      }
+      await skSleep(st, 450);
+    }
+    await skWait(st, 1200);
+    a.show(false);
+    await skWait(st, skRnd(2600, 4200));
+  }
+}
+// Копейщик в сторонке колет чучело — над ним команда удара. (Не воин с мечом: он как две капли воды похож на рыцаря игрока.)
+async function boardDemoHit(st, wx, sx, y) {
+  const w = skActor(st, "lidle", 0.6, 0.625), sc = skActor(st, "scare", 0.5, 0.88), puff = skActor(st, "dust", 0.9, 0.6);
+  w.high = 1.25;
+  sc.at(sx + 0.1, y); sc.show(true);
+  w.at(wx - 0.05, y); w.show(true); w.play(0, 12, 110, true, "lidle");
+  for (;;) {
+    await skWait(st, skRnd(2200, 3800));
+    skSay(st, w, [["cmd", "attack"]], 1900);
+    await skSleep(st, 350);
+    w.play(0, 3, 110, false, "lratk").then(() => w.play(0, 12, 110, true, "lidle"));
+    await skSleep(st, 200);
+    puff.at(sx - 0.1, y - 0.35); puff.show(true, true); puff.play(0, 10, 40, false).then(() => puff.show(false));
+    await skSleep(st, 600);
+  }
+}
 // Утки на воде поля: плавают туда-сюда по своему куску воды в ряду (клетки без камней; в одной клетке — покачивается на месте)
-function boardDucks(st, terr, cellOv) {
+function boardDucks(st, terr, cellOv, taken = new Set()) {
   const runs = [];
   for (let y = 0; y < H; y++) {
     let x0 = -1;
     for (let x = 0; x <= W; x++) {
-      const wet = x < W && terr[y]?.[x] === "water" && !cellOv[y]?.[x];
+      const wet = x < W && terr[y]?.[x] === "water" && !cellOv[y]?.[x] && !taken.has(x + "," + y) && !taken.has(x - 1 + "," + y) && !taken.has(x + 1 + "," + y);
       if (wet && x0 < 0) x0 = x;
       if (!wet && x0 >= 0) { if (!(y === 0 && (isLong() || x0 < 1 || x > W - 1))) runs.push([y, x0, x - 1]); x0 = -1; }
     }
@@ -12612,10 +12744,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 193;
+const APP_VERSION = 194;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 194, date: "2026-11-18", text: "На уровнях Острова программистов появились живые подсказки: утка или житель рядом с дорогой делают то же, что нужно рыцарю, — над ними команда и счёт шагов", en: "Levels on Programmers’ Island now have living hints: a duck or a villager next to the road does what the knight needs to do, with the command and a step count above them", big: true },
   { v: 193, date: "2026-11-18", text: "Над жителями Острова программистов всплывает их код: лесоруб, строитель, лучник, копейщик и другие работают по своим программам", en: "Code now pops up above the villagers of Programmers’ Island: the lumberjack, the builder, the archer, the lancer and others all follow their own programs", big: true },
   { v: 192, date: "2026-11-18", text: "Житель у костра в лесу больше не стоит на самом краю скалы", en: "The villager by the forest campfire no longer stands on the very edge of the cliff" },
   { v: 191, date: "2026-11-18", text: "Стрелы в бою у моста теперь видно в полёте", en: "Arrows in the battle by the bridge are now visible in flight" },

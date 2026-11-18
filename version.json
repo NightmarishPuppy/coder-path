@@ -1,13 +1,13 @@
 {
- "version": 193,
+ "version": 194,
  "date": "2026-11-18",
  "notes": [
-  "Над жителями Острова программистов всплывает их код: лесоруб, строитель, лучник, копейщик и другие работают по своим программам"
+  "На уровнях Острова программистов появились живые подсказки: утка или житель рядом с дорогой делают то же, что нужно рыцарю, — над ними команда и счёт шагов"
  ],
  "files": {
   "index.html": {
-   "size": 956665,
-   "hash": "40fc3d5a77a4d506"
+   "size": 967563,
+   "hash": "e821788864c48db3"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "3b7fa0a9f442a2ed"
+   "hash": "d507439c78229665"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Code now pops up above the villagers of Programmers’ Island: the lumberjack, the builder, the archer, the lancer and others all follow their own programs"
+  "Levels on Programmers’ Island now have living hints: a duck or a villager next to the road does what the knight needs to do, with the command and a step count above them"
  ]
 }
