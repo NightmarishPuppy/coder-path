@@ -1,13 +1,13 @@
 {
- "version": 191,
+ "version": 192,
  "date": "2026-11-18",
  "notes": [
-  "Стрелы в бою у моста теперь видно в полёте"
+  "Житель у костра в лесу больше не стоит на самом краю скалы"
  ],
  "files": {
   "index.html": {
-   "size": 948252,
-   "hash": "34310ab4e8ca5655"
+   "size": 948582,
+   "hash": "771f3e17de63cae9"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "aaa1758385ba4f68"
+   "hash": "2898a72a10e0e3bd"
   },
   "icon-192.png": {
    "size": 42164,
@@ -75,7 +75,7 @@
   },
   "isle1.js": {
    "size": 45969,
-   "hash": "d1ee169d0943d47f"
+   "hash": "12192b1f8c3c2e5e"
   },
   "isle2.js": {
    "size": 57134,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Arrows in the battle by the bridge are now visible in flight"
+  "The villager by the forest campfire no longer stands on the very edge of the cliff"
  ]
 }

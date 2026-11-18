@@ -5974,8 +5974,8 @@ const SKIT_PLAN = {
     // море слева-снизу, у замка: две утки
     { name: "утки у берега", fn: "paddle", lane: [[0.6, 52.3], [3.3, 52.3]] },
     // лес: привал у костра и лесоруб; в правом лесу — гоблин в бочке
-    { name: "привал у костра", fn: "camp", fire: [2.9, 37.0], pawn: [2.05, 37.1], monk: [3.7, 37.1] },
-    { name: "лесоруб в лесу", fn: "lumber", tree: [4.95, 36.6], d: -1, pile: [5.25, 37.55] },
+    { name: "привал у костра", fn: "camp", fire: [3.2, 37.0], pawn: [2.55, 37.1], monk: [3.85, 37.1] },   // житель — не ближе полклетки к обрыву слева (x = 2)
+    { name: "лесоруб в лесу", fn: "lumber", tree: [5.05, 36.6], d: -1, pile: [5.3, 37.6] },
     { name: "бочка-гоблин в лесу", fn: "barrel", at: [12.3, 29.95] },
   ],
   2: [
@@ -12505,10 +12505,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 191;
+const APP_VERSION = 192;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 192, date: "2026-11-18", text: "Житель у костра в лесу больше не стоит на самом краю скалы", en: "The villager by the forest campfire no longer stands on the very edge of the cliff" },
   { v: 191, date: "2026-11-18", text: "Стрелы в бою у моста теперь видно в полёте", en: "Arrows in the battle by the bridge are now visible in flight" },
   { v: 190, date: "2026-11-18", text: "Стрелу лучника теперь видно в полёте", en: "The archer’s arrow is now visible in flight" },
   { v: 189, date: "2026-11-18", text: "В пещерах на уровнях поблёскивает золото", en: "Gold now glints in the cave levels" },
