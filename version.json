@@ -1,13 +1,13 @@
 {
- "version": 199,
+ "version": 200,
  "date": "2026-11-18",
  "notes": [
-  "На планшетах вокруг острова теперь море до краёв экрана, а сам остров стал крупнее"
+  "На планшете и компьютере задание теперь стоит справа, над программой, поле стало крупнее, а окошко победы появляется там же — без прокрутки"
  ],
  "files": {
   "index.html": {
-   "size": 984038,
-   "hash": "24c9271f86318a7a"
+   "size": 986335,
+   "hash": "d1e000a556479672"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "818cbf2db73ef085"
+   "hash": "921cdc9087acbd80"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "On tablets the sea now reaches the edges of the screen around the island, and the island itself is bigger"
+  "On tablets and computers the task now sits on the right, above your program; the field is bigger, and the win box appears in the same place — no scrolling"
  ]
 }

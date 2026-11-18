@@ -121,6 +121,13 @@ h1 {
 @media (min-width: 820px) {
   .game { grid-template-columns: 1.15fr 1fr; align-items: start; }
 }
+/* Две колонки (v200): название и задание стоят в правой колонке над программой (placeBrief), поле — от самого верха.
+   После победы окошко со звёздами встаёт на место задания — страница никуда не едет. */
+.brief { display: flex; flex-direction: column; gap: 4px; }
+.brief .winbox { margin: 6px 0 2px; }
+.brief:has(.winbox:not([hidden])) > :is(.goal, .goal-more, .voicebar, .par) { display: none; }
+html.tg #levelview.two header { position: static; }
+html.tg #levelview.two header > .toprow { position: static; justify-content: flex-end; }
 .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
 /* --- Поле --- */
@@ -9455,6 +9462,25 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 // Поэтому на время замера всё временное убираем, а результат запоминаем.
 // Высота поля на компьютере (широкий экран, версия 120): сколько осталось от верха поля до низа окна
 // (минус строка подсказки и отступ), но не меньше 440 и не больше 1100. На телефоне — прежние 460 (там своя подгонка — fitBoard).
+// Две колонки (от 820 px; v200): название, задание и окошко победы переезжают из шапки в правую колонку, над программу, —
+// иначе справа вверху пустой угол, а поле и программа сдвинуты вниз. На узком экране всё возвращается на свои места.
+function placeBrief() {
+  const lv = $("levelview"), head = lv.querySelector("header"), right = $("blocks").parentElement, wide = innerWidth >= 820;
+  let brief = lv.querySelector(".brief");
+  if (wide === !!brief) return;
+  if (wide) {
+    brief = document.createElement("div"); brief.className = "brief";
+    for (const id of ["eyebrow", "title", "winbox", "goal", "goal-more", "voicebar", "par"]) brief.append($(id));
+    right.prepend(brief);
+  } else {
+    for (const id of ["eyebrow", "title", "goal", "goal-more", "voicebar", "par"]) head.append($(id));
+    $("statusslot").after($("winbox"));
+    brief.remove();
+  }
+  lv.classList.toggle("two", wide);
+}
+placeBrief();
+addEventListener("resize", placeBrief);
 function deskH() {
   if (innerWidth < 820 || !boardEl || $("levelview").hidden) return 460;
   const el = isLong() ? camEl : boardEl, top = el.getBoundingClientRect().top + scrollY;
@@ -12915,10 +12941,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 199;
+const APP_VERSION = 200;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 200, date: "2026-11-18", text: "На планшете и компьютере задание теперь стоит справа, над программой, поле стало крупнее, а окошко победы появляется там же — без прокрутки", en: "On tablets and computers the task now sits on the right, above your program; the field is bigger, and the win box appears in the same place — no scrolling", big: true },
   { v: 199, date: "2026-11-18", text: "На планшетах вокруг острова теперь море до краёв экрана, а сам остров стал крупнее", en: "On tablets the sea now reaches the edges of the screen around the island, and the island itself is bigger" },
   { v: 198, date: "2026-11-18", text: "На ноутбуке после победы сразу видно кнопки «Дальше» и «Карта» — раньше они прятались под краем экрана", en: "On laptops the “Next” and “Map” buttons are now visible right after you win — they used to hide below the edge of the screen" },
   { v: 197, date: "2026-11-18", text: "Призрак-подсказка теперь и на Острове условий. А если уровень не выходит десять раз подряд — призрак придёт на помощь через пару секунд", en: "The ghost hint now works on Island of Conditions too. And if a level fails ten times in a row, the ghost comes to help within a couple of seconds" },
