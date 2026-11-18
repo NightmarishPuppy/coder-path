@@ -1,17 +1,17 @@
 {
- "version": 188,
+ "version": 189,
  "date": "2026-11-18",
  "notes": [
-  "У замка плавают утки (тронь — крякнет), к стройке носят брёвна, а на самых первых уровнях появились овечка и утки"
+  "В пещерах на уровнях поблёскивает золото"
  ],
  "files": {
   "index.html": {
-   "size": 946043,
-   "hash": "8ed00513edf3e1c8"
+   "size": 947386,
+   "hash": "d420906da2c3eb81"
   },
   "art.js": {
-   "size": 841991,
-   "hash": "db9006b00fa9d46b"
+   "size": 852367,
+   "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
    "size": 72760,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "b042c10238538adf"
+   "hash": "7d96b0d120b98e1d"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Ducks swim by the castle (poke one — it quacks), logs are carried to the building site, and the very first levels now have a sheep and ducks"
+  "Gold now glints in the cave levels"
  ]
 }

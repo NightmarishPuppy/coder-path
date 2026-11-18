@@ -6082,7 +6082,7 @@ function boardSkits(terr, cellOv) {
     if ([..."SE"].some((ch) => map.some((row, yy) => [...row].some((cc, xx) => cc === ch && Math.abs(xx - x) <= 1 && Math.abs(yy - y) <= 1)))) continue;
     cand.push({ x, y, score: (floorNear(x, y, 1) ? 0 : 2) + (y === H - 1 ? 1 : 0) + ((x === 0 || x === W - 1) && y === H - 1 ? 1 : 0) });
   }
-  if (isleOf(L) === 1) boardDucks(st, terr, cellOv);              // на воде — утки (v188)
+  if (isleOf(L) === 1) { boardDucks(st, terr, cellOv); boardSparkle(st, cellOv); }   // на воде — утки (v187), на золоте — блики (v189)
   if (!cand.length) return;
   // Остров рудокопов: шахтёр — у золотой глыбы в стене (слева или справа от него)
   const goldAt = (x, y) => /^gold[123]$/.test(cellOv[y]?.[x]?.dataset.kind || "");
@@ -6217,6 +6217,23 @@ async function boardPicker(st, x, y, left) {
     await skWait(st, skRnd(2600, 4600));
     p.play(0, 8, 130, true, "pidle");
   }
+}
+// Золотые камни в стенах пещеры поблёскивают: поверх камня раз в несколько секунд пробегает блик (лист goldNh — шесть кадров,
+// та же рамка, что у камня). Лист крутится по кругу, поэтому показываем его ровно на один проход (как взмах копья в v186).
+function boardSparkle(st, cellOv) {
+  cellOv.flat().filter((ov) => ov && TS[ov.dataset.kind + "h"]).forEach((ov, i) => skRun(async () => {
+    const base = ov.firstElementChild, hl = sprite(ov.dataset.kind + "h", 1, { dur: 0.6 });
+    for (const pr of ["width", "height", "left", "bottom"]) hl.style[pr] = base.style[pr];
+    hl.style.display = "none";
+    ov.appendChild(hl);
+    await skWait(st, 500 + (i * 1300) % 5000);
+    for (;;) {
+      hl.style.display = "block";                    // показали — лист пошёл с первого кадра
+      await skSleep(st, 590);
+      hl.style.display = "none";
+      await skWait(st, skRnd(3500, 9000));
+    }
+  }));
 }
 // Утки на воде поля: плавают туда-сюда по своему куску воды в ряду (клетки без камней; в одной клетке — покачивается на месте)
 function boardDucks(st, terr, cellOv) {
@@ -12484,10 +12501,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 188;
+const APP_VERSION = 189;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 189, date: "2026-11-18", text: "В пещерах на уровнях поблёскивает золото", en: "Gold now glints in the cave levels" },
   { v: 188, date: "2026-11-18", text: "У замка плавают утки (тронь — крякнет), к стройке носят брёвна, а на самых первых уровнях появились овечка и утки", en: "Ducks swim by the castle (poke one — it quacks), logs are carried to the building site, and the very first levels now have a sheep and ducks" },
   { v: 187, date: "2026-11-18", text: "Остров программистов ожил. На карте: овцы и пастух (овцу можно тронуть!), стройка у замка, лучник стреляет по чучелу, воин и копейщик учатся биться, в лесу — костёр и лесоруб. На уровнях: больше жителей, утки на воде, и все радуются твоей победе. Когда звуков много, они сами становятся тише", en: "Programmers’ Island has come alive. On the map: sheep and a shepherd (try poking a sheep!), a building site by the castle, an archer shooting at a scarecrow, a warrior and a lancer sparring, a campfire and a lumberjack in the forest. On the levels: more villagers, ducks on the water, and everyone cheers when you win. When many sounds play at once, they get quieter on their own", big: true },
   { v: 186, date: "2026-11-18", text: "Копейщик отбивает динамит одним взмахом копья — больше не машет по воздуху", en: "The lancer knocks dynamite back with one swing — no more extra jabs at the air" },
