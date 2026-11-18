@@ -126,6 +126,7 @@ h1 {
 .brief { display: flex; flex-direction: column; gap: 4px; }
 .brief .winbox { margin: 6px 0 2px; }
 .brief:has(.winbox:not([hidden])) > :is(.goal, .goal-more, .voicebar, .par) { display: none; }
+@media (min-width: 1000px) { #levelview.wrap { max-width: min(1680px, 94vw); } }   /* планшет лёжа: экран уровня — почти во всю ширину (v201) */
 html.tg #levelview.two header { position: static; }
 html.tg #levelview.two header > .toprow { position: static; justify-content: flex-end; }
 .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -7559,6 +7560,7 @@ function buildBoard() {
   boardEl.style.gridTemplateColumns = `repeat(${W}, 1fr)`;
   boardEl.style.gridTemplateRows = `repeat(${H}, 1fr)`;
   boardEl.style.aspectRatio = `${W} / ${H}`;
+  if (typeof deskCols === "function") deskCols();
   boardEl.style.maxWidth = `min(100%, ${Math.round(W / H * deskH())}px)`;
   // длинная карта: поле шире окна во столько раз, во сколько карта длиннее 9 клеток
   const long = isLong(), vw = viewW();
@@ -9486,7 +9488,18 @@ function deskH() {
   const el = isLong() ? camEl : boardEl, top = el.getBoundingClientRect().top + scrollY;
   return Math.max(440, Math.min(1100, innerHeight - (window.tgBottom || 0) - top - 64));
 }
+// Ширина колонок в две колонки (v201): поле получает столько ширины, сколько ему нужно, чтобы дойти до низа окна,
+// но программе остаётся не меньше 36 % и не уже 420 px (уже — кнопки переносятся на вторую строку). Раньше делили всегда 1,15 : 1 — под низким широким полем была дыра.
+function deskCols() {
+  const g = boardEl?.closest(".game");
+  if (!g) return;
+  if (innerWidth < 820 || !L || $("levelview").hidden) { g.style.gridTemplateColumns = ""; return; }
+  const full = g.clientWidth - 18, base = full * 1.15 / 2.15, most = full - Math.max(420, full * 0.36);
+  const left = Math.round(Math.min(viewW() / H * deskH(), most));
+  g.style.gridTemplateColumns = left > base + 1 ? `${left}px minmax(0, 1fr)` : "";
+}
 function deskResize() {
+  deskCols();
   if (innerWidth < 820 || $("levelview").hidden || !boardEl || !L) return;
   const h = deskH(), vw = viewW();
   boardEl.style.maxWidth = isLong() ? boardEl.style.maxWidth : `min(100%, ${Math.round(W / H * h)}px)`;
@@ -12941,10 +12954,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 200;
+const APP_VERSION = 201;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 201, date: "2026-11-19", text: "На планшете и компьютере поле уровня стало крупнее", en: "On tablets and computers the level field is bigger" },
   { v: 200, date: "2026-11-18", text: "На планшете и компьютере задание теперь стоит справа, над программой, поле стало крупнее, а окошко победы появляется там же — без прокрутки", en: "On tablets and computers the task now sits on the right, above your program; the field is bigger, and the win box appears in the same place — no scrolling", big: true },
   { v: 199, date: "2026-11-18", text: "На планшетах вокруг острова теперь море до краёв экрана, а сам остров стал крупнее", en: "On tablets the sea now reaches the edges of the screen around the island, and the island itself is bigger" },
   { v: 198, date: "2026-11-18", text: "На ноутбуке после победы сразу видно кнопки «Дальше» и «Карта» — раньше они прятались под краем экрана", en: "On laptops the “Next” and “Map” buttons are now visible right after you win — they used to hide below the edge of the screen" },

@@ -1,13 +1,13 @@
 {
- "version": 200,
- "date": "2026-11-18",
+ "version": 201,
+ "date": "2026-11-19",
  "notes": [
-  "На планшете и компьютере задание теперь стоит справа, над программой, поле стало крупнее, а окошко победы появляется там же — без прокрутки"
+  "На планшете и компьютере поле уровня стало крупнее"
  ],
  "files": {
   "index.html": {
-   "size": 986335,
-   "hash": "d1e000a556479672"
+   "size": 987700,
+   "hash": "14b236965e8f8f97"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "921cdc9087acbd80"
+   "hash": "bb1136a16374c763"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "On tablets and computers the task now sits on the right, above your program; the field is bigger, and the win box appears in the same place — no scrolling"
+  "On tablets and computers the level field is bigger"
  ]
 }
