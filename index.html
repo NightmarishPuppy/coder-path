@@ -4657,7 +4657,11 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   torchp: [7, 5, 192], lidle: [12, 1, 320], lrun: [6, 1, 320], ldatk: [3, 1, 320], lddef: [6, 1, 320],
   lratk: [3, 1, 320], luatk: [3, 1, 320], ldratk: [3, 1, 320], luratk: [3, 1, 320], monkrun: [4, 1, 192], duck: [3, 1, 32], splash: [9, 1, 192], hidle: [8, 1, 120], hrun: [6, 1, 120], hatk: [4, 1, 120],
   mtree: [8, 1, 192], stump3: [1, 1, 192],
-  duckair: [3, 1, 32], boom2: [8, 1, 192], boom3: [10, 1, 192], dust: [10, 1, 64] };
+  duckair: [3, 1, 32], boom2: [8, 1, 192], boom3: [10, 1, 192], dust: [10, 1, 64],
+  // остров 1 наряднее (v187): овцы, стройка, тренировка, костёр
+  shidle: [6, 1, 128], shgrass: [12, 1, 128], shmove: [4, 1, 128], phidle: [8, 1, 192], prunham: [6, 1, 192], lrdef: [6, 1, 320], wguard: [6, 1, 192],
+  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128] };
+TS.sk_fire = TS.fx_fire;
 let SK_ACTORS = [];
 let skLast = 0;
 function skTick(t) {
@@ -5032,11 +5036,18 @@ async function skitBarrel(st, [x, y]) {
   b.at(x, y); b.show(true); b.frame(0, 0);
   for (;;) {
     await skWait(st, skRnd(6000, 13000));
+    if (skHeroNear(st, x, y, 3)) continue;        // рыцарь рядом — гоблин в бочке сидит тихо
     await b.play(1, 6, 150, false);
-    await sleep(skRnd(900, 1800));
-    await b.play(3, 6, 150, false);
+    for (let t = skRnd(900, 2600); t > 0 && !skHeroNear(st, x, y, 3); t -= 150) await sleep(150);   // подошёл рыцарь — сразу прячется
+    await b.play(3, 6, skHeroNear(st, x, y, 3) ? 70 : 150, false);
     b.frame(0, 0);
   }
+}
+// Рыцарь на карте ближе r клеток к точке (x, y)? Жители сценок могут на него оглядываться.
+function skHeroNear(st, x, y, r) {
+  if (!st.ear || !st.ear.querySelector(".map-hero")) return false;
+  const [hx, hy] = mapEar(st.ear);
+  return Math.hypot(hx - x, hy - y) < r;
 }
 // Шахтёр носит золото: выходит из шахты с самородком в руках, подбегает к большой куче золота,
 // бросает самородок на неё (по куче пробегает блик), бегом возвращается и скрывается в шахте.
@@ -5701,6 +5712,198 @@ function skStart(n, w, spec, fn) {
   if (bad.length) { console.warn(`сценка «${spec.name}» на острове ${n} не запущена:`, bad.join("; ")); return; }
   skRun(() => fn(mapStage(w), spec));
 }
+// ===== Остров 1 наряднее (v187): овечий луг, тренировка, стройка, лагерь в лесу =====
+// Овечий луг: овцы пасутся, щиплют траву, перебегают с места на место; от рыцаря, который бежит мимо по карте,
+// отпрыгивают подальше. Время от времени одна овца уходит с луга к дороге — пастух бежит за ней, и она скачет обратно.
+async function skitFlock(st, s) {
+  const [x0, y0, x1, y1] = s.box, isle = +st.ear.dataset.isle;
+  const inBox = (x, y) => x > x0 && x < x1 && y > y0 && y < y1;
+  const okWay = (a, b) => !skProblems(isle, { stand: [b], paths: [[a, b]], ok: s.ok }).length;
+  const spot = (from, cx, cy, r) => {
+    for (let i = 0; i < 24; i++) { const b = [cx + skRnd(-r, r), cy + skRnd(-r * 0.7, r * 0.7)]; if (inBox(...b) && Math.hypot(b[0] - from[0], b[1] - from[1]) > 0.5 && okWay(from, b)) return b; }
+    return null;
+  };
+  const flock = s.sheep.map(([x, y]) => { const a = skActor(st, "shidle", 0.95, 0.656); a.at(x, y); a.face(Math.random() < 0.5); a.show(true); a.play(0, 6, 150, true, "shidle"); return a; });
+  // овцу можно тронуть пальцем — отпрыгнет (v188). Ловим нажатие на карте и смотрим, не рядом ли овца: сам спрайт нажатий не берёт
+  st.layer.addEventListener("click", (e) => {
+    const r = st.layer.getBoundingClientRect(), D = ISLE_MAPS[isle], x = (e.clientX - r.left) / r.width * 18, y = (e.clientY - r.top) / r.height * D.terr.length;
+    const a = flock.find((a) => !a.busy && Math.abs(a.x - x) < 0.55 && y > a.y - 0.9 && y < a.y + 0.25);
+    if (a) a.poke = [x, y];
+  });
+  const pawn = skActor(st, "pidle", 0.8);
+  pawn.at(...s.herd); pawn.show(true); pawn.play(0, 8, 130, true, "pidle");
+  const hop = async (a, to, cellMs) => {
+    a.face(to[0] < a.x); a.play(0, 4, 95, true, "shmove");
+    await a.move(to[0], to[1], Math.max(250, Math.hypot(to[0] - a.x, to[1] - a.y) * cellMs));
+    a.play(0, 6, 150, true, "shidle");
+  };
+  const scared = (a) => skHeroNear(st, a.x, a.y, 2.3);
+  // ждать, поглядывая на рыцаря: true — рыцарь подошёл
+  const idle = async (a, ms) => { for (let t = ms; t > 0; t -= 150) { await skWait(st, 150); if (a.busy) return false; if (a.poke || scared(a)) return true; } return false; };
+  const live = async (a, i) => {
+    await skWait(st, i * 700);
+    for (;;) {
+      if (a.busy) { await skWait(st, 400); continue; }
+      if (await idle(a, skRnd(2500, 6500))) {                 // рыцарь рядом или овцу тронули — прочь
+        const poked = !!a.poke, [hx, hy] = a.poke || mapEar(st.ear);
+        a.poke = null;
+        // несколько мест поблизости, куда есть дорога, — берём самое дальнее от того, кто напугал
+        let to = null, far = Math.hypot(a.x - hx, a.y - hy) + (poked ? -9 : 0.4);
+        for (let k = 0; k < 8; k++) { const b = spot([a.x, a.y], a.x, a.y, 1.9); if (b && Math.hypot(b[0] - hx, b[1] - hy) > far) { to = b; far = Math.hypot(b[0] - hx, b[1] - hy); } }
+        if (to) await hop(a, to, poked ? 200 : 260);
+        else await skWait(st, 600);
+        continue;
+      }
+      if (a.busy) continue;
+      const r = Math.random();
+      if (r < 0.45) { a.play(0, 12, 115, true, "shgrass"); if (!(await idle(a, skRnd(2600, 5200))) && !a.busy) a.play(0, 6, 150, true, "shidle"); }
+      else if (r < 0.85) { const to = spot([a.x, a.y], a.x, a.y, 1.4); if (to) await hop(a, to, 520); }
+      else a.face(!a.el.classList.contains("flip"));
+    }
+  };
+  flock.forEach((a, i) => skRun(() => live(a, i)));
+  const run = async (to, ms = 330) => { pawn.face(to[0] < pawn.x); pawn.play(0, 6, 85, true, "prun"); await pawn.move(to[0], to[1], Math.hypot(to[0] - pawn.x, to[1] - pawn.y) * ms); pawn.play(0, 8, 130, true, "pidle"); };
+  for (;;) {
+    await skWait(st, skRnd(22000, 40000));
+    const a = flock[Math.floor(Math.random() * flock.length)];
+    if (a.busy || scared(a) || !okWay([a.x, a.y], s.stray)) continue;
+    a.busy = true;                                             // овца уходит с луга
+    await skWait(st, 350);
+    await hop(a, s.stray, 620);
+    a.play(0, 12, 115, true, "shgrass");
+    await skWait(st, skRnd(1500, 3000));
+    const side = [s.stray[0] + (s.stray[0] > s.herd[0] ? 0.9 : -0.9), s.stray[1]];
+    if (okWay([pawn.x, pawn.y], side)) {
+      await run(side);                                          // пастух обегает овцу и гонит её обратно
+      pawn.face(side[0] > s.stray[0]);
+      await skSleep(st, 250);
+    }
+    const home = spot(s.stray, (x0 + x1) / 2, (y0 + y1) / 2, Math.min(x1 - x0, y1 - y0) / 2) || s.sheep[0];
+    await hop(a, home, 300);
+    a.busy = false;
+    await skSleep(st, 500);
+    if (pawn.x !== s.herd[0]) await run(s.herd, 520);
+    pawn.face(s.herd[0] > (x0 + x1) / 2);
+  }
+}
+// Тренировка лучника: стреляет по чучелу, стрелы остаются торчать. Три стрелы — идёт, собирает их и возвращается.
+async function skitRange(st, { at: [ax, ay], dummy: [dx, dy] }) {
+  const sc = skActor(st, "scare", 0.62, 0.88), ar = skActor(st, "archb", 0.8), fly = skActor(st, "arrow", 0.85, 0.55), puff = skActor(st, "dust", 1.1, 0.6);
+  const stuck = [0, 1, 2].map(() => skActor(st, "arrow", 0.85, 0.55));
+  const right = dx > ax, f = right ? 1 : -1;
+  ar.mute = true;                                              // не «выстрел в бою» (он слышен за пол-острова), а тихий свист рядом
+  sc.at(dx, dy); sc.show(true);
+  ar.at(ax, ay); ar.face(!right); ar.show(true); ar.play(0, 6, 150);
+  fly.face(!right); stuck.forEach((a) => a.face(!right));
+  let n = 0;
+  for (;;) {
+    await skWait(st, skRnd(3500, 8000));
+    ar.play(4, 8, 85, false);
+    await skSleep(st, 430);
+    mapSfx(st, "shot", ax, ay);
+    const h = [-0.6, -0.42, -0.85][n] + skRnd(-0.04, 0.04);    // куда в чучело: грудь, пояс, голова
+    fly.at(ax + f * 0.9, ay - 0.62); fly.frame(0, 0); fly.show(true);
+    await fly.move(dx - f * 0.52, dy + h, Math.abs(dx - ax) * 75);
+    fly.show(false);
+    stuck[n].at(dx - f * 0.34, dy + h); stuck[n].frame(0, 1); stuck[n].show(true);   // второй кадр листа — стрела без наконечника: воткнулась
+    mapSfx(st, "thunk", dx, dy);
+    puff.at(dx - f * 0.2, dy + h + 0.25); puff.show(true); puff.play(0, 10, 45, false).then(() => puff.show(false));
+    ar.play(0, 6, 150);
+    if (++n < 3) continue;
+    await skWait(st, skRnd(1500, 3000));                       // три стрелы — пора собирать
+    ar.face(!right); ar.play(1, 6, 90);
+    await ar.move(dx - f * 0.75, ay, Math.abs(dx - ax) * 420);
+    ar.play(0, 6, 150);
+    for (const a of stuck) { await skSleep(st, 330); a.show(false); }
+    await skSleep(st, 300);
+    ar.face(right); ar.play(1, 6, 90);
+    await ar.move(ax, ay, Math.abs(dx - ax) * 420);
+    ar.face(!right); ar.play(0, 6, 150);
+    n = 0;
+  }
+}
+// Учебный бой: воин и копейщик по очереди бьют и закрываются. Никто не ранен — мечи только звенят.
+async function skitSpar(st, { a, b }) {
+  const w = skActor(st, "kwar", 0.8, 0.708), l = skActor(st, "lidle", 0.8, 0.625);
+  w.mute = l.mute = true;                                      // не звук боя (он слышен издалека), а тихий звон рядом
+  w.at(...a); w.face(a[0] > b[0]); w.show(true); w.play(0, 6, 150);
+  l.at(...b); l.face(b[0] > a[0]); l.show(true); l.play(0, 12, 110, true, "lidle");
+  const mid = [(a[0] + b[0]) / 2, a[1] - 0.5];
+  for (;;) {
+    await skWait(st, skRnd(2500, 6000));
+    for (let k = Math.floor(skRnd(2, 5)); k > 0; k--) {
+      if (Math.random() < 0.55) {                               // воин рубит — копейщик закрывается
+        l.play(0, 6, 80, false, "lrdef");
+        await skSleep(st, 120);
+        w.play(Math.random() < 0.5 ? 2 : 3, 6, 80, false);
+        await skSleep(st, 250);
+        mapSfx(st, "clang", ...mid);
+        await skSleep(st, 330);
+      } else {                                                  // копейщик колет — воин закрывается щитом
+        w.play(0, 6, 80, false, "wguard");
+        await skSleep(st, 120);
+        l.play(0, 3, 110, false, "lratk");
+        await skSleep(st, 170);
+        mapSfx(st, "clang", ...mid);
+        await skSleep(st, 400);
+      }
+      w.play(0, 6, 150, true, "kwar"); l.play(0, 12, 110, true, "lidle");
+      await skSleep(st, skRnd(250, 700));
+    }
+  }
+}
+// Стройка: два строителя стучат молотками по срубу — и вот стоит дом. Потом берутся за следующий. Когда все дома
+// готовы, время от времени подновляют их: берут бревно из поленницы, несут к дому и приколачивают.
+async function skitBuildYard(st, { lots, pile, rest }) {
+  const heap = skActor(st, "wood", 0.7, 0.8), puff = skActor(st, "dust", 1.6, 0.6);
+  heap.at(...pile); heap.show(true);
+  const houses = lots.map(([x, y]) => { const h = skActor(st, "housec", 0.56, 0.955); h.at(x, y); return h; });
+  const men = [0, 1].map((i) => { const p = skActor(st, "phidle", 0.8, 0.7); p.at(rest[0] + i * 0.8, rest[1]); p.show(true); p.play(0, 8, 130, true, "phidle"); return p; });
+  const go = async (p, to, sheet = "prunham") => { p.face(to[0] < p.x); p.play(0, 6, 85, true, sheet); await p.move(to[0], to[1], Math.hypot(to[0] - p.x, to[1] - p.y) * 430); };
+  const hammer = async (p, x, n) => { p.face(x < p.x); p.play(0, 3, 150, true, "phammer"); await skWait(st, n * 450); p.play(0, 8, 130, true, "phidle"); };
+  for (let i = 0; i < lots.length; i++) {
+    const [x, y] = lots[i], h = houses[i];
+    await skWait(st, skRnd(2500, 5000));
+    h.show(true);                                                // сруб
+    await Promise.all(men.map((p, k) => go(p, [x + (k ? 0.85 : -0.85), y + 0.02])));
+    for (let r = 0; r < 3; r++) {
+      await Promise.all(men.map((p, k) => skSleep(st, k * 220).then(() => hammer(p, x, 7))));
+      await skWait(st, skRnd(700, 1600));
+    }
+    puff.at(x, y - 0.2); puff.show(true); puff.play(0, 10, 55, false).then(() => puff.show(false));
+    mapSfx(st, "thud", x, y);
+    h.sheet(i % 2 ? "houseb2" : "houseb"); h.el.style.setProperty("--foot", "-90%");   // дом готов
+    await Promise.all(men.map((p, k) => go(p, [x + (k ? 1.05 : -1.05), y + 0.2])));
+    men.forEach((p) => { p.face(p.x > x); p.play(0, 8, 130, true, "phidle"); });         // любуются
+  }
+  for (let k = 0; ; k++) {                                       // подновляют
+    await skWait(st, skRnd(14000, 26000));
+    const p = men[k % 2], [x, y] = lots[Math.floor(Math.random() * lots.length)], back = [p.x, p.y];
+    await go(p, [pile[0] + (p.x < pile[0] ? -0.55 : 0.55), pile[1]]);
+    p.play(0, 8, 130, true, "phidle");
+    await skSleep(st, 400);
+    await go(p, [x + (p.x < x ? -0.85 : 0.85), y + 0.02], "prunwood");
+    await hammer(p, x, 5);
+    await go(p, back);
+    p.face(p.x > x); p.play(0, 8, 130, true, "phidle");
+  }
+}
+// Привал в лесу: костёр, у огня греется житель, рядом монах — иногда лечит его (или просто колдует).
+async function skitCamp(st, { fire, pawn, monk }) {
+  const f = skActor(st, "fire", 0.72, 0.82), p = skActor(st, "pidle", 0.8), m = skActor(st, "monk", 0.8), fx = skActor(st, "healfx", 0.8);
+  f.at(...fire); f.show(true); f.play(0, 7, 110);
+  p.at(...pawn); p.face(pawn[0] > fire[0]); p.show(true); p.play(0, 8, 130, true, "pidle");
+  m.at(...monk); m.face(monk[0] > fire[0]); m.show(true); m.play(0, 6, 150, true, "monk");
+  fx.at(...pawn);
+  skRun(async () => { for (;;) { await skWait(st, skRnd(1800, 4200)); mapSfx(st, "crackle", ...fire); } });
+  for (;;) {
+    await skWait(st, skRnd(9000, 18000));
+    fx.show(true); fx.play(0, 11, 90, true, "healfx");
+    await m.play(0, 11, 90, false, "heal");
+    fx.show(false);
+    m.play(0, 6, 150, true, "monk");
+  }
+}
 // Сценки островов — данными: где стоят, куда бегут, куда падает динамит
 const SKIT_PLAN = {
   1: [
@@ -5719,6 +5922,20 @@ const SKIT_PLAN = {
     { name: "золото из правой шахты", fn: "haul", door: [13.95, 20.35], pile: [15.45, 20.35], ok: ["mine"] },
     { name: "рудокоп у камня справа", fn: "miner", at: [14.38, 24.62], ok: ["goldsp6"] },
     { name: "гоблин пугает шахтёра", fn: "scare", pawn: [3.0, 25.0], hide: [2.6, 23.3], gob: [7.5, 25.0], ok: ["goldsp4"] },
+    // --- берег и лес наряднее (v187) ---
+    // левый луг у замка: овцы и пастух; овца иногда уходит к дороге
+    { name: "овечий луг", fn: "flock", box: [0.7, 39.7, 4.5, 46.9], sheep: [[1.5, 41.2], [3.2, 41.6], [1.4, 45.6], [3.4, 46.2]], herd: [3.4, 43.5], stray: [4.8, 45.4] },
+    // Рыцарь на карте стоит справа-сверху от кнопки своего уровня (на клетку правее, на клетку выше), поэтому всё, что летит
+    // (стрелы), — там, где кнопок снизу нет: верхний луг берега. Лучник стреляет по чучелу
+    { name: "лучник и чучело", fn: "range", at: [5.9, 41.3], dummy: [10.4, 41.35] },
+    // лужайка между дорогами: воин и копейщик учатся биться
+    { name: "учебный бой", fn: "spar", a: [8.0, 45.4], b: [9.15, 45.4] },
+    // полоска между дорогами у первых уровней: строят два дома (деревня у замка)
+    { name: "стройка", fn: "yard", lots: [[7.2, 49.55], [10.4, 49.6]], pile: [8.75, 49.3], rest: [8.3, 49.7] },
+    // лес: привал у костра и лесоруб; в правом лесу — гоблин в бочке
+    { name: "привал у костра", fn: "camp", fire: [2.9, 37.0], pawn: [2.05, 37.1], monk: [3.7, 37.1] },
+    { name: "лесоруб в лесу", fn: "lumber", tree: [4.95, 36.6], d: -1, pile: [5.25, 37.55] },
+    { name: "бочка-гоблин в лесу", fn: "barrel", at: [12.3, 29.95] },
   ],
   2: [
     { name: "лучник и гоблин", fn: "archer", at: [12.3, 17.9], run: [4.4, 9.4] },
@@ -5760,6 +5977,11 @@ const SKIT_GEOM = {
   haul: (s) => { const t = haulStand(s); return { stand: [s.door, s.pile, [s.pile[0] - 0.7, s.pile[1]], [s.pile[0] + 0.7, s.pile[1]], [s.pile[0], s.pile[1] - 0.6], t], paths: [[s.door, t]] }; },
   lumber: (s) => { const [tx, ty] = s.tree, cut = [tx - s.d * 0.6, ty], logs = [tx + s.d * 0.6, ty + 0.05];
     return { stand: [s.tree, cut, logs, [tx + s.d * 1.4, ty], s.pile], paths: [[cut, logs], [cut, s.pile]] }; },
+  flock: (s) => ({ stand: [...s.sheep, s.herd, s.stray], paths: [[s.herd, [s.stray[0] + (s.stray[0] > s.herd[0] ? 0.9 : -0.9), s.stray[1]]]] }),
+  range: (s) => ({ stand: [s.at, s.dummy], paths: [[s.at, [s.dummy[0] - Math.sign(s.dummy[0] - s.at[0]) * 0.75, s.at[1]]]] }),
+  spar: (s) => ({ stand: [s.a, s.b] }),
+  yard: (s) => ({ stand: [...s.lots, s.pile, s.rest, [s.rest[0] + 0.8, s.rest[1]], ...s.lots.flatMap(([x, y]) => [[x - 0.85, y], [x + 0.85, y], [x - 1.05, y + 0.2], [x + 1.05, y + 0.2]])] }),
+  camp: (s) => ({ stand: [s.fire, s.pawn, s.monk] }),
   scare: (s) => ({ stand: [s.pawn, s.hide, s.gob], paths: [[s.gob, [s.pawn[0] + 1.1, s.pawn[1]]], [s.pawn, s.hide]] }),
 };
 const SKIT_FN = {
@@ -5775,6 +5997,11 @@ const SKIT_FN = {
   beach: (st) => skitBeach(st, BEACH),
   lumber: (st, s) => skitLumber(st, s),
   builders: (st, s) => skitBuilders(st, s),
+  flock: (st, s) => skitFlock(st, s),
+  range: (st, s) => skitRange(st, s),
+  spar: (st, s) => skitSpar(st, s),
+  yard: (st, s) => skitBuildYard(st, s),
+  camp: (st, s) => skitCamp(st, s),
 };
 // Запускаются, когда карта острова показана впервые
 const SKITS = {};
@@ -5814,11 +6041,13 @@ function boardSkits(terr, cellOv) {
     if ([..."SE"].some((ch) => map.some((row, yy) => [...row].some((cc, xx) => cc === ch && Math.abs(xx - x) <= 1 && Math.abs(yy - y) <= 1)))) continue;
     cand.push({ x, y, score: (floorNear(x, y, 1) ? 0 : 2) + (y === H - 1 ? 1 : 0) + ((x === 0 || x === W - 1) && y === H - 1 ? 1 : 0) });
   }
+  if (isleOf(L) === 1) boardDucks(st, terr, cellOv);              // на воде — утки (v188)
   if (!cand.length) return;
   // Остров рудокопов: шахтёр — у золотой глыбы в стене (слева или справа от него)
   const goldAt = (x, y) => /^gold[123]$/.test(cellOv[y]?.[x]?.dataset.kind || "");
   if (L.isle === 3) cand.forEach((c) => (c.gold = goldAt(c.x - 1, c.y) ? -1 : goldAt(c.x + 1, c.y) ? 1 : 0));
   cand.sort((a, b) => (b.gold ? 1 : 0) - (a.gold ? 1 : 0) || b.score - a.score || (b.y - a.y));
+  if (isleOf(L) === 1) return boardSkits1(st, cand, cellOv);
   // на маленьком поле — одна сценка, на большом — две (подальше друг от друга)
   const picks = [cand[0]];
   const far = cand.find((c) => Math.abs(c.x - cand[0].x) + Math.abs(c.y - cand[0].y) >= (isLong() ? 7 : 4));
@@ -5851,13 +6080,138 @@ function boardSkits(terr, cellOv) {
     }
   });
 }
+// --- Остров 1 (v188): жителей на поле больше, они разные и болеют за рыцаря ---
+// Поле «радуется», когда гоблин повержен и когда уровень пройден: овцы скачут, монах колдует, лучник пускает стрелу
+// в небо, копейщик вскидывает копьё, строитель стучит молотком, костёр вспыхивает.
+let boardCheerAt = 0;
+function boardCheer() { boardCheerAt = performance.now(); }
+// ждать ms — или пока на поле не случится радость (тогда true, с маленькой задержкой: радуются не хором)
+const skWaitCheer = async (st, ms) => {
+  const t0 = performance.now();
+  for (let t = ms; t > 0; t -= 200) { await skWait(st, 200); if (boardCheerAt > t0) { await skSleep(st, skRnd(0, 450)); return true; } }
+  return false;
+};
+// Кого поставить: по местности поля. Жители разные (на одном поле не повторяются), на большом поле их до четырёх.
+function boardSkits1(st, cand, cellOv) {
+  const want = W * H >= 60 ? 4 : W * H >= 28 ? 3 : 2, picks = [];
+  for (const c of cand) { if (picks.length >= want) break; if (picks.every((q) => Math.abs(q.x - c.x) + Math.abs(q.y - c.y) >= 3)) picks.push(c); }
+  let h = 3; for (const ch of L.name) h = (h * 17 + ch.charCodeAt(0)) % 9973;
+  const treeAt = (x, y) => /^tree/.test(cellOv[y]?.[x]?.dataset.kind || "");
+  const pool = { forest: ["camp", "sheep", "monk", "archer", "builder"], cave: ["picker", "camp", "monk", "lancer"],
+    mountain: ["lancer", "archer", "camp", "monk"] }[boardEl.dataset.theme] || ["sheep", "archer", "builder", "monk", "lancer"];
+  const used = new Set();
+  picks.forEach((c, i) => {
+    const tree = treeAt(c.x - 1, c.y) ? -1 : treeAt(c.x + 1, c.y) ? 1 : 0;
+    let kind = tree && !used.has("chop") && !(L.events || []).some((e) => e.kind === "fell") && !L.allies ? "chop" : "";
+    for (let k = 0; !kind && k < pool.length; k++) { const q = pool[(h + i + k) % pool.length]; if (!used.has(q)) kind = q; }
+    used.add(kind ||= "monk");
+    cellOv[c.y][c.x]?.remove();                    // дерево или камень в этой клетке убираем
+    cellOv[c.y][c.x] = null;
+    const x = c.x + 0.5, y = c.y + 0.92, left = c.x > W / 2;   // смотрят к середине поля
+    if (kind === "chop") {
+      const out = c.x === 0 ? [-1, 0] : c.x === W - 1 ? [1, 0] : c.y === H - 1 ? [0, 1] : [0, -1];
+      skRun(() => boardWoodcutter(st, c, tree, cellOv[c.y][c.x + tree], out));
+    } else skRun(() => ({ monk: boardMonk, sheep: boardSheep, archer: boardArcher, lancer: boardLancer, camp: boardCamp, builder: boardBuilder, picker: boardPicker })[kind](st, x, y, left));
+  });
+}
+// Лучник-дозорный: время от времени (и на радостях) пускает стрелу в небо
+async function boardArcher(st, x, y, left) {
+  const a = skActor(st, "archb", 0.75), ar = skActor(st, "arrowu", 0.75, 0.5);
+  a.at(x, y); a.face(left); a.show(true); a.play(0, 6, 150);
+  for (;;) {
+    const joy = await skWaitCheer(st, skRnd(8000, 16000));
+    for (let k = joy ? 2 : 1; k > 0; k--) {
+      a.play(2, 8, 80, false);
+      await skSleep(st, 430);
+      ar.at(x, y - 1.1); ar.show(true);
+      ar.move(x, y - 5.5, 520).then(() => ar.show(false));
+      await skSleep(st, 330);
+    }
+    a.play(0, 6, 150);
+  }
+}
+// Копейщик на посту: иногда встаёт в стойку, на радостях вскидывает копьё
+async function boardLancer(st, x, y, left) {
+  const l = skActor(st, "lidle", 0.6, 0.625);
+  l.at(x, y); l.face(left); l.show(true); l.play(0, 12, 110, true, "lidle");
+  for (;;) {
+    const joy = await skWaitCheer(st, skRnd(7000, 14000));
+    if (joy) for (let k = 0; k < 2; k++) await l.play(0, 3, 120, false, "luatk");
+    else await l.play(0, 6, 130, false, "lddef");
+    l.play(0, 12, 110, true, "lidle");
+  }
+}
+// Привал: костёр и житель у огня; на радостях огонь вспыхивает
+async function boardCamp(st, x, y, left) {
+  const f = skActor(st, "fire", 0.5, 0.82), p = skActor(st, "pidle", 0.72);
+  const d = left ? -1 : 1;
+  f.at(x + d * 0.24, y); f.show(true); f.play(0, 7, 110);
+  p.at(x - d * 0.24, y); p.face(left); p.show(true); p.play(0, 8, 130, true, "pidle");
+  for (;;) {
+    if (await skWaitCheer(st, 60000)) { f.play(0, 7, 45); await skSleep(st, 1600); f.play(0, 7, 110); }
+  }
+}
+// Строитель у поленницы: постукивает молотком
+async function boardBuilder(st, x, y, left) {
+  const w = skActor(st, "wood", 0.62, 0.8), p = skActor(st, "phidle", 0.72, 0.7);
+  const d = left ? -1 : 1;
+  w.at(x + d * 0.26, y); w.show(true);
+  p.at(x - d * 0.2, y); p.face(left); p.show(true); p.play(0, 8, 130, true, "phidle");
+  for (;;) {
+    const joy = await skWaitCheer(st, skRnd(4000, 9000));
+    p.play(0, 3, joy ? 110 : 150, true, "phammer");
+    await skWait(st, joy ? 1600 : skRnd(1800, 3200));
+    p.play(0, 8, 130, true, "phidle");
+  }
+}
+// Рудокоп в пещере: долбит стену у края поля
+async function boardPicker(st, x, y, left) {
+  const p = skActor(st, "pidle", 0.75);
+  p.at(x, y); p.face(!left); p.show(true); p.play(0, 8, 130, true, "pidle");   // лицом к стене, от поля
+  for (;;) {
+    const joy = await skWaitCheer(st, skRnd(2500, 6000));
+    if (joy) { p.face(left); p.play(0, 8, 130, true, "pidle"); await skSleep(st, 1500); p.face(!left); continue; }   // оглянулся на рыцаря
+    p.play(0, 6, 110, true, "ppick");
+    await skWait(st, skRnd(2600, 4600));
+    p.play(0, 8, 130, true, "pidle");
+  }
+}
+// Утки на воде поля: плавают туда-сюда по своему куску воды в ряду (клетки без камней; в одной клетке — покачивается на месте)
+function boardDucks(st, terr, cellOv) {
+  const runs = [];
+  for (let y = 0; y < H; y++) {
+    let x0 = -1;
+    for (let x = 0; x <= W; x++) {
+      const wet = x < W && terr[y]?.[x] === "water" && !cellOv[y]?.[x];
+      if (wet && x0 < 0) x0 = x;
+      if (!wet && x0 >= 0) { if (!(y === 0 && (isLong() || x0 < 1 || x > W - 1))) runs.push([y, x0, x - 1]); x0 = -1; }
+    }
+  }
+  if (!runs.length) return;
+  let h = 7; for (const ch of L.name) h = (h * 31 + ch.charCodeAt(0)) % 9973;
+  const n = runs.reduce((a, r) => a + r[2] - r[1] + 1, 0) >= 4 && runs.length > 1 ? 2 : 1;
+  runs.sort((p, q) => (q[2] - q[1]) - (p[2] - p[1]));          // сначала — где просторнее
+  const wide = runs.filter((r) => r[2] - r[1] === runs[0][2] - runs[0][1]);
+  for (let i = 0; i < n; i++) { const [y, a, b] = i ? runs[1 + (h % (runs.length - 1))] : wide[h % wide.length]; skRun(() => boardDuck(st, y + 0.62, a + 0.3, b + 0.7)); }
+}
+async function boardDuck(st, y, xa, xb) {
+  const d = skActor(st, "duck", 1.3, 0.7);
+  d.at(skRnd(xa, xb), y); d.show(true); d.play(0, 3, 240);
+  for (;;) {
+    await skWaitCheer(st, skRnd(2500, 7000));
+    const to = skRnd(xa, xb);
+    if (Math.abs(to - d.x) < 0.12) continue;
+    d.face(to > d.x);                                  // утка в наборе смотрит влево
+    await d.move(to, y, Math.abs(to - d.x) * 1500);
+  }
+}
 // Монах в углу иногда колдует: свечение над ним
 async function boardMonk(st, x, y, left) {
   const m = skActor(st, "monk", 0.75), fx = skActor(st, "healfx", 0.75);
   m.at(x, y); m.face(left); m.show(true); m.play(0, 6, 150, true, "monk");
   fx.at(x, y);
   for (;;) {
-    await skWait(st, skRnd(6000, 12000));
+    await skWaitCheer(st, skRnd(6000, 12000));
     fx.show(true); fx.play(0, 11, 90, true, "healfx");
     await m.play(0, 11, 90, false, "heal");
     fx.show(false);
@@ -5980,8 +6334,8 @@ async function boardSheep(st, x, y, left) {
   const s = skActor(st, "sheepb", 0.85, 0.6);
   s.at(x, y); s.face(left); s.show(true); s.frame(0, 0);
   for (;;) {
-    await skWait(st, skRnd(3500, 8000));
-    for (let k = 0; k < 2; k++) await s.play(0, 6, 90, false);
+    const joy = await skWaitCheer(st, skRnd(3500, 8000));
+    for (let k = 0; k < (joy ? 4 : 2); k++) await s.play(0, 6, joy ? 70 : 90, false);
     s.frame(0, 0);
   }
 }
@@ -9374,7 +9728,7 @@ async function run() {
             sk.style.animation = "spr7 0.7s steps(7) 1";
             e.el.parentNode.appendChild(sk);
             setTimeout(() => { sk.style.animation = "none"; sk.style.backgroundPosition = "100% 0"; }, 700);
-            sfx("gobdie");
+            sfx("gobdie"); boardCheer();
           }
         }
         await wait(220);
@@ -9414,7 +9768,7 @@ async function run() {
         if (L.maps && await nextVariant()) return;
         if (L.maps) setStatus(tr("Победа! Одна программа прошла {n} {w} поля", { n: L.maps.length, w: plural(L.maps.length, "вариант", "варианта", "вариантов") }), "win");
         else setStatus("Победа! Гоблин побеждён", "win");
-        sfx("win");
+        sfx("win"); boardCheer();
         finish();
         return win();
       }
@@ -9529,7 +9883,7 @@ async function run() {
           if (await nextVariant()) return;
           setStatus(tr("Победа! Одна программа прошла {n} {w} поля", { n: L.maps.length, w: plural(L.maps.length, "вариант", "варианта", "вариантов") }), "win");
         } else setStatus(tr("Победа! {n} {w} пройдено", { n: walkedTotal, w: cellsWord(walkedTotal) }), "win");
-        sfx("win");
+        sfx("win"); boardCheer();
         finish();
         return win();
       }
@@ -11124,9 +11478,26 @@ const MAP_SND = {
   pick:   { gap: 220, synth: (bus) => { noise({ dur: 0.03, vol: 0.35, freq: 4200, bus }); note(1900 + Math.random() * 300, { dur: 0.09, vol: 0.14, type: "sine", bus }); note(300, { dur: 0.05, vol: 0.2, slideTo: 200, bus }); } },
   splash: { gap: 400, synth: (bus) => { noise({ dur: 0.32, vol: 0.5, freq: 1400, bus }); noise({ dur: 0.5, vol: 0.3, freq: 600, at: 0.05, bus }); } },
   thud:   { gap: 300, synth: (bus) => { noise({ dur: 0.1, vol: 0.4, freq: 300, bus }); note(120, { dur: 0.16, vol: 0.4, slideTo: 70, bus }); } },
+  // стрела воткнулась в чучело, мечи звякнули на тренировке (тихо, только рядом), костёр потрескивает
+  thunk:  { gap: 250, synth: (bus) => { noise({ dur: 0.04, vol: 0.4, freq: 500, bus }); note(150, { dur: 0.06, vol: 0.25, slideTo: 100, bus }); } },
+  clang:  { gap: 300, file: "sword-hit.mp3", vol: 0.26, load: 0.5 },
+  shot:   { gap: 280, file: "arrow-swish.mp3", vol: 0.26, load: 0.5 },
+  crackle: { gap: 900, load: 0.2, synth: (bus) => { for (let i = 0; i < 3; i++) noise({ dur: 0.02, vol: 0.16 + Math.random() * 0.1, freq: 2600 + Math.random() * 2400, at: Math.random() * 0.4, bus }); } },
   heal:   { gap: 1500, synth: (bus) => [784, 988, 1175, 1568].forEach((f, i) => note(f, { dur: 0.3, vol: 0.12, type: "sine", at: i * 0.09, bus })) },
 };
 const mapSndLast = {}, mapSndTimes = [];
+// Общая громкость звуков карты — по нагрузке: чем больше всего звучит разом (бой, топоры, утки, взрывы),
+// тем тише каждый звук, так что вместе они не громче одного-двух. mapLoad — «сколько звуков полной громкости
+// прозвучало за последние полторы секунды» (тает само); громкость общей ручки mapBus = 1,5 / (1 + нагрузка), не больше 1.
+let mapBus = null, mapLoad = 0, mapLoadAt = 0;
+function mapDuck(add) {
+  const t = performance.now();
+  mapLoad = mapLoad * Math.exp(-(t - mapLoadAt) / 1500) + add; mapLoadAt = t;
+  if (!mapBus) { mapBus = actx.createGain(); mapBus.connect(sfxBus); }
+  const want = Math.min(1, 1.5 / (1 + mapLoad));
+  try { mapBus.gain.setTargetAtTime(want, actx.currentTime, 0.12); } catch (e) { mapBus.gain.value = want; }
+  return want;
+}
 let mapSndCount = {};                                   // сколько раз что прозвучало (для проверки)
 // Где на карте стоит рыцарь (в клетках); на чужом острове (смотрим архипелаг) — середина того, что видно на экране
 function mapEar(wrap) {
@@ -11158,7 +11529,8 @@ function mapSfx(stage, name, x, y) {
     lp.type = "lowpass"; lp.frequency.value = 700 + 11000 * v * v;
     g.gain.value = v * (S.vol || 1) * 0.9;
     lp.connect(g);
-    if (actx.createStereoPanner) { const p = actx.createStereoPanner(); p.pan.value = pan; g.connect(p).connect(sfxBus); } else g.connect(sfxBus);
+    mapDuck(v * (S.load || 1));                         // общая ручка: чем больше звучит, тем тише все
+    if (actx.createStereoPanner) { const p = actx.createStereoPanner(); p.pan.value = pan; g.connect(p).connect(mapBus); } else g.connect(mapBus);
     if (buf) { const s = actx.createBufferSource(); s.buffer = buf; s.playbackRate.value = 0.93 + Math.random() * 0.14; s.connect(lp); s.start(); }
     else S.synth(lp);
     setTimeout(() => { try { g.disconnect(); } catch (e) {} }, 2500);
@@ -12070,10 +12442,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 186;
+const APP_VERSION = 187;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 187, date: "2026-11-18", text: "Остров программистов ожил. На карте: овцы и пастух (овцу можно тронуть!), стройка у замка, лучник стреляет по чучелу, воин и копейщик учатся биться, в лесу — костёр и лесоруб. На уровнях: больше жителей, утки на воде, и все радуются твоей победе. Когда звуков много, они сами становятся тише", en: "Programmers’ Island has come alive. On the map: sheep and a shepherd (try poking a sheep!), a building site by the castle, an archer shooting at a scarecrow, a warrior and a lancer sparring, a campfire and a lumberjack in the forest. On the levels: more villagers, ducks on the water, and everyone cheers when you win. When many sounds play at once, they get quieter on their own", big: true },
   { v: 186, date: "2026-11-18", text: "Копейщик отбивает динамит одним взмахом копья — больше не машет по воздуху", en: "The lancer knocks dynamite back with one swing — no more extra jabs at the air" },
   { v: 185, date: "2026-11-18", text: "Новая глава на Острове гоблинов — «Обстрел»: идёт копейщик. Подрывник кидает в него динамит, а копьё 🔱 отбивает его обратно", en: "A new chapter on Goblin Island — “Under Fire”: you lead a lancer. The bomber throws dynamite at him, and the spear 🔱 knocks it back", big: true },
   { v: 184, date: "2026-11-18", text: "Бой у моста: отбитый копейщиком динамит теперь хорошо видно — вспышка, дымный след и большой взрыв", en: "The fight at the bridge: dynamite knocked away by a lancer is now easy to see — a flash, a smoke trail and a big explosion" },

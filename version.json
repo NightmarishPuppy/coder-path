@@ -1,13 +1,13 @@
 {
- "version": 186,
+ "version": 187,
  "date": "2026-11-18",
  "notes": [
-  "Копейщик отбивает динамит одним взмахом копья — больше не машет по воздуху"
+  "Остров программистов ожил. На карте: овцы и пастух (овцу можно тронуть!), стройка у замка, лучник стреляет по чучелу, воин и копейщик учатся биться, в лесу — костёр и лесоруб. На уровнях: больше жителей, утки на воде, и все радуются твоей победе. Когда звуков много, они сами становятся тише"
  ],
  "files": {
   "index.html": {
-   "size": 915751,
-   "hash": "0fde74d89ee78ff9"
+   "size": 942354,
+   "hash": "291022d1338c0310"
   },
   "art.js": {
    "size": 841991,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "699bbb69ccb321da"
+   "hash": "830fcf9d90f0d5aa"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 45994,
-   "hash": "fd38d62bbecfedb1"
+   "size": 45969,
+   "hash": "d1ee169d0943d47f"
   },
   "isle2.js": {
    "size": 57134,
@@ -98,8 +98,8 @@
    "hash": "7620009dd6d7f45a"
   },
   "art-scenes.js": {
-   "size": 831208,
-   "hash": "fa6407c5bac9a85f"
+   "size": 908333,
+   "hash": "376f9aea278d4b4d"
   },
   "art-isle2.js": {
    "size": 80017,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The lancer knocks dynamite back with one swing — no more extra jabs at the air"
+  "Programmers’ Island has come alive. On the map: sheep and a shepherd (try poking a sheep!), a building site by the castle, an archer shooting at a scarecrow, a warrior and a lancer sparring, a campfire and a lumberjack in the forest. On the levels: more villagers, ducks on the water, and everyone cheers when you win. When many sounds play at once, they get quieter on their own"
  ]
 }
