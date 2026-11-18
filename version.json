@@ -1,13 +1,13 @@
 {
- "version": 202,
+ "version": 203,
  "date": "2026-11-19",
  "notes": [
-  "На планшете и компьютере в Python и JavaScript кнопка «Запустить» теперь видна рядом с полем: длинное задание встаёт под поле"
+  "На планшете в Python и JavaScript кнопка «Запустить» остаётся на экране и когда выбрана строка"
  ],
  "files": {
   "index.html": {
-   "size": 990463,
-   "hash": "be62d5f9e1f5aa28"
+   "size": 991037,
+   "hash": "13715734ef05224a"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "2ef682a8bd405a7c"
+   "hash": "97b1b3bfcbb2dfa3"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "On tablets and computers in Python and JavaScript the “Run” button now stays next to the field: a long task moves under the field"
+  "On tablets in Python and JavaScript the “Run” button stays on screen when a line is selected too"
  ]
 }

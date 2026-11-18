@@ -9495,12 +9495,14 @@ function briefSide() {
   if (key === briefKey) return;
   briefKey = key;
   const right = $("blocks").parentElement, left = boardEl.closest(".col"), runEl = $("run");
-  const below = (el) => Math.max(0, el.getBoundingClientRect().bottom + scrollY - innerHeight);
+  const below = (el, more = 0) => Math.max(0, el.getBoundingClientRect().bottom + scrollY + more - innerHeight);
+  // в Python / JavaScript над кнопками открывается панель выбранной строки (~180 px) — «Запустить» должна помещаться и с ней
+  const spare = uiBlocks ? 0 : 180;
   const put = (toLeft, slim) => { fieldSlim = slim; deskCols(); if (toLeft) $("statusslot").after(brief); else right.prepend(brief); };
   let best = null;
   for (const toLeft of [false, true]) for (const slim of [false, true]) {
     put(toLeft, slim);
-    const cost = 3 * below(runEl) + 2 * below(brief) + 0.2 * Math.max(below(left), below(right)) + (toLeft ? 30 : 0) + (slim ? 20 : 0);
+    const cost = 3 * below(runEl, spare) + 2 * below(brief) + 0.2 * Math.max(below(left), below(right)) + (toLeft ? 30 : 0) + (slim ? 20 : 0);
     if (!best || cost < best.cost) best = { cost, toLeft, slim };
     if (cost === 0) break;
   }
@@ -12983,10 +12985,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 202;
+const APP_VERSION = 203;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 203, date: "2026-11-19", text: "На планшете в Python и JavaScript кнопка «Запустить» остаётся на экране и когда выбрана строка", en: "On tablets in Python and JavaScript the “Run” button stays on screen when a line is selected too" },
   { v: 202, date: "2026-11-19", text: "На планшете и компьютере в Python и JavaScript кнопка «Запустить» теперь видна рядом с полем: длинное задание встаёт под поле", en: "On tablets and computers in Python and JavaScript the “Run” button now stays next to the field: a long task moves under the field" },
   { v: 201, date: "2026-11-19", text: "На планшете и компьютере поле уровня стало крупнее", en: "On tablets and computers the level field is bigger" },
   { v: 200, date: "2026-11-18", text: "На планшете и компьютере задание теперь стоит справа, над программой, поле стало крупнее, а окошко победы появляется там же — без прокрутки", en: "On tablets and computers the task now sits on the right, above your program; the field is bigger, and the win box appears in the same place — no scrolling", big: true },
