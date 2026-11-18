@@ -1,13 +1,13 @@
 {
- "version": 194,
+ "version": 195,
  "date": "2026-11-18",
  "notes": [
-  "На уровнях Острова программистов появились живые подсказки: утка или житель рядом с дорогой делают то же, что нужно рыцарю, — над ними команда и счёт шагов"
+  "Не знаешь, что делать? Подожди 15 секунд — на первых уровнях появится призрак героя и покажет, как пройти, а рядом будет его программа"
  ],
  "files": {
   "index.html": {
-   "size": 967563,
-   "hash": "e821788864c48db3"
+   "size": 974160,
+   "hash": "8c0a3b7273e4ab87"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "d507439c78229665"
+   "hash": "db3c3c9090c0eebd"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 45969,
-   "hash": "12192b1f8c3c2e5e"
+   "size": 47231,
+   "hash": "63643aa45bb85eeb"
   },
   "isle2.js": {
    "size": 57134,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Levels on Programmers’ Island now have living hints: a duck or a villager next to the road does what the knight needs to do, with the command and a step count above them"
+  "Not sure what to do? Wait 15 seconds — on the first levels a ghost of your hero appears and shows the way, with its program right beside it"
  ]
 }

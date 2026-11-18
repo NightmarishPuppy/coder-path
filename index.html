@@ -481,6 +481,15 @@ html.still .route .fight .sw { animation: none; }
   transition: transform calc(0.22s * var(--tm, 1.6)) ease-in-out;   /* --tm: медленнее/быстрее по кнопкам скорости */
   z-index: 2;
 }
+/* призрак-подсказка (v195): полупрозрачная голубоватая копия героя, мерцает; код рядом стоит на месте, текущая строка горит */
+.hero.ghost { z-index: 3; pointer-events: none; opacity: 0; transition: transform 0.42s linear, opacity 0.6s; filter: brightness(1.3) saturate(0.5) drop-shadow(0 0 6px #7fe3ff) drop-shadow(0 0 3px #7fe3ff) drop-shadow(0 0 1px #fff); }
+.hero.ghost.show { opacity: 0.78; animation: ghostpulse 1.6s ease-in-out infinite; }
+@keyframes ghostpulse { 50% { opacity: 0.55; } }
+.cbub.ghostcode { position: absolute; left: auto; top: auto; transform: none; animation: none; opacity: 0; transition: opacity 0.6s; text-align: left; padding: 5px 6px; z-index: 9; pointer-events: none; }
+.cbub.ghostcode.show { opacity: 0.94; }
+.cbub.ghostcode .gl { display: block; padding: 1px 5px 1px 3px; border-radius: 5px; border-left: 3px solid transparent; }
+.cbub.ghostcode .gl.on { background: rgba(255, 211, 90, 0.28); border-left-color: #ffd35a; }
+.cbub.ghostcode .gl.done { opacity: 0.55; }
 /* рыцарь: kwrap — для разворота и "отскока" от стены, внутри два спрайта: стоит и бежит */
 .hero .kwrap { position: absolute; inset: 0; }
 .hero .k-run { display: none; }
@@ -6200,6 +6209,7 @@ function boardSkits(terr, cellOv) {
     if ([..."SE"].some((ch) => map.some((row, yy) => [...row].some((cc, xx) => cc === ch && Math.abs(xx - x) <= 1 && Math.abs(yy - y) <= 1)))) continue;
     cand.push({ x, y, score: (floorNear(x, y, 1) ? 0 : 2) + (y === H - 1 ? 1 : 0) + ((x === 0 || x === W - 1) && y === H - 1 ? 1 : 0) });
   }
+  ghostStop(true); ghostIdleAt = performance.now();           // новое поле — призрак-подсказка ждёт свои 15 секунд заново
   // живая подсказка (v194): утка или житель рядом с дорогой делают то же, что нужно рыцарю, — и над ними код
   boardEl.dataset.demo = "";
   const demo = isleOf(L) === 1 && !L.challenge ? boardDemo(st, terr, cellOv, wall) : new Set();
@@ -6356,6 +6366,76 @@ function boardSparkle(st, cellOv) {
       await skWait(st, skRnd(3500, 9000));
     }
   }));
+}
+// ===== Призрак-подсказка (v195) =====
+// Игрок 15 секунд ничего не делал — на поле проявляется призрак его героя (тот же, кто идёт: рыцарь, работник, монах…)
+// и проходит уровень, а рядом стоит вся программа, и в ней горит строка, которую призрак сейчас выполняет.
+// Любое действие игрока (нажатие, клавиша, прокрутка) — призрак и код плавно тают; ещё 15 секунд тишины — появятся снова.
+// Программа — поле уровня hint (у уровней с выбором роли — hints по ролям): эталонное решение, вписывает tools/hints.py.
+// Только простые программы (шаги, удар, дело — по строке на команду); на пройденных уровнях и на испытаниях призрака нет.
+const GHOST_IDLE = 15000;
+let ghostIdleAt = performance.now(), ghost = null;
+const ghostHint = () => (L.hints && L.hints[L.skin || "fight"]) || L.hint || "";
+function ghostStop(now) {
+  if (!ghost) return;
+  const g = ghost;
+  ghost = null; g.off = true;
+  g.el.classList.remove("show"); g.panel.classList.remove("show");
+  setTimeout(() => { g.el.remove(); g.panel.remove(); }, now ? 0 : 700);
+}
+function ghostPoke() { ghostIdleAt = performance.now(); ghostStop(); }
+for (const ev of ["pointerdown", "keydown", "wheel", "touchmove", "input"]) document.addEventListener(ev, ghostPoke, { capture: true, passive: true });
+setInterval(() => {
+  if (ghost || running || STILL || $("levelview").hidden || document.hidden || performance.now() - ghostIdleAt < GHOST_IDLE) return;
+  if (!ghostHint() || L.challenge || save.stars[L.name] > 0 || !heroEl || !heroEl.isConnected) return;
+  ghostStart();
+}, 500);
+async function ghostStart() {
+  const items = ghostHint().split("\n").filter((ln) => ln.trim() && !/^\s*#/.test(ln)).map((ln) => { const m = /^(\w+)\((\d*)\)$/.exec(ln.trim()), k = m && Object.keys(DIRS).find((k) => DIRS[k].py === m[1]); return k ? ["cmd", k, +m[2] || 1] : null; });
+  if (!items.length || items.some((it) => !it)) return;
+  const el = heroEl.cloneNode(true), panel = document.createElement("div"), g = { el, panel };
+  el.className = "hero ghost";
+  el.querySelectorAll(".hearts, .hp, .herohp").forEach((e) => e.remove());
+  panel.className = "cbub skc ghostcode" + (uiBlocks ? " tiles" : "");
+  panel.innerHTML = items.map((it) => `<span class="gl">${skCodeHtml([it])}</span>`).join("");
+  panel.style.fontSize = Math.min(14, Math.max(10, boardEl.clientWidth / W * 0.26)) * (uiBlocks ? 1.3 : 1) + "px";
+  // код — в том углу поля, который дальше всего от дороги призрака
+  const cells = [{ ...start }];
+  for (const [, k, n] of items) if (!isHit(k)) for (let j = 0; j < n; j++) { const c = cells[cells.length - 1]; cells.push({ x: c.x + DIRS[k].dx, y: c.y + DIRS[k].dy }); }
+  const corner = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([cx, cy]) => ({ cx, cy, d: Math.min(...cells.map((c) => Math.abs(c.x - cx * (W - 1)) / W + Math.abs(c.y - cy * (H - 1)) / H)) })).sort((a, b) => b.d - a.d)[0];
+  panel.style[corner.cx ? "right" : "left"] = "5px"; panel.style[corner.cy ? "bottom" : "top"] = "5px";
+  boardEl.append(el, panel);
+  ghost = g;
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms)), lines = [...panel.children];
+  const put = (c) => (el.style.transform = `translate(${c.x * 100}%, ${c.y * 100}%)`);
+  while (!g.off) {
+    let pos = { ...start };
+    el.style.transition = "none"; put(pos); el.classList.remove("flip", "run", "atk"); void el.offsetWidth; el.style.transition = "";
+    lines.forEach((l) => (l.className = "gl"));
+    el.classList.add("show"); panel.classList.add("show");
+    await pause(1100);
+    for (let i = 0; i < items.length && !g.off; i++) {
+      const [, k, n] = items[i];
+      lines[i].className = "gl on";
+      for (let j = 0; j < n && !g.off; j++) {
+        if (isHit(k)) { el.classList.add("atk"); await pause(430); el.classList.remove("atk"); await pause(200); }
+        else {
+          if (DIRS[k].dx) el.classList.toggle("flip", DIRS[k].dx < 0);
+          pos = { x: pos.x + DIRS[k].dx, y: pos.y + DIRS[k].dy };
+          el.classList.add("run"); put(pos);
+          await pause(430);
+          el.classList.remove("run");
+          await pause(110);
+        }
+      }
+      await pause(260);
+      lines[i].className = "gl done";
+    }
+    if (g.off) return;
+    await pause(1600);
+    el.classList.remove("show");                      // дошёл — растаял; код остаётся, через паузу всё с начала
+    await pause(1500);
+  }
 }
 // ===== Живые подсказки на поле уровня (v194) =====
 // Рядом с дорогой рыцаря кто-нибудь делает то же, что нужно ему: утка плывёт (если рядом вода) или житель идёт (по земле)
@@ -12744,10 +12824,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 194;
+const APP_VERSION = 195;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 195, date: "2026-11-18", text: "Не знаешь, что делать? Подожди 15 секунд — на первых уровнях появится призрак героя и покажет, как пройти, а рядом будет его программа", en: "Not sure what to do? Wait 15 seconds — on the first levels a ghost of your hero appears and shows the way, with its program right beside it", big: true },
   { v: 194, date: "2026-11-18", text: "На уровнях Острова программистов появились живые подсказки: утка или житель рядом с дорогой делают то же, что нужно рыцарю, — над ними команда и счёт шагов", en: "Levels on Programmers’ Island now have living hints: a duck or a villager next to the road does what the knight needs to do, with the command and a step count above them", big: true },
   { v: 193, date: "2026-11-18", text: "Над жителями Острова программистов всплывает их код: лесоруб, строитель, лучник, копейщик и другие работают по своим программам", en: "Code now pops up above the villagers of Programmers’ Island: the lumberjack, the builder, the archer, the lancer and others all follow their own programs", big: true },
   { v: 192, date: "2026-11-18", text: "Житель у костра в лесу больше не стоит на самом краю скалы", en: "The villager by the forest campfire no longer stands on the very edge of the cliff" },

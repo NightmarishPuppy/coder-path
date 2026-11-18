@@ -9,6 +9,7 @@ levels: [
   {
     name: "Первый удар",
     chapter: 0,
+    hint: "attack()",
     slay: true, first: true,
     goal: "Гоблин стащил монеты! Нажми [[btn:attack]], потом <b>Запустить</b> — рыцарь ударит гоблина. Кнопка — это команда рыцарю.",
     en: {
@@ -27,6 +28,7 @@ levels: [
   {
     name: "Первые шаги",
     chapter: 0,
+    hint: "move_right(4)",
     after: "Первый удар",
     goal: "Теперь рыцарю нужно к двери. Нажми кнопку <b>→ moveRight</b> под кодом: в коде появится команда. Потом нажми <b>Запустить</b>. Одна команда — один шаг. Хочешь ★★★? Нажми цифру 4: команда станет <code>moveRight(4)</code>, четыре шага сразу.",
     block: "Теперь рыцарю нужно к двери. Нажми стрелку <b>→</b>: появится плитка — это один шаг. Потом нажми <b>Запустить</b>. Хочешь ★★★? Нажми цифру <b>4</b>: плитка станет <b>→4</b>, четыре шага сразу.",
@@ -47,6 +49,7 @@ levels: [
   {
     name: "Поворот",
     chapter: 0,
+    hint: "move_right(3)\nmove_down(3)",
     after: "Первые шаги",
     goal: "Новая команда <b>moveDown()</b>. Код уже написан, но рыцарь не доходит одну клетку. Клавиатура не нужна: нажми на номер строки <b>2</b> слева от кода, он станет оранжевым. Потом нажми цифру <b>3</b> и «Запустить».",
     block: "Новая стрелка <b>↓</b>. Плитки уже лежат, но рыцарь не доходит одну клетку. Нажми на плитку <b>↓2</b>, потом цифру <b>3</b> и «Запустить».",
@@ -69,6 +72,8 @@ levels: [
   {
     name: "Подвал",
     chapter: 0,
+    hint: "move_right(2)\nmove_down(2)\nattack()\nmove_right(2)\nmove_down(2)\nmove_right(2)",
+    hints: {"fight": "move_right(2)\nmove_down(2)\nattack()\nmove_right(2)\nmove_down(2)\nmove_right(2)", "work": "move_right(2)\nmove_down(2)\nwork()\nmove_right(2)\nmove_down(2)\nmove_right(2)", "monk": "move_right(2)\nmove_down(2)\nmove_right(2)\nmove_down()\nmove_right(2)\nmove_down()"},
     after: "Поворот",
     goal: "Доведи рыцаря до двери сам. Помни: в скобках можно написать число шагов, <code>moveRight(3)</code> — три клетки вправо.",
     block: "Доведи рыцаря до двери сам. Цифра на плитке — сколько шагов: <b>→3</b> — три клетки вправо. Цифры на поле подскажут, сколько нужно.",
@@ -101,6 +106,7 @@ levels: [
   {
     name: "Змейка",
     chapter: 0,
+    hint: "move_up(4)\nmove_right(2)\nmove_down(3)\nmove_right(2)\nmove_up(3)\nmove_right(2)\nmove_down(4)",
     after: "Поворот",
     goal: "Новые команды: <b>moveUp()</b> и <b>moveLeft()</b>. Здесь вниз до двери не пройти, придётся петлять.",
     block: "Новые стрелки: [[btn:moveUp]] и [[btn:moveLeft]]. Здесь вниз до двери не пройти — придётся петлять.",
@@ -124,6 +130,8 @@ levels: [
   {
     name: "Спираль",
     chapter: 0,
+    hint: "move_right(6)\nmove_down(6)\nmove_left(6)\nmove_up(4)\nmove_right(4)\nmove_down(2)\nattack()\nmove_left(2)",
+    hints: {"fight": "move_right(6)\nmove_down(6)\nmove_left(6)\nmove_up(4)\nmove_right(4)\nmove_down(2)\nattack()\nmove_left(2)", "work": "move_right(6)\nmove_down(6)\nmove_left(6)\nmove_up(4)\nmove_right(4)\nmove_down(2)\nwork()\nmove_left(2)", "monk": "move_right(6)\nmove_down(6)\nmove_left(5)\nmove_up()\nmove_left()\nmove_up(3)\nmove_right(4)\nmove_down(2)\nmove_left(2)"},
     after: "Поворот",
     goal: "Дверь в самой середине. Обойди стены по кругу.",
     en: {
@@ -154,6 +162,7 @@ levels: [
   {
     name: "Развилка",
     chapter: 0,
+    hint: "move_right(5)\nmove_down(2)\nmove_right()\nmove_down(2)",
     after: "Поворот",
     goal: "К двери ведут два пути. Найди короткий: за длинный дадут меньше звёзд.",
     en: {
@@ -174,6 +183,7 @@ levels: [
   {
     name: "Починка",
     chapter: 0,
+    hint: "# Здесь одна ошибка\nmove_right(3)\nmove_down(2)\nmove_right(3)\nmove_down(2)",
     after: "Поворот",
     bug: true,
     goal: "Код уже написан, но в одной строке ошибка. Нажми «Запустить» и посмотри, где рыцарь остановится: эта строка подсветится. Потом нажми на её номер и поправь число кнопками.",
