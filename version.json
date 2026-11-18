@@ -1,13 +1,13 @@
 {
- "version": 192,
+ "version": 193,
  "date": "2026-11-18",
  "notes": [
-  "Житель у костра в лесу больше не стоит на самом краю скалы"
+  "Над жителями Острова программистов всплывает их код: лесоруб, строитель, лучник, копейщик и другие работают по своим программам"
  ],
  "files": {
   "index.html": {
-   "size": 948582,
-   "hash": "771f3e17de63cae9"
+   "size": 956665,
+   "hash": "40fc3d5a77a4d506"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "2898a72a10e0e3bd"
+   "hash": "3b7fa0a9f442a2ed"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The villager by the forest campfire no longer stands on the very edge of the cliff"
+  "Code now pops up above the villagers of Programmers’ Island: the lumberjack, the builder, the archer, the lancer and others all follow their own programs"
  ]
 }

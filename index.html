@@ -4673,6 +4673,10 @@ function skTick(t) {
     const an = a.anim;
     if (!an) continue;
     let f = Math.floor((t - an.t0) / an.ms);
+    if (a.code && t - (a.said || 0) > 4300) {     // житель с «программой»: над ним всплывает её код (v193)
+      const c = SK_CODE[a.key + ":" + an.row] || SK_CODE[a.key];
+      if (c) skSay(a.stage, a, c);
+    }
     if (an.snd) {                                  // кадр со звуком: раз за каждый проход анимации
       const cyc = an.loop ? Math.floor(f / an.n) : 0;
       if (cyc !== an.cyc && (f % an.n >= an.snd[0] || f >= an.n)) { an.cyc = cyc; mapSfx(a.stage, an.snd[1], a.x, a.y); }
@@ -4806,6 +4810,7 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes, guard }) {
   const dusts = [0, 1, 2].map(() => skActor(st, "dust", 1.5, 0.6));
   for (const d of ducks) d.air = skActor(st, "duckair", 1.4, 0.5);
   const G = guard ? { a: skActor(st, "lidle", 0.8, 0.625), skull: skActor(st, "dead", 0.6), state: "off", next: 0 } : null;
+  if (G) G.a.code = true;                                        // отбивает динамит — над ним команда «копьё»
   if (G) G.skull.mute = true;                                   // вскрик гоблина тут не к месту
   tnt.at(tx, ty); tnt.show(true); tnt.play(0, 6, 130); tnt.face(true);
   const E = ISLE_ENG[1];
@@ -5015,6 +5020,7 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes, guard }) {
 // (масштаб 0.85) и на уровне ног, поэтому камень стоит центром в этой точке.
 async function skitMiner(st, { at: [x, y], left }) {
   const p = skActor(st, "ppick", 0.85);
+  p.code = true;
   p.at(x, y); p.face(!!left); p.show(true); p.play(0, 6, 120, true, "ppick");
 }
 // Гоблин-подрывник на берегу швыряет динамит в море — бабах в воде
@@ -5045,6 +5051,92 @@ async function skitBarrel(st, [x, y]) {
     for (let t = skRnd(900, 2600); t > 0 && !skHeroNear(st, x, y, 3); t -= 150) await sleep(150);   // подошёл рыцарь — сразу прячется
     await b.play(3, 6, skHeroNear(st, x, y, 3) ? 70 : 150, false);
     b.frame(0, 0);
+  }
+}
+// ===== Код над сценками карты (v193) =====
+// Над некоторыми жителями карты всплывает их «программа» — теми же словами, что пишет игрок: в блоках значки плиток,
+// в Python и JavaScript — строчки кода (как пузыри над бойцами в бою у моста). Какая анимация что «говорит» — таблица
+// SK_CODE («лист» или «лист:ряд» → строки программы); говорит только актёр с пометкой a.code = true, не чаще раза в 4,3 с.
+// Строка: ["loop"] — «повторяй», ["if", условие] — «если», ["cmd", команда, число] — команда (из DIRS) или shoot.
+const SK_CODE = {
+  pchop: [["loop"], ["cmd", "work"]], phammer: [["loop"], ["cmd", "work"]], ppick: [["loop"], ["cmd", "work"]],
+  "kwar:2": [["cmd", "attack"]], "kwar:3": [["cmd", "attack"]], lrdef: [["cmd", "parry"]], luratk: [["cmd", "parry"]],
+  "archb:4": [["cmd", "shoot"]], "archb:2": [["cmd", "shoot"]], heal: [["cmd", "heal"]],
+};
+const SK_COND = { enemy_near: ["enemyNear", "❓"] };
+function skCodeHtml(code) {
+  const mode = uiBlocks ? "blocks" : lang, js = mode === "js";
+  const icon = (c) => c === "shoot" ? "🏹" : DIRS[c].arrow, name = (c) => c === "shoot" ? "shoot" : js ? c : DIRS[c].py;
+  if (mode === "blocks")
+    return code.map(([k, c, n]) => k === "loop" ? "<i>🔁</i>" : k === "if" ? `<b>${SK_COND[c][1]}</b>` : `<em>${icon(c)}${n > 1 ? `<small>${n}</small>` : ""}</em>`).join(" ");
+  let pad = "";
+  const out = [];
+  for (const [k, c, n] of code) {
+    if (k === "loop") { out.push(pad + (js ? "<i>while</i> (true) {" : "<i>while</i> True:")); pad += "&nbsp;&nbsp;"; }
+    else if (k === "if") { out.push(pad + (js ? `<i>if</i> (<b>${SK_COND[c][0]}()</b>) {` : `<i>if</i> <b>${c}()</b>:`)); pad += "&nbsp;&nbsp;"; }
+    else out.push(pad + `<em>${name(c)}(${n > 1 ? n : ""})</em>` + (js ? ";" : ""));
+  }
+  if (js) for (let d = pad.length / 12; d > 0; d--) out.push("&nbsp;&nbsp;".repeat(d - 1) + "}");
+  return out.join("<br>");
+}
+// Пузырь с кодом над актёром (или над точкой { x, y }). ms — сколько висит.
+function skSay(st, a, code, ms = 2600) {
+  if (!st.ear || STILL || st.layer.querySelectorAll(".cbub.skc").length >= 6) return;
+  a.said = performance.now();
+  const el = document.createElement("span"), tiles = uiBlocks, W = st.layer.clientWidth;
+  el.className = "cbub skc" + (tiles ? " tiles" : "");
+  el.innerHTML = skCodeHtml(code);
+  el.style.fontSize = Math.min(15, Math.max(10, W / 18 * 0.4)) * (tiles ? 1.3 : 1) + "px";
+  el.style.textAlign = "left"; el.style.animationDuration = ms + "ms"; el.style.zIndex = 9999;
+  const [l, t] = st.pos(a.x, a.y - (a.high || 1.05));
+  el.style.left = l + "%"; el.style.top = t + "%";
+  st.layer.appendChild(el);
+  const bw = el.offsetWidth;                         // у края карты пузырь сдвигается внутрь — целиком на виду
+  el.style.left = Math.min(W - bw / 2 - 3, Math.max(bw / 2 + 3, l / 100 * W)) + "px";
+  setTimeout(() => el.remove(), ms);
+}
+// «Иду на n клеток»: команда шага в сторону движения
+const skSayMove = (st, a, to) => {
+  const dx = to[0] - a.x, dy = to[1] - a.y, n = Math.max(1, Math.round(Math.hypot(dx, dy)));
+  skSay(st, a, [["cmd", Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? "moveRight" : "moveLeft") : (dy > 0 ? "moveDown" : "moveUp"), n]]);
+};
+// Дозорный ходит туда-сюда по своей тропке — и над ним вся его программа: повторяй { шаги туда, шаги обратно }
+async function skitPatrol(st, { lane: [p0, p1] }) {
+  const l = skActor(st, "lidle", 0.8, 0.625);
+  const n = Math.max(1, Math.round(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]))), hor = Math.abs(p1[0] - p0[0]) >= Math.abs(p1[1] - p0[1]);
+  const fwd = hor ? (p1[0] > p0[0] ? "moveRight" : "moveLeft") : (p1[1] > p0[1] ? "moveDown" : "moveUp"), back = { moveRight: "moveLeft", moveLeft: "moveRight", moveDown: "moveUp", moveUp: "moveDown" }[fwd];
+  l.at(...p0); l.show(true); l.play(0, 12, 110, true, "lidle");
+  const go = async (to) => { l.face(to[0] < l.x); l.play(0, 6, 95, true, "lrun"); await l.move(to[0], to[1], Math.hypot(to[0] - l.x, to[1] - l.y) * 520); l.play(0, 12, 110, true, "lidle"); };
+  for (;;) {
+    await skWait(st, skRnd(1500, 3500));
+    skSay(st, l, [["loop"], ["cmd", fwd, n], ["cmd", back, n]], 3400);
+    await go(p1);
+    await skWait(st, skRnd(1200, 2600));
+    skSay(st, l, [["loop"], ["cmd", fwd, n], ["cmd", back, n]], 3400);
+    await go(p0);
+  }
+}
+// Лучник под вышкой гоблинов (самый верх острова): стреляет вверх по вышке — стрела стукает в брёвна, летит пыль
+async function skitSnipe(st, { at: [ax, ay], target: [tx, ty] }) {
+  const ar = skActor(st, "archb", 0.8), fly = skActor(st, "arrowu", 0.8, 0.5), puff = skActor(st, "dust", 1.1, 0.6);
+  ar.mute = true;
+  ar.at(ax, ay); ar.face(tx < ax); ar.show(true); ar.play(0, 6, 150);
+  for (;;) {
+    await skWait(st, skRnd(1500, 3000));
+    skSay(st, ar, [["loop"], ["cmd", "shoot"]], 4600);          // вверху карты он один с кодом — пузырь висит подольше
+    for (let k = Math.random() < 0.35 ? 2 : 1; k > 0; k--) {
+      ar.play(2, 8, 85, false);
+      await skSleep(st, 430);
+      mapSfx(st, "shot", ax, ay);
+      const ex = tx + skRnd(-0.25, 0.25), ey = ty + skRnd(-0.3, 0.3);
+      fly.at(ax, ay - 1.05); fly.show(true, true);
+      await fly.move(ex, ey, Math.hypot(ex - ax, ey - ay + 1.05) * 100);
+      fly.show(false, true);
+      mapSfx(st, "thunk", ex, ey);
+      puff.at(ex, ey + 0.2); puff.show(true, true); puff.play(0, 10, 45, false).then(() => puff.show(false));
+      await skSleep(st, 350);
+    }
+    ar.play(0, 6, 150);
   }
 }
 // Рыцарь на карте ближе r клеток к точке (x, y)? Жители сценок могут на него оглядываться.
@@ -5567,6 +5659,7 @@ async function skitLumber(st, { tree: [tx, ty], d, pile }) {
   };
   // поворот дерева: у актёра transform уже занят сдвигом, поэтому наклон — отдельной анимацией rotate
   const tilt = (frames, opt) => T.el.animate(frames, opt);
+  p.code = true;                                                 // над лесорубом — его программа: повторяй { работай }
   p.at(...cut); p.face(d < 0); p.show(true); p.play(0, 8, 130, true, "pidle");
   for (;;) {
     await skWait(st, skRnd(3000, 7000));
@@ -5766,7 +5859,7 @@ async function skitFlock(st, s) {
     }
   };
   flock.forEach((a, i) => skRun(() => live(a, i)));
-  const run = async (to, ms = 330) => { pawn.face(to[0] < pawn.x); pawn.play(0, 6, 85, true, "prun"); await pawn.move(to[0], to[1], Math.hypot(to[0] - pawn.x, to[1] - pawn.y) * ms); pawn.play(0, 8, 130, true, "pidle"); };
+  const run = async (to, ms = 330) => { skSayMove(st, pawn, to); pawn.face(to[0] < pawn.x); pawn.play(0, 6, 85, true, "prun"); await pawn.move(to[0], to[1], Math.hypot(to[0] - pawn.x, to[1] - pawn.y) * ms); pawn.play(0, 8, 130, true, "pidle"); };
   for (;;) {
     await skWait(st, skRnd(22000, 40000));
     const a = flock[Math.floor(Math.random() * flock.length)];
@@ -5795,6 +5888,7 @@ async function skitRange(st, { at: [ax, ay], dummy: [dx, dy] }) {
   const sc = skActor(st, "scare", 0.62, 0.88), ar = skActor(st, "archb", 0.8), fly = skActor(st, "arrow", 0.85, 0.55), puff = skActor(st, "dust", 1.1, 0.6);
   const stuck = [0, 1, 2].map(() => skActor(st, "arrow", 0.85, 0.55));
   const right = dx > ax, f = right ? 1 : -1;
+  ar.code = true;
   ar.mute = true;                                              // не «выстрел в бою» (он слышен за пол-острова), а тихий свист рядом
   sc.at(dx, dy); sc.show(true);
   ar.at(ax, ay); ar.face(!right); ar.show(true); ar.play(0, 6, 150);
@@ -5816,6 +5910,7 @@ async function skitRange(st, { at: [ax, ay], dummy: [dx, dy] }) {
     if (++n < 3) continue;
     await skWait(st, skRnd(1500, 3000));                       // три стрелы — пора собирать
     ar.face(!right); ar.play(1, 6, 90);
+    skSayMove(st, ar, [dx - f * 0.75, ay]);
     await ar.move(dx - f * 0.75, ay, Math.abs(dx - ax) * 420);
     ar.play(0, 6, 150);
     for (const a of stuck) { await skSleep(st, 330); a.show(false); }
@@ -5829,6 +5924,7 @@ async function skitRange(st, { at: [ax, ay], dummy: [dx, dy] }) {
 // Учебный бой: воин и копейщик по очереди бьют и закрываются. Никто не ранен — мечи только звенят.
 async function skitSpar(st, { a, b }) {
   const w = skActor(st, "kwar", 0.8, 0.708), l = skActor(st, "lidle", 0.8, 0.625);
+  w.code = l.code = true;
   w.mute = l.mute = true;                                      // не звук боя (он слышен издалека), а тихий звон рядом
   w.at(...a); w.face(a[0] > b[0]); w.show(true); w.play(0, 6, 150);
   l.at(...b); l.face(b[0] > a[0]); l.show(true); l.play(0, 12, 110, true, "lidle");
@@ -5868,17 +5964,19 @@ async function skitBuildYard(st, { lots, pile, rest, supply }) {
     for (;;) {
       await skWait(st, skRnd(28000, 50000));
       c.at(...supply[0]); c.show(true); c.play(0, 6, 85, true, "prunwood");
+      skSayMove(st, c, supply[supply.length - 1]);
       await along(supply.slice(1));
       c.play(0, 8, 130, true, "pidle");
       mapSfx(st, "thud", ...pile);
       await skSleep(st, 900);
       c.play(0, 6, 85, true, "prun");
+      skSayMove(st, c, supply[0]);
       await along([...supply].reverse().slice(1));
       c.show(false);
     }
   });
   const houses = lots.map(([x, y]) => { const h = skActor(st, "housec", 0.56, 0.955); h.at(x, y); return h; });
-  const men = [0, 1].map((i) => { const p = skActor(st, "phidle", 0.8, 0.7); p.at(rest[0] + i * 0.8, rest[1]); p.show(true); p.play(0, 8, 130, true, "phidle"); return p; });
+  const men = [0, 1].map((i) => { const p = skActor(st, "phidle", 0.8, 0.7); p.code = i === 0; p.at(rest[0] + i * 0.8, rest[1]); p.show(true); p.play(0, 8, 130, true, "phidle"); return p; });
   const go = async (p, to, sheet = "prunham") => { p.face(to[0] < p.x); p.play(0, 6, 85, true, sheet); await p.move(to[0], to[1], Math.hypot(to[0] - p.x, to[1] - p.y) * 430); };
   const hammer = async (p, x, n) => { p.face(x < p.x); p.play(0, 3, 150, true, "phammer"); await skWait(st, n * 450); p.play(0, 8, 130, true, "phidle"); };
   for (let i = 0; i < lots.length; i++) {
@@ -5929,6 +6027,7 @@ async function skitPaddle(st, { lane: [[x0, y0], [x1, y1]], n = 2 }) {
 // Привал в лесу: костёр, у огня греется житель, рядом монах — иногда лечит его (или просто колдует).
 async function skitCamp(st, { fire, pawn, monk }) {
   const f = skActor(st, "fire", 0.72, 0.82), p = skActor(st, "pidle", 0.8), m = skActor(st, "monk", 0.8), fx = skActor(st, "healfx", 0.8);
+  m.code = true;
   f.at(...fire); f.show(true); f.play(0, 7, 110);
   p.at(...pawn); p.face(pawn[0] > fire[0]); p.show(true); p.play(0, 8, 130, true, "pidle");
   m.at(...monk); m.face(monk[0] > fire[0]); m.show(true); m.play(0, 6, 150, true, "monk");
@@ -5977,6 +6076,10 @@ const SKIT_PLAN = {
     { name: "привал у костра", fn: "camp", fire: [3.2, 37.0], pawn: [2.55, 37.1], monk: [3.85, 37.1] },   // житель — не ближе полклетки к обрыву слева (x = 2)
     { name: "лесоруб в лесу", fn: "lumber", tree: [5.05, 36.6], d: -1, pile: [5.3, 37.6] },
     { name: "бочка-гоблин в лесу", fn: "barrel", at: [12.3, 29.95] },
+    // дозорный копейщик в правом лесу: ходит туда-сюда, над ним его программа (v193)
+    { name: "дозорный в лесу", fn: "patrol", lane: [[12.3, 27.75], [14.6, 27.75]] },
+    // самый верх острова: лучник на подъёме к крепости обстреливает вышку гоблинов (чтобы и вверху карты был виден код)
+    { name: "лучник под вышкой", fn: "snipe", at: [15.3, 9.0], target: [15.8, 5.3] },
   ],
   2: [
     { name: "лучник и гоблин", fn: "archer", at: [12.3, 17.9], run: [4.4, 9.4] },
@@ -6024,6 +6127,8 @@ const SKIT_GEOM = {
   yard: (s) => ({ stand: [...s.lots, s.pile, s.rest, [s.rest[0] + 0.8, s.rest[1]], ...s.lots.flatMap(([x, y]) => [[x - 0.85, y], [x + 0.85, y], [x - 1.05, y + 0.2], [x + 1.05, y + 0.2]])], paths: s.supply ? [s.supply] : [] }),
   camp: (s) => ({ stand: [s.fire, s.pawn, s.monk] }),
   paddle: (s) => ({ swim: [s.lane] }),
+  patrol: (s) => ({ stand: s.lane, paths: [s.lane] }),
+  snipe: (s) => ({ stand: [s.at] }),
   scare: (s) => ({ stand: [s.pawn, s.hide, s.gob], paths: [[s.gob, [s.pawn[0] + 1.1, s.pawn[1]]], [s.pawn, s.hide]] }),
 };
 const SKIT_FN = {
@@ -6045,6 +6150,8 @@ const SKIT_FN = {
   yard: (st, s) => skitBuildYard(st, s),
   camp: (st, s) => skitCamp(st, s),
   paddle: (st, s) => skitPaddle(st, s),
+  patrol: (st, s) => skitPatrol(st, s),
+  snipe: (st, s) => skitSnipe(st, s),
 };
 // Запускаются, когда карта острова показана впервые
 const SKITS = {};
@@ -12505,10 +12612,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 192;
+const APP_VERSION = 193;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 193, date: "2026-11-18", text: "Над жителями Острова программистов всплывает их код: лесоруб, строитель, лучник, копейщик и другие работают по своим программам", en: "Code now pops up above the villagers of Programmers’ Island: the lumberjack, the builder, the archer, the lancer and others all follow their own programs", big: true },
   { v: 192, date: "2026-11-18", text: "Житель у костра в лесу больше не стоит на самом краю скалы", en: "The villager by the forest campfire no longer stands on the very edge of the cliff" },
   { v: 191, date: "2026-11-18", text: "Стрелы в бою у моста теперь видно в полёте", en: "Arrows in the battle by the bridge are now visible in flight" },
   { v: 190, date: "2026-11-18", text: "Стрелу лучника теперь видно в полёте", en: "The archer’s arrow is now visible in flight" },
