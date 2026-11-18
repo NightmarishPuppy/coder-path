@@ -1,13 +1,13 @@
 {
- "version": 201,
+ "version": 202,
  "date": "2026-11-19",
  "notes": [
-  "На планшете и компьютере поле уровня стало крупнее"
+  "На планшете и компьютере в Python и JavaScript кнопка «Запустить» теперь видна рядом с полем: длинное задание встаёт под поле"
  ],
  "files": {
   "index.html": {
-   "size": 987700,
-   "hash": "14b236965e8f8f97"
+   "size": 990463,
+   "hash": "be62d5f9e1f5aa28"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "bb1136a16374c763"
+   "hash": "2ef682a8bd405a7c"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "On tablets and computers the level field is bigger"
+  "On tablets and computers in Python and JavaScript the “Run” button now stays next to the field: a long task moves under the field"
  ]
 }

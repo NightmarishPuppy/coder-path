@@ -9483,6 +9483,34 @@ function placeBrief() {
 }
 placeBrief();
 addEventListener("resize", placeBrief);
+// Раскладка в две колонки под уровень (v202). Обычно задание стоит справа над программой, а поле берёт ширину с запасом (deskCols).
+// Но при длинном задании (Python / JavaScript) правая колонка уходит за низ окна, и «Запустить» не видно вместе с полем.
+// Поэтому меряем четыре варианта — задание справа или под полем, поле широкое или обычное — и берём тот, где на экране
+// помещаются и «Запустить», и задание. Решается один раз на уровень, режим и размер окна (briefKey), чтобы ничего не прыгало.
+let briefKey = "", fieldSlim = false;
+function briefSide() {
+  const lv = $("levelview"), brief = lv.querySelector(".brief");
+  if (!brief || lv.hidden || !L) return;
+  const key = `${levelIdx}|${uiBlocks}|${lang}|${innerWidth}x${innerHeight}`;
+  if (key === briefKey) return;
+  briefKey = key;
+  const right = $("blocks").parentElement, left = boardEl.closest(".col"), runEl = $("run");
+  const below = (el) => Math.max(0, el.getBoundingClientRect().bottom + scrollY - innerHeight);
+  const put = (toLeft, slim) => { fieldSlim = slim; deskCols(); if (toLeft) $("statusslot").after(brief); else right.prepend(brief); };
+  let best = null;
+  for (const toLeft of [false, true]) for (const slim of [false, true]) {
+    put(toLeft, slim);
+    const cost = 3 * below(runEl) + 2 * below(brief) + 0.2 * Math.max(below(left), below(right)) + (toLeft ? 30 : 0) + (slim ? 20 : 0);
+    if (!best || cost < best.cost) best = { cost, toLeft, slim };
+    if (cost === 0) break;
+  }
+  put(best.toLeft, best.slim);
+  lv.classList.toggle("brief-left", best.toLeft);
+}
+// решаем в следующем кадре: к этому времени режим и уровень уже дорисованы
+let briefRaf = 0;
+function briefSoon() { if (!briefRaf) briefRaf = requestAnimationFrame(() => { briefRaf = 0; briefSide(); }); }
+if (window.ResizeObserver) { const ro = new ResizeObserver(briefSoon); for (const c of document.querySelectorAll("#levelview .game > .col")) ro.observe(c); }
 function deskH() {
   if (innerWidth < 820 || !boardEl || $("levelview").hidden) return 460;
   const el = isLong() ? camEl : boardEl, top = el.getBoundingClientRect().top + scrollY;
@@ -9495,11 +9523,12 @@ function deskCols() {
   if (!g) return;
   if (innerWidth < 820 || !L || $("levelview").hidden) { g.style.gridTemplateColumns = ""; return; }
   const full = g.clientWidth - 18, base = full * 1.15 / 2.15, most = full - Math.max(420, full * 0.36);
-  const left = Math.round(Math.min(viewW() / H * deskH(), most));
+  const left = fieldSlim ? 0 : Math.round(Math.min(viewW() / H * deskH(), most));
   g.style.gridTemplateColumns = left > base + 1 ? `${left}px minmax(0, 1fr)` : "";
 }
 function deskResize() {
   deskCols();
+  briefSoon();
   if (innerWidth < 820 || $("levelview").hidden || !boardEl || !L) return;
   const h = deskH(), vw = viewW();
   boardEl.style.maxWidth = isLong() ? boardEl.style.maxWidth : `min(100%, ${Math.round(W / H * h)}px)`;
@@ -12954,10 +12983,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 201;
+const APP_VERSION = 202;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 202, date: "2026-11-19", text: "На планшете и компьютере в Python и JavaScript кнопка «Запустить» теперь видна рядом с полем: длинное задание встаёт под поле", en: "On tablets and computers in Python and JavaScript the “Run” button now stays next to the field: a long task moves under the field" },
   { v: 201, date: "2026-11-19", text: "На планшете и компьютере поле уровня стало крупнее", en: "On tablets and computers the level field is bigger" },
   { v: 200, date: "2026-11-18", text: "На планшете и компьютере задание теперь стоит справа, над программой, поле стало крупнее, а окошко победы появляется там же — без прокрутки", en: "On tablets and computers the task now sits on the right, above your program; the field is bigger, and the win box appears in the same place — no scrolling", big: true },
   { v: 199, date: "2026-11-18", text: "На планшетах вокруг острова теперь море до краёв экрана, а сам остров стал крупнее", en: "On tablets the sea now reaches the edges of the screen around the island, and the island itself is bigger" },
