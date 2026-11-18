@@ -1,13 +1,13 @@
 {
- "version": 187,
+ "version": 188,
  "date": "2026-11-18",
  "notes": [
-  "Остров программистов ожил. На карте: овцы и пастух (овцу можно тронуть!), стройка у замка, лучник стреляет по чучелу, воин и копейщик учатся биться, в лесу — костёр и лесоруб. На уровнях: больше жителей, утки на воде, и все радуются твоей победе. Когда звуков много, они сами становятся тише"
+  "У замка плавают утки (тронь — крякнет), к стройке носят брёвна, а на самых первых уровнях появились овечка и утки"
  ],
  "files": {
   "index.html": {
-   "size": 942354,
-   "hash": "291022d1338c0310"
+   "size": 946043,
+   "hash": "8ed00513edf3e1c8"
   },
   "art.js": {
    "size": 841991,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "830fcf9d90f0d5aa"
+   "hash": "b042c10238538adf"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Programmers’ Island has come alive. On the map: sheep and a shepherd (try poking a sheep!), a building site by the castle, an archer shooting at a scarecrow, a warrior and a lancer sparring, a campfire and a lumberjack in the forest. On the levels: more villagers, ducks on the water, and everyone cheers when you win. When many sounds play at once, they get quieter on their own"
+  "Ducks swim by the castle (poke one — it quacks), logs are carried to the building site, and the very first levels now have a sheep and ducks"
  ]
 }

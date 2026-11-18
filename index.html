@@ -5854,9 +5854,25 @@ async function skitSpar(st, { a, b }) {
 }
 // Стройка: два строителя стучат молотками по срубу — и вот стоит дом. Потом берутся за следующий. Когда все дома
 // готовы, время от времени подновляют их: берут бревно из поленницы, несут к дому и приколачивают.
-async function skitBuildYard(st, { lots, pile, rest }) {
+async function skitBuildYard(st, { lots, pile, rest, supply }) {
   const heap = skActor(st, "wood", 0.7, 0.8), puff = skActor(st, "dust", 1.6, 0.6);
   heap.at(...pile); heap.show(true);
+  // подносчик (v188): время от времени выходит от замка с бревном, бежит вдоль дороги к поленнице, бросает бревно и бежит обратно
+  if (supply) skRun(async () => {
+    const c = skActor(st, "prunwood", 0.8);
+    const along = async (pts) => { for (const [x, y] of pts) { c.face(x < c.x); await c.move(x, y, Math.hypot(x - c.x, y - c.y) * 430); } };
+    for (;;) {
+      await skWait(st, skRnd(28000, 50000));
+      c.at(...supply[0]); c.show(true); c.play(0, 6, 85, true, "prunwood");
+      await along(supply.slice(1));
+      c.play(0, 8, 130, true, "pidle");
+      mapSfx(st, "thud", ...pile);
+      await skSleep(st, 900);
+      c.play(0, 6, 85, true, "prun");
+      await along([...supply].reverse().slice(1));
+      c.show(false);
+    }
+  });
   const houses = lots.map(([x, y]) => { const h = skActor(st, "housec", 0.56, 0.955); h.at(x, y); return h; });
   const men = [0, 1].map((i) => { const p = skActor(st, "phidle", 0.8, 0.7); p.at(rest[0] + i * 0.8, rest[1]); p.show(true); p.play(0, 8, 130, true, "phidle"); return p; });
   const go = async (p, to, sheet = "prunham") => { p.face(to[0] < p.x); p.play(0, 6, 85, true, sheet); await p.move(to[0], to[1], Math.hypot(to[0] - p.x, to[1] - p.y) * 430); };
@@ -5887,6 +5903,24 @@ async function skitBuildYard(st, { lots, pile, rest }) {
     await go(p, back);
     p.face(p.x > x); p.play(0, 8, 130, true, "phidle");
   }
+}
+// Утки у берега (v188): покачиваются на воде и плавают туда-сюда по своей полосе. Тронешь утку — крякнет и рванёт в сторону.
+async function skitPaddle(st, { lane: [[x0, y0], [x1, y1]], n = 2 }) {
+  const isle = +st.ear.dataset.isle, pt = (k) => [x0 + (x1 - x0) * k, y0 + (y1 - y0) * k];
+  const ducks = [...Array(n)].map((_, i) => { const d = skActor(st, "duck", 1.4, 0.8); d.k = (i + 0.5) / n; d.at(...pt(d.k)); d.face(i % 2 === 0); d.show(true); d.play(0, 3, 240 + i * 30); return d; });
+  st.layer.addEventListener("click", (e) => {
+    const r = st.layer.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 18, y = (e.clientY - r.top) / r.height * ISLE_MAPS[isle].terr.length;
+    const d = ducks.find((d) => Math.abs(d.x - x) < 0.5 && Math.abs(d.y - 0.15 - y) < 0.45);
+    if (d) d.poke = true;
+  });
+  const swim = async (d, k, ms) => { const to = pt(k); d.face(to[0] > d.x); d.k = k; await d.move(to[0], to[1], Math.max(300, Math.hypot(to[0] - d.x, to[1] - d.y) * ms)); };
+  await Promise.all(ducks.map(async (d) => {
+    for (;;) {
+      for (let t = skRnd(3000, 9000); t > 0 && !d.poke; t -= 150) await skWait(st, 150);
+      if (d.poke) { d.poke = false; mapSfx(st, "duck", d.x, d.y); await swim(d, d.k > 0.5 ? d.k - skRnd(0.3, 0.45) : d.k + skRnd(0.3, 0.45), 380); continue; }
+      await swim(d, Math.random(), 1500);
+    }
+  }));
 }
 // Привал в лесу: костёр, у огня греется житель, рядом монах — иногда лечит его (или просто колдует).
 async function skitCamp(st, { fire, pawn, monk }) {
@@ -5931,7 +5965,10 @@ const SKIT_PLAN = {
     // лужайка между дорогами: воин и копейщик учатся биться
     { name: "учебный бой", fn: "spar", a: [8.0, 45.4], b: [9.15, 45.4] },
     // полоска между дорогами у первых уровней: строят два дома (деревня у замка)
-    { name: "стройка", fn: "yard", lots: [[7.2, 49.55], [10.4, 49.6]], pile: [8.75, 49.3], rest: [8.3, 49.7] },
+    { name: "стройка", fn: "yard", lots: [[7.2, 49.55], [10.4, 49.6]], pile: [8.75, 49.3], rest: [8.3, 49.7],
+      supply: [[4.2, 49.85], [8.05, 49.82]] },                   // подносчик брёвен: от ворот замка вдоль дороги к поленнице
+    // море слева-снизу, у замка: две утки
+    { name: "утки у берега", fn: "paddle", lane: [[0.6, 52.3], [3.3, 52.3]] },
     // лес: привал у костра и лесоруб; в правом лесу — гоблин в бочке
     { name: "привал у костра", fn: "camp", fire: [2.9, 37.0], pawn: [2.05, 37.1], monk: [3.7, 37.1] },
     { name: "лесоруб в лесу", fn: "lumber", tree: [4.95, 36.6], d: -1, pile: [5.25, 37.55] },
@@ -5980,8 +6017,9 @@ const SKIT_GEOM = {
   flock: (s) => ({ stand: [...s.sheep, s.herd, s.stray], paths: [[s.herd, [s.stray[0] + (s.stray[0] > s.herd[0] ? 0.9 : -0.9), s.stray[1]]]] }),
   range: (s) => ({ stand: [s.at, s.dummy], paths: [[s.at, [s.dummy[0] - Math.sign(s.dummy[0] - s.at[0]) * 0.75, s.at[1]]]] }),
   spar: (s) => ({ stand: [s.a, s.b] }),
-  yard: (s) => ({ stand: [...s.lots, s.pile, s.rest, [s.rest[0] + 0.8, s.rest[1]], ...s.lots.flatMap(([x, y]) => [[x - 0.85, y], [x + 0.85, y], [x - 1.05, y + 0.2], [x + 1.05, y + 0.2]])] }),
+  yard: (s) => ({ stand: [...s.lots, s.pile, s.rest, [s.rest[0] + 0.8, s.rest[1]], ...s.lots.flatMap(([x, y]) => [[x - 0.85, y], [x + 0.85, y], [x - 1.05, y + 0.2], [x + 1.05, y + 0.2]])], paths: s.supply ? [s.supply] : [] }),
   camp: (s) => ({ stand: [s.fire, s.pawn, s.monk] }),
+  paddle: (s) => ({ swim: [s.lane] }),
   scare: (s) => ({ stand: [s.pawn, s.hide, s.gob], paths: [[s.gob, [s.pawn[0] + 1.1, s.pawn[1]]], [s.pawn, s.hide]] }),
 };
 const SKIT_FN = {
@@ -6002,11 +6040,13 @@ const SKIT_FN = {
   spar: (st, s) => skitSpar(st, s),
   yard: (st, s) => skitBuildYard(st, s),
   camp: (st, s) => skitCamp(st, s),
+  paddle: (st, s) => skitPaddle(st, s),
 };
 // Запускаются, когда карта острова показана впервые
 const SKITS = {};
 for (const n of [1, 2, 3, 4, 5, 6]) SKITS[n] = (w) => SKIT_PLAN[n].forEach((s) => skStart(n, w, { ...s, ...SKIT_GEOM[s.fn](s) }, SKIT_FN[s.fn]));
 
+// ===== Сценки на поле уровня =====
 // --- Сценки на поле уровня («в углах», как в CodeCombat) ---
 // Только мирные жители — монах, лесоруб, строитель, овечка: гоблин в углу поля можно принять
 // за врага уровня. Встают в клетки-стены у края поля, подальше от дороги и кнопок в углах поля;
@@ -6034,7 +6074,8 @@ function boardSkits(terr, cellOv) {
     if ((L.events || []).some((e) => e.tree && Math.abs(e.tree[0] - x) <= 2 && Math.abs(e.tree[1] - y) <= 1)) continue;   // у лесоруба уровня
     if (!(x === 0 || y === 0 || x === W - 1 || y === H - 1)) continue;
     // у длинной карты кнопки поверх окна стоят над любым куском верхнего ряда — его не берём
-    if (y === 0 && (isLong() || x < 3 || x > W - 3)) continue;
+    // (на Берегу острова 1 кнопок в углах ещё нет: ни вариантов поля, ни кругов цикла — там верхний ряд можно, v188)
+    if (y === 0 && (isLong() || x < 3 || x > W - 3) && !(isleOf(L) === 1 && L.chapter === 0 && !L.maps && !isLong())) continue;
     // клетка ниже — без дерева: высокое дерево снизу закрыло бы актёра, будто он стоит на кроне
     if (y < H - 1 && /^tree/.test(cellOv[y + 1]?.[x]?.dataset.kind || "")) continue;
     // не вплотную к старту рыцаря и к выходу — там и так много всего
@@ -6093,12 +6134,13 @@ const skWaitCheer = async (st, ms) => {
 };
 // Кого поставить: по местности поля. Жители разные (на одном поле не повторяются), на большом поле их до четырёх.
 function boardSkits1(st, cand, cellOv) {
-  const want = W * H >= 60 ? 4 : W * H >= 28 ? 3 : 2, picks = [];
+  const tiny = W * H < 20;                                     // самые первые уровни: один тихий житель, чтобы не отвлекал от задания
+  const want = W * H >= 60 ? 4 : W * H >= 28 ? 3 : tiny ? 1 : 2, picks = [];
   for (const c of cand) { if (picks.length >= want) break; if (picks.every((q) => Math.abs(q.x - c.x) + Math.abs(q.y - c.y) >= 3)) picks.push(c); }
   let h = 3; for (const ch of L.name) h = (h * 17 + ch.charCodeAt(0)) % 9973;
   const treeAt = (x, y) => /^tree/.test(cellOv[y]?.[x]?.dataset.kind || "");
   const pool = { forest: ["camp", "sheep", "monk", "archer", "builder"], cave: ["picker", "camp", "monk", "lancer"],
-    mountain: ["lancer", "archer", "camp", "monk"] }[boardEl.dataset.theme] || ["sheep", "archer", "builder", "monk", "lancer"];
+    mountain: ["lancer", "archer", "camp", "monk"] }[boardEl.dataset.theme] || (tiny ? ["sheep"] : ["sheep", "archer", "builder", "monk", "lancer"]);
   const used = new Set();
   picks.forEach((c, i) => {
     const tree = treeAt(c.x - 1, c.y) ? -1 : treeAt(c.x + 1, c.y) ? 1 : 0;
@@ -12442,10 +12484,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 187;
+const APP_VERSION = 188;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 188, date: "2026-11-18", text: "У замка плавают утки (тронь — крякнет), к стройке носят брёвна, а на самых первых уровнях появились овечка и утки", en: "Ducks swim by the castle (poke one — it quacks), logs are carried to the building site, and the very first levels now have a sheep and ducks" },
   { v: 187, date: "2026-11-18", text: "Остров программистов ожил. На карте: овцы и пастух (овцу можно тронуть!), стройка у замка, лучник стреляет по чучелу, воин и копейщик учатся биться, в лесу — костёр и лесоруб. На уровнях: больше жителей, утки на воде, и все радуются твоей победе. Когда звуков много, они сами становятся тише", en: "Programmers’ Island has come alive. On the map: sheep and a shepherd (try poking a sheep!), a building site by the castle, an archer shooting at a scarecrow, a warrior and a lancer sparring, a campfire and a lumberjack in the forest. On the levels: more villagers, ducks on the water, and everyone cheers when you win. When many sounds play at once, they get quieter on their own", big: true },
   { v: 186, date: "2026-11-18", text: "Копейщик отбивает динамит одним взмахом копья — больше не машет по воздуху", en: "The lancer knocks dynamite back with one swing — no more extra jabs at the air" },
   { v: 185, date: "2026-11-18", text: "Новая глава на Острове гоблинов — «Обстрел»: идёт копейщик. Подрывник кидает в него динамит, а копьё 🔱 отбивает его обратно", en: "A new chapter on Goblin Island — “Under Fire”: you lead a lancer. The bomber throws dynamite at him, and the spear 🔱 knocks it back", big: true },
