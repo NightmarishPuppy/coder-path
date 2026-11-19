@@ -4762,7 +4762,7 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   duckair: [3, 1, 32], boom2: [8, 1, 192], boom3: [10, 1, 192], dust: [10, 1, 64],
   // остров 1 наряднее (v187): овцы, стройка, тренировка, костёр
   shidle: [6, 1, 128], shgrass: [12, 1, 128], shmove: [4, 1, 128], phidle: [8, 1, 192], prunham: [6, 1, 192], lrdef: [6, 1, 320], wguard: [6, 1, 192],
-  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256], gwtc: [1, 1, 256], gwt1: [4, 1, 256], gwt2: [4, 1, 256], gwt3: [4, 1, 256], gwlog: [2, 1, 80] };
+  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256], gwtc: [1, 1, 256], towerbc: [1, 1, 256], towerbx: [1, 1, 256], gwt1: [4, 1, 256], gwt2: [4, 1, 256], gwt3: [4, 1, 256], gwlog: [2, 1, 80] };
 TS.sk_fire = TS.fx_fire;
 let SK_ACTORS = [];
 let skLast = 0;
@@ -5350,7 +5350,7 @@ async function battle(st0, B) {
     tower.at(tx, ty); front.at(tx, ty); a.at(tx, ay);
     [tower, a, front].forEach((x) => x.show(true));
     a.play(0, 6, 150);
-    return { a, x: tx, y: ay, next: 0, busy: 0, idle: true };
+    return { a, x: tx, y: ay, next: 0, busy: 0, idle: true, tower, front, tx, ty, hp: 3, hitAt: 0, smoke: 0 };
   });
 
   // ----- эффекты (заготовки, используются по очереди) -----
@@ -5533,7 +5533,85 @@ async function battle(st0, B) {
   };
   // Взрыв с волной: в круге r — урон, в круге wave — отбрасывает. power: 0,5 — обычный динамит (только опрокидывает),
   // 2 — бочка (самых ближних уносит насовсем), 2,3 — жирный динамит большого подрывника.
+  // ----- v221: башни рушатся, жители чинят (B.forts) -----
+  // Взрыв рядом с башней снимает ей прочность (3): дымит всё гуще, на нуле — руины, лучник слетает.
+  // Жители с молотками (B.pawns — где они стоят без дела) идут к побитой башне и стучат: по одной прочности за заход;
+  // руины сначала становятся стройкой, потом снова башней с новым лучником. Взрыв сбивает жителя с ног, но не губит.
+  const puffAt = (x, y, sc, dark, rise, ms) => {
+    if (STILL || !st.on()) return;
+    const a = A("dust", sc, 0.5);
+    a.el.style.transition = "none"; a.at(x, y); a.el.style.zIndex = 99000; if (dark) { a.el.style.filter = `brightness(${dark})`; a.el.style.opacity = 0.8; }
+    a.show(true, true); a.play(0, 10, ms / 10, false); void a.el.offsetWidth;
+    a.el.style.transition = `left ${ms}ms linear, top ${ms}ms ease-out`; a.at(x + 0.2 + Math.random() * 0.3, y - rise);
+    sleep(ms).then(() => a.el.remove());
+  };
+  const towerLook = (q) => {
+    const key = q.hp > 0 ? "towerb" : q.building ? "towerbc" : "towerbx";
+    q.tower.play(0, 1, 500, true, key); q.front.show(q.hp > 0);
+    q.tower.el.style.filter = q.hp > 0 && q.hp < 3 ? `brightness(${0.7 + 0.1 * q.hp})` : "";
+  };
+  const towerHit = (q) => {
+    if (q.hp <= 0 || performance.now() - q.hitAt < 500) return;
+    q.hitAt = performance.now(); q.hp--; q.building = false;
+    for (let i = 0; i < 3; i++) puffAt(q.tx + (i - 1) * 0.3, q.ty - 1.0 * ZM, 0.6, 0, 0.4, 600);
+    if (q.hp <= 0) {                               // рухнула: лучник слетает, руины под пылью
+      q.dead = true;
+      const a = q.a, dir = Math.random() < 0.5 ? -1 : 1;
+      tumble(a, dir * 2, 600); a.arc(q.tx + dir * 1.4, q.ty + 0.5, 1.2, 600).then(() => { a.show(false, true); skull(q.tx + dir * 1.4, q.ty + 0.5, { T: { side: "us" } }); });
+      for (let i = 0; i < 6; i++) puffAt(q.tx + (i - 2.5) * 0.3, q.ty - 0.2 - (i % 2) * 0.5, 0.95, 0, 0.4, 800);
+      mapSfx(st, "boom", q.tx, q.ty);
+    }
+    towerLook(q);
+  };
+  const towerMend = (q) => {                       // житель достучал: прочность +1
+    if (q.hp <= 0 && !q.building) { q.building = true; towerLook(q); return; }
+    q.hp++; q.building = false;
+    if (q.dead) { q.dead = false; q.busy = now + 800; q.a.el.style.transition = "none"; q.a.at(q.x, q.y); q.a.show(true); q.a.play(0, 6, 150); }
+    towerLook(q);
+  };
+  const pawns = B.forts ? (B.pawns || []).map(([hx, hy]) => { const p = A("phidle", 0.8); p.at(hx, hy); Z(p, hy); p.show(true); p.play(0, 8, 130); return { p, hx, hy, x: hx, y: hy, job: null, down: 0 }; }) : [];
+  const pawnGo = async (w, x, y) => {
+    w.p.face(x < w.x); w.p.play(0, 6, 85, true, "prunham");
+    const ms = Math.hypot(x - w.x, y - w.y) * 430;
+    w.p.el.style.transition = ""; await w.p.move(x, y, ms); w.x = x; w.y = y; Z(w.p, y);
+    w.p.play(0, 8, 130, true, "phidle");
+  };
+  const pawnLife = async (w, k) => {
+    while (st.alive()) {
+      await skWait(st, 700 + k * 300);
+      if (w.down > performance.now()) continue;
+      const q = archers.filter((t) => t.hp < 3 && !t.mender).sort((a, b) => Math.hypot(a.tx - w.x, a.ty - w.y) - Math.hypot(b.tx - w.x, b.ty - w.y))[0];
+      if (!q) { if (Math.hypot(w.x - w.hx, w.y - w.hy) > 0.1) await pawnGo(w, w.hx, w.hy); continue; }
+      q.mender = w;
+      const side = w.x < q.tx ? -1 : 1;
+      await pawnGo(w, q.tx + side * 0.75, q.ty + 0.2);
+      while (st.alive() && q.hp < 3) {
+        if (w.down > performance.now()) { await skWait(st, 300); continue; }
+        w.p.face(side > 0); w.p.play(0, 3, 150, true, "phammer");
+        for (let i = 0; i < 4 && w.down <= performance.now(); i++) { await skWait(st, 450); mapSfx(st, "knock", w.x, w.y); }
+        if (w.down <= performance.now()) towerMend(q);
+      }
+      w.p.play(0, 8, 130, true, "phidle");
+      q.mender = null;
+    }
+  };
+  pawns.forEach((w, k) => pawnLife(w, k));
+  if (B.forts) (async () => {                      // побитые башни и руины дымят
+    while (st.alive()) {
+      await skWait(st, 420);
+      for (const q of archers) { const lvl = q.hp <= 0 ? (q.building ? 0 : 2) : 3 - q.hp;
+        for (let k = 0; k < lvl; k++) puffAt(q.tx + (Math.random() - 0.5) * 0.6, q.ty - (q.hp <= 0 ? 0.4 : 1.6 * ZM), 0.28 + 0.05 * lvl + Math.random() * 0.1, 0.42, 1.2 + Math.random() * 0.6, 1500); }
+    }
+  })();
   const blast = (x, y, r, dmg, power, wave) => {
+    if (B.forts) {
+      for (const q of archers) if (Math.hypot(q.tx - x, q.ty + 0.3 - y) < Math.max(r, wave * 0.75) + 0.35) towerHit(q);
+      for (const w of pawns) if (w.down <= performance.now() && Math.hypot(w.x - x, w.y - y) < wave) {      // жителя сбивает с ног
+        w.down = performance.now() + 1900;
+        const lie = tumble(w.p, w.x < x ? -1 : 1, 420, 1, w.x < x ? -1 : 1);
+        setTimeout(() => { lie?.cancel(); w.p.play(0, 8, 130, true, "phidle"); }, 1800);
+      }
+    }
     for (const v of [...units]) {
       if (v.dead || v.air) continue;
       const d = Math.hypot(v.x - x, v.y - y);
@@ -5613,7 +5691,7 @@ async function battle(st0, B) {
       const SW = near(["war", "hero"], 0.6 * ZM), L = SW || near(["lan"], 1.2 * ZM), miss = SW ? 0.12 : 0.38, r = Math.random();
       const byArrow = () => {
         let ar = null, bd = Infinity;
-        for (const q of archers) { const dd = Math.hypot(q.x - x1, q.y - y1); if (now >= q.busy && dd < bd) { bd = dd; ar = q; } }
+        for (const q of archers) { const dd = Math.hypot(q.x - x1, q.y - y1); if (!q.dead && now >= q.busy && dd < bd) { bd = dd; ar = q; } }
         if (!ar || Math.random() > Math.max(0.05, 0.42 - bd / ZM * 0.08)) return false;
         met.arrow++;
         const ix = (d.x + x1) / 2, iy = (d.y + y1) / 2 - 1.0 * ZM, T = 360;       // точка встречи — в воздухе, на середине пути
@@ -5707,7 +5785,7 @@ async function battle(st0, B) {
   const ARCH_ROW = { up: 2, uside: 3, side: 4, dside: 5, down: 6 };
   const AR = { ...ARCHER, ...B.archer };            // у заставки лучники бьют ближе — гоблины успевают добежать
   const archerThink = (ar) => {
-    if (now < ar.busy) return;
+    if (ar.dead || now < ar.busy) return;
     let t = null, bd = Infinity;
     for (const v of units) if (!v.dead && !v.air && v.T.side === "gob") { const d = Math.hypot(v.x - ar.x, v.y - ar.y); if (d < bd) { bd = d; t = v; } }
     // умный лучник: бочка с динамитом в пределах выстрела — первой, пока она далеко от своих
@@ -5766,7 +5844,7 @@ async function battle(st0, B) {
     H.stands.forEach((stand) => { const p = A("prungold", 0.8), n = A("gnug", 0.8, 0.585); Z(p, stand[1]); skRun(() => haul(p, n, stand)); });
   } else if (mount) skRun(async () => { for (;;) { await skWait(st0, skRnd(2500, 5000)); await mount.play(0, 12, 70, false); mount.frame(0, 0); } });
 
-  B.api = { blast, make, throwTnt, met };                  // для тестов: устроить взрыв или поставить бойца самому
+  B.api = { blast, make, throwTnt, met, forts: () => archers.map((q) => ({ hp: q.hp, dead: !!q.dead })), pawns: () => pawns.length };                  // для тестов: устроить взрыв или поставить бойца самому
   // ----- волны гоблинов: приходят из облаков по мосту -----
   const W = B.waves;
   let queue = [], nextWave = now + (W.first ?? 2500);
@@ -5838,7 +5916,7 @@ async function skitSiege(st0, S) {
 // Наши от укрепления не отходят (короткий leash) — встречают врага там, где он сходит с моста;
 // лучники достают до середины моста и первой снимают бочку с динамитом — она взрывается среди гоблинов.
 const BEACH = {
-  zoom: 1.3, towers: [[14.4, 47.2], [16.45, 47.2]], goal: [15.4, 47.6], spawn: [15.5, 53.8], bridgeX: 15.5, respawn: [14.4, 47.5],
+  zoom: 1.3, towers: [[14.4, 47.2], [16.45, 47.2], [15.9, 45.0]], pawns: [[15.2, 46.5], [14.3, 46.2]], goal: [15.4, 47.6], spawn: [15.5, 53.8], bridgeX: 15.5, respawn: [14.4, 47.5],
   posts: [{ kind: "war", at: [14.9, 48.25] }, { kind: "lan", at: [16.2, 48.3], left: true },
     { kind: "lan", at: [14.0, 48.95] }, { kind: "war", at: [16.6, 49.0], left: true }, { kind: "monk", at: [17.0, 47.75], left: true }],
   rows: [43, 54.5],                                   // какие ряды карты занимает бой (видно ли его на экране)
@@ -5857,7 +5935,7 @@ async function skitBeach(st0, S) {
     const r = w.getBoundingClientRect(), k = r.height / RH;
     return r.top + S.rows[0] * k < innerHeight + 120 && r.top + S.rows[1] * k > -120;
   } };
-  const B = { walk, zoom: S.zoom, towers: S.towers, respawn: S.respawn, spawns: [S.spawn], goal: S.goal, posts: S.posts,
+  const B = { walk, zoom: S.zoom, towers: S.towers, forts: true, pawns: S.pawns, respawn: S.respawn, spawns: [S.spawn], goal: S.goal, posts: S.posts,
     code: true, talk: () => (uiBlocks ? "blocks" : lang), bubPx: () => Math.min(15, Math.max(10, w.clientWidth / 18 * 0.4)),
     bubMax: 3, bubGap: () => (uiBlocks ? [3.2, 1.3] : [6, 1.3]), bubFit: true, smart: true, skulls: 6500, archer: { reach: 6.8, cd: 1150 },
     stats: { war: { hp: 9, leash: 2.3 }, lan: { hp: 9, leash: 2.5 }, monk: { hp: 6 } },
@@ -13691,10 +13769,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 220;
+const APP_VERSION = 221;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 221, date: "2026-11-20", text: "У моста на первом острове третья башня. Башни теперь рушатся от взрывов, а жители с молотками их чинят", en: "A third tower by the bridge on the first island. Towers now collapse from explosions, and villagers with hammers repair them" },
   { v: 220, date: "2026-11-20", text: "«Вышка»: из настила вылетают и ломаются брёвна, вышка качается всё сильнее и на последнем ударе валится в груду", en: "“The Watchtower”: logs fly out of the deck and snap, the tower sways harder and harder and topples into a heap on the last hit" },
   { v: 219, date: "2026-11-20", text: "«Вышка»: вместо огня — дым, который густеет с каждым попаданием; вышка рушится под облаком пыли, брёвна разлетаются", en: "“The Watchtower”: smoke instead of fire, thicker with every hit; the tower collapses in a cloud of dust and logs fly" },
   { v: 218, date: "2026-11-19", text: "Новый уровень «Вышка» на острове гоблинов: наверху жирный подрывник, а копейщик отбивает его динамит обратно — вышка горит и рушится. Новый вопрос «динамит летит?»", en: "A new level, “The Watchtower”, on Goblin Island: a fat bomber sits on top, and the lancer knocks his dynamite back — the tower burns and collapses. A new question: “is dynamite flying?”", big: true },

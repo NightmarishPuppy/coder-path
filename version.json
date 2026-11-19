@@ -1,13 +1,13 @@
 {
- "version": 220,
+ "version": 221,
  "date": "2026-11-20",
  "notes": [
-  "«Вышка»: из настила вылетают и ломаются брёвна, вышка качается всё сильнее и на последнем ударе валится в груду"
+  "У моста на первом острове третья башня. Башни теперь рушатся от взрывов, а жители с молотками их чинят"
  ],
  "files": {
   "index.html": {
-   "size": 1060780,
-   "hash": "eb43fb41aadf3026"
+   "size": 1066560,
+   "hash": "d73ba0f8eba4aab0"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "9aebd1009082f7a6"
+   "hash": "7f897462b267458d"
   },
   "icon-192.png": {
    "size": 42164,
@@ -98,8 +98,8 @@
    "hash": "1379e6d146a2603c"
   },
   "art-scenes.js": {
-   "size": 976181,
-   "hash": "cfdf97987ed584ab"
+   "size": 985719,
+   "hash": "a0c68e8d8164c83e"
   },
   "art-isle2.js": {
    "size": 80017,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "“The Watchtower”: logs fly out of the deck and snap, the tower sways harder and harder and topples into a heap on the last hit"
+  "A third tower by the bridge on the first island. Towers now collapse from explosions, and villagers with hammers repair them"
  ]
 }
