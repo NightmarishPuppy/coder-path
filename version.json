@@ -1,21 +1,21 @@
 {
- "version": 210,
+ "version": 211,
  "date": "2026-11-19",
  "notes": [
-  "Три новых уровня, где нельзя останавливаться на полпути: шаткий мостик, баранья тропа и засада в кустах. Собери весь путь — и запусти один раз"
+  "Починил шаткий мостик: падала не та доска. Новый уровень «Болото» — вода, топь и мостики, останавливаться нельзя нигде. Шаткие мостики и баранья тропа появились на «Змейке», «Развилке» и «Серпантине»"
  ],
  "files": {
   "index.html": {
-   "size": 1018307,
-   "hash": "a6f9ca1abc9be80a"
+   "size": 1022288,
+   "hash": "d4d287c68568c858"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 74224,
-   "hash": "9964cf3ff804c89b"
+   "size": 74543,
+   "hash": "ce4a7e676a033dfb"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "50e68c6b070b08fc"
+   "hash": "02a42bd5b2d3aeb1"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 50032,
-   "hash": "0ef26fa48428d5d9"
+   "size": 51831,
+   "hash": "4a6da13ca2f8cac6"
   },
   "isle2.js": {
    "size": 59882,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Three new levels where you can’t stop halfway: a wobbly bridge, a ram trail and an ambush in the bushes. Build the whole path — and run it once"
+  "Fixed the wobbly bridge: the wrong plank was falling. A new level, “The Swamp” — water, bog and bridges, and you can’t stop anywhere. Wobbly bridges and a ram trail now appear on “Zigzag”, “The Fork” and “Switchbacks”"
  ]
 }

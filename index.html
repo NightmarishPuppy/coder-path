@@ -532,6 +532,12 @@ html.still .route .fight .sw { animation: none; }
 .hero.sunk .khp, .hero.down .khp { display: none; }
 .cell .plank { position: absolute; inset: 0; background-size: 300% 400%; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; transition: transform 0.35s ease-in, opacity 0.35s; }
 .cell .plank.gone { transform: translateY(30%) rotate(14deg); opacity: 0; }
+/* v211: топь — болотная кочка: тёмная зелень, лужицы; рыцарь остановился — кочка уходит под воду */
+.cell.ns-bog::after { content: ""; position: absolute; inset: 4%; border-radius: 42%; pointer-events: none; transition: opacity 0.4s, transform 0.4s;
+  background: radial-gradient(ellipse 22% 13% at 30% 34%, #2f5a5299 0 96%, transparent), radial-gradient(ellipse 17% 10% at 68% 62%, #2f5a5299 0 96%, transparent),
+    radial-gradient(ellipse 11% 7% at 40% 76%, #2f5a5288 0 96%, transparent), radial-gradient(closest-side, #4a4a1a8c 0 55%, #4a4a1a55 80%, transparent); }
+.cell.ns-bog.gone::after { opacity: 0.25; transform: scale(0.8); }
+.mud { filter: sepia(1) hue-rotate(35deg) saturate(1.6) brightness(0.75); }
 .cell.ns-rams::after { content: ""; position: absolute; inset: 30% 0; pointer-events: none;
   background: radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 0 0 / 14px 9px, radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 7px 4px / 14px 9px; }
 .hero.bump .kwrap { animation: bump 0.35s ease; }
@@ -6399,6 +6405,20 @@ function boardSkits(terr, cellOv) {
     if ([..."SE"].some((ch) => map.some((row, yy) => [...row].some((cc, xx) => cc === ch && Math.abs(xx - x) <= 1 && Math.abs(yy - y) <= 1)))) continue;
     cand.push({ x, y, score: (floorNear(x, y, 1) ? 0 : 2) + (y === H - 1 ? 1 : 0) + ((x === 0 || x === W - 1) && y === H - 1 ? 1 : 0) });
   }
+  // v211: у бараньей тропы стоит баран — без него тропа выглядит просто полосой травы
+  if (L.nostop === "rams") {
+    const spots = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!wall(x, y) || terr[y][x] === "water" || /^tree/.test(cellOv[y + 1]?.[x]?.dataset.kind || "")) continue;
+      if (map[y + 1]?.[x] === "~") spots.push({ x, y, up: 1 }); else if (map[y - 1]?.[x] === "~") spots.push({ x, y, up: 0 });
+    }
+    const best = spots.filter((p) => p.up).length ? spots.filter((p) => p.up) : spots, sp = best[Math.floor(best.length / 2)];
+    if (sp) {
+      cellOv[sp.y][sp.x]?.remove(); cellOv[sp.y][sp.x] = null;
+      skRun(() => boardSheep(st, sp.x + 0.5, sp.y + 0.9, sp.x > W / 2));
+      for (let i = cand.length - 1; i >= 0; i--) if (Math.abs(cand[i].x - sp.x) <= 1 && Math.abs(cand[i].y - sp.y) <= 1) cand.splice(i, 1);
+    }
+  }
   ghostStop(true); ghostIdleAt = performance.now();           // новое поле — призрак-подсказка ждёт свои 15 секунд заново
   // живая подсказка (v194): утка или житель рядом с дорогой делают то же, что нужно рыцарю, — и над ними код
   boardEl.dataset.demo = "";
@@ -6821,7 +6841,7 @@ function boardDucks(st, terr, cellOv, taken = new Set()) {
   for (let y = 0; y < H; y++) {
     let x0 = -1;
     for (let x = 0; x <= W; x++) {
-      const wet = x < W && terr[y]?.[x] === "water" && !cellOv[y]?.[x] && !taken.has(x + "," + y) && !taken.has(x - 1 + "," + y) && !taken.has(x + 1 + "," + y);
+      const wet = x < W && terr[y]?.[x] === "water" && L.map[y]?.[x] !== "~" && !cellOv[y]?.[x] && !taken.has(x + "," + y) && !taken.has(x - 1 + "," + y) && !taken.has(x + 1 + "," + y);
       if (wet && x0 < 0) x0 = x;
       if (!wet && x0 >= 0) { if (!(y === 0 && (isLong() || x0 < 1 || x > W - 1))) runs.push([y, x0, x - 1]); x0 = -1; }
     }
@@ -7787,20 +7807,23 @@ function buildBoard() {
       }
       // «~» — клетка, на которой нельзя останавливаться (v210; вид — L.nostop): bridge — шаткий мостик над водой,
       // rams — баранья тропа (трава, барашек ждёт сбоку), bush — дорога мимо кустов с подрывником (кусты — L.bushes).
+      // v211: swamp — болото: «~» — топь (кочка) или мостик (клетки мостиков — L.planks); вокруг только вода, песка нет.
+      const nk = nsKind(x, y);
       if (ch === "~") {
         tl.over = null;
-        if (L.nostop === "bridge") tl.ground = "water"; else if (tl.ground === "water") tl.ground = L.nostop === "rams" ? "grass" : "sand";
-        if (L.nostop === "rams") tl.ground = "grass";
+        if (nk === "bridge") tl.ground = "water"; else if (nk === "rams" || nk === "bog") tl.ground = "grass"; else if (tl.ground === "water") tl.ground = "sand";
       }
+      if (L.nostop === "swamp" && ch !== "~") { tl.ground = ch === "#" ? "water" : "grass"; tl.over = null; }
       // вокруг мостика — вода (иначе мост лежал бы на траве)
-      if (L.nostop === "bridge" && ch === "#" && [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]].some(([dx, dy]) => map[y + dy]?.[x + dx] === "~")) { tl.ground = "water"; tl.over = null; }
+      if (ch === "#" && [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]].some(([dx, dy]) => nsKind(x + dx, y + dy) === "bridge")) { tl.ground = "water"; tl.over = null; }
       if ((L.bushes || []).some(([bx, by]) => bx === x && by === y)) { tl.over = "bush2"; if (tl.ground === "water") tl.ground = "grass"; }
-      cell.className = "cell " + (ch === "#" ? "wall" : "floor") + (ch === "~" ? " nostop ns-" + L.nostop : "");
+      cell.className = "cell " + (ch === "#" ? "wall" : "floor") + (ch === "~" ? " nostop ns-" + nk : "");
+      cell.dataset.xy = x + "," + y;
       cellEl[y][x] = cell;
       terr[y][x] = tl.ground;
-      if (ch === "~" && L.nostop === "bridge") {
+      if (nk === "bridge") {
         // доски моста: лежит вдоль дороги; у краёв — концы моста (лист 3 × 4: верхний ряд — мост поперёк, левый столбец — вдоль)
-        const open = (dx, dy) => { const c = map[y + dy]?.[x + dx]; return c !== undefined && c !== "#"; }, br = (dx, dy) => map[y + dy]?.[x + dx] === "~";
+        const open = (dx, dy) => { const c = map[y + dy]?.[x + dx]; return c !== undefined && c !== "#"; }, br = (dx, dy) => nsKind(x + dx, y + dy) === "bridge";
         const horiz = open(-1, 0) || open(1, 0), k = horiz ? (br(-1, 0) ? (br(1, 0) ? 1 : 2) : br(1, 0) ? 0 : 1) : (br(0, -1) ? (br(0, 1) ? 2 : 3) : br(0, 1) ? 1 : 2);
         const pl = document.createElement("div");
         pl.className = "plank";
@@ -9150,7 +9173,7 @@ function buildPlan(code) {
   // v210: программа кончилась на клетке, где нельзя останавливаться («~»): мостик рушится, баран сбивает, из кустов летит динамит
   if (!dead && L.nostop && L.map[pos.y]?.[pos.x] === "~") {
     kHp = 0;
-    return { commands, crash, reachedAt, hpLeft, dead: { by: "nostop", nostop: L.nostop, final: true, at: { ...pos } }, finalHits: [], checks };
+    return { commands, crash, reachedAt, hpLeft, dead: { by: "nostop", nostop: nsKind(pos.x, pos.y), final: true, at: { ...pos } }, finalHits: [], checks };
   }
   const last = settle();
   const finalHits = [...(last && !last.miss ? [last] : []), ...strikes(null, true)];
@@ -10181,7 +10204,7 @@ function reset() {
   const moved = hero && (hero.x !== start.x || hero.y !== start.y);
   hero = { ...start };
   heroEl.classList.remove("flip", "run", "sunk", "down");
-  boardEl.querySelectorAll(".plank.gone").forEach((e) => e.classList.remove("gone"));
+  boardEl.querySelectorAll(".plank.gone, .cell.gone").forEach((e) => e.classList.remove("gone"));
   roundTag.hidden = true;
   placeHero();
   // длинная карта: рыцарь вернулся на старт — окно к нему (при открытии сразу, после запуска плавно)
@@ -10340,19 +10363,36 @@ function giantLoot(cell, crown = true) {
 const NOSTOP_TEXT = {
   bridge: "Мостик шаткий — на нём нельзя останавливаться: доска упала. Запиши весь путь до берега сразу и запусти один раз",
   rams: "Баран сбил рыцаря с ног! На бараньей тропе нельзя останавливаться. Запиши весь путь сразу и запусти один раз",
+  bog: "Топь затянула рыцаря: на болоте нельзя останавливаться. Запиши весь путь до двери сразу и запусти один раз",
   bush: "Засада! Рыцарь остановился у кустов — и подрывник успел бросить динамит. Запиши весь путь мимо кустов сразу и запусти один раз",
 };
+// Что за клетка «~»: bridge — мостик, rams — баранья тропа, bush — дорога у кустов, bog — топь (только на болоте, nostop: "swamp").
+function nsKind(x, y) {
+  if (!L.nostop || L.map[y]?.[x] !== "~") return null;
+  if (L.nostop !== "swamp") return L.nostop;
+  return (L.planks || []).some(([px, py]) => px === x && py === y) ? "bridge" : "bog";
+}
 async function noStopFall(kind) {
   const st = evStage(), k = SLOW / speed;
   heroEl.classList.remove("run", "atk", "guard");
   if (kind === "bridge") {
-    const cell = boardEl.children[hero.y * W + hero.x], pl = cell?.querySelector(".plank");
-    pl?.classList.add("gone");
+    // доска — именно под рыцарем (до v211 клетку искали по номеру среди всех слоёв поля и попадали на соседнюю)
+    boardEl.querySelector(`.cell[data-xy="${hero.x},${hero.y}"] .plank`)?.classList.add("gone");
     heroEl.classList.add("sunk");
     const sp = skActor(st, "splash", 1.3, 0.6);
     sp.at(hero.x + 0.5, hero.y + 0.85); sp.show(true, true);
     sfx("fall");
     await sp.play(0, 9, 26 * k, false);
+    sp.el.remove();
+  } else if (kind === "bog") {
+    // топь: кочка уходит под воду вместе с рыцарем
+    boardEl.querySelector(`.cell[data-xy="${hero.x},${hero.y}"]`)?.classList.add("gone");
+    heroEl.classList.add("sunk");
+    const sp = skActor(st, "splash", 1.1, 0.6);
+    sp.el.classList.add("mud");
+    sp.at(hero.x + 0.5, hero.y + 0.85); sp.show(true, true);
+    sfx("fall");
+    await sp.play(0, 9, 30 * k, false);
     sp.el.remove();
   } else if (kind === "rams") {
     // баран бежит по тропе с той стороны, где она длиннее, и сбивает рыцаря
@@ -13253,10 +13293,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 210;
+const APP_VERSION = 211;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 211, date: "2026-11-19", text: "Починил шаткий мостик: падала не та доска. Новый уровень «Болото» — вода, топь и мостики, останавливаться нельзя нигде. Шаткие мостики и баранья тропа появились на «Змейке», «Развилке» и «Серпантине»", en: "Fixed the wobbly bridge: the wrong plank was falling. A new level, “The Swamp” — water, bog and bridges, and you can’t stop anywhere. Wobbly bridges and a ram trail now appear on “Zigzag”, “The Fork” and “Switchbacks”" },
   { v: 210, date: "2026-11-19", text: "Три новых уровня, где нельзя останавливаться на полпути: шаткий мостик, баранья тропа и засада в кустах. Собери весь путь — и запусти один раз", en: "Three new levels where you can’t stop halfway: a wobbly bridge, a ram trail and an ambush in the bushes. Build the whole path — and run it once", big: true },
   { v: 209, date: "2026-11-19", text: "В бою у моста взрывы стали разнообразнее: бойцы летят на зрителя под разными углами, сбитые с ног лежат и встают, а упавшие в воду выбывают", en: "Explosions in the bridge battle are more varied: fighters fly toward the viewer at different angles, those knocked down lie and get up, and those thrown into the water are out" },
   { v: 208, date: "2026-11-19", text: "Бой у моста стал сочнее: взрывы отбрасывают бойцов, пришли большие подрывники, а динамит отбивают мечом, копьём и стрелой", en: "The battle at the bridge is juicier: explosions throw fighters around, big bombers have arrived, and dynamite gets knocked away by sword, spear and arrow", big: true },

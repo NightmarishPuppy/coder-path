@@ -228,6 +228,7 @@ var EN = {
   "Вернуть": "Redo",
   "Запустить": "Run",
   "Мостик шаткий — на нём нельзя останавливаться: доска упала. Запиши весь путь до берега сразу и запусти один раз": "The bridge is wobbly — you can’t stop on it: the plank fell. Write the whole path to the shore at once and run it one time",
+  "Топь затянула рыцаря: на болоте нельзя останавливаться. Запиши весь путь до двери сразу и запусти один раз": "The bog pulled the knight in: you can’t stop in the swamp. Write the whole path to the door first and run it once",
   "Баран сбил рыцаря с ног! На бараньей тропе нельзя останавливаться. Запиши весь путь сразу и запусти один раз": "A ram knocked the knight over! You can’t stop on the ram trail. Write the whole path at once and run it one time",
   "Засада! Рыцарь остановился у кустов — и подрывник успел бросить динамит. Запиши весь путь мимо кустов сразу и запусти один раз": "Ambush! The knight stopped by the bushes — and the bomber had time to throw dynamite. Write the whole path past the bushes at once and run it one time",
   "Можно не запускать после каждого шага. Весь путь уже нарисован на поле: добавляй команды, пока он не дойдёт до двери, — и запусти один раз": "You don’t have to run after every step. The whole path is already drawn on the board: keep adding commands until it reaches the door — then run once",
