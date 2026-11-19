@@ -1,21 +1,21 @@
 {
- "version": 221,
+ "version": 222,
  "date": "2026-11-20",
  "notes": [
-  "У моста на первом острове третья башня. Башни теперь рушатся от взрывов, а жители с молотками их чинят"
+  "На Острове гоблинов новая глава «Штурм»: «Вышка» теперь в ней, и появился уровень «Три дела» — копьё, удар и лечение в одной рамке. Кнопка «＋ иначе» теперь есть у любой половины рамки «если»."
  ],
  "files": {
   "index.html": {
-   "size": 1066560,
-   "hash": "d73ba0f8eba4aab0"
+   "size": 1069608,
+   "hash": "25993f71a79fcb51"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 75894,
-   "hash": "137a053bb7dd1c10"
+   "size": 77237,
+   "hash": "98d5cddf4e40e9b4"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "7f897462b267458d"
+   "hash": "887aa8e0073c3bfc"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 25054,
-   "hash": "1379e6d146a2603c"
+   "size": 27148,
+   "hash": "b8aaa23a7dd06818"
   },
   "art-scenes.js": {
    "size": 985719,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "A third tower by the bridge on the first island. Towers now collapse from explosions, and villagers with hammers repair them"
+  "A new chapter on Goblin Island — “Assault”: “The Watchtower” moved there, plus a new level, “Three Jobs” — spear, hit and heal in one frame. The “＋ else” button is now available on any part of an “if” frame."
  ]
 }

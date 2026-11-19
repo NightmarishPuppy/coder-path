@@ -2471,6 +2471,7 @@ const CHAPTERS = [
   // Шестой остров (isle: 6) — Остров гоблинов: «другое если» — одно из трёх
   { name: tr("Караулы"), topic: tr("«другое если»"), isle: 6 },
   { name: tr("Обстрел"), topic: tr("копьё против динамита"), isle: 6 },
+  { name: tr("Штурм"), topic: tr("разрушить вышку гоблинов"), isle: 6 },
 ];
 
 // Уровни по порядку на карте.
@@ -11647,6 +11648,10 @@ async function runArena() {
   let why;
   if (p.endedAt !== null && p.endedAt < A.secs - 0.5)
     why = tr("Программа кончилась на {n}-й секунде, и дальше рыцарь просто стоял. Положи команды в цикл 🔁 — он крутится весь бой", { n: Math.max(1, Math.round(p.endedAt)) });
+  else if (A.goal === "raze")                     // v222: копейщик у вышки — свои слова (он не «держится», а рушит вышку)
+    why = L.commands.includes("heal") && !p.heals ? tr("Копейщик ни разу не полечился. Когда динамит не летит и врага рядом нет — самое время лечиться: ♥")
+      : p.healsFailed >= 2 ? tr("Лечение срывалось {n} раз: если копейщика бьют, пока он лечится, ♥ не прибавляется. Лечись, когда рядом никого и динамит не летит, — в «иначе»", { n: p.healsFailed })
+      : tr("Копейщик не выстоял: {n} с из {m}, у вышки осталось прочности {k}. Посмотри, что он делает, когда летит динамит, когда враг рядом и когда никого", { n: sec, m: A.secs, k: p.fortHp });
   else if (L.commands.includes("heal") && !p.heals)
     why = "Рыцарь ни разу не полечился. Когда врага рядом нет — самое время для ♥ heal()";
   else if (L.commands.includes("goToEnemy") && !p.hits)
@@ -12043,7 +12048,9 @@ function drawLineBar() {
   const cont = fr ? (lang === "py" ? lines[fr.end] ?? "" : lines[fr.end - 1] ?? "") : "";
   const hasNext = lang === "py" ? ELSE_LINE.test(cont) || ELIF_LINE.test(cont) : /^\s*\}\s*else\b/.test(cont);
   const isElif = !!ifm && ELIF_LINE.test(line);
-  $("lb-else").hidden = !ifm || !L.elseButton || hasNext;
+  // v222: «＋ иначе» есть у любой половины рамки («если» или «другое если»), пока у рамки нет «иначе»: оно встаёт в самый низ
+  const tail = fr ? chainEnd(frames, lines, fr).cont : "";
+  $("lb-else").hidden = !ifm || !L.elseButton || (lang === "py" ? ELSE_LINE.test(tail) : /^\s*\}\s*else\b/.test(tail));
   // «＋ другое если» — ещё один вопрос сразу под этой рамкой (и у «если», и у «другое если»)
   $("lb-elif").hidden = !ifm || !L.elifButton;
   $("lb-elif").classList.toggle("new", !!L.newElif);   // на первом уровне главы новая кнопка обведена, как новые кнопки команд
@@ -12140,9 +12147,21 @@ $("lb-add").addEventListener("click", addLineBelow);
 $("lb-out").addEventListener("click", () => shiftSelected(-1));
 $("lb-in").addEventListener("click", () => shiftSelected(1));
 $("lb-done").addEventListener("click", () => { selLine = null; drawCode(); });
+// Последняя половина рамки «если»: от выбранной половины вниз по всем «другое если». cont — строка, которой рамка продолжается
+// (в Python — строка после тела, в JavaScript — строка с закрывающей скобкой): по ней видно, есть ли уже «иначе».
+function chainEnd(frames, lines, fr) {
+  for (let guard = 0; guard < 50; guard++) {
+    const cont = lang === "py" ? lines[fr.end] ?? "" : lines[fr.end - 1] ?? "";
+    const nx = ELIF_LINE.test(cont) && frames.find((f) => f.start === (lang === "py" ? fr.end + 1 : fr.end));
+    if (!nx || nx === fr) return { fr, cont };
+    fr = nx;
+  }
+  return { fr, cont: "" };
+}
 $("lb-else").addEventListener("click", () => {
-  const fr = findFrames(codeEl.value).find((f) => f.start === selLine);
-  if (!fr) return;
+  const frames = findFrames(codeEl.value), sel = frames.find((f) => f.start === selLine);
+  if (!sel) return;
+  const fr = chainEnd(frames, codeEl.value.split("\n"), sel).fr;   // «иначе» встаёт под последней половиной рамки
   editLines((lines) => {
     const ind = " ".repeat(fr.indent);
     if (lang === "py") { lines.splice(fr.end, 0, ind + "else:"); selLine = fr.end + 1; }
@@ -13769,10 +13788,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 221;
+const APP_VERSION = 222;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 222, date: "2026-11-20", text: "На Острове гоблинов новая глава «Штурм»: «Вышка» теперь в ней, и появился уровень «Три дела» — копьё, удар и лечение в одной рамке. Кнопка «＋ иначе» теперь есть у любой половины рамки «если».", en: "A new chapter on Goblin Island — “Assault”: “The Watchtower” moved there, plus a new level, “Three Jobs” — spear, hit and heal in one frame. The “＋ else” button is now available on any part of an “if” frame." },
   { v: 221, date: "2026-11-20", text: "У моста на первом острове третья башня. Башни теперь рушатся от взрывов, а жители с молотками их чинят", en: "A third tower by the bridge on the first island. Towers now collapse from explosions, and villagers with hammers repair them" },
   { v: 220, date: "2026-11-20", text: "«Вышка»: из настила вылетают и ломаются брёвна, вышка качается всё сильнее и на последнем ударе валится в груду", en: "“The Watchtower”: logs fly out of the deck and snap, the tower sways harder and harder and topples into a heap on the last hit" },
   { v: 219, date: "2026-11-20", text: "«Вышка»: вместо огня — дым, который густеет с каждым попаданием; вышка рушится под облаком пыли, брёвна разлетаются", en: "“The Watchtower”: smoke instead of fire, thicker with every hit; the tower collapses in a cloud of dust and logs fly" },
