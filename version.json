@@ -1,13 +1,13 @@
 {
- "version": 212,
+ "version": 213,
  "date": "2026-11-19",
  "notes": [
-  "Новый противник — гоблин-часовой: он ходит по своей программе, пока идёт твоя. Новая команда «ждать» ⏳ и два уровня на Берегу: «Часовой» и «За спиной». Место встречи видно на поле ещё до запуска"
+  "После обновления заставка больше не «разъезжается» с картой"
  ],
  "files": {
   "index.html": {
-   "size": 1030271,
-   "hash": "21a329cf254e4823"
+   "size": 1031261,
+   "hash": "f48bfb198882b22a"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "18abcfcdcf77a698"
+   "hash": "a869c76da2eaae88"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "A new opponent — the goblin sentry: he walks by his own program while yours runs. A new “wait” ⏳ command and two levels on the Shore: “The Sentry” and “Behind His Back”. The field shows where you would meet before you even press Run"
+  "After an update the title screen no longer splits with the map"
  ]
 }

@@ -301,8 +301,11 @@ html.still .ripple { animation: none; opacity: 0.5; }
   padding: 20px max(16px, env(safe-area-inset-left, 0px));
   background: radial-gradient(ellipse at 50% 70%, #1d3a52 0%, var(--bg) 70%);
   transition: opacity 0.6s ease;
+  transform: translateZ(0);   /* свой слой: на iPad после перезагрузки карта под заставкой иногда рисовалась поверх её нижней части */
 }
 .splash.gone { opacity: 0; pointer-events: none; }
+/* пока заставка на экране, карту под ней не рисуем вовсе (место она занимает, размеры считаются как обычно) */
+body.under-splash #mapview { visibility: hidden; }
 .splash-inner { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; width: 100%; max-width: 440px; }
 .splash h1 { font-size: clamp(34px, 9vw, 52px); }
 .splash p { margin: 0; color: var(--muted); }
@@ -13370,6 +13373,8 @@ L = LEVELS[levelIdx];
 showView("map");
 initCloud();
 if (syncOn) { setSyncState("idle"); codeFromLink().finally(syncNow); }
+try { history.scrollRestoration = "manual"; } catch (e) {}   // после перезагрузки браузер не возвращает старую прокрутку карты под заставку
+document.body.classList.add("under-splash");
 const stopScene = startSplash();
 showIsle(curIsle);
 
@@ -13379,6 +13384,7 @@ $("start-game").addEventListener("click", () => {
   if (save.music) startMusic();
   sfx("tap");
   $("splash").classList.add("gone");
+  document.body.classList.remove("under-splash");
   setTimeout(() => { $("splash").hidden = true; stopScene(); }, 600);
   if (!$("mapview").hidden) { scrollTo(0, 0); mapToHero(); }   // под заставкой страница могла сдвинуться — ставим к рыцарю заново
   scheduleCoach();
@@ -13389,10 +13395,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 212;
+const APP_VERSION = 213;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 213, date: "2026-11-19", text: "После обновления заставка больше не «разъезжается» с картой", en: "After an update the title screen no longer splits with the map" },
   { v: 212, date: "2026-11-19", text: "Новый противник — гоблин-часовой: он ходит по своей программе, пока идёт твоя. Новая команда «ждать» ⏳ и два уровня на Берегу: «Часовой» и «За спиной». Место встречи видно на поле ещё до запуска", en: "A new opponent — the goblin sentry: he walks by his own program while yours runs. A new “wait” ⏳ command and two levels on the Shore: “The Sentry” and “Behind His Back”. The field shows where you would meet before you even press Run", big: true },
   { v: 211, date: "2026-11-19", text: "Починил шаткий мостик: падала не та доска. Новый уровень «Болото» — вода, топь и мостики, останавливаться нельзя нигде. Шаткие мостики и баранья тропа появились на «Змейке», «Развилке» и «Серпантине»", en: "Fixed the wobbly bridge: the wrong plank was falling. A new level, “The Swamp” — water, bog and bridges, and you can’t stop anywhere. Wobbly bridges and a ram trail now appear on “Zigzag”, “The Fork” and “Switchbacks”" },
   { v: 210, date: "2026-11-19", text: "Три новых уровня, где нельзя останавливаться на полпути: шаткий мостик, баранья тропа и засада в кустах. Собери весь путь — и запусти один раз", en: "Three new levels where you can’t stop halfway: a wobbly bridge, a ram trail and an ambush in the bushes. Build the whole path — and run it once", big: true },
