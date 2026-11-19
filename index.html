@@ -5267,10 +5267,15 @@ const SIEGE_UNITS = {
   monk: { side: "us", hp: 4, heal: 2, reach: 3.5, cd: 3200, speed: 1.6, sight: 1.6, key: "monk", sc: 0.8 },
   torch: { side: "gob", hp: 3, dmg: 1, reach: 0.75, cd: 850, speed: 1.5, sight: 4, key: "torch", sc: 0.85 },
   torchp: { side: "gob", hp: 4, dmg: 1, reach: 0.75, cd: 800, speed: 1.35, sight: 4, key: "torchp", sc: 0.85 },
-  tnt: { side: "gob", hp: 2, dmg: 2, reach: 2.7, cd: 2300, speed: 1.4, sight: 4, key: "tnt", sc: 0.85 },
+  tnt: { side: "gob", hp: 2, dmg: 2, reach: 2.7, cd: 2300, speed: 1.4, sight: 4, key: "tnt", sc: 0.85, thrower: true },
+  // большой подрывник (v208): вдвое крупнее, живучий, кидает жирный динамит — его взрыв уносит ближних за край карты
+  tntbig: { side: "gob", hp: 7, dmg: 3, reach: 3.2, cd: 3400, speed: 1.0, sight: 5, key: "tnt", sc: 1.7, thrower: true, fat: true },
   barrel: { side: "gob", hp: 1, dmg: 3, reach: 0.6, cd: 0, speed: 1.0, sight: 5, key: "barrel", sc: 0.85, foot: 0.72 },
 };
 const ARCHER = { reach: 5.5, dmg: 1, cd: 1300 };
+// ОПЫТ (v208): отброшенный взрывом боец иногда летит не за край карты, а «на зрителя» — вбок и вниз, вырастая в размере.
+// Не понравится — поставить false: больше ничего менять не надо, такие бойцы будут улетать за край карты.
+const FLY_AT_CAMERA = true;
 // Общий движок живого боя (бой у шахты и заставка). B — описание поля боя:
 //   walk(x, y) — можно ли тут стоять; towers — башни с лучниками [x, y]; posts — наши на постах
 //   [{ kind, at, left }]; respawn — откуда выходит подкрепление; spawns — откуда приходят гоблины;
@@ -5316,6 +5321,8 @@ async function battle(st0, B) {
   // отбитый динамит должен быть заметен в свалке (v184): вспышка у копья, дымный след, большой взрыв там, куда вернулся
   const sparks = pool("boom2", 2, 0.6, 0.5), bigBooms = pool("boom3", 2, 1.5, 0.55), trail = pool("dust", 8, 0.5, 0.5);
   sparks.forEach((a) => (a.mute = true));
+  // v208: жирный динамит большого подрывника, огромный взрыв, всплеск (тело упало в воду)
+  const dynsBig = pool("dyn", 2, 2, 0.5), hugeBooms = pool("boom3", 2, 2.6, 0.55), splashes = pool("splash", 2, 1.1, 0.6);
   const fxAt = (list, x, y, ms, z) => { const f = take(list); f.el.style.transition = "none"; f.at(x, y); Z(f, z ?? y + 3); f.show(true); f.play(0, SK[f.key][0], ms, false).then(() => free(f)); };
   const take = (list) => { const a = list.find((x) => !x.busy) || list[0]; a.busy = true; return a; };
   const free = (a) => { a.busy = false; a.show(false); };
@@ -5369,18 +5376,18 @@ async function battle(st0, B) {
     let T = TYPES[kind];
     if (!T) {                                          // крупнее боец — дальше достаёт (динамит и лечение — как были)
       T = TYPES[kind] = { ...SIEGE_UNITS[kind], ...(B.stats && B.stats[kind]) };
-      if (T.dmg && kind !== "tnt") T.reach *= ZM;
+      if (T.dmg && !T.thrower) T.reach *= ZM;
     }
-    let u = units.find((v) => v.dead && v.kind === kind && !v.post && !post);
+    let u = units.find((v) => v.dead && !v.air && v.kind === kind && !v.post && !post);
     if (!u) { u = { kind, T, a: A(T.key, T.sc, T.foot) }; units.push(u); }
     Object.assign(u, { x, y, hp: T.hp, dead: false, post, busy: 0, next: 0, anim: "", left: x > 9, fuse: false, tgt: null });
     place(u);
     return u;
   };
   const IDLE = { war: [0, 6, 140, "kwar"], lan: [0, 12, 110, "lidle"], monk: [0, 6, 150, "monk"], hero: [0, 8, 110, "hidle"],
-    torch: [0, 7, 120], torchp: [0, 7, 120], tnt: [0, 6, 130], barrel: [0, 1, 200] };
+    torch: [0, 7, 120], torchp: [0, 7, 120], tnt: [0, 6, 130], tntbig: [0, 6, 170], barrel: [0, 1, 200] };
   const RUN = { war: [1, 6, 90, "kwar"], lan: [0, 6, 90, "lrun"], monk: [0, 4, 100, "monkrun"], hero: [0, 6, 85, "hrun"],
-    torch: [1, 6, 90], torchp: [1, 6, 90], tnt: [1, 6, 90], barrel: [4, 3, 160] };
+    torch: [1, 6, 90], torchp: [1, 6, 90], tnt: [1, 6, 90], tntbig: [1, 6, 130], barrel: [4, 3, 160] };
   const anim = (u, name, spec) => {
     if (u.anim === name) return;
     u.anim = name;
@@ -5399,24 +5406,87 @@ async function battle(st0, B) {
   ATK.hero = Object.fromEntries(["side", "dside", "uside", "down", "up"].map((k) => [k, [0, 4, 85, "hatk"]]));
   const flash = (u) => u.a.el.animate([{ filter: "brightness(2.4) saturate(0.3)" }, { filter: "none" }], 220);
   const boom = (x, y) => { const b = take(booms); b.at(x, y); Z(b, y + 0.5); b.show(true); b.play(0, 9, 70, false).then(() => free(b)); };
-  const hurt = (u, dmg) => {
+  const hurt = (u, dmg, fly) => {
     if (u.dead) return;
     u.hp -= dmg; flash(u);
-    if (u.hp <= 0) kill(u);
+    if (u.hp <= 0) kill(u, fly);
   };
   // взрыв ранит всех в небольшом круге — и наших, и гоблинов (бочка рядом тоже взрывается)
   const splash = (x, y, r, dmg) => [...units].forEach((v) => !v.dead && Math.hypot(v.x - x, v.y - y) < r && hurt(v, dmg));
-  const kill = (u) => {
-    u.dead = true; u.a.show(false);
-    if (u.kind === "barrel") { boom(u.x, u.y); splash(u.x, u.y, 0.9, u.T.dmg); return; }
-    const d = take(deads); d.at(u.x, u.y); Z(d, u.y); d.show(true);
+  const skull = (x, y, u) => {
+    const d = take(deads); d.at(x, y); Z(d, y); d.show(true);
     d.mute = u.T.side !== "gob";                         // вскрик — только у гоблина
     d.play(0, 7, 110, false);
     after(B.skulls || 2600, () => d.play(1, 7, 120, false).then(() => free(d)));
+  };
+  // fly — погибшего сейчас унесёт взрывной волной: череп появится там, где он упадёт (fling)
+  const kill = (u, fly) => {
+    u.dead = true;
+    // бочек стало меньше, зато взрыв мощнее (v208): большой взрыв и взрывная волна
+    if (u.kind === "barrel") { u.a.show(false); boom(u.x, u.y); fxAt(bigBooms, u.x, u.y, 75); blast(u.x, u.y, 1.15, u.T.dmg, 2.0, 2.6); return; }
+    if (!fly) { u.a.show(false); skull(u.x, u.y, u); }
     if (u.post) after(8000, () => {                      // подкрепление
-      Object.assign(u, { x: B.respawn[0], y: B.respawn[1], hp: u.T.hp, dead: false, busy: 0, anim: "", tgt: null, via: B.via ? [...B.via] : [] });
+      Object.assign(u, { x: B.respawn[0], y: B.respawn[1], hp: u.T.hp, dead: false, air: false, busy: 0, anim: "", tgt: null, via: B.via ? [...B.via] : [] });
       place(u);
     });
+  };
+  // ----- взрывная волна (v208) -----
+  // Кувырок в полёте: картинка крутится в своей плоскости, как утка от взрыва; grow — вырасти (полёт «на зрителя»), в конце тает.
+  const tumble = (a, turns, ms, grow = 1) => {
+    if (STILL || !a.el.animate) return;
+    const base = `translate(-50%, ${a.el.style.getPropertyValue("--foot")})${a.el.classList.contains("flip") ? " scaleX(-1)" : ""}`;
+    a.el.animate([{ transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
+      { transform: `${base} rotate(${turns * 290}deg) scale(${1 + (grow - 1) * 0.55})`, opacity: 1, offset: 0.8 },
+      { transform: `${base} rotate(${turns * 360}deg) scale(${grow})`, opacity: grow > 1 ? 0 : 1 }], { duration: ms, easing: grow > 1 ? "cubic-bezier(.5,0,1,.6)" : "linear" });
+  };
+  // Боец отлетает от взрыва в точке (x, y). s — сила, с которой волна до него дошла:
+  //   до 0,6 — опрокидывает на месте («как уточку»); 0,6–1,7 — подлетает и падает подальше;
+  //   больше — уносит насовсем: за край карты или (опыт FLY_AT_CAMERA) «на зрителя».
+  // Живой после приземления встаёт и дерётся дальше; погибший летит телом, череп — там, где упал (в воде — всплеск).
+  const fling = (v, x, y, s) => {
+    let dx = v.x - x, dy = v.y - y; const d0 = Math.hypot(dx, dy);
+    if (d0 < 0.05) { const q = Math.random() * 6.28; dx = Math.cos(q); dy = Math.sin(q); } else { dx /= d0; dy /= d0; }
+    const a = v.a, dir = dx < 0 ? -1 : 1;
+    v.air = true; v.busy = Infinity; v.tgt = null;
+    a.el.style.transition = "none"; Z(a, v.y + 6);
+    if (s >= 1.7) {
+      if (!v.dead) kill(v, true);
+      const gone = () => { a.show(false, true); v.air = false; };
+      if (FLY_AT_CAMERA && !STILL && Math.random() < 0.5) {              // «на зрителя»: вбок и вниз по экрану, всё крупнее
+        a.el.style.zIndex = 99999;
+        tumble(a, dir * 1.4, 950, 7);
+        return a.arc(v.x + dx * 2.2 + (Math.random() - 0.5) * 2, v.y + 3.5 + Math.random() * 2, 1.6, 950).then(gone);
+      }
+      tumble(a, dir * 5, 1300);                                          // за край карты
+      return a.arc(v.x + dx * 15, v.y + dy * 15, 5, 1300).then(gone);
+    }
+    const far = s >= 0.6;
+    let len = far ? 1.1 + (s - 0.6) * 3.4 : 0.3, lx = v.x, ly = v.y;
+    if (v.dead) { lx = v.x + dx * len; ly = v.y + dy * len; }
+    else for (; len > 0.08; len *= 0.6) if (walk(v.x + dx * len, v.y + dy * len)) { lx = v.x + dx * len; ly = v.y + dy * len; break; }
+    const ms = far ? 600 + len * 90 : 520;
+    tumble(a, far ? dir * Math.max(1, Math.round(len * 0.7)) : dir, ms);
+    a.arc(lx, ly, far ? 0.9 + len * 0.35 : 0.55, ms).then(() => {
+      v.air = false;
+      if (!v.dead) { v.x = lx; v.y = ly; v.busy = now + (far ? 900 : 450); v.anim = ""; anim(v, "idle"); return; }
+      a.show(false, true);
+      if (B.water?.(lx, ly)) { fxAt(splashes, lx, ly, 70, ly); mapSfx(st, "splash", lx, ly); }
+      else if (walk(lx, ly)) skull(lx, ly, v);
+    });
+  };
+  // Взрыв с волной: в круге r — урон, в круге wave — отбрасывает. power: 0,5 — обычный динамит (только опрокидывает),
+  // 2 — бочка (самых ближних уносит насовсем), 2,3 — жирный динамит большого подрывника.
+  const blast = (x, y, r, dmg, power, wave) => {
+    for (const v of [...units]) {
+      if (v.dead || v.air) continue;
+      const d = Math.hypot(v.x - x, v.y - y);
+      if (d >= wave && d >= r) continue;
+      const s = power * Math.max(0, 1 - d / wave);
+      // бочку не носит (она взрывается сама), большого подрывника сдвинет только очень сильный взрыв
+      const fly = s >= 0.16 && v.kind !== "barrel" && (!v.T.fat || s >= 1);
+      if (d < r) hurt(v, dmg, fly);
+      if (fly) fling(v, x, y, v.T.fat ? Math.min(s, 0.5) : s);
+    }
   };
   // шаг к цели в обход препятствий: прямо, а если нельзя — чуть левее или правее
   const stepTo = (u, gx, gy) => {
@@ -5441,7 +5511,7 @@ async function battle(st0, B) {
   };
   const nearest = (u, ok) => {
     let best = null, bd = Infinity;
-    for (const v of units) if (!v.dead && v.T.side !== u.T.side && ok(v)) { const d = dist(u, v); if (d < bd) { bd = d; best = v; } }
+    for (const v of units) if (!v.dead && !v.air && v.T.side !== u.T.side && ok(v)) { const d = dist(u, v); if (d < bd) { bd = d; best = v; } }
     return best && bd <= u.T.sight ? best : null;
   };
   const melee = (u, t) => {
@@ -5462,6 +5532,7 @@ async function battle(st0, B) {
     if (u.T.side === "us") say(u, CMD("attack"), 0.3);
     after(spec[1] * spec[2] * 0.55, () => { if (!u.dead && dist(u, t) < u.T.reach + 0.45 * ZM) hurt(t, u.T.dmg); });
   };
+  const met = { sword: 0, spear: 0, arrow: 0, ground: 0 };   // чем встретили динамит (счётчики для тестов)
   const throwTnt = (u, t) => {
     if (dist(u, t) > u.T.reach) { if (!stepTo(u, t.x, t.y)) anim(u, "idle"); return; }
     u.left = t.x < u.x;
@@ -5471,36 +5542,57 @@ async function battle(st0, B) {
     const [x1, y1] = [t.x, t.y];
     after(380, () => {
       if (u.dead) return;
-      const d = take(dyns); d.el.style.transition = "none"; d.at(u.x + (u.left ? -0.3 : 0.3) * ZM, u.y - 1.0 * ZM); Z(d, 40); d.show(true); d.play(0, 6, 70);
-      const land = () => { free(d); boom(x1, y1); splash(x1, y1, 0.75, u.T.dmg); };
-      // Копейщик рядом с местом падения встречает динамит ударом копья вверх-вбок (v182). Каждый раз по-своему:
-      // не заметил или махнул поздно — взрыв у ног, как раньше; подбросил — взрыв в воздухе, никого не задело;
-      // отбил обратно — динамит летит в того, кто кинул, и взрывается среди гоблинов; сбил на землю — фитиль погас, один пар.
-      const L = units.find((v) => !v.dead && v.kind === "lan" && Math.hypot(v.x - x1, v.y - y1) < 1.0 * ZM && now >= v.busy), r = Math.random();
-      if (!L || r < 0.22) { d.arc(x1, y1, 1.1, 650).then(land); return; }
-      const swing = () => { if (L.dead) return; L.left = u.x < L.x; L.busy = now + 480; L.next = Math.max(L.next || 0, now + 600); anim(L, "atk" + now, ATK.lan.uside); };
-      if (r < 0.38) { after(560, swing); d.arc(x1, y1, 1.1, 650).then(land); return; }        // махнул поздно
+      const fat = !!u.T.fat, big = fat ? 2 : 1;
+      const d = take(fat ? dynsBig : dyns); d.el.style.transition = "none"; d.at(u.x + (u.left ? -0.3 : 0.3) * ZM * big, u.y - 1.0 * ZM * big); Z(d, 40); d.show(true); d.play(0, 6, 70);
+      // взрыв динамита: обычный только опрокидывает тех, кто рядом; жирный — огромный, с дальней взрывной волной
+      const explode = (ex, ey, more = 0) => { boom(ex, ey);
+        if (fat) { fxAt(hugeBooms, ex, ey, 80); blast(ex, ey, 1.1, u.T.dmg + more, 2.3, 3.4); } else blast(ex, ey, 0.75, u.T.dmg + more, 0.5, 1.5); };
+      const land = () => { free(d); met.ground++; explode(x1, y1); };
+      // Динамит встречают (v208): мечник — совсем рядом и почти наверняка; копейщик — вдвое дальше, но реже (v182);
+      // лучник — стрелой в воздухе с любого расстояния, но редко, и чем дальше, тем реже.
+      // Каждый раз по-своему: не заметил или махнул поздно — взрыв у ног; подбросил — взрыв в воздухе, никого не задело;
+      // отбил обратно — динамит летит в того, кто кинул; сбил на землю — фитиль погас, один пар.
+      const near = (kinds, R) => units.find((v) => !v.dead && !v.air && kinds.includes(v.kind) && Math.hypot(v.x - x1, v.y - y1) < R && now >= v.busy);
+      const SW = near(["war", "hero"], 0.6 * ZM), L = SW || near(["lan"], 1.2 * ZM), miss = SW ? 0.12 : 0.38, r = Math.random();
+      const byArrow = () => {
+        let ar = null, bd = Infinity;
+        for (const q of archers) { const dd = Math.hypot(q.x - x1, q.y - y1); if (now >= q.busy && dd < bd) { bd = dd; ar = q; } }
+        if (!ar || Math.random() > Math.max(0.05, 0.42 - bd / ZM * 0.08)) return false;
+        met.arrow++;
+        const ix = (d.x + x1) / 2, iy = (d.y + y1) / 2 - 1.0 * ZM, T = 360;       // точка встречи — в воздухе, на середине пути
+        ar.idle = false; ar.a.face(ix < ar.x); ar.a.play(ARCH_ROW[dirOf(ix - ar.x, iy - ar.y)], 8, 45, false);
+        ar.next = now + AR.cd; ar.busy = now + 8 * 45;
+        say({ get said() { return ar.said; }, set said(v) { ar.said = v; }, x: ar.x, y: ar.y + 0.2 }, CMD("shoot"), 0.6);
+        after(T - 200, () => fireArrow(ar, ix, iy, 200));
+        d.arc(ix, iy, 0.35, T).then(() => { free(d); mapSfx(st, "knock", ix, iy); fxAt(sparks, ix, iy, 45); fxAt(fat ? hugeBooms : bigBooms, ix, iy + 0.5, 70); });
+        return true;
+      };
+      if (!L || r < miss * 0.58) { if (!byArrow()) d.arc(x1, y1, 1.1, 650).then(land); return; }
+      const swing = () => { if (L.dead || L.air) return; L.left = u.x < L.x; L.busy = now + 480; L.next = Math.max(L.next || 0, now + 600); anim(L, "atk" + now, ATK[L.kind].uside); };
+      if (r < miss) { after(560, swing); d.arc(x1, y1, 1.1, 650).then(land); return; }        // махнул поздно
+      const q = (r - miss) / (1 - miss);                                                       // что вышло из удачного удара
+      met[SW ? "sword" : "spear"]++;
       // динамит крутится в полёте: поворот — вместе с обычным сдвигом актёра (transform у него уже занят)
       const base = `translate(-50%, ${d.el.style.getPropertyValue("--foot")})`;
       const spin = (turns, ms) => STILL || !d.el.animate ? null : d.el.animate([{ transform: `${base} rotate(0deg)` }, { transform: `${base} rotate(${turns * 360}deg)` }], { duration: ms });
-      const px = L.x + (u.x < L.x ? -0.5 : 0.5) * ZM, py = L.y - 0.95 * ZM;                  // остриё копья на кадре удара
+      const px = L.x + (u.x < L.x ? -1 : 1) * (SW ? 0.4 : 0.5) * ZM, py = L.y - (SW ? 0.7 : 0.95) * ZM;   // остриё копья (или меч) на кадре удара
       after(370, swing);
       d.arc(px, py, 0.8, 520).then(() => {
-        if (L.dead) return d.arc(x1, y1, 0.3, 160).then(land);                              // копейщика уже нет — падает, куда летел
+        if (L.dead || L.air) return d.arc(x1, y1, 0.3, 160).then(land);                     // отбивать уже некому — падает, куда летел
         mapSfx(st, "knock", px, py);
         say(L, CMD("attack"));
         fxAt(sparks, px, py, 45);                                                             // вспышка у острия копья
         Z(d, py + 4);                                                                         // летит поверх бойцов
         const smoke = (ms) => { for (let t = 80; t < ms; t += 100) after(t, () => { if (d.busy) fxAt(trail, d.x, d.y + 0.1, 55); }); };
-        if (r < 0.60) {                                                                       // подбросил: взрыв высоко в воздухе
+        if (q < 0.35) {                                                                       // подбросил: взрыв высоко в воздухе
           const ax = px + (px - L.x) * 0.8, ay = py - 3.0 * ZM;
           spin(3, 650); smoke(650);
-          return d.arc(ax, ay, 0.25, 650).then(() => { free(d); fxAt(bigBooms, ax, ay + 0.6, 70); });
+          return d.arc(ax, ay, 0.25, 650).then(() => { free(d); fxAt(fat ? hugeBooms : bigBooms, ax, ay + 0.6, 70); });
         }
-        if (r < 0.90) {                                                                       // отбил обратно: в того, кто кинул
+        if (q < 0.84) {                                                                       // отбил обратно: в того, кто кинул
           const bx = u.x, by = u.y;                                                           // летит высоко и не спеша — видно, куда вернётся
           spin(u.x < L.x ? -4 : 4, 950); smoke(950);
-          return d.arc(bx, by, 2.3, 950).then(() => { free(d); boom(bx, by); fxAt(bigBooms, bx, by, 75); splash(bx, by, 0.9, u.T.dmg + 1); });
+          return d.arc(bx, by, 2.3, 950).then(() => { free(d); if (!fat) fxAt(bigBooms, bx, by, 75); explode(bx, by, 1); });
         }
         const gx = px + (px - L.x) * 1.2, gy = L.y + 0.1;                                    // сбил на землю: фитиль погас
         spin(1, 300);
@@ -5548,7 +5640,7 @@ async function battle(st0, B) {
       return;
     }
     const t = nearest(u, () => true);
-    if (t) return u.kind === "tnt" ? throwTnt(u, t) : u.kind === "barrel" ? barrelGo(u, t) : melee(u, t);
+    if (t) return u.T.thrower ? throwTnt(u, t) : u.kind === "barrel" ? barrelGo(u, t) : melee(u, t);
     // никого не видно — к золоту; дошёл — долбит гору
     if (stepTo(u, ...B.goal)) return;
     if (u.kind === "torch" || u.kind === "torchp") { u.busy = now + 600; anim(u, "atk" + now, ATK[u.kind].up); }
@@ -5560,7 +5652,7 @@ async function battle(st0, B) {
   const archerThink = (ar) => {
     if (now < ar.busy) return;
     let t = null, bd = Infinity;
-    for (const v of units) if (!v.dead && v.T.side === "gob") { const d = Math.hypot(v.x - ar.x, v.y - ar.y); if (d < bd) { bd = d; t = v; } }
+    for (const v of units) if (!v.dead && !v.air && v.T.side === "gob") { const d = Math.hypot(v.x - ar.x, v.y - ar.y); if (d < bd) { bd = d; t = v; } }
     // умный лучник: бочка с динамитом в пределах выстрела — первой, пока она далеко от своих
     if (B.smart) for (const v of units) if (!v.dead && v.kind === "barrel" && !v.fuse) {
       const d = Math.hypot(v.x - ar.x, v.y - ar.y); if (d <= AR.reach && (t?.kind !== "barrel" || d < bd)) { bd = d; t = v; } }
@@ -5572,13 +5664,18 @@ async function battle(st0, B) {
     ar.next = now + AR.cd; ar.busy = now + 8 * 55;
     say({ get said() { return ar.said; }, set said(v) { ar.said = v; }, x: ar.x, y: ar.y + 0.2 }, CMD("shoot"), 0.35);
     after(300, () => {
-      if (t.dead) return;
-      const a = take(arrows), sx = ar.x + (dx < 0 ? -0.2 : 0.2) * ZM, sy = ar.y - 0.35 * ZM, ex = t.x, ey = t.y - 0.35 * ZM;
-      const ax = Math.abs(ex - sx), ay = Math.abs(ey - sy);
-      a.sheet(ax >= ay ? "arrow" : ey > sy ? "arrowd" : "arrowu"); a.frame(0, 0); a.face(ax >= ay && ex < sx);
-      a.el.style.transition = "none"; a.at(sx, sy); Z(a, 200); a.show(true, true);     // сразу, без проявления: иначе стрелу в полёте не видно (v191)
-      a.move(ex, ey, Math.max(260, Math.hypot(ex - sx, ey - sy) * 90)).then(() => { free(a); if (!t.dead) hurt(t, AR.dmg); });
+      if (t.dead || t.air) return;
+      const ex = t.x, ey = t.y - 0.35 * ZM;
+      fireArrow(ar, ex, ey, Math.max(260, Math.hypot(ex - ar.x, ey - ar.y) * 90)).then(() => { if (!t.dead) hurt(t, AR.dmg); });
     });
+  };
+  // стрела с башни в точку (ex, ey) за ms мс
+  const fireArrow = (ar, ex, ey, ms) => {
+    const a = take(arrows), sx = ar.x + (ex < ar.x ? -0.2 : 0.2) * ZM, sy = ar.y - 0.35 * ZM;
+    const ax = Math.abs(ex - sx), ay = Math.abs(ey - sy);
+    a.sheet(ax >= ay ? "arrow" : ey > sy ? "arrowd" : "arrowu"); a.frame(0, 0); a.face(ax >= ay && ex < sx);
+    a.el.style.transition = "none"; a.at(sx, sy); Z(a, 200); a.show(true, true);     // сразу, без проявления: иначе стрелу в полёте не видно (v191)
+    return a.move(ex, ey, ms).then(() => free(a));
   };
 
   // ----- наши на постах -----
@@ -5612,6 +5709,7 @@ async function battle(st0, B) {
     H.stands.forEach((stand) => { const p = A("prungold", 0.8), n = A("gnug", 0.8, 0.585); Z(p, stand[1]); skRun(() => haul(p, n, stand)); });
   } else if (mount) skRun(async () => { for (;;) { await skWait(st0, skRnd(2500, 5000)); await mount.play(0, 12, 70, false); mount.frame(0, 0); } });
 
+  B.api = { blast, make, throwTnt, met };                  // для тестов: устроить взрыв или поставить бойца самому
   // ----- волны гоблинов: приходят из облаков по мосту -----
   const W = B.waves;
   let queue = [], nextWave = now + (W.first ?? 2500);
@@ -5619,7 +5717,13 @@ async function battle(st0, B) {
     const n = W.min + Math.floor(Math.random() * (W.max - W.min + 1)) + (Math.random() < 0.15 ? 2 : 0);
     B.spawns.forEach((sp, si) => {
       const k = B.spawns.length > 1 ? Math.ceil(n / B.spawns.length) : n;
-      for (let i = 0; i < k; i++) queue.push([now + i * (W.every || 900) + si * 300, W.kinds[Math.floor(Math.random() * W.kinds.length)], sp]);
+      for (let i = 0; i < k; i++) {
+        let kind = W.kinds[Math.floor(Math.random() * W.kinds.length)];
+        // редкие виды (бочка, большой подрывник): не больше W.cap[вид] на поле и в очереди сразу
+        const cap = W.cap?.[kind];
+        if (cap && units.filter((v) => !v.dead && v.kind === kind).length + queue.filter((e) => e[1] === kind).length >= cap) kind = W.kinds[0];
+        queue.push([now + i * (W.every || 900) + si * 300, kind, sp]);
+      }
     });
     queue.sort((a, b) => a[0] - b[0]);
   };
@@ -5635,7 +5739,7 @@ async function battle(st0, B) {
     units.forEach(think);
     archers.forEach(archerThink);
     // не стоять друг в друге
-    const live = units.filter((v) => !v.dead);
+    const live = units.filter((v) => !v.dead && !v.air);
     for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
       const a = live[i], b = live[j], d = dist(a, b);
       if (d > 0.42 * ZM || d === 0) continue;
@@ -5700,10 +5804,12 @@ async function skitBeach(st0, S) {
     code: true, talk: () => (uiBlocks ? "blocks" : lang), bubPx: () => Math.min(15, Math.max(10, w.clientWidth / 18 * 0.4)),
     bubMax: 3, bubGap: () => (uiBlocks ? [3.2, 1.3] : [6, 1.3]), bubFit: true, smart: true, skulls: 6500, archer: { reach: 6.8, cd: 1150 },
     stats: { war: { hp: 9, leash: 2.3 }, lan: { hp: 9, leash: 2.5 }, monk: { hp: 6 } },
-    waves: { kinds: ["torch", "torch", "torch", "torchp", "torchp", "tnt", "barrel"], min: 5, max: 8, every: 650, gap: [1500, 4000], first: 1200 },
+    waves: { kinds: ["torch", "torch", "torch", "torch", "torchp", "torchp", "torchp", "tnt", "tnt", "barrel", "tntbig"], cap: { barrel: 1, tntbig: 1 },
+      min: 5, max: 8, every: 650, gap: [1500, 4000], first: 1200 },
+    water: (x, y) => E.waterAt(x, y),
     start: [["torch", S.bridgeX, 50.5], ["torchp", S.bridgeX, 51.4], ["torch", S.bridgeX, 52.3], ["tnt", S.bridgeX, 53.2]] };
   const run = battle(st, B);
-  S.units = B.units;
+  S.units = B.units; S.api = B.api;
   return run;
 }
 // Лесоруб на карте: рубит дерево, оно падает в сторону от него, на месте остаётся пень и брёвна.
@@ -13035,10 +13141,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 207;
+const APP_VERSION = 208;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 208, date: "2026-11-19", text: "Бой у моста стал сочнее: взрывы отбрасывают бойцов, пришли большие подрывники, а динамит отбивают мечом, копьём и стрелой", en: "The battle at the bridge is juicier: explosions throw fighters around, big bombers have arrived, and dynamite gets knocked away by sword, spear and arrow", big: true },
   { v: 207, date: "2026-11-19", text: "В Python и JavaScript задания на островах 4 и 5 теперь говорят про строки кода, а не про плитки", en: "In Python and JavaScript the tasks on islands 4 and 5 now talk about lines of code, not tiles" },
   { v: 206, date: "2026-11-19", text: "В Python и JavaScript на планшете и компьютере задание сворачивается, пока идёт программа: видно, какой шаг выполняется", en: "In Python and JavaScript on tablets and computers the task folds away while the program runs, so you can see which step is running" },
   { v: 205, date: "2026-11-19", text: "Окошко победы на планшете и компьютере больше не наползает на соседнюю колонку", en: "The win box on tablets and computers no longer overlaps the next column" },
