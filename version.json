@@ -1,13 +1,13 @@
 {
- "version": 215,
+ "version": 216,
  "date": "2026-11-19",
  "notes": [
-  "На планшете экран уровня больше не дёргается после кнопки «если»"
+  "«Два дела»: задание и кнопки теперь сходятся — команда встаёт туда, куда сказано"
  ],
  "files": {
   "index.html": {
-   "size": 1036093,
-   "hash": "d462fea8b7350eca"
+   "size": 1036384,
+   "hash": "d3c5782bbc62b7f3"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "2dc2190386af2553"
+   "hash": "42d099546ee4f52d"
   },
   "icon-192.png": {
    "size": 42164,
@@ -82,8 +82,8 @@
    "hash": "ba9be0574f8e6e40"
   },
   "isle3.js": {
-   "size": 51299,
-   "hash": "a6ffe62163e2ab08"
+   "size": 51355,
+   "hash": "ced7e3856e808ee0"
   },
   "isle4.js": {
    "size": 49545,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "On tablets the level screen no longer jitters after the “if” button"
+  "“Two Jobs”: the task and the buttons now agree — the command lands where the task says"
  ]
 }

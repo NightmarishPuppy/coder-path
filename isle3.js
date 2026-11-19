@@ -655,12 +655,12 @@ levels: [
     isle: 3,
     arena: { secs: 20, hp: 10, tower: [6.2, 4.2], allies: [{ kind: "war", at: [8.7, 4.0], left: true }, { kind: "lan", at: [9.2, 6.6] }],
       waves: [[1, "r", "tnt"], [1.4, "l", "barrel"], [1.5, "l", "torch"], [2.5, "l", "tnt"], [3.5, "r", "barrel"], [4.5, "r", "torchp"], [5, "l", "tnt"], [6.5, "r", "tnt"], [7, "l", "barrel"], [7.9, "l", "torch"], [8.5, "r", "torch"], [9, "l", "tnt"], [9.2, "r", "barrel"], [10, "r", "barrel"], [11.5, "r", "tnt"], [11.6, "r", "torch"], [13, "l", "barrel"], [13.5, "r", "torch"], [14.5, "l", "tnt"], [15, "l", "torch"], [16, "r", "tnt"], [16.5, "l", "torchp"]] },
-    goal: "Гоблинов с динамитом много, и бросают они издалека. В «иначе» можно положить две команды. Порядок важен: сначала лечись heal(), пока никто не бьёт, потом иди к врагу goToEnemy().",
-    block: "Гоблины с динамитом бросают издалека. В «иначе» поместятся две команды: [[btn:goToEnemy]] уже есть. Нажми на [[elsehead]] и кнопку [[btn:heal]] — лечение встанет первым: сначала лечись, потом иди к врагу.",
+    goal: "Гоблинов с динамитом много, и бросают они издалека. В «иначе» можно положить две команды: heal() там уже есть, допиши после него goToEnemy(). Порядок важен: сначала лечись, пока никто не бьёт, потом иди к врагу.",
+    block: "Гоблины с динамитом бросают издалека. В «иначе» поместятся две команды: [[btn:heal]] уже есть. Нажми на [[elsehead]] и кнопку [[btn:goToEnemy]] — она встанет второй: сначала лечись, потом иди к врагу.",
     en: {
       name: "Two Jobs",
-      goal: "There are lots of dynamite goblins, and they throw from afar. You can put two commands in “else”. The order matters: first heal with heal() while no one is hitting you, then go to the enemy with goToEnemy().",
-      block: "Dynamite goblins throw from afar. Two commands fit in “else”: [[btn:goToEnemy]] is already there. Tap [[elsehead]] and the button [[btn:heal]] — healing goes first: heal first, then go to the enemy.",
+      goal: "There are lots of dynamite goblins, and they throw from afar. You can put two commands in “else”: heal() is already there, add goToEnemy() after it. The order matters: heal first while no one is hitting you, then go to the enemy.",
+      block: "Dynamite goblins throw from afar. Two commands fit in “else”: [[btn:heal]] is already there. Tap [[elsehead]] and the button [[btn:goToEnemy]] — it goes second: heal first, then go to the enemy.",
     },
     commands: ["attack", "heal", "goToEnemy"],
     ifs: ["near"],
@@ -668,8 +668,8 @@ levels: [
     par: 3, good: 4,
     map: ["S........", ".........", ".........", ".........", "........."],
     starter: {
-      py: "while True:\n    if enemy_near():\n        attack()\n    else:\n        go_to_enemy()\n",
-      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n    goToEnemy();\n  }\n}\n",
+      py: "while True:\n    if enemy_near():\n        attack()\n    else:\n        heal()\n",
+      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n    heal();\n  }\n}\n",
     },
   },
   {
