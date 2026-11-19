@@ -1,13 +1,13 @@
 {
- "version": 206,
+ "version": 207,
  "date": "2026-11-19",
  "notes": [
-  "В Python и JavaScript на планшете и компьютере задание сворачивается, пока идёт программа: видно, какой шаг выполняется"
+  "В Python и JavaScript задания на островах 4 и 5 теперь говорят про строки кода, а не про плитки"
  ],
  "files": {
   "index.html": {
-   "size": 995612,
-   "hash": "33c96c579d71df93"
+   "size": 997480,
+   "hash": "90975f0fd3dcb88f"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "5ff8f9c356e32bbb"
+   "hash": "93f7ab5b0b8e62d3"
   },
   "icon-192.png": {
    "size": 42164,
@@ -86,12 +86,12 @@
    "hash": "a6ffe62163e2ab08"
   },
   "isle4.js": {
-   "size": 46629,
-   "hash": "d94a19bc9bb70b74"
+   "size": 49545,
+   "hash": "0745f49bf5ac91d2"
   },
   "isle5.js": {
-   "size": 49624,
-   "hash": "95cd103e2d23f17d"
+   "size": 56894,
+   "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
    "size": 23354,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "In Python and JavaScript on tablets and computers the task folds away while the program runs, so you can see which step is running"
+  "In Python and JavaScript the tasks on islands 4 and 5 now talk about lines of code, not tiles"
  ]
 }

@@ -2468,10 +2468,26 @@ const EN_LEVELS = Object.fromEntries(LEVELS.map((l) => [l.name, l.en || {}]));
 // Переводим текст задания на язык игрока
 // [[btn:moveDown]] — кнопка команды в тексте задания, нарисованная как настоящая кнопка внизу;
 // [[line:2]] — номер строки, как на полоске номеров слева от кода
+// Номер строки (с 1) в коде игрока: k-я строка заголовка приёма («def»), «если» («if»), цикла («while») или с командой по имени.
+function codeLineOf(key, k = 1) {
+  const src = codeEl?.value || L?.starter?.[lang] || "";
+  const re = key === "def" ? /^\s*(def|function)\s/ : key === "if" ? /^\s*if\b/ : key === "while" ? /^\s*while\b/
+    : DIRS[key] ? new RegExp(`^\\s*(${key}|${DIRS[key].py})\\(`) : null;
+  if (!re) return 0;
+  const lines = src.split("\n");
+  for (let i = 0; i < lines.length; i++) if (re.test(lines[i]) && --k === 0) return i + 1;
+  return 0;
+}
 function btnRefs(html) {
   return html
     .replace(/\[\[btn:(\w+)\]\]/g, (m, n) => `<span class="chipref ${DIRS[n].axis}${uiBlocks ? " big" : ""}">${uiBlocks ? DIRS[n].arrow : `${DIRS[n].arrow} ${disp(n)}`}</span>`)
     .replace(/\[\[line:(\d+)\]\]/g, (m, n) => `<span class="lineref">${n}</span>`)
+    // Для Python / JavaScript (v207): номер строки по её смыслу — он разный в двух языках (в JavaScript есть строки со скобкой «}»).
+    // [[lineof:def:2]] — заголовок второго приёма, [[lineof:if]] — первая строка «если», [[lineof:moveRight]] — первая строка с этой командой;
+    // [[defcode:2]] — сам заголовок второго приёма, как он написан в коде игрока.
+    .replace(/\[\[lineof:(\w+)(?::(\d))?\]\]/g, (m, key, k) => `<span class="lineref">${codeLineOf(key, +k || 1) || "…"}</span>`)
+    .replace(/\[\[defcode(?::(\d))?\]\]/g, (m, k) => { const n = codeLineOf("def", +k || 1), src = codeEl?.value || L?.starter?.[lang] || "";
+      return `<code>${n ? src.split("\n")[n - 1].trim().replace(/</g, "&lt;") : "def"}</code>`; })
     .replace(/\[\[tool:(\w+)\]\]/g, (m, n) => `<span class="toolref">${TOOL_ICONS[n]}</span>`)
     // [[tile:moveUp:1]] — плитка программы, как в рамке; [[num:2]] — кнопка цифры; [[ifhead]] — заголовок «если»
     .replace(/\[\[tile:(\w+):(\d+|n)\]\]/g, (m, n, k) => `<span class="tile tileref ${DIRS[n].axis}"><span class="ar">${DIRS[n].arrow}</span><span class="nn">${k}</span></span>`)
@@ -13019,10 +13035,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 206;
+const APP_VERSION = 207;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 207, date: "2026-11-19", text: "В Python и JavaScript задания на островах 4 и 5 теперь говорят про строки кода, а не про плитки", en: "In Python and JavaScript the tasks on islands 4 and 5 now talk about lines of code, not tiles" },
   { v: 206, date: "2026-11-19", text: "В Python и JavaScript на планшете и компьютере задание сворачивается, пока идёт программа: видно, какой шаг выполняется", en: "In Python and JavaScript on tablets and computers the task folds away while the program runs, so you can see which step is running" },
   { v: 205, date: "2026-11-19", text: "Окошко победы на планшете и компьютере больше не наползает на соседнюю колонку", en: "The win box on tablets and computers no longer overlaps the next column" },
   { v: 204, date: "2026-11-19", text: "На планшете стоя поле уровня стало вдвое крупнее, а на ноутбуке задание и кнопка «Запустить» помещаются на экран", en: "In portrait mode on tablets the level field is twice as big, and on laptops the task and the “Run” button fit on the screen", big: true },
