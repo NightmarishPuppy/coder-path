@@ -323,6 +323,7 @@ body.under-splash #mapview { visibility: hidden; }
 .arenahud span { background: rgba(15, 17, 23, 0.72); padding: 5px 8px; border-radius: 8px; }
 .arenahud .ahp b { color: #ff6b81; } .arenahud .ahp i { font-style: normal; opacity: 0.6; font-weight: 500; }
 .arenahud.low .ahp { box-shadow: 0 0 0 2px #ff6b81; }
+.arena-hud .afort, .afort { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); padding: 3px 10px; border-radius: 10px; background: #15151ccc; color: #ffd76a; font-weight: 800; font-size: 14px; letter-spacing: 1px; white-space: nowrap; }
 .splash-view { position: relative; width: min(100%, 480px, calc((100dvh - 300px) / 1.05)); min-width: 240px; aspect-ratio: 1 / 1.05;
   overflow: hidden; border-radius: 16px; border: 2px solid #2d5a6a; background: #47aba9; margin-block: 6px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); container-type: inline-size; }
@@ -2423,10 +2424,12 @@ for (const [d, ru] of [["Right", tr("справа")], ["Left", tr("слева")]
 }
 // Арена: «враг рядом» — кто-то из врагов на расстоянии удара (в любую сторону)
 CONDS.enemyNear = { what: "near", dx: 0, dy: 0, arrow: "◎", ru: tr("рядом"), py: "enemy_near" };
+// Арена (v218): «динамит летит» — в рыцаря летит динамит (его уже бросили и он ещё не упал)
+CONDS.dynamiteFlying = { what: "tnt", dx: 0, dy: 0, arrow: "🧨", ru: tr("летит"), py: "dynamite_flying" };
 const COND_NAMES = Object.keys(CONDS);
 const COND_ANY = [...COND_NAMES, ...COND_NAMES.map((c) => CONDS[c].py)].join("|");
 const condKey = (name) => COND_NAMES.find((c) => c === name || CONDS[c].py === name);
-const WHAT_RU = { wall: tr("препятствие"), enemy: tr("враг"), near: tr("враг рядом") };
+const WHAT_RU = { wall: tr("препятствие"), enemy: tr("враг"), near: tr("враг рядом"), tnt: tr("динамит летит") };
 
 let lang = "py"; // "py" или "js"
 const disp = (name) => (lang === "py" ? DIRS[name].py : name); // как команда пишется в текущем языке
@@ -4759,7 +4762,7 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   duckair: [3, 1, 32], boom2: [8, 1, 192], boom3: [10, 1, 192], dust: [10, 1, 64],
   // остров 1 наряднее (v187): овцы, стройка, тренировка, костёр
   shidle: [6, 1, 128], shgrass: [12, 1, 128], shmove: [4, 1, 128], phidle: [8, 1, 192], prunham: [6, 1, 192], lrdef: [6, 1, 320], wguard: [6, 1, 192],
-  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128] };
+  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256] };
 TS.sk_fire = TS.fx_fire;
 let SK_ACTORS = [];
 let skLast = 0;
@@ -10931,7 +10934,7 @@ const ARENA_ARCHER = { reach: 5.5, dmg: 1, cd: 1.3 };
 // v217: взрывная волна, как в бою у моста. r — докуда доходит волна (дальше, чем ранит), power — сила у самого взрыва.
 // Сила до бойца: power × (1 − расстояние / r). Меньше far — сбивает с ног (лежит и встаёт), больше — отбрасывает; упал в воду — погиб.
 // Рыцаря в воду не бросает и лежит он недолго: иначе бой решал бы случай, а не программа.
-const ARENA_WAVE = { dyn: { r: 1.3, power: 1.0 }, barrel: { r: 1.8, power: 1.5 }, far: 0.45, weak: 0.12,
+const ARENA_WAVE = { dyn: { r: 1.3, power: 1.0 }, barrel: { r: 1.8, power: 1.5 }, fat: { r: 2.0, power: 1.7 }, far: 0.45, weak: 0.12,
   down: { hero: [0.35, 0.3], us: [0.8, 0.8], gob: [0.5, 0.5] } };   // сколько лежит сбитый с ног: [не меньше, разброс], секунды
 // союзник у места падения встречает динамит: [дальность, шанс]. Мечник — вплотную и чаще всего: отбивает обратно в метателя.
 // Копейщик — вдвое дальше, реже: подбрасывает, динамит рвётся в воздухе. Лучник — стрелой в полёте, редко и тем реже, чем дальше.
@@ -10977,6 +10980,26 @@ function arenaPlan(code) {
     units.push(u); return u; };
   for (const { kind, at, left } of A.allies || []) add(kind, at[0], at[1], { post: at, postLeft: !!left, left: !!left });
   const tower = A.tower ? { x: A.tower[0], y: A.tower[1] - (232 - 118) / 64 * 0.75, next: 1 } : null;   // лучник на площадке башни
+  // v218: вышка гоблинов с жирным подрывником (A.fort). Он бросает жирный динамит в рыцаря; рыцарь отбивает его командой parry —
+  // динамит летит обратно и рвётся на вышке. Прочность кончилась — вышка рушится (A.goal === "raze": это и есть победа).
+  const fort = A.fort ? { x: A.fort.at[0], y: A.fort.at[1], hp: A.fort.hp, next: A.fort.first ?? 2.5, cd: A.fort.cd ?? 3.6 } : null;
+  const air = [];                               // динамит, который летит в рыцаря: { land — когда упадёт, tx, ty, fort / gob — кто бросил }
+  let razedAt = null, endAt = 0, heroParries = 0;
+  const fortHit = () => {
+    if (!fort || fort.hp <= 0) return;
+    fort.hp--;
+    events.push({ t, kind: "boom", at: [fort.x, fort.y - 1.1], big: true }); events.push({ t, kind: "fort", hp: fort.hp });
+    if (fort.hp <= 0) { razedAt = t; endAt = t + 1.8; events.push({ t, kind: "fortdown" }); blast(fort.x, fort.y, 1.2, 2, ARENA_WAVE.barrel); }
+  };
+  const fortThink = () => {
+    if (fort.hp <= 0 || t < fort.next || hero.hp <= 0) return;
+    fort.next = t + fort.cd;
+    const tx = hero.x, ty = hero.y, d = { land: t + 1.4, tx, ty, fort: true };
+    air.push(d);
+    events.push({ t, kind: "fthrow", left: tx < fort.x });
+    events.push({ t: t + 0.55, kind: "throw", from: [fort.x + (tx < fort.x ? -0.3 : 0.3), fort.y - 2.1], to: [tx, ty], dur: 0.85, fat: true });
+    pend.push({ t: d.land, fn: () => { air.splice(air.indexOf(d), 1); if (!d.caught) blast(tx, ty, 1.0, 2, ARENA_WAVE.fat); } });
+  };
   const gobs = () => units.filter((u) => u.side === "gob" && u.hp > 0);
   const near = () => gobs().filter((f) => dist(f, hero) <= ARENA.reach).sort((a, b) => dist(a, hero) - dist(b, hero))[0];
   const nearestAny = () => gobs().sort((a, b) => dist(a, hero) - dist(b, hero))[0];
@@ -11082,7 +11105,10 @@ function arenaPlan(code) {
         return;
       }
       events.push({ t: t + 0.38, kind: "throw", from: [fx, fy], to: [tx, ty], dur: 0.6 });
+      const d = tg === hero ? { land: t + 0.98, tx, ty, gob: f } : null;   // летит в рыцаря — он может отбить сам (parry)
+      if (d) air.push(d);
       pend.push({ t: t + 0.98, fn: () => {
+        if (d) { air.splice(air.indexOf(d), 1); if (d.caught) return; }
         // союзник у места падения встречает динамит мечом или копьём
         const can = (u) => u.side === "us" && !u.hero && u.hp > 0 && !u.fly && !(u.downTill > t) && ARENA_PARRY[u.kind] && Math.hypot(u.x - tx, u.y - ty) <= ARENA_PARRY[u.kind][0];
         const who = units.filter(can).sort((a, b) => Math.hypot(a.x - tx, a.y - ty) - Math.hypot(b.x - tx, b.y - ty))[0];
@@ -11163,6 +11189,7 @@ function arenaPlan(code) {
         if (u.side === "gob") gobThink(u); else allyThink(u);
       }
       if (tower) archerThink();
+      if (fort) fortThink();
       for (let i = pend.length - 1; i >= 0; i--) if (pend[i].t <= t) { const p = pend[i]; pend.splice(i, 1); p.fn(); }
       // бойцы не стоят друг в друге и не залезают в рыцаря
       for (const a of units) if (!a.hero && a.hp > 0 && !a.fly) {
@@ -11172,7 +11199,7 @@ function arenaPlan(code) {
         }
       }
       if (t >= nextFrame - 1e-9) { snap(); nextFrame += 0.1; }
-      if (hero.hp <= 0 || t >= A.secs) throw STOPA;
+      if (hero.hp <= 0 || t >= A.secs || (endAt && t >= endAt)) throw STOPA;
     }
   };
   // команды рыцаря
@@ -11211,7 +11238,28 @@ function arenaPlan(code) {
     hero.act = "idle";
   };
   const enemyNear = (ln) => { line = ln; stand(); live(0.05); return !!near(); };
-  const fns = { attack, heal, goToEnemy };
+  const flying = () => air.filter((d) => !d.caught && d.land > t + 0.02).sort((a, b) => a.land - b.land)[0];
+  const dynamiteFlying = (ln) => { line = ln; stand(); live(0.05); return !!flying(); };
+  // копьё: дождаться динамита и отбить его обратно — в того, кто бросил. Динамита нет — удар в пустоту
+  const parry = (ln) => {
+    line = ln; stand();
+    const d = flying();
+    hero.act = "atk";
+    if (!d) { events.push({ t, kind: "swing", hit: false }); live(0.5); live(A.whiff ?? ARENA_MISS.whiff); hero.act = "idle"; return; }
+    const src = d.fort ? fort : d.gob;
+    hero.left = src.x < hero.x; hero.act = "idle";
+    live(Math.max(0.05, d.land - t - 0.2));
+    if (hero.hp <= 0 || hero.fly || hero.downTill > t) return;
+    hero.act = "atk"; live(0.15);
+    if (hero.hp <= 0 || hero.fly || hero.downTill > t || d.caught) { hero.act = "idle"; return; }
+    d.caught = true; heroParries++;
+    events.push({ t, kind: "parry", id: 0 });
+    const bx = src.x, by = d.fort ? src.y - 1.1 : src.y;
+    events.push({ t, kind: "throw", from: [hero.x, hero.y - 0.8], to: [bx, by], dur: 0.6, fat: !!d.fort });
+    pend.push({ t: t + 0.6, fn: () => (d.fort ? fortHit() : blast(bx, by, ARENA_BLAST.dyn.r, 1, ARENA_WAVE.dyn)) });
+    live(0.3); hero.act = "idle";
+  };
+  const fns = { attack, heal, goToEnemy, parry };
   try {
     checkDefs(code, lang);
     const js = lang === "py" ? pyToJs(code) : code;
@@ -11219,7 +11267,7 @@ function arenaPlan(code) {
     const __loop = (ln) => { if (++loops > 20000) throw pyError(ln, "Цикл крутится, а время не идёт"); };
     const program = new Function("__loop", ...names, ...conds.map(condDisp), instrument(js));
     snap();
-    program(__loop, ...L.commands.map((c) => (ln) => fns[c](ln)), ...conds.map(() => enemyNear));
+    program(__loop, ...L.commands.map((c) => (ln) => fns[c](ln)), ...conds.map((c) => (c === "dynamiteFlying" ? dynamiteFlying : enemyNear)));
     endedAt = t; line = 0;
     live(A.secs - t + 0.05);                    // программа кончилась — рыцарь стоит, гоблины не ждут
   } catch (e) {
@@ -11227,9 +11275,9 @@ function arenaPlan(code) {
   }
   snap();
   events.sort((a, b) => a.t - b.t);             // бросок записан наперёд — события по времени
-  const survived = hero.hp > 0;
+  const survived = hero.hp > 0 && (A.goal !== "raze" || razedAt !== null);
   const lost = units.filter((u) => u.side === "us" && !u.hero && u.hp <= 0).length;
-  return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp, lost, healsFailed, flung, parried };
+  return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp, lost, healsFailed, flung, parried, heroParries, razed: razedAt !== null, fortHp: fort?.hp };
 }
 
 // Поле арены: карта островка + слой бойцов + таймер и сердечки
@@ -11260,12 +11308,21 @@ function arenaStage() {
   const my = ++arenaRun;
   return { layer: arenaBox, before: null, unit: 100 / 18, pos: (x, y) => [x / 18 * 100, y / VH * 100], on: () => true, alive: () => my === arenaRun };
 }
-function arenaHudDraw(hp, max, left) {
+function arenaHudDraw(hp, max, left, fortHp) {
+  if (L.arena.fort) {                           // прочность вышки
+    let f = arenaHud.querySelector(".afort");
+    if (!f) { f = document.createElement("span"); f.className = "afort"; arenaHud.appendChild(f); }
+    const n = fortHp ?? L.arena.fort.hp;
+    f.textContent = "🏚 " + "▮".repeat(Math.max(0, n)) + "▯".repeat(L.arena.fort.hp - Math.max(0, n));
+  } else arenaHud.querySelector(".afort")?.remove();
   arenaHud.querySelector(".ahp").innerHTML = `<b>♥</b> ${Math.max(0, hp)}<i>/${max}</i>`;
   arenaHud.querySelector(".atime").textContent = `⏱ ${Math.max(0, Math.ceil(left))} ${tr("с")}`;
   arenaHud.classList.toggle("low", hp <= 3);
 }
 let arenaHero = null;
+// кто идёт на арену: рыцарь, а на уровнях копейщика (lancer) — копейщик
+const arenaHeroArt = () => (L.lancer ? { key: "lidle", sc: 0.8, foot: 0.625, idle: [0, 12, 110, "lidle"], run: [0, 6, 90, "lrun"], atk: [0, 3, 120, "lratk"] }
+  : { key: "hidle", sc: 0.85, foot: 0.825, idle: [0, 8, 110, "hidle"], run: [0, 6, 85, "hrun"], atk: [0, 4, 110, "hatk"] });
 // башня с лучником и союзники на своих местах (до запуска и в начале боя)
 function arenaScene(st) {
   const A = L.arena, Z = (a, y, d = 0) => (a.el.style.zIndex = Math.round(y * 40) + d);
@@ -11278,23 +11335,35 @@ function arenaScene(st) {
     a.play(0, 6, 150);
     archer = a;
   }
+  let fortA = null;
+  if (A.fort) {                                 // вышка гоблинов, наверху жирный подрывник
+    const [fx, fy] = A.fort.at, tw = skActor(st, "gwt", 0.6, 236 / 256), crew = skActor(st, "tnt", 1.25, 0.67);
+    tw.at(fx, fy); Z(tw, fy); tw.show(true); tw.play(0, 4, 160);
+    crew.at(fx, fy - 1.25); Z(crew, fy, 1); crew.show(true); crew.play(0, 6, 130);
+    const fires = [skActor(st, "fire", 0.7, 0.8), skActor(st, "fire", 0.9, 0.8)];
+    fires[0].at(fx - 0.35, fy - 0.2); fires[1].at(fx + 0.3, fy - 0.9); fires.forEach((f) => Z(f, fy, 3));
+    fortA = { tw, crew, fires, x: fx, y: fy };
+  }
   const allies = (A.allies || []).map(({ kind, at, left }) => {
     const R = ARENA_ART[kind], a = skActor(st, R.key, R.sc || 0.85, R.foot);
     a.at(...at); a.face(!!left); Z(a, at[1]); a.show(true); a.play(...R.idle.slice(0, 3), true, R.idle[3] || R.key);
     return a;
   });
-  return { archer, allies };
+  return { archer, allies, fort: fortA };
 }
 function arenaReset() {
   showProblems = false;
   const st = arenaStage();
   arenaScene(st);
-  arenaHero = skActor(st, "hidle", 0.85, 0.825);
-  arenaHero.at(...ARENA.start); arenaHero.show(true); arenaHero.play(0, 8, 110, true, "hidle");
+  const HA = arenaHeroArt();
+  arenaHero = skActor(st, HA.key, HA.sc, HA.foot);
+  arenaHero.at(...ARENA.start); arenaHero.show(true); arenaHero.play(...HA.idle.slice(0, 3), true, HA.idle[3]);
   arenaHero.el.style.zIndex = Math.round(ARENA.start[1] * 40);
   arenaHudDraw(L.arena.hp, L.arena.hp, L.arena.secs);
   refreshPlan();
-  setStatus(tr(uiBlocks ? "Собери программу рыцаря и нажми «Запустить» — продержись {n} секунд"
+  if (L.arena.goal === "raze") setStatus(tr(uiBlocks ? "Собери программу копейщика и нажми «Запустить» — разрушь вышку за {n} секунд"
+    : "Напиши программу копейщика и нажми «Запустить» — разрушь вышку за {n} секунд", { n: L.arena.secs }));
+  else setStatus(tr(uiBlocks ? "Собери программу рыцаря и нажми «Запустить» — продержись {n} секунд"
     : "Напиши программу рыцаря и нажми «Запустить» — продержись {n} секунд", { n: L.arena.secs }));
 }
 // Проигрывание просчитанного боя
@@ -11309,7 +11378,11 @@ async function runArena() {
   setDisabled(true);
   const st = arenaStage(), A = L.arena;
   const scene = arenaScene(st);
-  const H = skActor(st, "hidle", 0.85, 0.825); H.at(...ARENA.start); H.show(true);
+  const HA = arenaHeroArt(), FT = scene.fort;
+  let fortHp = A.fort?.hp;
+  const fatdyns = A.fort ? [skActor(st, "dyn", 1.7, 0.5), skActor(st, "dyn", 1.7, 0.5)] : [];
+  let fdi = 0;
+  const H = skActor(st, HA.key, HA.sc, HA.foot); H.at(...ARENA.start); H.show(true);
   const fx = skActor(st, "healfx", 0.8);
   const pool = (k, n, sc, foot) => Array.from({ length: n }, () => skActor(st, k, sc, foot));
   const booms = pool("boom", 5, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5), deads = pool("dead", 8, 0.9, 0.75), arrows = pool("arrow", 4, 0.75, 0.5);
@@ -11344,7 +11417,16 @@ async function runArena() {
       const e = p.events[ev++];
       if (e.kind === "fling") { const a = e.id ? actors[e.id] : H; if (a) { tumbleA(a, e.turns, e.dir, quick(e.dur * 1000), true); flash(a); } }
       if (e.kind === "airboom") { const b = booms[ki++ % booms.length]; b.at(...e.at); Z(b, 400); b.show(true); b.play(0, 9, quick(60), false).then(() => b.show(false)); if (performance.now() - lastBoom > 700) { sfx("boom"); lastBoom = performance.now(); } }
-      if (e.kind === "parry") { flash(actors[e.id]); sfx("spear"); }
+      if (e.kind === "parry") { flash(e.id ? actors[e.id] : H); sfx("spear"); }
+      if (e.kind === "fthrow" && FT) { FT.crew.face(e.left); FT.crew.play(2, 7, quick(80), false).then(() => FT.crew.play(0, 6, 130)); }
+      if (e.kind === "fort" && FT) { fortHp = e.hp; flash(FT.tw); FT.fires.slice(0, A.fort.hp - e.hp).forEach((f) => { if (!f.on) { f.on = true; f.show(true); f.play(0, 7, 90); } }); }
+      if (e.kind === "fortdown" && FT) {               // вышка рухнула: руины, подрывник кувырком улетает
+        FT.tw.play(0, 1, 500, true, "gwtx"); FT.fires[1].show(false);
+        const c = FT.crew, ms = quick(700);
+        c.el.style.transition = `left ${ms}ms linear, top ${ms}ms linear`; c.at(FT.x + 2.6, FT.y + 0.6); Z(c, FT.y + 3); tumbleA(c, 2, 1, ms, false);
+        sleep(ms).then(() => { c.show(false, true); upA(c); });
+      }
+      if (e.kind === "throw" && e.fat) { const d = fatdyns[fdi++ % fatdyns.length]; d.el.style.transition = "none"; d.at(...e.from); Z(d, 400); d.show(true); d.play(0, 6, 70); d.arc(...e.to, 1.6, e.dur * 1000 / speed).then(() => d.show(false)); continue; }
       if (e.kind === "throw") { const d = dyns[bi++ % dyns.length]; d.el.style.transition = "none"; d.at(...e.from); Z(d, 40); d.show(true); d.play(0, 6, 70); d.arc(...e.to, 1.0, e.dur * 1000 / speed).then(() => d.show(false)); }
       if (e.kind === "boom") {
         const b = booms[ki++ % booms.length]; b.at(...e.at); Z(b, e.at[1] + 0.5); b.show(true); b.play(0, 9, quick(70), false).then(() => b.show(false));
@@ -11389,9 +11471,9 @@ async function runArena() {
     H.at(h.x, h.y); H.x = h.x; H.y = h.y; if (h.act !== "fly" && h.act !== "down") { if (H.lie) upA(H); H.face(h.left); } Z(H, h.y);
     if (h.act !== heroAct) {
       heroAct = h.act;
-      if (h.act === "run") H.play(0, 6, 85, true, "hrun");
-      else if (h.act === "atk") H.play(0, 4, quick(110), false, "hatk");
-      else H.play(0, 8, 110, true, "hidle");
+      if (h.act === "run") H.play(...HA.run.slice(0, 3), true, HA.run[3]);
+      else if (h.act === "atk") H.play(HA.atk[0], HA.atk[1], quick(HA.atk[2]), false, HA.atk[3]);
+      else H.play(...HA.idle.slice(0, 3), true, HA.idle[3]);
     }
     // союзники и гоблины
     for (const f of fr.units) {
@@ -11407,20 +11489,26 @@ async function runArena() {
         a.play(spec[0], spec[1], once ? quick(spec[2]) : spec[2], !once, spec[3] || R.key);
       }
     }
-    arenaHudDraw(h.hp, A.hp, A.secs - fr.t);
+    arenaHudDraw(h.hp, A.hp, A.secs - fr.t, fortHp);
     drawCode(fr.line);
     await sleep(dur);
     if (!running) return;
   }
   drawCode(0);
   if (p.survived) {
-    setStatus(tr("Победа! Рыцарь продержался {n} секунд — побеждено гоблинов: {k}", { n: A.secs, k: p.kills }), "win");
+    setStatus(A.goal === "raze" ? tr("Победа! Вышка разрушена — отбито динамита: {n}", { n: p.heroParries })
+      : tr("Победа! Рыцарь продержался {n} секунд — побеждено гоблинов: {k}", { n: A.secs, k: p.kills }), "win");
     sfx("win");
     finish();
     return win();
   }
+  if (A.goal === "raze" && p.hp > 0) {             // время вышло, а вышка стоит
+    setStatus(tr("Время вышло, а вышка стоит: осталось прочности {n}. Отбивай каждый динамит обратно — «если динамит летит», то копьё", { n: p.fortHp }), "fail");
+    finish();
+    return;
+  }
   // рыцарь не выдержал
-  H.play(0, 8, 110, true, "hidle"); H.show(false);
+  H.play(...HA.idle.slice(0, 3), true, HA.idle[3]); H.show(false);
   const d = deads[di++ % deads.length]; d.at(H.x, H.y); Z(d, H.y); d.show(true); d.play(0, 7, 110, false);
   sfx("fall");
   const sec = Math.floor(p.t);
@@ -13549,10 +13637,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 217;
+const APP_VERSION = 218;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 218, date: "2026-11-19", text: "Новый уровень «Вышка» на острове гоблинов: наверху жирный подрывник, а копейщик отбивает его динамит обратно — вышка горит и рушится. Новый вопрос «динамит летит?»", en: "A new level, “The Watchtower”, on Goblin Island: a fat bomber sits on top, and the lancer knocks his dynamite back — the tower burns and collapses. A new question: “is dynamite flying?”", big: true },
   { v: 217, date: "2026-11-19", text: "Арена: динамит взрывается по-новому — бойцов сбивает с ног и отбрасывает, а мечник, копейщик и лучник иногда отбивают его. Бои на арене сбалансированы заново", en: "Arena: dynamite now blasts for real — fighters get knocked down and thrown, and the swordsman, lancer and archer sometimes deflect it. Arena battles are rebalanced", big: true },
   { v: 216, date: "2026-11-19", text: "«Два дела»: задание и кнопки теперь сходятся — команда встаёт туда, куда сказано", en: "“Two Jobs”: the task and the buttons now agree — the command lands where the task says" },
   { v: 215, date: "2026-11-19", text: "На планшете экран уровня больше не дёргается после кнопки «если»", en: "On tablets the level screen no longer jitters after the “if” button" },

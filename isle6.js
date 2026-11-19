@@ -197,6 +197,30 @@ levels: [
     ],
     starter: { py: "", js: "" },
   },
+  // Вышка (v218): арена с копейщиком. На вышке гоблинов жирный подрывник; отбитый динамит летит обратно и рушит вышку.
+  // Новое: вопрос «динамит летит?» (dynamite_flying) и копьё на арене. Победа — вышка разрушена (goal: "raze").
+  {
+    name: "Вышка",
+    chapter: 22,
+    isle: 6,
+    lancer: true,
+    arena: { secs: 30, hp: 8, whiff: 2, goal: "raze", fort: { at: [12.4, 4.4], hp: 4, first: 2.5, cd: 3.6 },
+      waves: [[1.5, "l", "torch"], [5, "r", "torch"], [8.5, "l", "torch"], [12, "r", "torch"], [15.5, "l", "torch"], [19, "r", "torch"], [22.5, "l", "torch"]] },
+    goal: "Разрушь вышку: отбивай динамит обратно в неё. Подрывник наверху уже учтён — «если динамит летит», то [[btn:parry]]. Допиши вторую половину: «другое если» враг рядом — [[btn:attack]].",
+    en: {
+      name: "The Watchtower",
+      goal: "Destroy the watchtower: knock the dynamite back into it. The bomber on top is already handled — “if dynamite is flying”, then [[btn:parry]]. Add the second half: “else if” an enemy is near — [[btn:attack]].",
+    },
+    commands: ["attack", "parry"],
+    ifs: ["tnt", "near"],
+    elifButton: true,
+    par: 2, good: 3,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if dynamite_flying():\n        parry()\n",
+      js: "while (true) {\n  if (dynamiteFlying()) {\n    parry();\n  }\n}\n",
+    },
+  },
   {
     name: "Обстрел: испытание",
     chapter: 22,
@@ -230,7 +254,7 @@ levels: [
 // Карта острова. Руками не править: её целиком пишет tools/gen3.py из файла раскладки.
 // @@isle6@@
 ISLES[6].map = {
-  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [190, 390], [130, 390]],
+  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [210, 390], [170, 390], [130, 390]],
   rows: [
     "....................................",
     "....................................",

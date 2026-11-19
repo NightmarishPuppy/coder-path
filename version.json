@@ -1,21 +1,21 @@
 {
- "version": 217,
+ "version": 218,
  "date": "2026-11-19",
  "notes": [
-  "Арена: динамит взрывается по-новому — бойцов сбивает с ног и отбрасывает, а мечник, копейщик и лучник иногда отбивают его. Бои на арене сбалансированы заново"
+  "Новый уровень «Вышка» на острове гоблинов: наверху жирный подрывник, а копейщик отбивает его динамит обратно — вышка горит и рушится. Новый вопрос «динамит летит?»"
  ],
  "files": {
   "index.html": {
-   "size": 1046503,
-   "hash": "bbeb77046855ba51"
+   "size": 1054983,
+   "hash": "890319d2c6e28977"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 74834,
-   "hash": "a2985e8c9c937f98"
+   "size": 75894,
+   "hash": "137a053bb7dd1c10"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "bbfab72b71baecb7"
+   "hash": "6545f0fc4da0aa13"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,12 +94,12 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 23354,
-   "hash": "7620009dd6d7f45a"
+   "size": 25054,
+   "hash": "1379e6d146a2603c"
   },
   "art-scenes.js": {
-   "size": 908333,
-   "hash": "376f9aea278d4b4d"
+   "size": 928910,
+   "hash": "130facf6c6433221"
   },
   "art-isle2.js": {
    "size": 80017,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Arena: dynamite now blasts for real — fighters get knocked down and thrown, and the swordsman, lancer and archer sometimes deflect it. Arena battles are rebalanced"
+  "A new level, “The Watchtower”, on Goblin Island: a fat bomber sits on top, and the lancer knocks his dynamite back — the tower burns and collapses. A new question: “is dynamite flying?”"
  ]
 }
