@@ -1,21 +1,21 @@
 {
- "version": 211,
+ "version": 212,
  "date": "2026-11-19",
  "notes": [
-  "Починил шаткий мостик: падала не та доска. Новый уровень «Болото» — вода, топь и мостики, останавливаться нельзя нигде. Шаткие мостики и баранья тропа появились на «Змейке», «Развилке» и «Серпантине»"
+  "Новый противник — гоблин-часовой: он ходит по своей программе, пока идёт твоя. Новая команда «ждать» ⏳ и два уровня на Берегу: «Часовой» и «За спиной». Место встречи видно на поле ещё до запуска"
  ],
  "files": {
   "index.html": {
-   "size": 1022288,
-   "hash": "d4d287c68568c858"
+   "size": 1030271,
+   "hash": "21a329cf254e4823"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 74543,
-   "hash": "ce4a7e676a033dfb"
+   "size": 74834,
+   "hash": "a2985e8c9c937f98"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "02a42bd5b2d3aeb1"
+   "hash": "18abcfcdcf77a698"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 51831,
-   "hash": "4a6da13ca2f8cac6"
+   "size": 53756,
+   "hash": "3afbf35cea2b63f3"
   },
   "isle2.js": {
    "size": 59882,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Fixed the wobbly bridge: the wrong plank was falling. A new level, “The Swamp” — water, bog and bridges, and you can’t stop anywhere. Wobbly bridges and a ram trail now appear on “Zigzag”, “The Fork” and “Switchbacks”"
+  "A new opponent — the goblin sentry: he walks by his own program while yours runs. A new “wait” ⏳ command and two levels on the Shore: “The Sentry” and “Behind His Back”. The field shows where you would meet before you even press Run"
  ]
 }

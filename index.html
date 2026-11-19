@@ -249,6 +249,15 @@ html.still .hero.hurt .kwrap { animation: none; }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .enemy, html.still .enemy.hit .ewrap, html.still .poof { transition: none; animation: none; }
 .route .badge.a rect { stroke: var(--sword); }
+.route .badge.w rect { stroke: #c9b88a; }
+/* v212: часовой — его маршрут на поле (пунктир) и жёлтая метка «здесь встретитесь» ещё до запуска */
+.route .proute { fill: none; stroke: #b7e07a; stroke-width: 0.07; stroke-dasharray: 0.12 0.12; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+.route .meet circle { fill: #ffd34d33; stroke: #ffd34d; stroke-width: 0.06; }
+.route .meet rect { fill: #ffd34d; }
+.route .meet text { fill: #1b1b22; font-size: 0.2px; font-weight: 800; text-anchor: middle; dominant-baseline: central; }
+.pcode { position: absolute; transform: translate(-50%, -50%); z-index: 5; pointer-events: none; white-space: pre; background: #15151cdd; border: 1px solid #b7e07a88; border-radius: 8px;
+  padding: 3px 6px; font: 600 11px/1.25 ui-monospace, Menlo, Consolas, monospace; color: #e9e6da; }
+.pcode .m { margin: 0 1px; } .pcode .m.h { color: var(--torch); } .pcode .m.v { color: var(--frost); } .pcode i { color: var(--loop); font-style: normal; }
 .route.marks { z-index: 6; }
 .route .cross { stroke: #b3262b; stroke-width: 0.085; stroke-linecap: square; }
 .route .cross-under { stroke: #2a1012; stroke-width: 0.15; stroke-linecap: square; opacity: 0.75; }
@@ -693,6 +702,7 @@ html.still .winbox .stars .win-crown { animation: none; }
 .card.h .arrow { color: var(--torch); }
 .card.v .arrow { color: var(--frost); }
 .card.a .arrow { color: var(--sword); }
+.card.w .arrow { color: #c9b88a; } .card.w .cells i { background: #c9b88a; }
 .card.a .cells i { background: var(--sword); }
 .card .cells { display: inline-flex; gap: 2px; }
 .card .cells i { width: 6px; height: 6px; border-radius: 1px; opacity: 0.4; }
@@ -911,6 +921,7 @@ textarea#code:focus-visible { box-shadow: inset 0 0 0 2px var(--torch); }
 .tile.h { border-color: var(--torch); } .tile.h .ar { color: var(--torch); }
 .tile.v { border-color: var(--frost); } .tile.v .ar { color: var(--frost); }
 .tile.a { border-color: var(--sword); } .tile.a .ar { color: var(--sword); }
+.tile.w { border-color: #c9b88a; } .tile.w .ar { color: #c9b88a; }
 .tile.g { border-color: #5fd3a6; } .tile.g .ar { color: #5fd3a6; }
 .tile.l { border-color: #ff8fb3; } .tile.l .ar { color: #ff8fb3; }
 /* Выбранная плитка — видно сразу: жёлтая заливка, приподнята, пульсирующая рамка и стрелка-указатель */
@@ -1153,11 +1164,12 @@ html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation:
 .chip.mv.v { border-color: var(--frost); color: var(--frost); }
 .chip.mv.a { border-color: var(--sword); color: var(--sword); }
 .chip.mv.g { border-color: #5fd3a6; color: #5fd3a6; }
+.chip.mv.w { border-color: #c9b88a; color: #c9b88a; }
 .chip.mv.l { border-color: #ff8fb3; color: #ff8fb3; }
 /* В тексте задания кнопка рисуется так же, как настоящая: та же рамка, стрелка и подпись */
 .chipref { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; border: 2px solid currentColor; border-radius: 4px;
   font-family: var(--font-code); font-size: 0.92em; font-weight: 600; line-height: 1.45; white-space: nowrap; vertical-align: middle; }
-.chipref.h { color: var(--torch); } .chipref.v { color: var(--frost); } .chipref.a { color: var(--sword); } .chipref.g { color: #5fd3a6; } .chipref.l { color: #ff8fb3; }
+.chipref.h { color: var(--torch); } .chipref.v { color: var(--frost); } .chipref.a { color: var(--sword); } .chipref.g { color: #5fd3a6; } .chipref.w { color: #c9b88a; } .chipref.l { color: #ff8fb3; }
 .chipref.big { font-family: var(--font-display); font-size: 1.1em; padding: 0 9px; }
 /* картинки кнопок и плиток в тексте задания — ростом со строку текста; строки чуть реже, чтобы картинки не касались соседних */
 #goal:has(.tileref, .chipref, .numref, .ifref, .toolref, .ifbtnref, .elsebtnref, .elseref, .elifref, .fnref, .fnheadref) { line-height: 1.85; }
@@ -2281,6 +2293,8 @@ const DIRS = {
   // Арена: идти к ближайшему врагу и лечиться (рыцарь сам решает куда — команда без числа)
   goToEnemy: { dx: 0, dy: 0, arrow: "➤", axis: "g", py: "go_to_enemy" },
   heal:      { dx: 0, dy: 0, arrow: "♥", axis: "l", py: "heal" },
+  // Ждать (v212): рыцарь стоит один такт (wait(2) — два), а часовые на поле в это время делают свой шаг.
+  wait:      { dx: 0, dy: 0, arrow: "⏳", axis: "w", py: "wait" },
 };
 const ALL_COMMANDS = Object.keys(DIRS);
 const PY_NAMES = ALL_COMMANDS.map((c) => DIRS[c].py);
@@ -7963,6 +7977,7 @@ function buildBoard() {
   // сердечки рыцаря — только на уровнях с гоблинами
 
   boardEl.appendChild(heroEl);
+  patrolSetup();               // часовые (v212)
   boardEl.appendChild(markEl);   // отметки (крестики, начало круга) — поверх рыцаря
 
   roundTag = document.createElement("div");
@@ -8932,6 +8947,12 @@ function buildPlan(code) {
     fly = null;
   };
   const firedEv = new Set();   // засады, которые уже сработали
+  let tk = 0;                  // такт: сколько шагов (и ожиданий) уже сделал рыцарь — столько же сделали часовые (v212)
+  // часовой на следующем такте придёт в клетку, куда идёт рыцарь, — или они шагнут навстречу и поменяются местами
+  const patrolMeets = (from, to) => patrolsOf().some((seq) => {
+    const a = patrolAt(seq, tk), b = patrolAt(seq, tk + 1);
+    return (b.x === to.x && b.y === to.y) || (a.x === to.x && a.y === to.y && b.x === from.x && b.y === from.y);
+  });
   const fallen = new Set();    // клетки, куда упало дерево: теперь это препятствие
   const wallAt = (x, y) => isWall(x, y) || fallen.has(x + "," + y);
   // Великан (V) сам не нападает. Ударил его — он замахивается и бьёт после СЛЕДУЮЩЕГО действия рыцаря
@@ -8993,7 +9014,7 @@ function buildPlan(code) {
     }
     if (fly && name !== "parry") { flyBlow(); throw STOP; }       // динамит летел, а копья не было
     const lp = loopOfLine(loops, line) || (callStack[0] ? loopOfLine(loops, callStack[0]) : null);   // шаг приёма, позванного из цикла
-    const c = { name, n, line, via: callStack[0] || 0, ...DIRS[name], from: { ...pos }, cells: [], got: [],
+    const c = { name, n, line, via: callStack[0] || 0, ...DIRS[name], from: { ...pos }, cells: [], got: [], tk,
                 loop: lp ? { line: lp.start, round: rounds[lp.start] || 1 } : null };
     commands.push(c);
     const i = commands.length - 1;
@@ -9001,6 +9022,7 @@ function buildPlan(code) {
       // Удар: бьём гоблина впереди; если впереди никого — того, кто стоит рядом с другой стороны
       c.hits = [];
       for (let s = 0; s < n; s++) {
+        tk++;
         if (fly && name === "parry") {
           // копьё встречает динамит: он летит обратно в подрывника
           const b = fly.e, bk = enemyKey(b.x, b.y);
@@ -9077,7 +9099,7 @@ function buildPlan(code) {
       if (commands.length >= 100) throw new Error("Рыцарь сделал 100 команд и так и не дошёл. Он ходит по кругу?");
       return;
     }
-    face = { dx: c.dx, dy: c.dy };
+    if (name !== "wait") face = { dx: c.dx, dy: c.dy };
     c.pre = [];
     for (let s = 0; s < n; s++) {
       c.pre[s] = strikes(null, true); // стоял рядом с гоблином и не бил — гоблин добивает
@@ -9093,6 +9115,8 @@ function buildPlan(code) {
       const atExit = !!exitPos && next.x === exitPos.x && next.y === exitPos.y;
       // Запертая дверь работает как стена
       if (atExit && doorLocked(got)) { crash = { cmd: i, step: s, at: next, reason: "locked", got: { ...got } }; break; }
+      if (patrolMeets(pos, next)) { crash = { cmd: i, step: s, at: next, reason: "patrol", tick: tk + 1 }; break; }
+      tk++;
       pos = next;
       c.cells.push({ ...pos });
       // замах великана: успел отойти — мимо, стоит рядом — удар
@@ -9930,8 +9954,18 @@ function drawRoute(p, activeIdx = -1) {
   routeEl.innerHTML = "";
   markEl.innerHTML = "";
   if (activeIdx < 0 && !running) drawStepHints(p);
+  // v212: маршрут часового — пунктиром, его программа — над ним
+  for (const seq of patrolsOf()) svg("polygon", { class: "proute", points: seq.map((q) => `${q.x + 0.5},${q.y + 0.5}`).join(" ") }, routeEl);
+  patrolCode();
   if (!p || p.error) return;
   const c = (v) => v + 0.5;
+  // …и жёлтая метка: где и на каком шаге рыцарь с ним встретится (видна ещё до запуска)
+  if (p.crash?.reason === "patrol") {
+    const { x, y } = p.crash.at, g = svg("g", { class: "meet" }, markEl), t = tr("шаг") + " " + p.crash.tick, w = 0.16 * t.length + 0.14;
+    svg("circle", { cx: c(x), cy: c(y), r: 0.36 }, g);
+    svg("rect", { x: c(x) - w / 2, y: c(y) - 0.62, width: w, height: 0.28, rx: 0.14 }, g);
+    svg("text", { x: c(x), y: c(y) - 0.48 }, g).textContent = t;
+  }
   // Круги цикла не рисуем все сразу — это каша. До запуска виден только ПЕРВЫЙ круг.
   // Во время запуска ярко горит текущий круг, прошлые круги — тонкая серая дорожка,
   // будущих не видно. role[i]: "show" — рисуем полностью, "trace" — серым следом, "hide" — нет.
@@ -9975,6 +10009,7 @@ function drawRoute(p, activeIdx = -1) {
     let prev = cmd.from;
     cmd.cells.forEach((cell) => {
       const k = `${prev.x},${prev.y}>${cell.x},${cell.y}`;
+      if (prev.x === cell.x && prev.y === cell.y) return;     // «ждать»: рыцарь стоит, отрезка нет
       if (!edges.has(k)) edges.set(k, { a: prev, b: cell, dx: cmd.dx, dy: cmd.dy, axis: cmd.axis, cmds: [] });
       edges.get(k).cmds.push(i);
       prev = cell;
@@ -10063,8 +10098,9 @@ function drawRoute(p, activeIdx = -1) {
     svg("polyline", { class: "try-under", points: pts }, g);
     svg("polyline", { class: "try", points: pts }, g);
     const r = 0.2, X = c(at.x), Y = c(at.y);
-    svg("circle", { class: "x-bg", cx: X, cy: Y, r: 0.3 }, g);
-    for (const [ax, ay, bx, by] of [[X - r, Y - r, X + r, Y + r], [X - r, Y + r, X + r, Y - r]]) {
+    if (p.crash.reason !== "patrol") svg("circle", { class: "x-bg", cx: X, cy: Y, r: 0.3 }, g);
+    // встреча с часовым — не крестик, а жёлтая метка «шаг N» (нарисована выше)
+    for (const [ax, ay, bx, by] of p.crash.reason === "patrol" ? [] : [[X - r, Y - r, X + r, Y + r], [X - r, Y + r, X + r, Y - r]]) {
       svg("line", { class: "x-under", x1: ax, y1: ay, x2: bx, y2: by }, g);
       svg("line", { class: "x", x1: ax, y1: ay, x2: bx, y2: by }, g);
     }
@@ -10203,6 +10239,7 @@ function reset() {
   }
   const moved = hero && (hero.x !== start.x || hero.y !== start.y);
   hero = { ...start };
+  patrolPlace(0);
   heroEl.classList.remove("flip", "run", "sunk", "down");
   boardEl.querySelectorAll(".plank.gone, .cell.gone").forEach((e) => e.classList.remove("gone"));
   roundTag.hidden = true;
@@ -10366,6 +10403,56 @@ const NOSTOP_TEXT = {
   bog: "Топь затянула рыцаря: на болоте нельзя останавливаться. Запиши весь путь до двери сразу и запусти один раз",
   bush: "Засада! Рыцарь остановился у кустов — и подрывник успел бросить динамит. Запиши весь путь мимо кустов сразу и запусти один раз",
 };
+// Часовые (v212): гоблин ходит по своей программе, пока идёт программа игрока: один шаг рыцаря (или «ждать») — один шаг часового.
+// В уровне: patrols: [{ at: [x, y], prog: [["moveDown", 2], ["moveUp", 2]], say: [x, y] }] — программа должна вернуть его на место (ходит по кругу).
+function patrolSeq(pt) {
+  const seq = [{ x: pt.at[0], y: pt.at[1] }];
+  for (const [cmd, n] of pt.prog) for (let k = 0; k < n; k++) { const l = seq[seq.length - 1]; seq.push({ x: l.x + DIRS[cmd].dx, y: l.y + DIRS[cmd].dy }); }
+  seq.pop();
+  return seq;
+}
+const patrolsOf = () => (L.patrols || []).map((pt) => (pt.seq ||= patrolSeq(pt)));
+const patrolAt = (seq, t) => seq[t % seq.length];
+let patrolActs = [], patrolBubs = [], patrolTick = 0;
+function patrolSetup() {
+  patrolActs = patrolsOf().map((seq) => {
+    const a = skActor(evStage(), "torch", 0.6, 0.62);
+    a.at(seq[0].x + 0.5, seq[0].y + 0.9); a.show(true, true); a.play(0, 7, 120);
+    a.el.style.zIndex = 2; a.el.classList.add("patrol");
+    return a;
+  });
+  patrolBubs = (L.patrols || []).map((pt) => {
+    const b = document.createElement("div");
+    b.className = "pcode";
+    const [bx, by] = pt.say || [pt.at[0] + 0.5, pt.at[1] - 0.3];
+    b.style.left = bx / W * 100 + "%"; b.style.top = by / H * 100 + "%";
+    boardEl.appendChild(b);
+    return b;
+  });
+  patrolTick = 0;
+  patrolCode();
+}
+// программа часового над ним: в блоках — значки плиток, в Python / JavaScript — код
+function patrolCode() {
+  (L.patrols || []).forEach((pt, k) => {
+    if (!patrolBubs[k]) return;
+    patrolBubs[k].innerHTML = uiBlocks ? `<i>🔁</i> ` + pt.prog.map(([c, n]) => `<span class="m ${DIRS[c].axis}">${DIRS[c].arrow}${n}</span>`).join(" ")
+      : (lang === "py" ? `<i>while True:</i>\n` : `<i>while (true) {</i>\n`) + pt.prog.map(([c, n]) => `  ${disp(c)}(${n})${lang === "py" ? "" : ";"}`).join("\n") + (lang === "py" ? "" : "\n<i>}</i>");
+  });
+}
+// поставить часовых туда, где они стоят на такте t (ms — за сколько дойти; 0 — сразу)
+function patrolPlace(t, ms = 0) {
+  patrolsOf().forEach((seq, k) => {
+    const a = patrolActs[k], to = patrolAt(seq, t);
+    if (!a) return;
+    const x = to.x + 0.5, y = to.y + 0.9;
+    if (!ms || (a.x === x && a.y === y)) { a.at(x, y); return; }
+    if (x !== a.x) a.face(x < a.x);
+    a.play(1, 6, 90);
+    a.move(x, y, ms).then(() => { if (a.x === x && a.y === y) a.play(0, 7, 120); });
+  });
+  patrolTick = t;
+}
 // Что за клетка «~»: bridge — мостик, rams — баранья тропа, bush — дорога у кустов, bog — топь (только на болоте, nostop: "swamp").
 function nsKind(x, y) {
   if (!L.nostop || L.map[y]?.[x] !== "~") return null;
@@ -10611,6 +10698,11 @@ async function run() {
 
       if (p.crash && p.crash.cmd === i && p.crash.step === s) {
         await shotPending;
+        if (p.crash.reason === "patrol") {          // часовой доходит до места встречи (если это не клетка, где стоит рыцарь)
+          const there = patrolsOf().some((seq) => { const q = patrolAt(seq, p.crash.tick); return q.x === hero.x && q.y === hero.y; });
+          if (!there) patrolPlace(p.crash.tick, 230 * SLOW / speed);
+          heroEl.classList.remove("run");
+        }
         heroEl.classList.remove("bump");
         void heroEl.offsetWidth;
         heroEl.classList.add("bump");
@@ -10618,7 +10710,9 @@ async function run() {
         showProblems = true;
         drawRoute(p, i);
         await wait(420);
-        if (p.crash.reason === "goblin" && p.crash.shield) {
+        if (p.crash.reason === "patrol") {
+          setStatus(tr("Часовой не пустил: вы встретились на шаге {n}. Пережди его — {cmd} — и иди, когда дорога свободна", { n: p.crash.tick, cmd: uiBlocks ? "⏳" : disp("wait") + "()" }), "fail");
+        } else if (p.crash.reason === "goblin" && p.crash.shield) {
           setStatus("Щитоносец стоит на пути — сквозь него не пройти", "fail");
         } else if (p.crash.reason === "goblin" && p.crash.max === GIANT_HP) {
           setStatus("Великан стоит на пути — сквозь него не пройти. Обойди его или победи: тогда будет корона 👑", "fail");
@@ -10653,18 +10747,20 @@ async function run() {
         return finish();
       }
 
+      heroEl.classList.toggle("run", cmd.name !== "wait");   // ждёт — стоит, а не бежит на месте
+      patrolPlace(cmd.tk + s + 1, 230 * SLOW / speed);          // часовые делают свой шаг вместе с рыцарем
       hero = cmd.cells[s];
       placeHero();
       camFollow();          // окно длинной карты едет вместе с рыцарем
       // звуки шага и подобранных предметов
       const before = s ? cmd.got[s - 1] : (i ? p.commands[i - 1].got.at(-1) : null) || noneGot();
       const now = cmd.got[s];
-      if (speed < 5) sfx("step");
+      if (speed < 5 && cmd.name !== "wait") sfx("step");
       if (now.key && !before.key) sfx("key");
       if (now.coins > before.coins) sfx("coin");
       if (items.length && doorLocked(before) && !doorLocked(now)) setTimeout(() => sfx("unlock"), 180);
       drawItems(now);
-      walkedTotal++;
+      if (cmd.name !== "wait") walkedTotal++;
       if (cmd.sw?.[s]) {
         // замах великана: рыцарь успел отойти — мимо, остался рядом — удар
         heroEl.classList.remove("run");
@@ -11944,8 +12040,8 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ===== 17. Прочитать задание вслух =====
-const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear" }
-  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё" };
+const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear", wait: "wait" }
+  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё", wait: "ждать" };
 function speakGoal() {
   try {
     let t = $("title").textContent + ". " + $("goal").textContent;
@@ -13293,10 +13389,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 211;
+const APP_VERSION = 212;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 212, date: "2026-11-19", text: "Новый противник — гоблин-часовой: он ходит по своей программе, пока идёт твоя. Новая команда «ждать» ⏳ и два уровня на Берегу: «Часовой» и «За спиной». Место встречи видно на поле ещё до запуска", en: "A new opponent — the goblin sentry: he walks by his own program while yours runs. A new “wait” ⏳ command and two levels on the Shore: “The Sentry” and “Behind His Back”. The field shows where you would meet before you even press Run", big: true },
   { v: 211, date: "2026-11-19", text: "Починил шаткий мостик: падала не та доска. Новый уровень «Болото» — вода, топь и мостики, останавливаться нельзя нигде. Шаткие мостики и баранья тропа появились на «Змейке», «Развилке» и «Серпантине»", en: "Fixed the wobbly bridge: the wrong plank was falling. A new level, “The Swamp” — water, bog and bridges, and you can’t stop anywhere. Wobbly bridges and a ram trail now appear on “Zigzag”, “The Fork” and “Switchbacks”" },
   { v: 210, date: "2026-11-19", text: "Три новых уровня, где нельзя останавливаться на полпути: шаткий мостик, баранья тропа и засада в кустах. Собери весь путь — и запусти один раз", en: "Three new levels where you can’t stop halfway: a wobbly bridge, a ram trail and an ambush in the bushes. Build the whole path — and run it once", big: true },
   { v: 209, date: "2026-11-19", text: "В бою у моста взрывы стали разнообразнее: бойцы летят на зрителя под разными углами, сбитые с ног лежат и встают, а упавшие в воду выбывают", en: "Explosions in the bridge battle are more varied: fighters fly toward the viewer at different angles, those knocked down lie and get up, and those thrown into the water are out" },
