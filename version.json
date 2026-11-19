@@ -1,13 +1,13 @@
 {
- "version": 216,
+ "version": 217,
  "date": "2026-11-19",
  "notes": [
-  "«Два дела»: задание и кнопки теперь сходятся — команда встаёт туда, куда сказано"
+  "Арена: динамит взрывается по-новому — бойцов сбивает с ног и отбрасывает, а мечник, копейщик и лучник иногда отбивают его. Бои на арене сбалансированы заново"
  ],
  "files": {
   "index.html": {
-   "size": 1036384,
-   "hash": "d3c5782bbc62b7f3"
+   "size": 1046503,
+   "hash": "bbeb77046855ba51"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "42d099546ee4f52d"
+   "hash": "bbfab72b71baecb7"
   },
   "icon-192.png": {
    "size": 42164,
@@ -82,8 +82,8 @@
    "hash": "ba9be0574f8e6e40"
   },
   "isle3.js": {
-   "size": 51355,
-   "hash": "ced7e3856e808ee0"
+   "size": 51541,
+   "hash": "6451a3c1c9eb0bbe"
   },
   "isle4.js": {
    "size": 49545,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "“Two Jobs”: the task and the buttons now agree — the command lands where the task says"
+  "Arena: dynamite now blasts for real — fighters get knocked down and thrown, and the swordsman, lancer and archer sometimes deflect it. Arena battles are rebalanced"
  ]
 }
