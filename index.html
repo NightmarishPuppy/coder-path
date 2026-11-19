@@ -125,7 +125,7 @@ h1 {
 /* Две колонки (v200): название и задание стоят в правой колонке над программой (placeBrief), поле — от самого верха.
    После победы окошко со звёздами встаёт на место задания — страница никуда не едет. */
 .brief { display: flex; flex-flow: row wrap; align-items: center; gap: 4px 14px; }
-.brief > * { flex: 0 0 100%; min-width: 0; }
+.brief > * { flex: 0 0 100%; min-width: 0; box-sizing: border-box; }   /* border-box: у окошка победы есть поля и рамка — без этого оно на 30 px шире колонки и наползает на соседнюю (v205) */
 /* «Прочитать вслух» и строка про звёзды — в один ряд, когда помещаются (v204): экономит высоту */
 .brief > .voicebar { flex: 0 0 auto; margin-top: 2px; }
 .brief > .par { flex: 1 1 230px; margin: 0; }
@@ -13013,10 +13013,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 204;
+const APP_VERSION = 205;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 205, date: "2026-11-19", text: "Окошко победы на планшете и компьютере больше не наползает на соседнюю колонку", en: "The win box on tablets and computers no longer overlaps the next column" },
   { v: 204, date: "2026-11-19", text: "На планшете стоя поле уровня стало вдвое крупнее, а на ноутбуке задание и кнопка «Запустить» помещаются на экран", en: "In portrait mode on tablets the level field is twice as big, and on laptops the task and the “Run” button fit on the screen", big: true },
   { v: 203, date: "2026-11-19", text: "На планшете в Python и JavaScript кнопка «Запустить» остаётся на экране и когда выбрана строка", en: "On tablets in Python and JavaScript the “Run” button stays on screen when a line is selected too" },
   { v: 202, date: "2026-11-19", text: "На планшете и компьютере в Python и JavaScript кнопка «Запустить» теперь видна рядом с полем: длинное задание встаёт под поле", en: "On tablets and computers in Python and JavaScript the “Run” button now stays next to the field: a long task moves under the field" },

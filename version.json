@@ -1,13 +1,13 @@
 {
- "version": 204,
+ "version": 205,
  "date": "2026-11-19",
  "notes": [
-  "На планшете стоя поле уровня стало вдвое крупнее, а на ноутбуке задание и кнопка «Запустить» помещаются на экран"
+  "Окошко победы на планшете и компьютере больше не наползает на соседнюю колонку"
  ],
  "files": {
   "index.html": {
-   "size": 993879,
-   "hash": "38f7a2630b60fbb3"
+   "size": 994367,
+   "hash": "c3f1b1fadb4b2cf2"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "b240434868477129"
+   "hash": "2391b4617683a407"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "In portrait mode on tablets the level field is twice as big, and on laptops the task and the “Run” button fit on the screen"
+  "The win box on tablets and computers no longer overlaps the next column"
  ]
 }
