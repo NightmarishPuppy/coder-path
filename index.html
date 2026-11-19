@@ -4921,7 +4921,7 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes, guard }) {
     const a = d.air, x0 = d.a.x, y0 = d.a.y;
     let dir = x0 === tx ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(x0 - tx), dist = power ? skRnd(9, 13) : skRnd(3, 5);
     if (!power && !E.waterAt(x0 + dir * dist, y0)) { dir = -dir; if (!E.waterAt(x0 + dir * dist, y0)) power = true, dist = 10; }   // сесть некуда — улетает совсем
-    const ms = power ? 1500 : 1150, turns = (power ? skRnd(4, 6) : skRnd(1.5, 2.5)) * (Math.random() < 0.5 ? -1 : 1);
+    const ms = power ? 1500 : 1150, turns = Math.max(power ? 1.5 : 0.8, flySpin(0.5, ms)) * (Math.random() < 0.5 ? -1 : 1);
     d.a.el.style.transition = "none"; d.a.show(false);
     a.el.style.transition = "none"; a.at(x0, y0 - 0.25); void a.el.offsetWidth; a.show(true); a.play(0, 3, 80);
     mapSfx(st, "duck", x0, y0);
@@ -5276,6 +5276,10 @@ const ARCHER = { reach: 5.5, dmg: 1, cd: 1300 };
 // ОПЫТ (v208): отброшенный взрывом боец иногда летит не за край карты, а «на зрителя» — вбок и вниз, вырастая в размере.
 // Не понравится — поставить false: больше ничего менять не надо, такие бойцы будут улетать за край карты.
 const FLY_AT_CAMERA = true;
+// Сколько оборотов сделает отброшенный взрывом за ms мс (v209). Скорость каждый раз случайная (от 30 до 100 % предела),
+// а предел зависит от размера линейно: мелкое крутится быстро, крупное — медленно.
+// size: 0,5 — утка (до 2,6 оборота в секунду), 1 — обычный боец (до 1,9), 2 — большой подрывник (до 0,6).
+const flySpin = (size, ms) => Math.max(0.4, 3.2 - 1.3 * size) * (0.3 + 0.7 * Math.random()) * ms / 1000;
 // Общий движок живого боя (бой у шахты и заставка). B — описание поля боя:
 //   walk(x, y) — можно ли тут стоять; towers — башни с лучниками [x, y]; posts — наши на постах
 //   [{ kind, at, left }]; respawn — откуда выходит подкрепление; spawns — откуда приходят гоблины;
@@ -5368,6 +5372,7 @@ async function battle(st0, B) {
   // поставить сразу на место, без плавного переезда с того места, где юнит был раньше (погиб):
   // переход выключен и браузер обязан применить новое место до того, как переход включится снова
   const place = (u) => {
+    u.lie?.cancel(); u.lie = null;                    // вернулся в строй — уже не лежит
     u.a.el.style.transition = "none"; u.a.at(u.x, u.y); Z(u.a, u.y, 1);
     void u.a.el.offsetWidth;
     u.a.show(true);
@@ -5424,53 +5429,69 @@ async function battle(st0, B) {
     u.dead = true;
     // бочек стало меньше, зато взрыв мощнее (v208): большой взрыв и взрывная волна
     if (u.kind === "barrel") { u.a.show(false); boom(u.x, u.y); fxAt(bigBooms, u.x, u.y, 75); blast(u.x, u.y, 1.15, u.T.dmg, 2.0, 2.6); return; }
-    if (!fly) { u.a.show(false); skull(u.x, u.y, u); }
+    if (!fly) { u.lie?.cancel(); u.lie = null; u.a.show(false); skull(u.x, u.y, u); }
     if (u.post) after(8000, () => {                      // подкрепление
       Object.assign(u, { x: B.respawn[0], y: B.respawn[1], hp: u.T.hp, dead: false, air: false, busy: 0, anim: "", tgt: null, via: B.via ? [...B.via] : [] });
       place(u);
     });
   };
   // ----- взрывная волна (v208) -----
-  // Кувырок в полёте: картинка крутится в своей плоскости, как утка от взрыва; grow — вырасти (полёт «на зрителя»), в конце тает.
-  const tumble = (a, turns, ms, grow = 1) => {
-    if (STILL || !a.el.animate) return;
+  // Кувырок в полёте: картинка крутится в своей плоскости, как утка от взрыва. turns — сколько оборотов (со знаком);
+  // grow — вырасти (полёт «на зрителя»), в конце тает; lie — в конце остаться лежать на боку (держится, пока не снимут: u.lie).
+  const tumble = (a, turns, ms, grow = 1, lie = 0) => {
+    if (STILL || !a.el.animate) return null;
     const base = `translate(-50%, ${a.el.style.getPropertyValue("--foot")})${a.el.classList.contains("flip") ? " scaleX(-1)" : ""}`;
-    a.el.animate([{ transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
-      { transform: `${base} rotate(${turns * 290}deg) scale(${1 + (grow - 1) * 0.55})`, opacity: 1, offset: 0.8 },
-      { transform: `${base} rotate(${turns * 360}deg) scale(${grow})`, opacity: grow > 1 ? 0 : 1 }], { duration: ms, easing: grow > 1 ? "cubic-bezier(.5,0,1,.6)" : "linear" });
+    const end = lie ? Math.round(turns) * 360 + lie * 90 : turns * 360;
+    return a.el.animate([{ transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
+      { transform: `${base} rotate(${end * 0.8}deg) scale(${1 + (grow - 1) * 0.55})`, opacity: 1, offset: 0.8 },
+      { transform: `${base} rotate(${end}deg) scale(${grow})`, opacity: grow > 1 ? 0 : 1 }],
+      { duration: ms, easing: grow > 1 ? "cubic-bezier(.5,0,1,.6)" : lie ? "ease-out" : "linear", fill: lie ? "forwards" : "none" });
   };
+  const getUp = (v) => { v.lie?.cancel(); v.lie = null; };
   // Боец отлетает от взрыва в точке (x, y). s — сила, с которой волна до него дошла:
-  //   до 0,6 — опрокидывает на месте («как уточку»); 0,6–1,7 — подлетает и падает подальше;
-  //   больше — уносит насовсем: за край карты или (опыт FLY_AT_CAMERA) «на зрителя».
-  // Живой после приземления встаёт и дерётся дальше; погибший летит телом, череп — там, где упал (в воде — всплеск).
+  //   до 0,6 — сбивает с ног: короткий кувырок, лежит секунду-две, потом встаёт и снова дерётся (v209: раньше делал сальто на месте
+  //   и сразу бил — выглядело комично); 0,6–1,7 — подлетает и падает подальше, тоже лежит; больше — уносит насовсем:
+  //   за край карты или (опыт FLY_AT_CAMERA) «на зрителя» — прямо или под углом, в любую сторону.
+  // Упал в воду — погиб (всплеск). Погибший летит телом, череп — там, где упал. Скорость вращения — flySpin: случайная, по размеру.
   const fling = (v, x, y, s) => {
     let dx = v.x - x, dy = v.y - y; const d0 = Math.hypot(dx, dy);
     if (d0 < 0.05) { const q = Math.random() * 6.28; dx = Math.cos(q); dy = Math.sin(q); } else { dx /= d0; dy /= d0; }
-    const a = v.a, dir = dx < 0 ? -1 : 1;
+    const a = v.a, dir = dx < 0 ? -1 : 1, size = v.T.sc / 0.85;
+    getUp(v);
     v.air = true; v.busy = Infinity; v.tgt = null;
     a.el.style.transition = "none"; Z(a, v.y + 6);
     if (s >= 1.7) {
       if (!v.dead) kill(v, true);
       const gone = () => { a.show(false, true); v.air = false; };
-      if (FLY_AT_CAMERA && !STILL && Math.random() < 0.5) {              // «на зрителя»: вбок и вниз по экрану, всё крупнее
+      if (FLY_AT_CAMERA && !STILL && Math.random() < 0.7) {
+        // «На зрителя». phi — угол выхода из плоскости карты: 85° — почти прямо в экран (сильно растёт, вбок почти не уходит),
+        // 30° — полого (уходит далеко вбок, растёт меньше). th — куда вбок: от взрыва, но с большим разбросом — и вверх, и вниз.
+        const phi = (30 + Math.random() * 55) * Math.PI / 180, th = Math.atan2(dy, dx) + (Math.random() - 0.5) * 2.6;
+        const side = 9 * Math.cos(phi), grow = 1 + 6.5 * Math.sin(phi) ** 1.6, ms = 900 + 350 * Math.cos(phi);
         a.el.style.zIndex = 99999;
-        tumble(a, dir * 1.4, 950, 7);
-        return a.arc(v.x + dx * 2.2 + (Math.random() - 0.5) * 2, v.y + 3.5 + Math.random() * 2, 1.6, 950).then(gone);
+        tumble(a, dir * flySpin(size, ms), ms, grow);
+        return a.arc(v.x + Math.cos(th) * side, v.y + Math.sin(th) * side + 1.6 * Math.sin(phi), 1.2, ms).then(gone);
       }
-      tumble(a, dir * 5, 1300);                                          // за край карты
+      tumble(a, dir * Math.max(1, flySpin(size, 1300)), 1300);              // за край карты
       return a.arc(v.x + dx * 15, v.y + dy * 15, 5, 1300).then(gone);
     }
     const far = s >= 0.6;
-    let len = far ? 1.1 + (s - 0.6) * 3.4 : 0.3, lx = v.x, ly = v.y;
-    if (v.dead) { lx = v.x + dx * len; ly = v.y + dy * len; }
-    else for (; len > 0.08; len *= 0.6) if (walk(v.x + dx * len, v.y + dy * len)) { lx = v.x + dx * len; ly = v.y + dy * len; break; }
-    const ms = far ? 600 + len * 90 : 520;
-    tumble(a, far ? dir * Math.max(1, Math.round(len * 0.7)) : dir, ms);
-    a.arc(lx, ly, far ? 0.9 + len * 0.35 : 0.55, ms).then(() => {
+    let len = far ? 1.1 + (s - 0.6) * 3.4 : 0.4, lx = v.x + dx * len, ly = v.y + dy * len;
+    // живой падает в воду — гибнет; на землю, где стоять нельзя (деревья, обрыв), не залетает — падает ближе
+    const wet = () => !!B.water?.(lx, ly);
+    if (!v.dead && !wet()) for (; !walk(lx, ly); ) { len *= 0.6; lx = v.x + dx * len; ly = v.y + dy * len; if (len < 0.08) { lx = v.x; ly = v.y; break; } }
+    const ms = far ? 600 + len * 90 : 480;
+    v.lie = tumble(a, dir * (far ? Math.max(1, flySpin(size, ms)) : 0), ms, 1, dir);
+    a.arc(lx, ly, far ? 0.9 + len * 0.35 : 0.4, ms).then(() => {
       v.air = false;
-      if (!v.dead) { v.x = lx; v.y = ly; v.busy = now + (far ? 900 : 450); v.anim = ""; anim(v, "idle"); return; }
-      a.show(false, true);
-      if (B.water?.(lx, ly)) { fxAt(splashes, lx, ly, 70, ly); mapSfx(st, "splash", lx, ly); }
+      if (!v.dead && wet()) kill(v, true);
+      if (!v.dead) {                                   // лежит секунду-две, потом встаёт
+        v.x = lx; v.y = ly; v.anim = ""; anim(v, "idle");
+        const down = 1000 + Math.random() * 1000; v.busy = now + down;
+        return after(down, () => { if (!v.dead && !v.air) getUp(v); });
+      }
+      getUp(v); a.show(false, true);
+      if (wet()) { fxAt(splashes, lx, ly, 70, ly); mapSfx(st, "splash", lx, ly); }
       else if (walk(lx, ly)) skull(lx, ly, v);
     });
   };
@@ -13141,10 +13162,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 208;
+const APP_VERSION = 209;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 209, date: "2026-11-19", text: "В бою у моста взрывы стали разнообразнее: бойцы летят на зрителя под разными углами, сбитые с ног лежат и встают, а упавшие в воду выбывают", en: "Explosions in the bridge battle are more varied: fighters fly toward the viewer at different angles, those knocked down lie and get up, and those thrown into the water are out" },
   { v: 208, date: "2026-11-19", text: "Бой у моста стал сочнее: взрывы отбрасывают бойцов, пришли большие подрывники, а динамит отбивают мечом, копьём и стрелой", en: "The battle at the bridge is juicier: explosions throw fighters around, big bombers have arrived, and dynamite gets knocked away by sword, spear and arrow", big: true },
   { v: 207, date: "2026-11-19", text: "В Python и JavaScript задания на островах 4 и 5 теперь говорят про строки кода, а не про плитки", en: "In Python and JavaScript the tasks on islands 4 and 5 now talk about lines of code, not tiles" },
   { v: 206, date: "2026-11-19", text: "В Python и JavaScript на планшете и компьютере задание сворачивается, пока идёт программа: видно, какой шаг выполняется", en: "In Python and JavaScript on tablets and computers the task folds away while the program runs, so you can see which step is running" },

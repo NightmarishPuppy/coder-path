@@ -1,13 +1,13 @@
 {
- "version": 208,
+ "version": 209,
  "date": "2026-11-19",
  "notes": [
-  "Бой у моста стал сочнее: взрывы отбрасывают бойцов, пришли большие подрывники, а динамит отбивают мечом, копьём и стрелой"
+  "В бою у моста взрывы стали разнообразнее: бойцы летят на зрителя под разными углами, сбитые с ног лежат и встают, а упавшие в воду выбывают"
  ],
  "files": {
   "index.html": {
-   "size": 1006803,
-   "hash": "36f48135af6eddf9"
+   "size": 1009851,
+   "hash": "a1de2c8a87c0a295"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "0ca80d16662f5f65"
+   "hash": "bbfe30703da76de3"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The battle at the bridge is juicier: explosions throw fighters around, big bombers have arrived, and dynamite gets knocked away by sword, spear and arrow"
+  "Explosions in the bridge battle are more varied: fighters fly toward the viewer at different angles, those knocked down lie and get up, and those thrown into the water are out"
  ]
 }
