@@ -1,13 +1,13 @@
 {
- "version": 205,
+ "version": 206,
  "date": "2026-11-19",
  "notes": [
-  "Окошко победы на планшете и компьютере больше не наползает на соседнюю колонку"
+  "В Python и JavaScript на планшете и компьютере задание сворачивается, пока идёт программа: видно, какой шаг выполняется"
  ],
  "files": {
   "index.html": {
-   "size": 994367,
-   "hash": "c3f1b1fadb4b2cf2"
+   "size": 995612,
+   "hash": "33c96c579d71df93"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "2391b4617683a407"
+   "hash": "5ff8f9c356e32bbb"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The win box on tablets and computers no longer overlaps the next column"
+  "In Python and JavaScript on tablets and computers the task folds away while the program runs, so you can see which step is running"
  ]
 }

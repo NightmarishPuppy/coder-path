@@ -135,6 +135,9 @@ h1 {
   #levelview .brief h1 { font-size: 28px; }
   #levelview .game > .col { gap: 9px; }
 }
+/* Пока программа идёт (v206): в Python / JavaScript задание под полем сворачивается — видно «План маршрута», где бежит выполнение.
+   Не прошёл — задание возвращается; прошёл — на его месте окошко победы. */
+#levelview.two.brief-left.runs:not(.blk) .brief > :is(.goal, .goal-more, .voicebar, .par) { display: none; }
 .brief .winbox { margin: 6px 0 2px; }
 .brief:has(.winbox:not([hidden])) > :is(.goal, .goal-more, .voicebar, .par) { display: none; }
 @media (min-width: 1000px) { #levelview.wrap { max-width: min(1680px, 94vw); } }   /* планшет лёжа: экран уровня — почти во всю ширину (v201) */
@@ -383,6 +386,7 @@ html.still .item { transition: none; }
 .boardtop { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; }
 .skinbtn { opacity: 0.8; }
 .boardtop[hidden] { display: none; }
+.itemstag:empty { visibility: hidden; }   /* пустая плашка предметов не видна (место держит: сердечки появятся — поле не прыгнет) */
 .skinbar { display: flex; gap: 6px; margin-left: auto; }
 .skinbtn { width: 46px; height: 42px; padding: 0; border-radius: 12px; border: 2px solid #4a5068; background: var(--bg); cursor: pointer;
   display: grid; place-items: center; font-size: 15px; line-height: 1; opacity: 0.72; position: relative; }
@@ -10193,6 +10197,7 @@ async function run() {
   if (!p.commands.length) { setStatus("Добавь хотя бы одну команду кнопками ниже", "fail"); return; }
 
   running = true;
+  $("levelview").classList.add("runs");   // пока программа идёт, задание под полем свёрнуто (стили .runs)
   setDisabled(true);
   // длинную карту листали — сначала окно возвращается к рыцарю
   if (camFollow("page")) await sleep(520);
@@ -11216,6 +11221,7 @@ async function showChecks(p, before) {
 
 function finish() {
   running = false;
+  $("levelview").classList.remove("runs");
   if (!ghostWon) ghostFails[L.name] = (ghostFails[L.name] || 0) + 1;   // запуск без победы — неудача (победа сама сотрёт счёт)
   ghostIdleAt = performance.now();
   drawLoopView(plan);
@@ -13013,10 +13019,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 205;
+const APP_VERSION = 206;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 206, date: "2026-11-19", text: "В Python и JavaScript на планшете и компьютере задание сворачивается, пока идёт программа: видно, какой шаг выполняется", en: "In Python and JavaScript on tablets and computers the task folds away while the program runs, so you can see which step is running" },
   { v: 205, date: "2026-11-19", text: "Окошко победы на планшете и компьютере больше не наползает на соседнюю колонку", en: "The win box on tablets and computers no longer overlaps the next column" },
   { v: 204, date: "2026-11-19", text: "На планшете стоя поле уровня стало вдвое крупнее, а на ноутбуке задание и кнопка «Запустить» помещаются на экран", en: "In portrait mode on tablets the level field is twice as big, and on laptops the task and the “Run” button fit on the screen", big: true },
   { v: 203, date: "2026-11-19", text: "На планшете в Python и JavaScript кнопка «Запустить» остаётся на экране и когда выбрана строка", en: "On tablets in Python and JavaScript the “Run” button stays on screen when a line is selected too" },
