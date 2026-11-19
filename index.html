@@ -525,6 +525,15 @@ html.still .route .fight .sw { animation: none; }
 .hero.run .k-run { display: block; }
 .hero.run .k-idle { display: none; }
 .hero.flip .kwrap { transform: scaleX(-1); }
+/* v210: остановился, где нельзя, — искупался (мостик) или сбит с ног (баран, динамит из кустов) */
+.hero .kwrap { transition: transform 0.3s, opacity 0.4s; transform-origin: 50% 85%; }
+.hero.sunk .kwrap { transform: translateY(34%) scale(0.85); opacity: 0; }
+.hero.down .kwrap { transform: rotate(90deg); }
+.hero.sunk .khp, .hero.down .khp { display: none; }
+.cell .plank { position: absolute; inset: 0; background-size: 300% 400%; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; transition: transform 0.35s ease-in, opacity 0.35s; }
+.cell .plank.gone { transform: translateY(30%) rotate(14deg); opacity: 0; }
+.cell.ns-rams::after { content: ""; position: absolute; inset: 30% 0; pointer-events: none;
+  background: radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 0 0 / 14px 9px, radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 7px 4px / 14px 9px; }
 .hero.bump .kwrap { animation: bump 0.35s ease; }
 @keyframes bump {
   0%, 100% { translate: 0 0; }
@@ -3022,6 +3031,7 @@ function skinButtons(lv, onPick) {
 let levelIdx = Math.max(0, indexOf(save.currentName) );
 // Варианты поля (у уровня есть maps): какой показан и какие уже пройдены этим кодом
 let variant = 0, variantsDone = new Set();
+const noStopSeen = new Set();   // уровни с засадой в кустах, где динамит уже прилетал: опасные клетки теперь видны (красные)
 let curCheck = null;   // проверка условия, которую сейчас показываем при запуске
 let L = null;
 let W = 0, H = 0;
@@ -7775,9 +7785,29 @@ function buildBoard() {
         if (f.tree[0] === x && f.tree[1] === y) { tl.over = "tree1"; tl.ground = "grass"; }
         if ([f.cutter, f.away].some(([cx, cy]) => cx === x && cy === y)) { tl.over = null; if (tl.ground === "water") tl.ground = "grass"; }
       }
-      cell.className = "cell " + (ch === "#" ? "wall" : "floor");
+      // «~» — клетка, на которой нельзя останавливаться (v210; вид — L.nostop): bridge — шаткий мостик над водой,
+      // rams — баранья тропа (трава, барашек ждёт сбоку), bush — дорога мимо кустов с подрывником (кусты — L.bushes).
+      if (ch === "~") {
+        tl.over = null;
+        if (L.nostop === "bridge") tl.ground = "water"; else if (tl.ground === "water") tl.ground = L.nostop === "rams" ? "grass" : "sand";
+        if (L.nostop === "rams") tl.ground = "grass";
+      }
+      // вокруг мостика — вода (иначе мост лежал бы на траве)
+      if (L.nostop === "bridge" && ch === "#" && [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]].some(([dx, dy]) => map[y + dy]?.[x + dx] === "~")) { tl.ground = "water"; tl.over = null; }
+      if ((L.bushes || []).some(([bx, by]) => bx === x && by === y)) { tl.over = "bush2"; if (tl.ground === "water") tl.ground = "grass"; }
+      cell.className = "cell " + (ch === "#" ? "wall" : "floor") + (ch === "~" ? " nostop ns-" + L.nostop : "");
       cellEl[y][x] = cell;
       terr[y][x] = tl.ground;
+      if (ch === "~" && L.nostop === "bridge") {
+        // доски моста: лежит вдоль дороги; у краёв — концы моста (лист 3 × 4: верхний ряд — мост поперёк, левый столбец — вдоль)
+        const open = (dx, dy) => { const c = map[y + dy]?.[x + dx]; return c !== undefined && c !== "#"; }, br = (dx, dy) => map[y + dy]?.[x + dx] === "~";
+        const horiz = open(-1, 0) || open(1, 0), k = horiz ? (br(-1, 0) ? (br(1, 0) ? 1 : 2) : br(1, 0) ? 0 : 1) : (br(0, -1) ? (br(0, 1) ? 2 : 3) : br(0, 1) ? 1 : 2);
+        const pl = document.createElement("div");
+        pl.className = "plank";
+        pl.style.cssText = `background-image:url(${TS.bridge});background-position:${horiz ? k * 50 : 0}% ${horiz ? 0 : k * 33.34}%`;
+        cell.appendChild(pl);
+      }
+      if (ch === "~" && L.nostop === "bush" && noStopSeen.has(L.name)) cell.insertAdjacentHTML("beforeend", `<div class="danger"></div>`);
       // то, что стоит на клетке (дерево, куст, камень) — отдельный слой с анимацией
       if (tl.over) {
         const p = PROPS[tl.over] || { k: 1 };
@@ -9117,6 +9147,11 @@ function buildPlan(code) {
   if (fly) { flyBlow(); return { commands, crash, reachedAt, hpLeft, dead, endless, checks }; }   // код кончился, а динамит летел
   // Код кончился, а рыцарь стоит рядом с гоблином — гоблин бьёт, пока рыцарь не упадёт
   // (и великан доводит свой замах, если рыцарь остался рядом)
+  // v210: программа кончилась на клетке, где нельзя останавливаться («~»): мостик рушится, баран сбивает, из кустов летит динамит
+  if (!dead && L.nostop && L.map[pos.y]?.[pos.x] === "~") {
+    kHp = 0;
+    return { commands, crash, reachedAt, hpLeft, dead: { by: "nostop", nostop: L.nostop, final: true, at: { ...pos } }, finalHits: [], checks };
+  }
   const last = settle();
   const finalHits = [...(last && !last.miss ? [last] : []), ...strikes(null, true)];
   if (dead) dead.final = true;
@@ -10145,7 +10180,8 @@ function reset() {
   }
   const moved = hero && (hero.x !== start.x || hero.y !== start.y);
   hero = { ...start };
-  heroEl.classList.remove("flip", "run");
+  heroEl.classList.remove("flip", "run", "sunk", "down");
+  boardEl.querySelectorAll(".plank.gone").forEach((e) => e.classList.remove("gone"));
   roundTag.hidden = true;
   placeHero();
   // длинная карта: рыцарь вернулся на старт — окно к нему (при открытии сразу, после запуска плавно)
@@ -10300,7 +10336,47 @@ function giantLoot(cell, crown = true) {
 }
 
 // Рыцарь упал: облачко, из него — череп, как у гоблинов
+// Остановился там, где нельзя (v210). Без черепа и «гибели»: рыцарь искупался, его сбили с ног — или прилетел динамит из кустов.
+const NOSTOP_TEXT = {
+  bridge: "Мостик шаткий — на нём нельзя останавливаться: доска упала. Запиши весь путь до берега сразу и запусти один раз",
+  rams: "Баран сбил рыцаря с ног! На бараньей тропе нельзя останавливаться. Запиши весь путь сразу и запусти один раз",
+  bush: "Засада! Рыцарь остановился у кустов — и подрывник успел бросить динамит. Запиши весь путь мимо кустов сразу и запусти один раз",
+};
+async function noStopFall(kind) {
+  const st = evStage(), k = SLOW / speed;
+  heroEl.classList.remove("run", "atk", "guard");
+  if (kind === "bridge") {
+    const cell = boardEl.children[hero.y * W + hero.x], pl = cell?.querySelector(".plank");
+    pl?.classList.add("gone");
+    heroEl.classList.add("sunk");
+    const sp = skActor(st, "splash", 1.3, 0.6);
+    sp.at(hero.x + 0.5, hero.y + 0.85); sp.show(true, true);
+    sfx("fall");
+    await sp.play(0, 9, 26 * k, false);
+    sp.el.remove();
+  } else if (kind === "rams") {
+    // баран бежит по тропе с той стороны, где она длиннее, и сбивает рыцаря
+    const free = (dx) => { let n = 0; while (L.map[hero.y]?.[hero.x + dx * (n + 1)] === "~") n++; return n; };
+    const dir = free(-1) >= free(1) ? 1 : -1, from = hero.x + 0.5 - dir * (Math.max(free(-1), free(1)) + 1.2);
+    const ram = skActor(st, "shmove", 1.05, 0.656);
+    ram.at(from, hero.y + 0.86); ram.face(dir < 0); ram.show(true, true); ram.play(0, 4, 24 * k);
+    await ram.move(hero.x + 0.5, hero.y + 0.86, Math.abs(hero.x + 0.5 - from) * 55 * k);
+    heroEl.classList.add("down");
+    sfx("fall");
+    await ram.move(hero.x + 0.5 + dir * 2.4, hero.y + 0.86, 2.4 * 55 * k);
+    ram.el.remove();
+  } else {
+    const bs = (L.bushes || []).slice().sort((a, b) => Math.hypot(a[0] - hero.x, a[1] - hero.y) - Math.hypot(b[0] - hero.x, b[1] - hero.y));
+    if (bs[0]) await playShot({ kind: "shot", from: bs[0], hp: 0 });
+    heroEl.classList.add("down");
+    if (!noStopSeen.has(L.name)) { noStopSeen.add(L.name);
+      boardEl.querySelectorAll(".cell.nostop").forEach((c) => c.insertAdjacentHTML("beforeend", `<div class="danger"></div>`)); }
+  }
+  await wait(500);
+  setStatus(NOSTOP_TEXT[kind], "fail");
+}
 async function knightFalls(why) {
+  if (why?.nostop) return noStopFall(why.nostop);
   heroEl.classList.remove("run", "atk", "guard");
   heroEl.classList.add("dead");
   const pf = sprite("poof", 1.1, { bottom: 0, cls: "poof" });
@@ -10602,6 +10678,7 @@ async function run() {
   drawRoute(p, p.commands.length);
   drawTape(p, p.commands.length);
   heroEl.classList.remove("run");
+  if (p.dead?.by === "nostop") { await knightFalls(p.dead); return finish(); }   // остановился, где нельзя (v210)
   if (p.finalHits?.length) {
     await playStrikes(p.finalHits);
     if (p.dead) { await knightFalls(p.dead); return finish(); }
@@ -10622,6 +10699,20 @@ async function run() {
   setStatus(L.slay ? "Почти! Ещё не все гоблины побеждены — добавь команд" : "Почти! До двери ещё немного — добавь шагов", "fail");
   sfx("almost");
   finish();
+  stepTip(p);
+}
+// Игрок «ходит по шагу» (v210): добавил команду — запустил, ещё одну — снова запустил, как в обычной игре.
+// На третий такой запуск подряд (программа каждый раз длиннее ровно на одну команду и до двери не дошла) — совет.
+// Не больше трёх раз за всё время (save.stepTips) и не чаще раза на уровень.
+let stepRuns = { name: "", n: 0, streak: 0, told: false };
+function stepTip(p) {
+  const n = p.commands.length;
+  if (stepRuns.name !== L.name) stepRuns = { name: L.name, n: 0, streak: 0, told: false };
+  stepRuns.streak = n === stepRuns.n + 1 ? stepRuns.streak + 1 : 0;
+  stepRuns.n = n;
+  if (stepRuns.streak < 3 || stepRuns.told || (save.stepTips || 0) >= 3 || isleOf(L) > 2) return;
+  stepRuns.told = true; save.stepTips = (save.stepTips || 0) + 1; writeSave();
+  setStatus("Можно не запускать после каждого шага. Весь путь уже нарисован на поле: добавляй команды, пока он не дойдёт до двери, — и запусти один раз", "");
 }
 
 // ===== Арена: рыцарь держится против волн гоблинов по своей программе =====
@@ -13162,10 +13253,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 209;
+const APP_VERSION = 210;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 210, date: "2026-11-19", text: "Три новых уровня, где нельзя останавливаться на полпути: шаткий мостик, баранья тропа и засада в кустах. Собери весь путь — и запусти один раз", en: "Three new levels where you can’t stop halfway: a wobbly bridge, a ram trail and an ambush in the bushes. Build the whole path — and run it once", big: true },
   { v: 209, date: "2026-11-19", text: "В бою у моста взрывы стали разнообразнее: бойцы летят на зрителя под разными углами, сбитые с ног лежат и встают, а упавшие в воду выбывают", en: "Explosions in the bridge battle are more varied: fighters fly toward the viewer at different angles, those knocked down lie and get up, and those thrown into the water are out" },
   { v: 208, date: "2026-11-19", text: "Бой у моста стал сочнее: взрывы отбрасывают бойцов, пришли большие подрывники, а динамит отбивают мечом, копьём и стрелой", en: "The battle at the bridge is juicier: explosions throw fighters around, big bombers have arrived, and dynamite gets knocked away by sword, spear and arrow", big: true },
   { v: 207, date: "2026-11-19", text: "В Python и JavaScript задания на островах 4 и 5 теперь говорят про строки кода, а не про плитки", en: "In Python and JavaScript the tasks on islands 4 and 5 now talk about lines of code, not tiles" },

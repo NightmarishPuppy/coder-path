@@ -70,6 +70,27 @@ levels: [
     starter: { py: "move_right(3)\nmove_down(2)\n", js: "moveRight(3);\nmoveDown(2);\n" },
   },
   {
+    name: "Шаткий мостик",
+    chapter: 0,
+    after: "Поворот",
+    hint: "move_right(6)\nmove_down(2)",
+    nostop: "bridge",
+    goal: "Впереди шаткий мостик: на нём нельзя останавливаться — доска падает. Собери весь путь до двери и только потом нажми «Запустить».",
+    en: {
+      name: "Wobbly Bridge",
+      goal: "A wobbly bridge ahead: you can’t stop on it — the plank falls. Build the whole path to the door first, and only then press “Run”.",
+    },
+    commands: ["moveRight", "moveDown"],
+    par: 2, good: 4,
+    map: [
+      "#######",
+      "S.~~~..",
+      "######.",
+      "######E",
+    ],
+    starter: { py: "", js: "" },
+  },
+  {
     name: "Подвал",
     chapter: 0,
     hint: "move_right(2)\nmove_down(2)\nattack()\nmove_right(2)\nmove_down(2)\nmove_right(2)",
@@ -126,6 +147,27 @@ levels: [
       "S#####E",
     ],
     starter: { py: "# Сначала наверх\nmove_up(4)\n", js: "// Сначала наверх\nmoveUp(4);\n" },
+  },
+  {
+    name: "Баранья тропа",
+    chapter: 0,
+    after: "Поворот",
+    hint: "move_down(2)\nmove_right(6)\nmove_up()",
+    nostop: "rams",
+    goal: "Через луг идёт баранья тропа: кто на ней встанет, того баран собьёт с ног. Собери весь путь до двери и запусти один раз.",
+    en: {
+      name: "Ram Trail",
+      goal: "A ram trail crosses the meadow: stand on it and a ram knocks you over. Build the whole path to the door and run it once.",
+    },
+    commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
+    par: 3, good: 5,
+    map: [
+      "S######",
+      ".#####E",
+      ".~~~~~.",
+      "#######",
+    ],
+    starter: { py: "", js: "" },
   },
   {
     name: "Спираль",
@@ -653,7 +695,7 @@ levels: [
 // Карта острова. Руками не править: её целиком пишет tools/gen3.py из файла раскладки.
 // @@isle1@@
 ISLES[1].map = {
-  nodes: [[90, 1010], [150, 1010], [210, 1010], [250, 990], [190, 950], [110, 930], [130, 870], [210, 870], [310, 810], [190, 750], [130, 710], [230, 650], [290, 590], [230, 530], [250, 490], [230, 470], [150, 470], [110, 470], [110, 430], [110, 390], [110, 310], [50, 270], [110, 250], [190, 270], [190, 230], [270, 230], [250, 130]],
+  nodes: [[90, 1010], [150, 1010], [210, 1010], [250, 990], [230, 950], [170, 950], [110, 930], [130, 870], [190, 870], [250, 870], [310, 810], [190, 750], [130, 710], [230, 650], [290, 590], [230, 530], [250, 490], [230, 470], [150, 470], [110, 470], [110, 430], [110, 390], [110, 310], [50, 270], [110, 250], [190, 270], [190, 230], [270, 230], [250, 130]],
   rows: [
     "....................................",
     "....................................",
