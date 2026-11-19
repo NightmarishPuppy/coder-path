@@ -4762,7 +4762,7 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   duckair: [3, 1, 32], boom2: [8, 1, 192], boom3: [10, 1, 192], dust: [10, 1, 64],
   // остров 1 наряднее (v187): овцы, стройка, тренировка, костёр
   shidle: [6, 1, 128], shgrass: [12, 1, 128], shmove: [4, 1, 128], phidle: [8, 1, 192], prunham: [6, 1, 192], lrdef: [6, 1, 320], wguard: [6, 1, 192],
-  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256], gwtc: [1, 1, 256] };
+  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256], gwtc: [1, 1, 256], gwt1: [4, 1, 256], gwt2: [4, 1, 256], gwt3: [4, 1, 256], gwlog: [2, 1, 80] };
 TS.sk_fire = TS.fx_fire;
 let SK_ACTORS = [];
 let skLast = 0;
@@ -11391,13 +11391,26 @@ async function runArena() {
     a.el.style.transition = `left ${ms}ms linear, top ${ms}ms ease-out`; a.at(x + 0.25 + Math.random() * 0.35, y - rise);
     sleep(ms).then(() => a.el.remove());
   };
-  // брёвна разлетаются от вышки
-  const logs = (n, y) => { if (STILL) return; for (let i = 0; i < n; i++) {
-    const a = skActor(st, "wood", 0.3, 0.6), dir = Math.random() < 0.5 ? -1 : 1, ms = 500 + Math.random() * 350;
-    a.el.style.transition = "none"; a.at(FT.x + dir * 0.2, y); a.el.style.zIndex = 850; a.show(true, true);
-    tumbleA(a, 1 + Math.floor(Math.random() * 2), dir, ms, false);
-    a.arc(FT.x + dir * (0.8 + Math.random() * 1.8), FT.y + 0.2 + Math.random() * 0.9, 1.2 + Math.random(), ms).then(() => sleep(500)).then(() => a.el.remove());
+  // брёвна настила вылетают из вышки: целое (кадр 0) или обломок (кадр 1) — вырезаны из её же картинки
+  const logs = (n, y, half = 0) => { if (STILL) return; for (let i = 0; i < n; i++) {
+    const a = skActor(st, "gwlog", 0.6, 0.5), dir = Math.random() < 0.5 ? -1 : 1, ms = 550 + Math.random() * 400;
+    a.frame(i < half ? 1 : 0, 0);
+    a.el.style.transition = "none"; a.at(FT.x + (Math.random() - 0.5) * 0.7, y); a.el.style.zIndex = 850; a.show(true, true);
+    tumbleA(a, 1 + Math.floor(Math.random() * 2), dir, ms, true);      // упало — лежит на боку
+    a.arc(FT.x + dir * (0.9 + Math.random() * 2), FT.y + 0.1 + Math.random() * 1.0, 1.3 + Math.random(), ms).then(() => sleep(600)).then(() => a.el.remove());
   } };
+  // вышка качается из стороны в сторону — чем сильнее побита, тем шире и чаще; подрывник наверху ездит вместе с ней
+  let swayA = [];
+  const sway = (deg, ms) => {
+    swayA.forEach((x) => x.cancel()); swayA = [];
+    if (STILL || !deg || !FT.tw.el.animate) return;
+    const foot = FT.tw.el.style.getPropertyValue("--foot") || "-92%", base = `translate(-50%, ${foot})`;
+    FT.tw.el.style.transformOrigin = "50% 92%";
+    const o = { duration: ms, direction: "alternate", iterations: Infinity, easing: "ease-in-out" };
+    const d = 1.3 * Math.sin(deg * Math.PI / 180) * arenaBox.clientWidth / 18;       // на столько пикселей уезжает настил
+    swayA = [FT.tw.el.animate([{ transform: `${base} rotate(${-deg}deg)` }, { transform: `${base} rotate(${deg}deg)` }], o),
+      FT.crew.el.animate([{ marginLeft: `${-d}px` }, { marginLeft: `${d}px` }], o)];
+  };
   const myRun = arenaRun;
   if (FT) (async () => {                          // вышка дымит, пока идёт бой: чем сильнее побита, тем гуще и темнее
     while ((running || performance.now() < smokeTill) && arenaRun === myRun) {      // руины дымят ещё несколько секунд после боя
@@ -11444,17 +11457,25 @@ async function runArena() {
       if (e.kind === "fthrow" && FT) { FT.crew.face(e.left); FT.crew.play(2, 7, quick(80), false).then(() => FT.crew.play(0, 6, 130)); }
       if (e.kind === "fort" && FT) {                   // попадание: щепки летят, вышка темнеет, дым гуще
         fortHp = e.hp; flash(FT.tw);
-        const hits = A.fort.hp - e.hp;
-        FT.tw.el.style.filter = `brightness(${Math.max(0.55, 1 - 0.13 * hits)}) saturate(${Math.max(0.5, 1 - 0.15 * hits)})`;
-        smokeLvl = hits; logs(2 + hits, FT.y - 1.0);
+        const hits = A.fort.hp - e.hp, stage = Math.min(3, Math.max(1, Math.round(hits / Math.max(1, A.fort.hp - 1) * 3)));
+        FT.tw.el.style.filter = `brightness(${Math.max(0.7, 1 - 0.08 * hits)})`;
+        FT.tw.play(0, 4, 160, true, "gwt" + stage);       // настил с выбитыми и обломанными брёвнами
+        smokeLvl = hits; logs(2, FT.y - 1.3, 1);
+        sway([0, 1.2, 2.4, 4][stage], [0, 900, 750, 600][stage]);
         for (let i = 0; i < 3; i++) puff(FT.x + (i - 1) * 0.3, FT.y - 1.0, 0.6, 0, 0.4, 600);
       }
       if (e.kind === "fortdown" && FT) {               // вышка рухнула: настил слетает, остов складывается в руины под облаком пыли
         ruined = true; smokeLvl = 2; smokeTill = performance.now() + 7000; FT.tw.el.style.filter = "";
-        FT.tw.play(0, 1, 500, true, "gwtc");
-        for (let i = 0; i < 7; i++) puff(FT.x + (i - 3) * 0.3, FT.y - 0.15 - (i % 2) * 0.55, 0.95, 0, 0.4, 800);
-        logs(7, FT.y - 0.8);
-        sleep(quick(190)).then(() => { FT.tw.play(0, 1, 500, true, "gwtx"); for (let i = 0; i < 4; i++) puff(FT.x + (i - 1.5) * 0.4, FT.y - 0.1, 0.8, 0, 0.3, 700); sfx("fall"); });
+        sway(0);
+        FT.tw.play(0, 1, 500, true, "gwtc");               // остатки настила разлетаются, голый остов валится набок
+        logs(5, FT.y - 1.2, 2);
+        const foot = FT.tw.el.style.getPropertyValue("--foot") || "-92%", fallMs = STILL ? 0 : 330;
+        const fall = fallMs && FT.tw.el.animate ? FT.tw.el.animate([{ transform: `translate(-50%, ${foot}) rotate(0deg)` }, { transform: `translate(-50%, ${foot}) rotate(34deg)` }], { duration: fallMs, easing: "cubic-bezier(.55,0,1,.45)", fill: "forwards" }) : null;
+        sleep(fallMs).then(() => {                         // рухнул — груда хлама под облаком пыли
+          fall?.cancel(); FT.tw.play(0, 1, 500, true, "gwtx");
+          for (let i = 0; i < 7; i++) puff(FT.x + (i - 3) * 0.3, FT.y - 0.15 - (i % 2) * 0.5, 0.95, 0, 0.4, 800);
+          logs(3, FT.y - 0.4, 1); sfx("fall");
+        });
         const c = FT.crew, ms = quick(700);
         c.el.style.transition = `left ${ms}ms linear, top ${ms}ms linear`; c.at(FT.x + 2.6, FT.y + 0.6); Z(c, FT.y + 3); tumbleA(c, 2, 1, ms, false);
         sleep(ms).then(() => { c.show(false, true); upA(c); });
@@ -13670,10 +13691,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 219;
+const APP_VERSION = 220;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 220, date: "2026-11-20", text: "«Вышка»: из настила вылетают и ломаются брёвна, вышка качается всё сильнее и на последнем ударе валится в груду", en: "“The Watchtower”: logs fly out of the deck and snap, the tower sways harder and harder and topples into a heap on the last hit" },
   { v: 219, date: "2026-11-20", text: "«Вышка»: вместо огня — дым, который густеет с каждым попаданием; вышка рушится под облаком пыли, брёвна разлетаются", en: "“The Watchtower”: smoke instead of fire, thicker with every hit; the tower collapses in a cloud of dust and logs fly" },
   { v: 218, date: "2026-11-19", text: "Новый уровень «Вышка» на острове гоблинов: наверху жирный подрывник, а копейщик отбивает его динамит обратно — вышка горит и рушится. Новый вопрос «динамит летит?»", en: "A new level, “The Watchtower”, on Goblin Island: a fat bomber sits on top, and the lancer knocks his dynamite back — the tower burns and collapses. A new question: “is dynamite flying?”", big: true },
   { v: 217, date: "2026-11-19", text: "Арена: динамит взрывается по-новому — бойцов сбивает с ног и отбрасывает, а мечник, копейщик и лучник иногда отбивают его. Бои на арене сбалансированы заново", en: "Arena: dynamite now blasts for real — fighters get knocked down and thrown, and the swordsman, lancer and archer sometimes deflect it. Arena battles are rebalanced", big: true },

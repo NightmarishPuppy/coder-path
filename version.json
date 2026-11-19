@@ -1,13 +1,13 @@
 {
- "version": 219,
+ "version": 220,
  "date": "2026-11-20",
  "notes": [
-  "«Вышка»: вместо огня — дым, который густеет с каждым попаданием; вышка рушится под облаком пыли, брёвна разлетаются"
+  "«Вышка»: из настила вылетают и ломаются брёвна, вышка качается всё сильнее и на последнем ударе валится в груду"
  ],
  "files": {
   "index.html": {
-   "size": 1058290,
-   "hash": "7b5723a884cf3e58"
+   "size": 1060780,
+   "hash": "eb43fb41aadf3026"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "bde4295cc1dee4b4"
+   "hash": "9aebd1009082f7a6"
   },
   "icon-192.png": {
    "size": 42164,
@@ -98,8 +98,8 @@
    "hash": "1379e6d146a2603c"
   },
   "art-scenes.js": {
-   "size": 933333,
-   "hash": "f23c0f2d0d721083"
+   "size": 976181,
+   "hash": "cfdf97987ed584ab"
   },
   "art-isle2.js": {
    "size": 80017,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "“The Watchtower”: smoke instead of fire, thicker with every hit; the tower collapses in a cloud of dust and logs fly"
+  "“The Watchtower”: logs fly out of the deck and snap, the tower sways harder and harder and topples into a heap on the last hit"
  ]
 }
