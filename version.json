@@ -1,13 +1,13 @@
 {
- "version": 203,
+ "version": 204,
  "date": "2026-11-19",
  "notes": [
-  "На планшете в Python и JavaScript кнопка «Запустить» остаётся на экране и когда выбрана строка"
+  "На планшете стоя поле уровня стало вдвое крупнее, а на ноутбуке задание и кнопка «Запустить» помещаются на экран"
  ],
  "files": {
   "index.html": {
-   "size": 991037,
-   "hash": "13715734ef05224a"
+   "size": 993879,
+   "hash": "38f7a2630b60fbb3"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "97b1b3bfcbb2dfa3"
+   "hash": "b240434868477129"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "On tablets in Python and JavaScript the “Run” button stays on screen when a line is selected too"
+  "In portrait mode on tablets the level field is twice as big, and on laptops the task and the “Run” button fit on the screen"
  ]
 }

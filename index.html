@@ -116,14 +116,25 @@ h1 {
 .lvl.current { border-color: var(--torch); box-shadow: inset 0 0 0 1px var(--torch); }
 .lvl:disabled { opacity: 0.4; cursor: default; }
 
+/* --- Раскладка экрана уровня --- */
 .game { display: grid; gap: 18px; grid-template-columns: 1fr; }
 
-@media (min-width: 820px) {
+@media (min-width: 1000px), (min-width: 820px) and (orientation: landscape) {
   .game { grid-template-columns: 1.15fr 1fr; align-items: start; }
 }
 /* Две колонки (v200): название и задание стоят в правой колонке над программой (placeBrief), поле — от самого верха.
    После победы окошко со звёздами встаёт на место задания — страница никуда не едет. */
-.brief { display: flex; flex-direction: column; gap: 4px; }
+.brief { display: flex; flex-flow: row wrap; align-items: center; gap: 4px 14px; }
+.brief > * { flex: 0 0 100%; min-width: 0; }
+/* «Прочитать вслух» и строка про звёзды — в один ряд, когда помещаются (v204): экономит высоту */
+.brief > .voicebar { flex: 0 0 auto; margin-top: 2px; }
+.brief > .par { flex: 1 1 230px; margin: 0; }
+/* невысокое окно (ноутбук 1366×650, iPad в Telegram): шапка и отступы плотнее */
+@media (min-width: 820px) and (max-height: 780px) {
+  #levelview.wrap { padding-top: 10px; gap: 10px; }
+  #levelview .brief h1 { font-size: 28px; }
+  #levelview .game > .col { gap: 9px; }
+}
 .brief .winbox { margin: 6px 0 2px; }
 .brief:has(.winbox:not([hidden])) > :is(.goal, .goal-more, .voicebar, .par) { display: none; }
 @media (min-width: 1000px) { #levelview.wrap { max-width: min(1680px, 94vw); } }   /* планшет лёжа: экран уровня — почти во всю ширину (v201) */
@@ -921,7 +932,7 @@ html.still .tile.err { animation: none; }
 .bif .lempty { color: #5fd3a6; }
 /* пустая рамка «если» — пустое место под плитку (пунктир), а не надпись: так рамка остаётся в одну строку */
 .bif .lempty.slot { display: inline-block; flex: none; width: 56px; height: 48px; padding: 0; border: 2px dashed #5fd3a6; border-radius: 10px; opacity: 0.75; }
-@media (max-width: 819px) { #levelview.blk .bif .lempty.slot { height: 42px; } }
+@media (max-width: 819px), (max-width: 999px) and (orientation: portrait) { #levelview.blk .bif .lempty.slot { height: 42px; } }
 /* Рамка «если»: зелёная, с заголовком-условием; «иначе» — вторая половина рамки */
 .bif {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
@@ -981,7 +992,7 @@ html.still .bif > .ihead.sel, html.still .bif > .ihead.sel::after { animation: n
   font-size: 13px; line-height: 1; color: #ffd54a; text-shadow: 0 1px 0 #000; animation: tile-arrow 1s ease-in-out infinite; }
 html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation: none; box-shadow: 0 0 0 4px #ffd54a99; }
 .bdef .lempty.slot { display: inline-block; flex: none; width: 56px; height: 48px; padding: 0; border: 2px dashed var(--fn); border-radius: 10px; opacity: 0.75; }
-@media (max-width: 819px) { #levelview.blk .bdef .lempty.slot { height: 42px; } }
+@media (max-width: 819px), (max-width: 999px) and (orientation: portrait) { #levelview.blk .bdef .lempty.slot { height: 42px; } }
 /* плитка-вызов компактная: четыре вызова помещаются в один ряд даже на узком телефоне */
 .tile.fn { border-color: var(--fn); background: #ff6ad51c; gap: 2px; min-width: 0; padding: 0 5px; }
 .tile.fn .pz { font-size: 15px; }
@@ -1015,7 +1026,7 @@ html.still .bdef > .dhead.sel, html.still .bdef > .dhead.sel::after { animation:
 #levelview.blk .chips .chip:not(.num):not(.loopchip):not(.ifchip):not(.fnchip) { flex: 1 1 0; min-width: 44px; padding: 0 4px; }
 #levelview.blk .chips .chip.loopchip { flex: 0 0 auto; padding: 0 10px; font-size: 15px !important; }
 #levelview.blk .chips .chip.num { flex: 1 1 0; min-width: 0; padding: 0; }
-@media (max-width: 819px) {
+@media (max-width: 819px), (max-width: 999px) and (orientation: portrait) {
   #levelview.blk .board { max-width: min(100%, var(--blk-max)) !important; }
   #levelview.blk .cam.long { max-width: min(100%, var(--blk-max)); }
   #levelview.blk .game { gap: 8px; }
@@ -1436,7 +1447,7 @@ html.tg #levelview #to-map { display: none; }
 html.tg #levelview header { position: relative; }
 html.tg #levelview header > .toprow { position: absolute; top: 0; right: 0; }
 html.tg #levelview #eyebrow { padding-right: 184px; min-height: 34px; box-sizing: border-box; }
-@media (max-width: 819px) {   /* в блоках на телефоне строки «глава · уровень» нет — кнопки рядом с названием */
+@media (max-width: 819px), (max-width: 999px) and (orientation: portrait) {   /* в блоках на телефоне строки «глава · уровень» нет — кнопки рядом с названием */
   html.tg #levelview.blk #title { padding-right: 184px; min-height: 34px; box-sizing: border-box; }
   html.tg #levelview.blk .voicebar { left: auto; right: 138px; }
 }
@@ -2876,6 +2887,9 @@ const boardEl = $("board"), statusEl = $("status"), codeEl = $("code"), hlEl = $
 const camEl = $("cam");
 const viewW = () => Math.min(W, L?.view || W);
 const isLong = () => !!L && W > viewW();
+// Экран уровня в две колонки (поле слева, программа справа): широкое окно. Планшет стоя (820–999 px в ширину, v204) — в одну колонку,
+// как телефон: в двух колонках поле там выходило крошечным. В стилях то же условие: (min-width: 1000px), (min-width: 820px) and (orientation: landscape).
+const twoCols = () => innerWidth >= 1000 || (innerWidth >= 820 && innerWidth > innerHeight);
 const camHost = () => (isLong() ? camEl : boardEl);   // куда класть кнопки поверх поля — они не едут вместе с картой
 let camX = null;          // левый край окна (в клетках); null — ещё не ставили
 const CAM_LEAD = 3;       // рыцарь держится на 4-й клетке окна: впереди видно 5 клеток
@@ -9175,7 +9189,7 @@ function fitBlocksNow() {
   const box = $("blocks");
   if (!box) return;
   box.style.maxHeight = "";
-  if (!uiBlocks || innerWidth >= 820 || $("levelview").hidden) { box.classList.remove("scrolls"); return; }
+  if (!uiBlocks || twoCols() || $("levelview").hidden) { box.classList.remove("scrolls"); return; }
   const vh = (window.visualViewport?.height || innerHeight) - (window.tgBottom || 0) - 6;
   const over = $("run").getBoundingClientRect().bottom + scrollY - vh * PAGE_MAX;
   // допуск 4 px (предел и так на 6 px выше края экрана): иначе окно программы дёргалось на 2 px,
@@ -9464,10 +9478,11 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 // Поэтому на время замера всё временное убираем, а результат запоминаем.
 // Высота поля на компьютере (широкий экран, версия 120): сколько осталось от верха поля до низа окна
 // (минус строка подсказки и отступ), но не меньше 440 и не больше 1100. На телефоне — прежние 460 (там своя подгонка — fitBoard).
+// ===== Раскладка экрана уровня =====
 // Две колонки (от 820 px; v200): название, задание и окошко победы переезжают из шапки в правую колонку, над программу, —
 // иначе справа вверху пустой угол, а поле и программа сдвинуты вниз. На узком экране всё возвращается на свои места.
 function placeBrief() {
-  const lv = $("levelview"), head = lv.querySelector("header"), right = $("blocks").parentElement, wide = innerWidth >= 820;
+  const lv = $("levelview"), head = lv.querySelector("header"), right = $("blocks").parentElement, wide = twoCols();
   let brief = lv.querySelector(".brief");
   if (wide === !!brief) return;
   if (wide) {
@@ -9487,26 +9502,34 @@ addEventListener("resize", placeBrief);
 // Но при длинном задании (Python / JavaScript) правая колонка уходит за низ окна, и «Запустить» не видно вместе с полем.
 // Поэтому меряем четыре варианта — задание справа или под полем, поле широкое или обычное — и берём тот, где на экране
 // помещаются и «Запустить», и задание. Решается один раз на уровень, режим и размер окна (briefKey), чтобы ничего не прыгало.
-let briefKey = "", fieldSlim = false;
+let briefKey = "", fieldSlim = false, fieldCap = 0;
 function briefSide() {
   const lv = $("levelview"), brief = lv.querySelector(".brief");
   if (!brief || lv.hidden || !L) return;
   const key = `${levelIdx}|${uiBlocks}|${lang}|${innerWidth}x${innerHeight}`;
   if (key === briefKey) return;
   briefKey = key;
-  const right = $("blocks").parentElement, left = boardEl.closest(".col"), runEl = $("run");
-  const below = (el, more = 0) => Math.max(0, el.getBoundingClientRect().bottom + scrollY + more - innerHeight);
+  const right = $("blocks").parentElement, left = boardEl.closest(".col"), runEl = $("run"), winH = innerHeight - (window.tgBottom || 0);
+  const below = (el, more = 0) => Math.max(0, el.getBoundingClientRect().bottom + scrollY + more - winH);
   // в Python / JavaScript над кнопками открывается панель выбранной строки (~180 px) — «Запустить» должна помещаться и с ней
   const spare = uiBlocks ? 0 : 180;
-  const put = (toLeft, slim) => { fieldSlim = slim; deskCols(); if (toLeft) $("statusslot").after(brief); else right.prepend(brief); };
+  const put = (o) => { fieldSlim = o.slim; fieldCap = o.cap; if (o.toLeft) $("statusslot").after(brief); else right.prepend(brief); deskCols(); deskField(); };
+  const fieldH = () => (isLong() ? camEl : boardEl).getBoundingClientRect().height;
   let best = null;
+  const tryOut = (o) => {
+    put(o);
+    o.cost = 3 * below(runEl, spare) + 2 * below(brief) + 0.2 * Math.max(below(left), below(right)) + (o.toLeft ? 30 : 0) + (o.slim ? 20 : 0) + (o.cap ? 0.5 * o.lost : 0);
+    if (!best || o.cost < best.cost) best = o;
+    return o;
+  };
   for (const toLeft of [false, true]) for (const slim of [false, true]) {
-    put(toLeft, slim);
-    const cost = 3 * below(runEl, spare) + 2 * below(brief) + 0.2 * Math.max(below(left), below(right)) + (toLeft ? 30 : 0) + (slim ? 20 : 0);
-    if (!best || cost < best.cost) best = { cost, toLeft, slim };
-    if (cost === 0) break;
+    const o = tryOut({ toLeft, slim, cap: 0 });
+    if (o.cost === 0) break;
+    // задание под полем не влезло (невысокий экран ноутбука) — пробуем поле пониже, но не ниже 40 % окна
+    const over = toLeft ? below(brief) : 0, h0 = fieldH(), cap = Math.max(Math.round(winH * 0.4), Math.round(h0 - over));
+    if (over > 0 && cap < h0 - 4) tryOut({ toLeft, slim, cap, lost: h0 - cap });
   }
-  put(best.toLeft, best.slim);
+  put(best);
   lv.classList.toggle("brief-left", best.toLeft);
 }
 // решаем в следующем кадре: к этому времени режим и уровень уже дорисованы
@@ -9514,16 +9537,17 @@ let briefRaf = 0;
 function briefSoon() { if (!briefRaf) briefRaf = requestAnimationFrame(() => { briefRaf = 0; briefSide(); }); }
 if (window.ResizeObserver) { const ro = new ResizeObserver(briefSoon); for (const c of document.querySelectorAll("#levelview .game > .col")) ro.observe(c); }
 function deskH() {
-  if (innerWidth < 820 || !boardEl || $("levelview").hidden) return 460;
+  if (!twoCols() || !boardEl || $("levelview").hidden) return 460;
   const el = isLong() ? camEl : boardEl, top = el.getBoundingClientRect().top + scrollY;
-  return Math.max(440, Math.min(1100, innerHeight - (window.tgBottom || 0) - top - 64));
+  const h = Math.max(440, Math.min(1100, innerHeight - (window.tgBottom || 0) - top - 64));
+  return fieldCap ? Math.min(h, fieldCap) : h;   // fieldCap — поле пониже, чтобы под ним поместилось задание (briefSide)
 }
 // Ширина колонок в две колонки (v201): поле получает столько ширины, сколько ему нужно, чтобы дойти до низа окна,
 // но программе остаётся не меньше 36 % и не уже 420 px (уже — кнопки переносятся на вторую строку). Раньше делили всегда 1,15 : 1 — под низким широким полем была дыра.
 function deskCols() {
   const g = boardEl?.closest(".game");
   if (!g) return;
-  if (innerWidth < 820 || !L || $("levelview").hidden) { g.style.gridTemplateColumns = ""; return; }
+  if (!twoCols() || !L || $("levelview").hidden) { g.style.gridTemplateColumns = ""; return; }
   const full = g.clientWidth - 18, base = full * 1.15 / 2.15, most = full - Math.max(420, full * 0.36);
   const left = fieldSlim ? 0 : Math.round(Math.min(viewW() / H * deskH(), most));
   g.style.gridTemplateColumns = left > base + 1 ? `${left}px minmax(0, 1fr)` : "";
@@ -9531,16 +9555,20 @@ function deskCols() {
 function deskResize() {
   deskCols();
   briefSoon();
-  if (innerWidth < 820 || $("levelview").hidden || !boardEl || !L) return;
+  deskField();
+}
+function deskField() {
+  if (!twoCols() || $("levelview").hidden || !boardEl || !L) return;
   const h = deskH(), vw = viewW();
   boardEl.style.maxWidth = isLong() ? boardEl.style.maxWidth : `min(100%, ${Math.round(W / H * h)}px)`;
   camEl.style.setProperty("--cam-max", Math.round(vw / H * h) + "px");
 }
 addEventListener("resize", () => requestAnimationFrame(deskResize));
+// ===== Режим «Блоки»: поле и плитки на одном экране телефона =====
 var fitSize = null;   // { key, px, w, h } — для какого уровня и экрана посчитано
 function fitBoard(force = false) {
   const lv = $("levelview");
-  if (!uiBlocks || innerWidth >= 820 || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); camEl.style.removeProperty("--blk-max"); fitBlocks(); return; }
+  if (!uiBlocks || twoCols() || lv.hidden || !boardEl) { boardEl?.style.removeProperty("--blk-max"); camEl.style.removeProperty("--blk-max"); fitBlocks(); return; }
   const key = `${levelIdx}|${uiBlocks}`, sw = innerWidth, sh = (window.visualViewport?.height || innerHeight) - (window.tgBottom || 0);
   const same = fitSize && fitSize.key === key && fitSize.w === sw && Math.abs(fitSize.h - sh) < 160;
   if (same && !force) { boardEl.style.setProperty("--blk-max", fitSize.px + "px"); camEl.style.setProperty("--blk-max", fitSize.px + "px"); fitBlocks(); return; }
@@ -11248,7 +11276,7 @@ function drawLineBar() {
   const bar = $("linebar");
   // на телефоне в блоках панель живёт в месте строки подсказки (поверх неё) и не сдвигает кнопки;
   // на компьютере и в тексте кода — на прежнем месте, над кнопками команд
-  const slot = $("statusslot"), float = uiBlocks && innerWidth < 820;
+  const slot = $("statusslot"), float = uiBlocks && !twoCols();
   if (float !== (bar.parentElement === slot)) float ? slot.append(bar) : chipsEl.before(bar);
   bar.hidden = !selLine || running;
   if (bar.hidden) return;
@@ -12985,10 +13013,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 203;
+const APP_VERSION = 204;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 204, date: "2026-11-19", text: "На планшете стоя поле уровня стало вдвое крупнее, а на ноутбуке задание и кнопка «Запустить» помещаются на экран", en: "In portrait mode on tablets the level field is twice as big, and on laptops the task and the “Run” button fit on the screen", big: true },
   { v: 203, date: "2026-11-19", text: "На планшете в Python и JavaScript кнопка «Запустить» остаётся на экране и когда выбрана строка", en: "On tablets in Python and JavaScript the “Run” button stays on screen when a line is selected too" },
   { v: 202, date: "2026-11-19", text: "На планшете и компьютере в Python и JavaScript кнопка «Запустить» теперь видна рядом с полем: длинное задание встаёт под поле", en: "On tablets and computers in Python and JavaScript the “Run” button now stays next to the field: a long task moves under the field" },
   { v: 201, date: "2026-11-19", text: "На планшете и компьютере поле уровня стало крупнее", en: "On tablets and computers the level field is bigger" },
