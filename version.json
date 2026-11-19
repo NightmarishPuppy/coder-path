@@ -1,13 +1,13 @@
 {
- "version": 214,
+ "version": 215,
  "date": "2026-11-19",
  "notes": [
-  "Блоки: плитка, вынутая из рамки кнопкой, больше не ломает программу"
+  "На планшете экран уровня больше не дёргается после кнопки «если»"
  ],
  "files": {
   "index.html": {
-   "size": 1034672,
-   "hash": "8622b61a3983fd86"
+   "size": 1036093,
+   "hash": "d462fea8b7350eca"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "aef70f4302a43391"
+   "hash": "2dc2190386af2553"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Blocks: taking a tile out of a frame with the button no longer breaks the program"
+  "On tablets the level screen no longer jitters after the “if” button"
  ]
 }
