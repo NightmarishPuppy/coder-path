@@ -1,13 +1,13 @@
 {
- "version": 218,
- "date": "2026-11-19",
+ "version": 219,
+ "date": "2026-11-20",
  "notes": [
-  "Новый уровень «Вышка» на острове гоблинов: наверху жирный подрывник, а копейщик отбивает его динамит обратно — вышка горит и рушится. Новый вопрос «динамит летит?»"
+  "«Вышка»: вместо огня — дым, который густеет с каждым попаданием; вышка рушится под облаком пыли, брёвна разлетаются"
  ],
  "files": {
   "index.html": {
-   "size": 1054983,
-   "hash": "890319d2c6e28977"
+   "size": 1058290,
+   "hash": "7b5723a884cf3e58"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "6545f0fc4da0aa13"
+   "hash": "bde4295cc1dee4b4"
   },
   "icon-192.png": {
    "size": 42164,
@@ -98,8 +98,8 @@
    "hash": "1379e6d146a2603c"
   },
   "art-scenes.js": {
-   "size": 928910,
-   "hash": "130facf6c6433221"
+   "size": 933333,
+   "hash": "f23c0f2d0d721083"
   },
   "art-isle2.js": {
    "size": 80017,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "A new level, “The Watchtower”, on Goblin Island: a fat bomber sits on top, and the lancer knocks his dynamite back — the tower burns and collapses. A new question: “is dynamite flying?”"
+  "“The Watchtower”: smoke instead of fire, thicker with every hit; the tower collapses in a cloud of dust and logs fly"
  ]
 }

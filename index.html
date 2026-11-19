@@ -4762,7 +4762,7 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   duckair: [3, 1, 32], boom2: [8, 1, 192], boom3: [10, 1, 192], dust: [10, 1, 64],
   // остров 1 наряднее (v187): овцы, стройка, тренировка, костёр
   shidle: [6, 1, 128], shgrass: [12, 1, 128], shmove: [4, 1, 128], phidle: [8, 1, 192], prunham: [6, 1, 192], lrdef: [6, 1, 320], wguard: [6, 1, 192],
-  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256] };
+  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256], gwtc: [1, 1, 256] };
 TS.sk_fire = TS.fx_fire;
 let SK_ACTORS = [];
 let skLast = 0;
@@ -11339,10 +11339,8 @@ function arenaScene(st) {
   if (A.fort) {                                 // вышка гоблинов, наверху жирный подрывник
     const [fx, fy] = A.fort.at, tw = skActor(st, "gwt", 0.6, 236 / 256), crew = skActor(st, "tnt", 1.25, 0.67);
     tw.at(fx, fy); Z(tw, fy); tw.show(true); tw.play(0, 4, 160);
-    crew.at(fx, fy - 1.25); Z(crew, fy, 1); crew.show(true); crew.play(0, 6, 130);
-    const fires = [skActor(st, "fire", 0.7, 0.8), skActor(st, "fire", 0.9, 0.8)];
-    fires[0].at(fx - 0.35, fy - 0.2); fires[1].at(fx + 0.3, fy - 0.9); fires.forEach((f) => Z(f, fy, 3));
-    fortA = { tw, crew, fires, x: fx, y: fy };
+    crew.at(fx, fy - 1.25); Z(crew, fy, 5); crew.show(true); crew.play(0, 6, 130);
+    fortA = { tw, crew, x: fx, y: fy };
   }
   const allies = (A.allies || []).map(({ kind, at, left }) => {
     const R = ARENA_ART[kind], a = skActor(st, R.key, R.sc || 0.85, R.foot);
@@ -11381,7 +11379,32 @@ async function runArena() {
   const HA = arenaHeroArt(), FT = scene.fort;
   let fortHp = A.fort?.hp;
   const fatdyns = A.fort ? [skActor(st, "dyn", 1.7, 0.5), skActor(st, "dyn", 1.7, 0.5)] : [];
-  let fdi = 0;
+  let fdi = 0, smokeLvl = 0, ruined = false, smokeTill = 0;
+  // v219: дым и пыль — клуб пыли из набора: белый (пыль от удара) или затемнённый (дым); поднимается, сносится вбок и тает.
+  // После каждого попадания дыма больше; огня нет.
+  const puff = (x, y, sc, dark, rise, ms) => {
+    if (STILL) return;
+    const a = skActor(st, "dust", sc, 0.5);
+    a.el.style.transition = "none"; a.at(x, y); a.el.style.zIndex = 900;
+    if (dark) { a.el.style.filter = `brightness(${dark})`; a.el.style.opacity = 0.8; if (!ruined) a.el.style.zIndex = Math.round(FT.y * 40) + 2; }   // дым — за подрывником, перед вышкой
+    a.show(true, true); a.play(0, 10, ms / 10, false); void a.el.offsetWidth;
+    a.el.style.transition = `left ${ms}ms linear, top ${ms}ms ease-out`; a.at(x + 0.25 + Math.random() * 0.35, y - rise);
+    sleep(ms).then(() => a.el.remove());
+  };
+  // брёвна разлетаются от вышки
+  const logs = (n, y) => { if (STILL) return; for (let i = 0; i < n; i++) {
+    const a = skActor(st, "wood", 0.3, 0.6), dir = Math.random() < 0.5 ? -1 : 1, ms = 500 + Math.random() * 350;
+    a.el.style.transition = "none"; a.at(FT.x + dir * 0.2, y); a.el.style.zIndex = 850; a.show(true, true);
+    tumbleA(a, 1 + Math.floor(Math.random() * 2), dir, ms, false);
+    a.arc(FT.x + dir * (0.8 + Math.random() * 1.8), FT.y + 0.2 + Math.random() * 0.9, 1.2 + Math.random(), ms).then(() => sleep(500)).then(() => a.el.remove());
+  } };
+  const myRun = arenaRun;
+  if (FT) (async () => {                          // вышка дымит, пока идёт бой: чем сильнее побита, тем гуще и темнее
+    while ((running || performance.now() < smokeTill) && arenaRun === myRun) {      // руины дымят ещё несколько секунд после боя
+      for (let k = 0; k < smokeLvl; k++) puff(FT.x + (ruined ? (Math.random() - 0.5) * 0.5 : (k % 2 ? -0.5 : 0.45) + (Math.random() - 0.5) * 0.2), FT.y - (ruined ? 0.5 : 0.95 + Math.random() * 0.3), 0.42 + 0.07 * smokeLvl + Math.random() * 0.15, Math.max(0.3, 0.62 - 0.09 * smokeLvl), 1.2 + Math.random() * 0.7, 1500);
+      await sleep(Math.max(180, 620 - 130 * smokeLvl));
+    }
+  })();
   const H = skActor(st, HA.key, HA.sc, HA.foot); H.at(...ARENA.start); H.show(true);
   const fx = skActor(st, "healfx", 0.8);
   const pool = (k, n, sc, foot) => Array.from({ length: n }, () => skActor(st, k, sc, foot));
@@ -11419,9 +11442,19 @@ async function runArena() {
       if (e.kind === "airboom") { const b = booms[ki++ % booms.length]; b.at(...e.at); Z(b, 400); b.show(true); b.play(0, 9, quick(60), false).then(() => b.show(false)); if (performance.now() - lastBoom > 700) { sfx("boom"); lastBoom = performance.now(); } }
       if (e.kind === "parry") { flash(e.id ? actors[e.id] : H); sfx("spear"); }
       if (e.kind === "fthrow" && FT) { FT.crew.face(e.left); FT.crew.play(2, 7, quick(80), false).then(() => FT.crew.play(0, 6, 130)); }
-      if (e.kind === "fort" && FT) { fortHp = e.hp; flash(FT.tw); FT.fires.slice(0, A.fort.hp - e.hp).forEach((f) => { if (!f.on) { f.on = true; f.show(true); f.play(0, 7, 90); } }); }
-      if (e.kind === "fortdown" && FT) {               // вышка рухнула: руины, подрывник кувырком улетает
-        FT.tw.play(0, 1, 500, true, "gwtx"); FT.fires[1].show(false);
+      if (e.kind === "fort" && FT) {                   // попадание: щепки летят, вышка темнеет, дым гуще
+        fortHp = e.hp; flash(FT.tw);
+        const hits = A.fort.hp - e.hp;
+        FT.tw.el.style.filter = `brightness(${Math.max(0.55, 1 - 0.13 * hits)}) saturate(${Math.max(0.5, 1 - 0.15 * hits)})`;
+        smokeLvl = hits; logs(2 + hits, FT.y - 1.0);
+        for (let i = 0; i < 3; i++) puff(FT.x + (i - 1) * 0.3, FT.y - 1.0, 0.6, 0, 0.4, 600);
+      }
+      if (e.kind === "fortdown" && FT) {               // вышка рухнула: настил слетает, остов складывается в руины под облаком пыли
+        ruined = true; smokeLvl = 2; smokeTill = performance.now() + 7000; FT.tw.el.style.filter = "";
+        FT.tw.play(0, 1, 500, true, "gwtc");
+        for (let i = 0; i < 7; i++) puff(FT.x + (i - 3) * 0.3, FT.y - 0.15 - (i % 2) * 0.55, 0.95, 0, 0.4, 800);
+        logs(7, FT.y - 0.8);
+        sleep(quick(190)).then(() => { FT.tw.play(0, 1, 500, true, "gwtx"); for (let i = 0; i < 4; i++) puff(FT.x + (i - 1.5) * 0.4, FT.y - 0.1, 0.8, 0, 0.3, 700); sfx("fall"); });
         const c = FT.crew, ms = quick(700);
         c.el.style.transition = `left ${ms}ms linear, top ${ms}ms linear`; c.at(FT.x + 2.6, FT.y + 0.6); Z(c, FT.y + 3); tumbleA(c, 2, 1, ms, false);
         sleep(ms).then(() => { c.show(false, true); upA(c); });
@@ -13637,10 +13670,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 218;
+const APP_VERSION = 219;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 219, date: "2026-11-20", text: "«Вышка»: вместо огня — дым, который густеет с каждым попаданием; вышка рушится под облаком пыли, брёвна разлетаются", en: "“The Watchtower”: smoke instead of fire, thicker with every hit; the tower collapses in a cloud of dust and logs fly" },
   { v: 218, date: "2026-11-19", text: "Новый уровень «Вышка» на острове гоблинов: наверху жирный подрывник, а копейщик отбивает его динамит обратно — вышка горит и рушится. Новый вопрос «динамит летит?»", en: "A new level, “The Watchtower”, on Goblin Island: a fat bomber sits on top, and the lancer knocks his dynamite back — the tower burns and collapses. A new question: “is dynamite flying?”", big: true },
   { v: 217, date: "2026-11-19", text: "Арена: динамит взрывается по-новому — бойцов сбивает с ног и отбрасывает, а мечник, копейщик и лучник иногда отбивают его. Бои на арене сбалансированы заново", en: "Arena: dynamite now blasts for real — fighters get knocked down and thrown, and the swordsman, lancer and archer sometimes deflect it. Arena battles are rebalanced", big: true },
   { v: 216, date: "2026-11-19", text: "«Два дела»: задание и кнопки теперь сходятся — команда встаёт туда, куда сказано", en: "“Two Jobs”: the task and the buttons now agree — the command lands where the task says" },
