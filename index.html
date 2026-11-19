@@ -8546,7 +8546,44 @@ function moveSelected(delta) {
   });
 }
 
+// Блоки (v214): «Из рамки» и «В рамку» переставляют плитку (или рамку целиком) так, чтобы Python под блоками остался правильным.
+// Раньше у строки просто менялся отступ: плитку вынимали из середины рамки — следующая за ней оставалась «сдвинутой без рамки»,
+// блоки выглядели нормально, а программа не запускалась («Лишний сдвиг вправо»).
+function frameShift(lines, dir) {
+  const ind = (l) => l.match(/^ */)[0].length, full = (k) => k < lines.length && lines[k].trim() !== "";
+  const HEAD = /^\s*(while|for|if|def)\b/, TAIL = /^\s*(elif|else)\b/;
+  const i = selLine - 1, step = INDENT(), my = ind(lines[i]);
+  // кусок: выбранная строка и всё, что под ней глубже (рамка целиком, «если» — со своими «другое если» и «иначе»)
+  let j = i + 1;
+  const deeper = (base) => { while (full(j) && ind(lines[j]) > base) j++; };
+  deeper(my);
+  if (/^\s*(if|elif)\b/.test(lines[i])) while (full(j) && ind(lines[j]) === my && TAIL.test(lines[j])) { j++; deeper(my); }
+  const move = (to, d) => {            // to — номер строки (в старой нумерации), перед которой встанет кусок
+    const chunk = lines.splice(i, j - i).map((l) => (d > 0 ? " ".repeat(step) + l : l.slice(step)));
+    const at = to > i ? to - chunk.length : to;
+    lines.splice(at, 0, ...chunk);
+    selLine = at + 1;
+  };
+  if (dir < 0) {
+    if (my < step) return;
+    const p = my - step;
+    let k = j;                                                          // конец рамки, в которой лежит кусок
+    while (full(k) && ind(lines[k]) >= my) k++;
+    const last = k === j;
+    while (full(k) && ind(lines[k]) === p && TAIL.test(lines[k])) { k++; while (full(k) && ind(lines[k]) > p) k++; }
+    // первая плитка рамки (и не единственная) выходит наверх, перед рамкой; остальные — вниз, после рамки
+    const first = i > 0 && ind(lines[i - 1]) === p && HEAD.test(lines[i - 1]);
+    if (first && !last) move(i - 1, -1); else move(k, -1);
+    return;
+  }
+  const prev = i > 0 ? lines[i - 1] : "";
+  if (i > 0 && prev.trim() !== "" && (ind(prev) > my || (ind(prev) === my && (HEAD.test(prev) || TAIL.test(prev))))) return move(i, 1);   // рамка прямо над плиткой — в её конец
+  if (full(j) && ind(lines[j]) === my && HEAD.test(lines[j])) return move(j + 1, 1);                // рамка прямо под плиткой — в её начало
+  for (let k = i - 1; k >= 0 && lines[k].trim() !== "" && ind(lines[k]) >= my; k--) if (ind(lines[k]) > my) return move(k + 1, 1);   // ближайшая рамка выше — в её конец
+  move(i, 1);
+}
 function shiftSelected(dir) {
+  if (uiBlocks && lang === "py" && selLine) return editLines((lines) => frameShift(lines, dir));
   editLines((lines) => {
     const i = selLine - 1;
     const step = INDENT();
@@ -13395,10 +13432,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 213;
+const APP_VERSION = 214;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 214, date: "2026-11-19", text: "Блоки: плитка, вынутая из рамки кнопкой, больше не ломает программу", en: "Blocks: taking a tile out of a frame with the button no longer breaks the program" },
   { v: 213, date: "2026-11-19", text: "После обновления заставка больше не «разъезжается» с картой", en: "After an update the title screen no longer splits with the map" },
   { v: 212, date: "2026-11-19", text: "Новый противник — гоблин-часовой: он ходит по своей программе, пока идёт твоя. Новая команда «ждать» ⏳ и два уровня на Берегу: «Часовой» и «За спиной». Место встречи видно на поле ещё до запуска", en: "A new opponent — the goblin sentry: he walks by his own program while yours runs. A new “wait” ⏳ command and two levels on the Shore: “The Sentry” and “Behind His Back”. The field shows where you would meet before you even press Run", big: true },
   { v: 211, date: "2026-11-19", text: "Починил шаткий мостик: падала не та доска. Новый уровень «Болото» — вода, топь и мостики, останавливаться нельзя нигде. Шаткие мостики и баранья тропа появились на «Змейке», «Развилке» и «Серпантине»", en: "Fixed the wobbly bridge: the wrong plank was falling. A new level, “The Swamp” — water, bog and bridges, and you can’t stop anywhere. Wobbly bridges and a ram trail now appear on “Zigzag”, “The Fork” and “Switchbacks”" },
