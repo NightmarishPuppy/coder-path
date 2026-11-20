@@ -323,7 +323,8 @@ body.under-splash #mapview { visibility: hidden; }
 .arenahud span { background: rgba(15, 17, 23, 0.72); padding: 5px 8px; border-radius: 8px; }
 .arenahud .ahp b { color: #ff6b81; } .arenahud .ahp i { font-style: normal; opacity: 0.6; font-weight: 500; }
 .arenahud.low .ahp { box-shadow: 0 0 0 2px #ff6b81; }
-.arena-hud .afort, .afort { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); padding: 3px 10px; border-radius: 10px; background: #15151ccc; color: #ffd76a; font-weight: 800; font-size: 14px; letter-spacing: 1px; white-space: nowrap; }
+.afort .akeep { color: #8fd0ff; } .afort .akeep.lost { color: #8a8fa3; }
+.arena-hud .afort, .afort { line-height: 1.25; text-align: left; position: absolute; left: 50%; top: 8px; transform: translateX(-50%); padding: 3px 10px; border-radius: 10px; background: #15151ccc; color: #ffd76a; font-weight: 800; font-size: 14px; letter-spacing: 1px; white-space: nowrap; }
 .splash-view { position: relative; width: min(100%, 480px, calc((100dvh - 300px) / 1.05)); min-width: 240px; aspect-ratio: 1 / 1.05;
   overflow: hidden; border-radius: 16px; border: 2px solid #2d5a6a; background: #47aba9; margin-block: 6px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); container-type: inline-size; }
@@ -3108,7 +3109,8 @@ const GIANT_HP = 6;  // сердечек у великана (V на поле)
 const SHIELD_HP = 3; // сердечек у щитоносца (H на поле)
 const BOMB_HP = 2;   // сердечек у подрывника (D на поле)
 const BOMB_REACH = [2, 3];   // подрывник бросает динамит, если рыцарь на одной линии с ним в 2–3 клетках
-const hasGiant = (lv) => !lv.arena && (lv.maps || [lv.map]).some((m) => m.some((row) => /[VHD]/.test(row)));
+// уровень с короной: на поле великан, щитоносец или подрывник; на арене — своя башня, которую надо уберечь (arena.keep, v223)
+const hasGiant = (lv) => (lv.arena ? !!lv.arena.keep : (lv.maps || [lv.map]).some((m) => m.some((row) => /[VHD]/.test(row))));
 let hero = { x: 0, y: 0 };
 let running = false;
 let showAll = false, loopViewBtn = null;   // кнопка 🔂/🔁 на поле
@@ -8259,7 +8261,8 @@ function buildChips() {
   if (L.ifButton) {
     extra(add("add-if", "ifchip" + (L.newIf ? " new" : ""), (uiBlocks ? "❓ " : "? ") + tr("если"), () => {
       const conds = levelConds();
-      const c = condDisp(conds.find((x) => CONDS[x].what === L.ifs[0] && CONDS[x].move === "moveRight") || conds[0]);
+      // вопрос новой рамки — первый из L.ifs (на арене у вопросов нет стороны: «динамит летит», «враг рядом»)
+      const c = condDisp(conds.find((x) => CONDS[x].what === L.ifs[0] && CONDS[x].move === "moveRight") || conds.find((x) => CONDS[x].what === L.ifs[0]) || conds[0]);
       const lines = codeEl.value.replace(/\s+$/, "").split("\n").filter((l, i, a) => a.length > 1 || l.trim());
       // Куда встаёт рамка — то же правило, что у стрелок, одинаково в блоках, Python и JavaScript:
       // выбрана рамка (цикл, приём, «если», «иначе») — в конец этой рамки; выбрана плитка — сразу после неё;
@@ -11004,6 +11007,7 @@ const ARENA_UNITS = {
   torchp: { side: "gob", hp: 3, dmg: 1, reach: 0.75, cd: 1.1, speed: 1.25 },
   tnt:    { side: "gob", hp: 2, dmg: 1, reach: 2.6, cd: 2.4, speed: 1.2 },
   barrel: { side: "gob", hp: 2, dmg: 2, reach: 0.6, cd: 0, speed: 1.7 },
+  burn:   { side: "gob", hp: 2, dmg: 1, reach: 0.75, cd: 1.5, speed: 1.3 },   // v223: поджигатель — идёт жечь нашу башню (arena.keep)
   war:    { side: "us", hp: 6, dmg: 1, reach: 0.8, cd: 0.9, speed: 1.8, sight: 1.6 },
   lan:    { side: "us", hp: 6, dmg: 1, reach: 1.1, cd: 1.0, speed: 1.7, sight: 1.6 },
 };
@@ -11024,6 +11028,7 @@ const ARENA_ART = {
   torchp: { key: "torchp", idle: [0, 7, 120], run: [1, 6, 90], atk: [2, 6, 85] },
   tnt:    { key: "tnt", idle: [0, 6, 130], run: [1, 6, 90], throw: [2, 7, 90] },
   barrel: { key: "barrel", foot: 0.72, idle: [0, 1, 200], run: [4, 3, 160], fuse: [5, 3, 150] },
+  burn:   { key: "torchp", idle: [0, 7, 120], run: [1, 6, 90], atk: [2, 6, 85] },
   war:    { key: "kwar", idle: [0, 6, 140], run: [1, 6, 90], atk: [2, 6, 75] },
   lan:    { key: "lidle", sc: 0.8, foot: 0.625, idle: [0, 12, 110, "lidle"], run: [0, 6, 90, "lrun"], atk: [0, 3, 120, "lratk"] },
 };
@@ -11062,6 +11067,16 @@ function arenaPlan(code) {
   // v218: вышка гоблинов с жирным подрывником (A.fort). Он бросает жирный динамит в рыцаря; рыцарь отбивает его командой parry —
   // динамит летит обратно и рвётся на вышке. Прочность кончилась — вышка рушится (A.goal === "raze": это и есть победа).
   const fort = A.fort ? { x: A.fort.at[0], y: A.fort.at[1], hp: A.fort.hp, next: A.fort.first ?? 2.5, cd: A.fort.cd ?? 3.6 } : null;
+  // v223: своя башня с прочностью (A.keep, стоит на месте A.tower). Её жгут поджигатели (гоблины вида burn) и задевают
+  // взрывы рядом. Прочность кончилась — руины, лучника нет. На победу не влияет: устояла до конца — корона.
+  const keep = A.keep && A.tower ? { x: A.tower[0], y: A.tower[1], hp: A.keep.hp } : null;
+  const keepHit = (by) => {
+    if (!keep || keep.hp <= 0) return;
+    keep.hp--; keepHits++;
+    events.push({ t, kind: "keep", hp: keep.hp, by });
+    if (keep.hp <= 0) events.push({ t, kind: "keepdown" });
+  };
+  let keepHits = 0;
   const air = [];                               // динамит, который летит в рыцаря: { land — когда упадёт, tx, ty, fort / gob — кто бросил }
   let razedAt = null, endAt = 0, heroParries = 0;
   const fortHit = () => {
@@ -11140,6 +11155,7 @@ function arenaPlan(code) {
   const blast = (x, y, r, dmg, wave) => {
     events.push({ t, kind: "boom", at: [x, y], big: wave === ARENA_WAVE.barrel });
     const was = blastAt; blastAt = [x, y];
+    if (keep && Math.hypot(x - keep.x, y - (keep.y - 0.2)) < r + 0.55) keepHit("blast");   // взрыв у своей башни задевает и её
     for (const u of [...units]) {
       const d = Math.hypot(u.x - x, u.y - y);
       if (u.hp > 0 && d < r) hurt(u, dmg, "blast");
@@ -11155,7 +11171,24 @@ function arenaPlan(code) {
   };
   // гоблин: охотится за рыцарем, а если тот далеко — за ближайшим из наших;
   // факел бьёт, динамит бросает, бочка поджигает фитиль
+  // поджигатель (burn): идёт к нашей башне и жжёт её факелом, на копейщика не оглядывается. Сжёг — убегает тем же мостом
+  // (иначе исход обычного боя зависел бы от того, устояла ли башня). Нет башни с прочностью — обычный факельщик.
+  const burnThink = (f) => {
+    if (keep.hp <= 0) {
+      const [ex, ey] = ARENA.spawn[f.from || "l"];
+      f.left = ex < f.x; f.act = stepTo(f, ex, ey, f.T.speed * 1.3) ? "run" : "idle";
+      if (Math.abs(f.x - ex) < 0.5) { f.hp = 0; events.push({ t, kind: "leave", id: f.id }); }
+      return;
+    }
+    const sx = keep.x + (f.id % 2 ? -0.88 : 0.88), sy = keep.y + 0.14 + (f.id % 3) * 0.08;
+    if (Math.hypot(f.x - sx, f.y - sy) > 0.4) { f.act = stepTo(f, sx, sy, f.T.speed) ? "run" : "idle"; return; }
+    f.left = keep.x < f.x;
+    if (t < f.next) { f.act = "idle"; return; }
+    f.next = t + f.T.cd; f.act = "atk"; f.busy = t + 0.5;
+    pend.push({ t: t + 0.3, fn: () => { if (f.hp > 0 && !f.fly && !(f.downTill > t)) keepHit("torch"); } });
+  };
   const gobThink = (f) => {
+    if (f.kind === "burn" && keep) return burnThink(f);
     const tg = dist(f, hero) <= 5 ? hero : nearestOf(f, "us");
     if (!tg) { f.act = "idle"; return; }
     const d = dist(f, tg);
@@ -11232,7 +11265,7 @@ function arenaPlan(code) {
   };
   // лучник на башне: сначала бочки (пусть взрываются подальше), потом ближайший гоблин
   const archerThink = () => {
-    if (t < tower.next) return;
+    if (t < tower.next || (keep && keep.hp <= 0)) return;        // башня рухнула — лучника больше нет
     const inRange = (v) => inView(v) && Math.hypot(v.x - tower.x, v.y - tower.y) <= ARENA_ARCHER.reach;
     const tg = nearestOf(tower, "gob", (v) => inRange(v) && v.kind === "barrel" && v.act !== "fuse") || nearestOf(tower, "gob", inRange);
     if (!tg) return;
@@ -11250,7 +11283,7 @@ function arenaPlan(code) {
       t += DT;
       while (waves.length && waves[0].t <= t) {
         const w = waves.shift(), [sx, sy] = ARENA.spawn[w.side];
-        add(w.kind, sx, sy + (rnd() - 0.5) * 0.2, { act: "run", left: w.side === "r" });
+        add(w.kind, sx, sy + (rnd() - 0.5) * 0.2, { act: "run", left: w.side === "r", from: w.side });
       }
       for (const u of units) {             // v217: кто летит от взрыва — летит; долетел — лежит; отлежал — встаёт
         if (u.fly) {
@@ -11356,7 +11389,8 @@ function arenaPlan(code) {
   events.sort((a, b) => a.t - b.t);             // бросок записан наперёд — события по времени
   const survived = hero.hp > 0 && (A.goal !== "raze" || razedAt !== null);
   const lost = units.filter((u) => u.side === "us" && !u.hero && u.hp <= 0).length;
-  return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp, lost, healsFailed, flung, parried, heroParries, razed: razedAt !== null, fortHp: fort?.hp };
+  return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp, lost, healsFailed, flung, parried, heroParries, razed: razedAt !== null, fortHp: fort?.hp,
+    keepHp: keep?.hp, keepHits, crown: !!keep && survived && keep.hp > 0 };
 }
 
 // Поле арены: карта островка + слой бойцов + таймер и сердечки
@@ -11387,12 +11421,14 @@ function arenaStage() {
   const my = ++arenaRun;
   return { layer: arenaBox, before: null, unit: 100 / 18, pos: (x, y) => [x / 18 * 100, y / VH * 100], on: () => true, alive: () => my === arenaRun };
 }
-function arenaHudDraw(hp, max, left, fortHp) {
-  if (L.arena.fort) {                           // прочность вышки
+function arenaHudDraw(hp, max, left, fortHp, keepHp) {
+  if (L.arena.fort) {                           // прочность вышки; ниже — своей башни (v223), если она на уровне с прочностью
     let f = arenaHud.querySelector(".afort");
     if (!f) { f = document.createElement("span"); f.className = "afort"; arenaHud.appendChild(f); }
-    const n = fortHp ?? L.arena.fort.hp;
-    f.textContent = "🏚 " + "▮".repeat(Math.max(0, n)) + "▯".repeat(L.arena.fort.hp - Math.max(0, n));
+    const bar = (n, max) => "▮".repeat(Math.max(0, n)) + "▯".repeat(max - Math.max(0, n));
+    const K = L.arena.keep, k = keepHp ?? K?.hp;
+    const html = "🏚 " + bar(fortHp ?? L.arena.fort.hp, L.arena.fort.hp) + (K ? `<br><span class="akeep${k <= 0 ? " lost" : ""}">🏰 ${bar(k, K.hp)}</span>` : "");
+    if (f.dataset.h !== html) { f.dataset.h = html; f.innerHTML = html; }
   } else arenaHud.querySelector(".afort")?.remove();
   arenaHud.querySelector(".ahp").innerHTML = `<b>♥</b> ${Math.max(0, hp)}<i>/${max}</i>`;
   arenaHud.querySelector(".atime").textContent = `⏱ ${Math.max(0, Math.ceil(left))} ${tr("с")}`;
@@ -11406,13 +11442,13 @@ const arenaHeroArt = () => (L.lancer ? { key: "lidle", sc: 0.8, foot: 0.625, idl
 function arenaScene(st) {
   const A = L.arena, Z = (a, y, d = 0) => (a.el.style.zIndex = Math.round(y * 40) + d);
   if (actx) { soundBuf("sword-hit.mp3"); soundBuf("goblin-death.mp3"); soundBuf("goblin-attack.mp3"); if (A.allies?.some((a) => a.kind === "lan")) soundBuf("spear-thrust.mp3"); if (A.tower) soundBuf("arrow-swish.mp3"); soundBuf("tnt-boom.mp3"); }   // звуки боя — заранее
-  let archer = null;
+  let archer = null, keepA = null;
   if (A.tower) {
     const [tx, ty] = A.tower, tw = skActor(st, "towerb", 0.75, 232 / 256), a = skActor(st, "archb", 0.75), front = skActor(st, "towerbf", 0.75, 232 / 256);
     [[tw, 0], [a, 1], [front, 2]].forEach(([x, d]) => { Z(x, ty, d); x.show(true); });
     tw.at(tx, ty); front.at(tx, ty); a.at(tx, ty - (232 - 118) / 64 * 0.75);
     a.play(0, 6, 150);
-    archer = a;
+    archer = a; keepA = { tw, front, x: tx, y: ty };
   }
   let fortA = null;
   if (A.fort) {                                 // вышка гоблинов, наверху жирный подрывник
@@ -11426,7 +11462,7 @@ function arenaScene(st) {
     a.at(...at); a.face(!!left); Z(a, at[1]); a.show(true); a.play(...R.idle.slice(0, 3), true, R.idle[3] || R.key);
     return a;
   });
-  return { archer, allies, fort: fortA };
+  return { archer, allies, fort: fortA, keep: keepA };
 }
 function arenaReset() {
   showProblems = false;
@@ -11461,11 +11497,11 @@ async function runArena() {
   let fdi = 0, smokeLvl = 0, ruined = false, smokeTill = 0;
   // v219: дым и пыль — клуб пыли из набора: белый (пыль от удара) или затемнённый (дым); поднимается, сносится вбок и тает.
   // После каждого попадания дыма больше; огня нет.
-  const puff = (x, y, sc, dark, rise, ms) => {
+  const puff = (x, y, sc, dark, rise, ms, z) => {
     if (STILL) return;
     const a = skActor(st, "dust", sc, 0.5);
-    a.el.style.transition = "none"; a.at(x, y); a.el.style.zIndex = 900;
-    if (dark) { a.el.style.filter = `brightness(${dark})`; a.el.style.opacity = 0.8; if (!ruined) a.el.style.zIndex = Math.round(FT.y * 40) + 2; }   // дым — за подрывником, перед вышкой
+    a.el.style.transition = "none"; a.at(x, y); a.el.style.zIndex = z ?? 900;
+    if (dark) { a.el.style.filter = `brightness(${dark})`; a.el.style.opacity = 0.8; if (!ruined && z == null) a.el.style.zIndex = Math.round(FT.y * 40) + 2; }   // дым — за подрывником, перед вышкой
     a.show(true, true); a.play(0, 10, ms / 10, false); void a.el.offsetWidth;
     a.el.style.transition = `left ${ms}ms linear, top ${ms}ms ease-out`; a.at(x + 0.25 + Math.random() * 0.35, y - rise);
     sleep(ms).then(() => a.el.remove());
@@ -11495,6 +11531,15 @@ async function runArena() {
     while ((running || performance.now() < smokeTill) && arenaRun === myRun) {      // руины дымят ещё несколько секунд после боя
       for (let k = 0; k < smokeLvl; k++) puff(FT.x + (ruined ? (Math.random() - 0.5) * 0.5 : (k % 2 ? -0.5 : 0.45) + (Math.random() - 0.5) * 0.2), FT.y - (ruined ? 0.5 : 0.95 + Math.random() * 0.3), 0.42 + 0.07 * smokeLvl + Math.random() * 0.15, Math.max(0.3, 0.62 - 0.09 * smokeLvl), 1.2 + Math.random() * 0.7, 1500);
       await sleep(Math.max(180, 620 - 130 * smokeLvl));
+    }
+  })();
+  // v223: своя башня с прочностью — темнеет и дымит тем гуще, чем сильнее обгорела; сгорела — руины, лучник слетает
+  const KP = A.keep ? scene.keep : null;
+  let keepHp = A.keep?.hp, keepSmoke = 0, keepTill = 0;
+  if (KP) (async () => {
+    while ((running || performance.now() < keepTill) && arenaRun === myRun) {
+      for (let k = 0; k < Math.min(3, keepSmoke); k++) puff(KP.x + (keepHp > 0 ? (k % 2 ? -0.35 : 0.3) : 0) + (Math.random() - 0.5) * 0.3, KP.y - (keepHp > 0 ? 1.0 + Math.random() * 0.5 : 0.4), 0.4 + 0.06 * keepSmoke + Math.random() * 0.12, Math.max(0.3, 0.6 - 0.07 * keepSmoke), 1.1 + Math.random() * 0.6, 1400, keepHp > 0 ? Math.round(KP.y * 40) + 3 : 900);
+      await sleep(Math.max(200, 640 - 110 * keepSmoke));
     }
   })();
   const H = skActor(st, HA.key, HA.sc, HA.foot); H.at(...ARENA.start); H.show(true);
@@ -11559,13 +11604,29 @@ async function runArena() {
         c.el.style.transition = `left ${ms}ms linear, top ${ms}ms linear`; c.at(FT.x + 2.6, FT.y + 0.6); Z(c, FT.y + 3); tumbleA(c, 2, 1, ms, false);
         sleep(ms).then(() => { c.show(false, true); upA(c); });
       }
+      if (e.kind === "keep" && KP) {                    // нашу башню подожгли или задело взрывом
+        keepHp = e.hp; flash(KP.tw); flash(KP.front);
+        const hits = A.keep.hp - e.hp, dim = `brightness(${Math.max(0.62, 1 - 0.38 * hits / A.keep.hp)})`;
+        KP.tw.el.style.filter = dim; KP.front.el.style.filter = dim;
+        keepSmoke = Math.ceil(hits / A.keep.hp * 3);
+        for (let i = 0; i < 2; i++) puff(KP.x + (i ? 0.45 : -0.45), KP.y - 0.2, 0.5, 0, 0.35, 550);
+      }
+      if (e.kind === "keepdown" && KP) {                // сгорела: руины под облаком пыли, лучник кувырком слетает
+        keepSmoke = 2; keepTill = performance.now() + 6000;
+        KP.tw.el.style.filter = ""; KP.tw.play(0, 1, 500, true, "towerbx"); KP.front.show(false);
+        for (let i = 0; i < 6; i++) puff(KP.x + (i - 2.5) * 0.3, KP.y - 0.15 - (i % 2) * 0.5, 0.9, 0, 0.4, 800);
+        sfx("fall");
+        const c = scene.archer, ms = quick(650);
+        if (c) { c.el.style.transition = `left ${ms}ms linear, top ${ms}ms linear`; c.at(KP.x - 1.5, KP.y + 0.7); Z(c, KP.y + 2); tumbleA(c, 2, -1, ms, false); sleep(ms).then(() => { c.show(false, true); upA(c); }); scene.archer = null; }
+      }
+      if (e.kind === "leave") { const a = actors[e.id]; if (a) { a.gone = true; a.show(false); } }
       if (e.kind === "throw" && e.fat) { const d = fatdyns[fdi++ % fatdyns.length]; d.el.style.transition = "none"; d.at(...e.from); Z(d, 400); d.show(true); d.play(0, 6, 70); d.arc(...e.to, 1.6, e.dur * 1000 / speed).then(() => d.show(false)); continue; }
       if (e.kind === "throw") { const d = dyns[bi++ % dyns.length]; d.el.style.transition = "none"; d.at(...e.from); Z(d, 40); d.show(true); d.play(0, 6, 70); d.arc(...e.to, 1.0, e.dur * 1000 / speed).then(() => d.show(false)); }
       if (e.kind === "boom") {
         const b = booms[ki++ % booms.length]; b.at(...e.at); Z(b, e.at[1] + 0.5); b.show(true); b.play(0, 9, quick(70), false).then(() => b.show(false));
         if (performance.now() - lastBoom > 700) { sfx("boom"); lastBoom = performance.now(); }   // цепочка взрывов — один звук
       }
-      if (e.kind === "aim" && scene.archer) { scene.archer.face(e.dx < -0.05); scene.archer.play(ARCH_ROW[dirOf(e.dx, e.dy)], 8, quick(55), false).then(() => scene.archer.play(0, 6, 150)); }
+      if (e.kind === "aim" && scene.archer) { const ar = scene.archer; ar.face(e.dx < -0.05); ar.play(ARCH_ROW[dirOf(e.dx, e.dy)], 8, quick(55), false).then(() => { if (scene.archer === ar) ar.play(0, 6, 150); }); }
       if (e.kind === "arrow") {
         const a = arrows[ai++ % arrows.length], [sx, sy] = e.from, [ex, ey] = e.to, ax = Math.abs(ex - sx), ay = Math.abs(ey - sy);
         a.sheet(ax >= ay ? "arrow" : ey > sy ? "arrowd" : "arrowu"); a.frame(0, 0); a.face(ax >= ay && ex < sx);
@@ -11622,14 +11683,16 @@ async function runArena() {
         a.play(spec[0], spec[1], once ? quick(spec[2]) : spec[2], !once, spec[3] || R.key);
       }
     }
-    arenaHudDraw(h.hp, A.hp, A.secs - fr.t, fortHp);
+    arenaHudDraw(h.hp, A.hp, A.secs - fr.t, fortHp, keepHp);
     drawCode(fr.line);
     await sleep(dur);
     if (!running) return;
   }
   drawCode(0);
   if (p.survived) {
-    setStatus(A.goal === "raze" ? tr("Победа! Вышка разрушена — отбито динамита: {n}", { n: p.heroParries })
+    setStatus(A.keep ? (p.crown ? tr("Победа! Вышка разрушена, а своя башня устояла — отбито динамита: {n}", { n: p.heroParries })
+        : tr("Победа! Вышка разрушена — отбито динамита: {n}. Только свою башню гоблины сожгли", { n: p.heroParries }))
+      : A.goal === "raze" ? tr("Победа! Вышка разрушена — отбито динамита: {n}", { n: p.heroParries })
       : tr("Победа! Рыцарь продержался {n} секунд — побеждено гоблинов: {k}", { n: A.secs, k: p.kills }), "win");
     sfx("win");
     finish();
@@ -11717,7 +11780,8 @@ function win() {
   const written = countWrittenCommands(codeEl.value);
   // корона: на уровне был великан, и рыцарь его победил
   const giants = enemies.filter((e) => e.boss), bossShield = giants.some((e) => e.shield), bossBomb = giants.some((e) => e.bomb);
-  const crown = giants.length > 0 && !!plan?.hpLeft && giants.every((e) => (plan.hpLeft.get(enemyKey(e.x, e.y)) || 0) <= 0);
+  const keepCrown = !!L.arena?.keep;             // арена со своей башней (v223): корона — вышка разрушена, а башня устояла
+  const crown = keepCrown ? !!plan?.crown : giants.length > 0 && !!plan?.hpLeft && giants.every((e) => (plan.hpLeft.get(enemyKey(e.x, e.y)) || 0) <= 0);
   // путь с победой над великаном длиннее — для него свои пороги звёзд (crownPar / crownGood)
   const par = crown && L.crownPar ? L.crownPar : L.par, good = crown && L.crownGood ? L.crownGood : L.good;
   const stars = Math.min(missing ? 2 : 3, written <= par ? 3 : written <= good ? 2 : 1);
@@ -11746,7 +11810,9 @@ function win() {
     : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
   else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
-  if (crown) note += bossBomb ? (newCrown ? tr(" Ты победил подрывника — у тебя корона!") : tr(" Подрывник снова повержен."))
+  if (crown && keepCrown) note += newCrown ? tr(" Своя башня устояла — у тебя корона!") : tr(" Башня снова устояла.");
+  else if (keepCrown && !save.crowns?.[L.name]) note += tr(" Говорят, можно разрушить вышку и сберечь свою башню. Кто сумеет — получит корону.");
+  else if (crown) note += bossBomb ? (newCrown ? tr(" Ты победил подрывника — у тебя корона!") : tr(" Подрывник снова повержен."))
     : bossShield ? (newCrown ? tr(" Ты победил щитоносца — у тебя корона!") : tr(" Щитоносец снова повержен."))
     : newCrown ? tr(" Ты победил великана — у тебя корона!") : tr(" Великан снова повержен.");
   else if (giants.length && !save.crowns?.[L.name]) note += tr(bossBomb ? " Говорят, и подрывника можно победить — если подобраться к нему вплотную мимо красных клеток. Кто сумеет — получит корону."
@@ -12123,6 +12189,9 @@ function drawLineBar() {
     else if (ifm) $("lb-what").textContent = "⇄ " + WHAT_RU[whats.find((w) => w !== CONDS[condKey(ifm[2])].what)];
     document.querySelector(".shift").hidden = true;
   }
+  // v223: на телефоне в блоках кнопка смены вопроса — всегда короткой подписью («⇄ враг рядом»): с длинной она не влезала в полоску
+  // и пряталась, а на арене (два вопроса без сторон) другого способа сменить вопрос нет
+  if (float && ifm && whats.length >= 2 && !$("lb-what").hidden) $("lb-what").textContent = "⇄ " + WHAT_RU[whats.find((w) => w !== CONDS[condKey(ifm[2])].what)];
   // подпись не помещается в две строки (узкий экран, много кнопок) — остаются одни значки.
   // Меряем в самом конце, когда кнопки панели уже приняли свой вид.
   const info = bar.querySelector(".lb-info");
@@ -12135,6 +12204,11 @@ function drawLineBar() {
     for (const el of [$("lb-up"), $("lb-down"), document.querySelector(".shift"), $("lb-add"), $("lb-what"), sides]) if (!el.hidden && over()) el.hidden = true;
   }
   if (float && $("lb-label").scrollHeight > $("lb-label").clientHeight + 1) info.style.display = "none";
+  // v223: на арене у вопросов нет сторон — сменить вопрос в блоках можно только этой кнопкой. Не влезла — уступает место подпись
+  if (float && ifm && whats.length >= 2 && sides.hidden && $("lb-what").hidden) {
+    info.style.display = "none"; $("lb-what").hidden = false;
+    if (bar.getBoundingClientRect().right > document.documentElement.clientWidth - 2 || bar.scrollWidth > bar.clientWidth + 1) $("lb-what").hidden = true;
+  }
 }
 
 gutterEl.addEventListener("click", (e) => {
@@ -13788,10 +13862,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 222;
+const APP_VERSION = 223;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 223, date: "2026-11-20", text: "Глава «Штурм» закончена: появилось «Штурм: испытание» с первой короной Острова гоблинов. Разрушь вышку гоблинов — и сбереги свою башню от поджигателей.", en: "The “Assault” chapter is complete: “Assault: Challenge” brings Goblin Island’s first crown. Bring down the goblin watchtower — and save your own tower from the arsonists.", big: true },
   { v: 222, date: "2026-11-20", text: "На Острове гоблинов новая глава «Штурм»: «Вышка» теперь в ней, и появился уровень «Три дела» — копьё, удар и лечение в одной рамке. Кнопка «＋ иначе» теперь есть у любой половины рамки «если».", en: "A new chapter on Goblin Island — “Assault”: “The Watchtower” moved there, plus a new level, “Three Jobs” — spear, hit and heal in one frame. The “＋ else” button is now available on any part of an “if” frame." },
   { v: 221, date: "2026-11-20", text: "У моста на первом острове третья башня. Башни теперь рушатся от взрывов, а жители с молотками их чинят", en: "A third tower by the bridge on the first island. Towers now collapse from explosions, and villagers with hammers repair them" },
   { v: 220, date: "2026-11-20", text: "«Вышка»: из настила вылетают и ломаются брёвна, вышка качается всё сильнее и на последнем ударе валится в груду", en: "“The Watchtower”: logs fly out of the deck and snap, the tower sways harder and harder and topples into a heap on the last hit" },

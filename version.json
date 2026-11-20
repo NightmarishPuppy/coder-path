@@ -1,21 +1,21 @@
 {
- "version": 222,
+ "version": 223,
  "date": "2026-11-20",
  "notes": [
-  "На Острове гоблинов новая глава «Штурм»: «Вышка» теперь в ней, и появился уровень «Три дела» — копьё, удар и лечение в одной рамке. Кнопка «＋ иначе» теперь есть у любой половины рамки «если»."
+  "Глава «Штурм» закончена: появилось «Штурм: испытание» с первой короной Острова гоблинов. Разрушь вышку гоблинов — и сбереги свою башню от поджигателей."
  ],
  "files": {
   "index.html": {
-   "size": 1069608,
-   "hash": "25993f71a79fcb51"
+   "size": 1077936,
+   "hash": "82963ba4f613f236"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 77237,
-   "hash": "98d5cddf4e40e9b4"
+   "size": 78183,
+   "hash": "cc7854d6b0505ee1"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "887aa8e0073c3bfc"
+   "hash": "26799e86a50f4c4e"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 27148,
-   "hash": "b8aaa23a7dd06818"
+   "size": 30462,
+   "hash": "8545c2ed749d072e"
   },
   "art-scenes.js": {
    "size": 985719,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "A new chapter on Goblin Island — “Assault”: “The Watchtower” moved there, plus a new level, “Three Jobs” — spear, hit and heal in one frame. The “＋ else” button is now available on any part of an “if” frame."
+  "The “Assault” chapter is complete: “Assault: Challenge” brings Goblin Island’s first crown. Bring down the goblin watchtower — and save your own tower from the arsonists."
  ]
 }

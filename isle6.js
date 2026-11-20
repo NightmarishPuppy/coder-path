@@ -277,13 +277,41 @@ levels: [
       js: "while (true) {\n  if (dynamiteFlying()) {\n    parry();\n  } else if (enemyNear()) {\n    attack();\n  }\n}\n",
     },
   },
+  // Штурм: испытание (v223). Программа пустая — все три дела игрок собирает сам. Слева наша башня с лучником (arena.keep):
+  // её жгут поджигатели (гоблины в капюшонах, вид бойца burn) и задевают взрывы рядом. Для победы башня не нужна;
+  // корона 👑 — вышка гоблинов разрушена, а своя башня устояла: копейщик должен сам идти к поджигателям.
+  {
+    name: "Штурм: испытание",
+    chapter: 23,
+    isle: 6,
+    lancer: true,
+    challenge: true,
+    requireLoop: true,
+    requireElif: true,
+    loopButton: true, ifButton: true, elifButton: true, elseButton: true,
+    arena: { secs: 45, hp: 8, whiff: 2, goal: "raze", tower: [6.2, 4.2], keep: { hp: 6 }, fort: { at: [12.4, 4.4], hp: 7, first: 2.5, cd: 3.6 },
+      waves: [[1.5, "l", "torch"], [1.9, "r", "torch"], [3.0, "l", "burn"], [3.6, "l", "burn"], [10.0, "l", "burn"], [10.5, "r", "torch"], [10.6, "l", "burn"], [10.9, "l", "torch"], [17.0, "l", "burn"], [17.6, "l", "burn"], [19.5, "l", "torch"], [19.9, "r", "torch"], [24.0, "l", "burn"], [24.6, "l", "burn"], [28.5, "r", "torch"], [28.9, "l", "torch"], [31.0, "l", "burn"], [31.6, "l", "burn"], [37.5, "l", "torch"], [37.9, "r", "torch"], [38.0, "l", "burn"], [38.6, "l", "burn"]] },
+    goal: "Испытание: программа пустая. Разрушь вышку гоблинов: в цикле «если динамит летит» — [[btn:parry]], «другое если» враг рядом — [[btn:attack]], «иначе» — [[btn:heal]]. А гоблины в капюшонах идут жечь твою башню с лучником. Сбережёшь её — корона 👑.",
+    block: "Испытание: программа пустая. Разрушь вышку гоблинов: «🔁 повторять», в нём «❓ если» динамит летит — [[btn:parry]], [[elifbtn]] враг рядом — [[btn:attack]], [[elsebtn]] — [[btn:heal]]. А гоблины в капюшонах идут жечь твою башню с лучником. Сбережёшь её — корона 👑.",
+    en: {
+      name: "Assault: Challenge",
+      goal: "Challenge: the program is empty. Destroy the goblin watchtower: in a loop, “if dynamite is flying” — [[btn:parry]], “else if” an enemy is near — [[btn:attack]], “else” — [[btn:heal]]. Meanwhile hooded goblins are coming to burn your archer tower. Keep it standing — and the crown 👑 is yours.",
+      block: "Challenge: the program is empty. Destroy the goblin watchtower: “🔁 repeat”, in it “❓ if” dynamite is flying — [[btn:parry]], [[elifbtn]] an enemy is near — [[btn:attack]], [[elsebtn]] — [[btn:heal]]. Meanwhile hooded goblins are coming to burn your archer tower. Keep it standing — and the crown 👑 is yours.",
+    },
+    commands: ["attack", "parry", "heal", "goToEnemy"],
+    ifs: ["tnt", "near"],
+    par: 3, good: 4,
+    crownPar: 4, crownGood: 5,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: { py: "", js: "" },
+  },
 ],
 };
 
 // Карта острова. Руками не править: её целиком пишет tools/gen3.py из файла раскладки.
 // @@isle6@@
 ISLES[6].map = {
-  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [210, 390], [170, 390], [90, 350], [90, 270]],
+  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [210, 390], [170, 390], [90, 350], [90, 270], [150, 250]],
   rows: [
     "....................................",
     "....................................",
