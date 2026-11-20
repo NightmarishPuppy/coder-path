@@ -1,21 +1,21 @@
 {
- "version": 223,
+ "version": 224,
  "date": "2026-11-20",
  "notes": [
-  "Глава «Штурм» закончена: появилось «Штурм: испытание» с первой короной Острова гоблинов. Разрушь вышку гоблинов — и сбереги свою башню от поджигателей."
+  "Глава «Штурм» выросла до шести уровней: «Что первым?» (найди ошибку), «Своя башня» — подрывники взрывают твою башню, «Толкни бочку» — новая команда 🛢. Испытание стало труднее, а корона — только за башню, в которую не попал ни один динамит."
  ],
  "files": {
   "index.html": {
-   "size": 1077936,
-   "hash": "82963ba4f613f236"
+   "size": 1084015,
+   "hash": "c3d7a6fbf3a6c27e"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 78183,
-   "hash": "cc7854d6b0505ee1"
+   "size": 79251,
+   "hash": "566dd0b1d5984a5f"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "26799e86a50f4c4e"
+   "hash": "f7d843a6634b483f"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 30462,
-   "hash": "8545c2ed749d072e"
+   "size": 39539,
+   "hash": "0c65f56d8c58fb05"
   },
   "art-scenes.js": {
    "size": 985719,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The “Assault” chapter is complete: “Assault: Challenge” brings Goblin Island’s first crown. Bring down the goblin watchtower — and save your own tower from the arsonists."
+  "The “Assault” chapter has grown to six levels: “What Comes First?” (find the bug), “Your Own Tower” — bombers blow up your tower, “Push the Barrel” — a new command 🛢. The challenge is tougher, and the crown is only for a tower not hit by a single stick of dynamite."
  ]
 }

@@ -277,9 +277,95 @@ levels: [
       js: "while (true) {\n  if (dynamiteFlying()) {\n    parry();\n  } else if (enemyNear()) {\n    attack();\n  }\n}\n",
     },
   },
-  // Штурм: испытание (v223). Программа пустая — все три дела игрок собирает сам. Слева наша башня с лучником (arena.keep):
-  // её жгут поджигатели (гоблины в капюшонах, вид бойца burn) и задевают взрывы рядом. Для победы башня не нужна;
-  // корона 👑 — вышка гоблинов разрушена, а своя башня устояла: копейщик должен сам идти к поджигателям.
+  // Что первым? (v224): найди ошибку. В программе все три дела, но «враг рядом» спрашивают раньше, чем «динамит летит»:
+  // гоблины идут один за другим, копейщик рубится без передышки, и динамит рвётся у него под ногами. Проверки идут сверху вниз.
+  {
+    name: "Что первым?",
+    chapter: 23,
+    isle: 6,
+    lancer: true,
+    bug: true,
+    requireElif: true,
+    after: "Три дела",
+    arena: { secs: 45, hp: 8, whiff: 2, goal: "raze", fort: { at: [12.4, 4.4], hp: 5, first: 2.5, cd: 3.6 },
+      waves: [[1, "l", "brute"]] },
+    goal: "Найди ошибку: здоровяка не зарубить, и пока копейщик его бьёт, динамит рвётся у ног. Про динамит надо спрашивать первым: выбери строку [[lineof:if]], нажми [[swapbtn]], а команду под ней замени на [[btn:parry]]. В «другое если» — наоборот: [[swapbtn]] и [[btn:attack]].",
+    block: "Найди ошибку: здоровяка не зарубить, и пока копейщик его бьёт, динамит рвётся у ног. Про динамит надо спрашивать первым: нажми на «❓ если» и на [[swapbtn]], а плитку под ним замени на [[btn:parry]]. В [[elifhead]] — наоборот: [[swapbtn]] и [[btn:attack]].",
+    en: {
+      name: "What Comes First?",
+      goal: "Find the bug: the big brute can’t be cut down, and while the lancer keeps hitting him, dynamite blows up at his feet. Ask about the dynamite first: select line [[lineof:if]], tap [[swapbtn]], and replace the command under it with [[btn:parry]]. In “else if” — the other way round: [[swapbtn]] and [[btn:attack]].",
+      block: "Find the bug: the big brute can’t be cut down, and while the lancer keeps hitting him, dynamite blows up at his feet. Ask about the dynamite first: tap “❓ if” and [[swapbtn]], then replace the tile under it with [[btn:parry]]. In [[elifhead]] — the other way round: [[swapbtn]] and [[btn:attack]].",
+    },
+    commands: ["attack", "parry", "heal"],
+    ifs: ["tnt", "near"],
+    elifButton: true, elseButton: true,
+    par: 3, good: 4,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n        attack()\n    elif dynamite_flying():\n        parry()\n    else:\n        heal()\n",
+      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else if (dynamiteFlying()) {\n    parry();\n  } else {\n    heal();\n  }\n}\n",
+    },
+  },
+  // Своя башня (v224): слева наша каменная башня с лучником (arena.keep, must — её надо уберечь). Подрывники (sap) идут слева,
+  // встают поодаль и кидают в неё динамит. В программе уже три дела — игрок дописывает четвёртое: после лечения «к врагу».
+  {
+    name: "Своя башня",
+    chapter: 23,
+    isle: 6,
+    lancer: true,
+    requireElif: true,
+    after: "Что первым?",
+    arena: { secs: 45, hp: 8, whiff: 2, goal: "raze", tower: [6.2, 4.2], keep: { hp: 6, must: true }, fort: { at: [12.4, 4.4], hp: 7, first: 2.5, cd: 3.6 },
+      waves: [[1.5, "l", "torch"], [1.9, "r", "torch"], [3.0, "l", "sap"], [3.6, "l", "sap"], [7.5, "r", "torch"], [7.9, "l", "torch"], [11.0, "l", "sap"], [11.6, "l", "sap"], [13.5, "l", "torch"], [13.9, "r", "torch"], [19.0, "l", "sap"], [19.5, "r", "torch"], [19.6, "l", "sap"], [19.9, "l", "torch"], [25.5, "l", "torch"], [25.9, "r", "torch"], [27.0, "l", "sap"], [27.6, "l", "sap"], [31.5, "r", "torch"], [31.9, "l", "torch"], [35.0, "l", "sap"], [35.6, "l", "sap"], [37.5, "l", "torch"], [37.9, "r", "torch"], [43.0, "l", "sap"], [43.5, "r", "torch"], [43.6, "l", "sap"], [43.9, "l", "torch"]] },
+    goal: "Подрывники идут взрывать твою башню с лучником — её надо уберечь. Допиши четвёртое дело: выбери строку [[lineof:else]] и нажми [[btn:goToEnemy]] — после лечения копейщик сам пойдёт к врагу.",
+    block: "Подрывники идут взрывать твою башню с лучником — её надо уберечь. Допиши четвёртое дело: нажми на [[elsehead]], потом [[btn:goToEnemy]] — после лечения копейщик сам пойдёт к врагу.",
+    en: {
+      name: "Your Own Tower",
+      goal: "Bombers are coming to blow up your archer tower — you must keep it standing. Add the fourth job: select line [[lineof:else]] and tap [[btn:goToEnemy]] — after healing, the lancer will go to the enemy himself.",
+      block: "Bombers are coming to blow up your archer tower — you must keep it standing. Add the fourth job: tap [[elsehead]], then [[btn:goToEnemy]] — after healing, the lancer will go to the enemy himself.",
+    },
+    commands: ["attack", "parry", "heal", "goToEnemy"],
+    ifs: ["tnt", "near"],
+    elifButton: true, elseButton: true,
+    par: 4, good: 5,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if dynamite_flying():\n        parry()\n    elif enemy_near():\n        attack()\n    else:\n        heal()\n",
+      js: "while (true) {\n  if (dynamiteFlying()) {\n    parry();\n  } else if (enemyNear()) {\n    attack();\n  } else {\n    heal();\n  }\n}\n",
+    },
+  },
+  // Толкни бочку (v224): новая команда «толкни» 🛢 и вопрос «бочка рядом?». Гоблин в бочке бежит к копейщику и взрывается;
+  // толчок отправляет бочку обратно — она рвётся среди тех, кто бежал следом. В программе три дела, игрок добавляет вторую
+  // «другое если»: бочка рядом — толкни.
+  {
+    name: "Толкни бочку",
+    chapter: 23,
+    isle: 6,
+    lancer: true,
+    requireElif: true,
+    after: "Своя башня",
+    arena: { secs: 45, hp: 8, whiff: 2, goal: "raze", fort: { at: [12.4, 4.4], hp: 6, first: 2.5, cd: 3.6 },
+      waves: [[1.5, "r", "torch"], [4, "l", "barrel"], [8, "r", "barrel"], [9.5, "l", "torch"], [12, "l", "barrel"], [16, "r", "barrel"], [17.5, "r", "torch"], [20, "l", "barrel"], [24, "r", "barrel"], [25.5, "l", "torch"], [28, "l", "barrel"], [32, "r", "barrel"], [33.5, "r", "torch"], [36, "l", "barrel"], [40, "r", "barrel"], [41.5, "l", "torch"]] },
+    goal: "Новое: бочку можно толкнуть обратно — она взорвётся среди гоблинов. Выбери строку [[lineof:if]], нажми [[elifbtn]] — встанет вопрос про бочку — и [[btn:push]]. Про бочку спрашивай раньше, чем про врага рядом.",
+    block: "Новое: бочку можно толкнуть обратно — она взорвётся среди гоблинов. Нажми на «❓ если», потом [[elifbtn]] — встанет вопрос про бочку — и [[btn:push]]. Про бочку спрашивай раньше, чем про врага рядом.",
+    en: {
+      name: "Push the Barrel",
+      goal: "New: you can push a barrel back — it will blow up among the goblins. Select line [[lineof:if]], tap [[elifbtn]] — the barrel question appears — then [[btn:push]]. Ask about the barrel before asking about an enemy nearby.",
+      block: "New: you can push a barrel back — it will blow up among the goblins. Tap “❓ if”, then [[elifbtn]] — the barrel question appears — then [[btn:push]]. Ask about the barrel before asking about an enemy nearby.",
+    },
+    commands: ["attack", "parry", "heal", "push"],
+    ifs: ["tnt", "barrel", "near"],
+    elifButton: true, elseButton: true,
+    par: 4, good: 5,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if dynamite_flying():\n        parry()\n    elif enemy_near():\n        attack()\n    else:\n        heal()\n",
+      js: "while (true) {\n  if (dynamiteFlying()) {\n    parry();\n  } else if (enemyNear()) {\n    attack();\n  } else {\n    heal();\n  }\n}\n",
+    },
+  },
+  // Штурм: испытание (v223, переделано в v224). Программа пустая — все четыре дела игрок собирает сам. Свою башню надо уберечь
+  // (arena.keep.must): три дела без «к врагу» проигрывают. Корона 👑 (keep.crown: "clean") — в башню не попал ни один динамит:
+  // на это хватает времени, только если не лечиться, а сразу идти к врагу.
   {
     name: "Штурм: испытание",
     chapter: 23,
@@ -289,19 +375,19 @@ levels: [
     requireLoop: true,
     requireElif: true,
     loopButton: true, ifButton: true, elifButton: true, elseButton: true,
-    arena: { secs: 45, hp: 8, whiff: 2, goal: "raze", tower: [6.2, 4.2], keep: { hp: 6 }, fort: { at: [12.4, 4.4], hp: 7, first: 2.5, cd: 3.6 },
-      waves: [[1.5, "l", "torch"], [1.9, "r", "torch"], [3.0, "l", "burn"], [3.6, "l", "burn"], [10.0, "l", "burn"], [10.5, "r", "torch"], [10.6, "l", "burn"], [10.9, "l", "torch"], [17.0, "l", "burn"], [17.6, "l", "burn"], [19.5, "l", "torch"], [19.9, "r", "torch"], [24.0, "l", "burn"], [24.6, "l", "burn"], [28.5, "r", "torch"], [28.9, "l", "torch"], [31.0, "l", "burn"], [31.6, "l", "burn"], [37.5, "l", "torch"], [37.9, "r", "torch"], [38.0, "l", "burn"], [38.6, "l", "burn"]] },
-    goal: "Испытание: программа пустая. Разрушь вышку гоблинов: в цикле «если динамит летит» — [[btn:parry]], «другое если» враг рядом — [[btn:attack]], «иначе» — [[btn:heal]]. А гоблины в капюшонах идут жечь твою башню с лучником. Сбережёшь её — корона 👑.",
-    block: "Испытание: программа пустая. Разрушь вышку гоблинов: «🔁 повторять», в нём «❓ если» динамит летит — [[btn:parry]], [[elifbtn]] враг рядом — [[btn:attack]], [[elsebtn]] — [[btn:heal]]. А гоблины в капюшонах идут жечь твою башню с лучником. Сбережёшь её — корона 👑.",
+    arena: { secs: 45, hp: 8, whiff: 2, goal: "raze", tower: [6.2, 4.2], keep: { hp: 5, must: true, crown: "clean" }, fort: { at: [12.4, 4.4], hp: 7, first: 2.5, cd: 3.6 },
+      waves: [[1.5, "l", "torch"], [3.0, "l", "sap"], [3.6, "l", "sap"], [9.5, "r", "torch"], [11.0, "l", "sap"], [11.6, "l", "sap"], [17.5, "l", "torch"], [19.0, "l", "sap"], [19.6, "l", "sap"], [25.5, "r", "torch"], [27.0, "l", "sap"], [27.6, "l", "sap"], [33.5, "l", "torch"], [35.0, "l", "sap"], [35.6, "l", "sap"], [41.5, "r", "torch"], [43.0, "l", "sap"], [43.6, "l", "sap"]] },
+    goal: "Испытание: программа пустая. Разрушь вышку гоблинов и не дай подрывникам взорвать твою башню. Собери четыре дела сам: в цикле «если динамит летит» — [[btn:parry]], «другое если» враг рядом — [[btn:attack]], «иначе» — [[btn:heal]] и [[btn:goToEnemy]]. Корона 👑 — если в башню не попадёт ни один динамит.",
+    block: "Испытание: программа пустая. Разрушь вышку гоблинов и не дай подрывникам взорвать твою башню. Собери четыре дела сам: «🔁 повторять», в нём «❓ если» динамит летит — [[btn:parry]], [[elifbtn]] враг рядом — [[btn:attack]], [[elsebtn]] — [[btn:heal]] и [[btn:goToEnemy]]. Корона 👑 — если в башню не попадёт ни один динамит.",
     en: {
       name: "Assault: Challenge",
-      goal: "Challenge: the program is empty. Destroy the goblin watchtower: in a loop, “if dynamite is flying” — [[btn:parry]], “else if” an enemy is near — [[btn:attack]], “else” — [[btn:heal]]. Meanwhile hooded goblins are coming to burn your archer tower. Keep it standing — and the crown 👑 is yours.",
-      block: "Challenge: the program is empty. Destroy the goblin watchtower: “🔁 repeat”, in it “❓ if” dynamite is flying — [[btn:parry]], [[elifbtn]] an enemy is near — [[btn:attack]], [[elsebtn]] — [[btn:heal]]. Meanwhile hooded goblins are coming to burn your archer tower. Keep it standing — and the crown 👑 is yours.",
+      goal: "Challenge: the program is empty. Destroy the goblin watchtower and don’t let the bombers blow up your tower. Build the four jobs yourself: in a loop, “if dynamite is flying” — [[btn:parry]], “else if” an enemy is near — [[btn:attack]], “else” — [[btn:heal]] and [[btn:goToEnemy]]. The crown 👑 — if not a single stick of dynamite hits the tower.",
+      block: "Challenge: the program is empty. Destroy the goblin watchtower and don’t let the bombers blow up your tower. Build the four jobs yourself: “🔁 repeat”, in it “❓ if” dynamite is flying — [[btn:parry]], [[elifbtn]] an enemy is near — [[btn:attack]], [[elsebtn]] — [[btn:heal]] and [[btn:goToEnemy]]. The crown 👑 — if not a single stick of dynamite hits the tower.",
     },
     commands: ["attack", "parry", "heal", "goToEnemy"],
     ifs: ["tnt", "near"],
-    par: 3, good: 4,
-    crownPar: 4, crownGood: 5,
+    par: 4, good: 5,
+    crownPar: 4, crownGood: 5, crownBest: 3,   // программа на корону — три команды: 💎 сверх короны за неё не полагается
     map: ["S........", ".........", ".........", ".........", "........."],
     starter: { py: "", js: "" },
   },
@@ -311,7 +397,7 @@ levels: [
 // Карта острова. Руками не править: её целиком пишет tools/gen3.py из файла раскладки.
 // @@isle6@@
 ISLES[6].map = {
-  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [210, 390], [170, 390], [90, 350], [90, 270], [150, 250]],
+  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [210, 390], [170, 390], [90, 350], [90, 310], [90, 270], [130, 250], [170, 250], [210, 250]],
   rows: [
     "....................................",
     "....................................",

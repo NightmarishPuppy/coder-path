@@ -2298,6 +2298,8 @@ const DIRS = {
   // Арена: идти к ближайшему врагу и лечиться (рыцарь сам решает куда — команда без числа)
   goToEnemy: { dx: 0, dy: 0, arrow: "➤", axis: "g", py: "go_to_enemy" },
   heal:      { dx: 0, dy: 0, arrow: "♥", axis: "l", py: "heal" },
+  // Арена (v224): толкнуть бочку — гоблин в бочке летит обратно и взрывается среди своих
+  push:      { dx: 0, dy: 0, arrow: "🛢", axis: "a", py: "push" },
   // Ждать (v212): рыцарь стоит один такт (wait(2) — два), а часовые на поле в это время делают свой шаг.
   wait:      { dx: 0, dy: 0, arrow: "⏳", axis: "w", py: "wait" },
 };
@@ -2427,10 +2429,12 @@ for (const [d, ru] of [["Right", tr("справа")], ["Left", tr("слева")]
 CONDS.enemyNear = { what: "near", dx: 0, dy: 0, arrow: "◎", ru: tr("рядом"), py: "enemy_near" };
 // Арена (v218): «динамит летит» — в рыцаря летит динамит (его уже бросили и он ещё не упал)
 CONDS.dynamiteFlying = { what: "tnt", dx: 0, dy: 0, arrow: "🧨", ru: tr("летит"), py: "dynamite_flying" };
+// Арена (v224): «бочка рядом» — гоблин в бочке подбежал на расстояние толчка (дальше, чем удар: бочку надо успеть оттолкнуть)
+CONDS.barrelNear = { what: "barrel", dx: 0, dy: 0, arrow: "🛢", ru: tr("рядом"), py: "barrel_near" };
 const COND_NAMES = Object.keys(CONDS);
 const COND_ANY = [...COND_NAMES, ...COND_NAMES.map((c) => CONDS[c].py)].join("|");
 const condKey = (name) => COND_NAMES.find((c) => c === name || CONDS[c].py === name);
-const WHAT_RU = { wall: tr("препятствие"), enemy: tr("враг"), near: tr("враг рядом"), tnt: tr("динамит летит") };
+const WHAT_RU = { wall: tr("препятствие"), enemy: tr("враг"), near: tr("враг рядом"), tnt: tr("динамит летит"), barrel: tr("бочка рядом") };
 
 let lang = "py"; // "py" или "js"
 const disp = (name) => (lang === "py" ? DIRS[name].py : name); // как команда пишется в текущем языке
@@ -2508,7 +2512,7 @@ const EN_LEVELS = Object.fromEntries(LEVELS.map((l) => [l.name, l.en || {}]));
 // Номер строки (с 1) в коде игрока: k-я строка заголовка приёма («def»), «если» («if»), цикла («while») или с командой по имени.
 function codeLineOf(key, k = 1) {
   const src = codeEl?.value || L?.starter?.[lang] || "";
-  const re = key === "def" ? /^\s*(def|function)\s/ : key === "if" ? /^\s*if\b/ : key === "while" ? /^\s*while\b/
+  const re = key === "def" ? /^\s*(def|function)\s/ : key === "if" ? /^\s*if\b/ : key === "while" ? /^\s*while\b/ : key === "else" ? /^\s*(else\s*:|\}\s*else\s*\{)/
     : DIRS[key] ? new RegExp(`^\\s*(${key}|${DIRS[key].py})\\(`) : null;
   if (!re) return 0;
   const lines = src.split("\n");
@@ -2539,6 +2543,8 @@ function btnRefs(html) {
     // [[elsebtn]] — кнопка «＋ иначе» серой панели выбранной строки; [[elsehead]] — заголовок половины «иначе» в рамке
     .replace(/\[\[elsebtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("иначе")}</span>`)
     .replace(/\[\[elsehead\]\]/g, () => `<span class="elseref">${tr("иначе")}</span>`)
+    // [[swapbtn]] — кнопка «⇄» серой панели выбранной рамки «если»: сменить вопрос (v224)
+    .replace(/\[\[swapbtn\]\]/g, () => `<span class="elsebtnref">⇄</span>`)
     // [[elifbtn]] — кнопка «＋ другое если» серой панели; [[elifhead:moveRight:wall]] — заголовок половины «другое если»
     .replace(/\[\[elifbtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("другое если")}</span>`)
     .replace(/\[\[elifhead(?::(\w+):(\w+))?\]\]/g, (m, d, w) => `<span class="elifref">${tr("другое если")}${d ? ` <span class="ar">${DIRS[d].arrow}</span>${WHAT_RU[w]}` : ""}</span>`)
@@ -3110,7 +3116,7 @@ const SHIELD_HP = 3; // сердечек у щитоносца (H на поле)
 const BOMB_HP = 2;   // сердечек у подрывника (D на поле)
 const BOMB_REACH = [2, 3];   // подрывник бросает динамит, если рыцарь на одной линии с ним в 2–3 клетках
 // уровень с короной: на поле великан, щитоносец или подрывник; на арене — своя башня, которую надо уберечь (arena.keep, v223)
-const hasGiant = (lv) => (lv.arena ? !!lv.arena.keep : (lv.maps || [lv.map]).some((m) => m.some((row) => /[VHD]/.test(row))));
+const hasGiant = (lv) => (lv.arena ? !!lv.arena.keep?.crown : (lv.maps || [lv.map]).some((m) => m.some((row) => /[VHD]/.test(row))));
 let hero = { x: 0, y: 0 };
 let running = false;
 let showAll = false, loopViewBtn = null;   // кнопка 🔂/🔁 на поле
@@ -10996,6 +11002,7 @@ function stepTip(p) {
 // в ширину (x 3…15) и ряды 1,3…8, поэтому бойцы крупные.
 const ARENA = { map: 20, x0: 3, y0: 1.3, cols: 12, start: [9, 5.5], roadY: 5.5,
   reach: 1.0,                                   // «враг рядом» и удар — на столько клеток
+  push: 2.0,                                    // «бочка рядом» и толчок (v224) — вдвое дальше: бочка взрывается, едва добежит
   dmg: 1,                                       // удар рыцаря
   spawn: { l: [-0.3, 5.5], r: [18.3, 5.5] },
   // видимая часть поля по ширине: рыцарь и союзники за неё не уходят, гоблины бросают и стреляют только из неё
@@ -11007,7 +11014,8 @@ const ARENA_UNITS = {
   torchp: { side: "gob", hp: 3, dmg: 1, reach: 0.75, cd: 1.1, speed: 1.25 },
   tnt:    { side: "gob", hp: 2, dmg: 1, reach: 2.6, cd: 2.4, speed: 1.2 },
   barrel: { side: "gob", hp: 2, dmg: 2, reach: 0.6, cd: 0, speed: 1.7 },
-  burn:   { side: "gob", hp: 2, dmg: 1, reach: 0.75, cd: 1.5, speed: 1.3 },   // v223: поджигатель — идёт жечь нашу башню (arena.keep)
+  brute:  { side: "gob", hp: 60, dmg: 1, reach: 0.9, cd: 4.4, speed: 1.1, heavy: true },   // v224: здоровяк — крупный, бьёт редко, зарубить его не успеть
+  sap:    { side: "gob", hp: 2, dmg: 1, reach: 2.6, cd: 2.4, wind: 1.0, speed: 1.3 },   // v224: подрывник, который взрывает нашу башню (arena.keep)
   war:    { side: "us", hp: 6, dmg: 1, reach: 0.8, cd: 0.9, speed: 1.8, sight: 1.6 },
   lan:    { side: "us", hp: 6, dmg: 1, reach: 1.1, cd: 1.0, speed: 1.7, sight: 1.6 },
 };
@@ -11028,7 +11036,8 @@ const ARENA_ART = {
   torchp: { key: "torchp", idle: [0, 7, 120], run: [1, 6, 90], atk: [2, 6, 85] },
   tnt:    { key: "tnt", idle: [0, 6, 130], run: [1, 6, 90], throw: [2, 7, 90] },
   barrel: { key: "barrel", foot: 0.72, idle: [0, 1, 200], run: [4, 3, 160], fuse: [5, 3, 150] },
-  burn:   { key: "torchp", idle: [0, 7, 120], run: [1, 6, 90], atk: [2, 6, 85] },
+  brute:  { key: "torchp", sc: 1.25, idle: [0, 7, 150], run: [1, 6, 120], atk: [2, 6, 110] },
+  sap:    { key: "tnt", idle: [0, 6, 130], run: [1, 6, 90], throw: [2, 7, 90] },
   war:    { key: "kwar", idle: [0, 6, 140], run: [1, 6, 90], atk: [2, 6, 75] },
   lan:    { key: "lidle", sc: 0.8, foot: 0.625, idle: [0, 12, 110, "lidle"], run: [0, 6, 90, "lrun"], atk: [0, 3, 120, "lratk"] },
 };
@@ -11067,8 +11076,8 @@ function arenaPlan(code) {
   // v218: вышка гоблинов с жирным подрывником (A.fort). Он бросает жирный динамит в рыцаря; рыцарь отбивает его командой parry —
   // динамит летит обратно и рвётся на вышке. Прочность кончилась — вышка рушится (A.goal === "raze": это и есть победа).
   const fort = A.fort ? { x: A.fort.at[0], y: A.fort.at[1], hp: A.fort.hp, next: A.fort.first ?? 2.5, cd: A.fort.cd ?? 3.6 } : null;
-  // v223: своя башня с прочностью (A.keep, стоит на месте A.tower). Её жгут поджигатели (гоблины вида burn) и задевают
-  // взрывы рядом. Прочность кончилась — руины, лучника нет. На победу не влияет: устояла до конца — корона.
+  // v223: своя башня с прочностью (A.keep, стоит на месте A.tower). В неё кидают динамит подрывники вида sap (v224; в v223
+  // её жгли факелами, но башня каменная), задевают и другие взрывы рядом. Прочность кончилась — руины, лучника нет. На победу не влияет: устояла до конца — корона.
   const keep = A.keep && A.tower ? { x: A.tower[0], y: A.tower[1], hp: A.keep.hp } : null;
   const keepHit = (by) => {
     if (!keep || keep.hp <= 0) return;
@@ -11076,7 +11085,7 @@ function arenaPlan(code) {
     events.push({ t, kind: "keep", hp: keep.hp, by });
     if (keep.hp <= 0) events.push({ t, kind: "keepdown" });
   };
-  let keepHits = 0;
+  let keepHits = 0, keepEnd = 0, pushes = 0;
   const air = [];                               // динамит, который летит в рыцаря: { land — когда упадёт, tx, ty, fort / gob — кто бросил }
   let razedAt = null, endAt = 0, heroParries = 0;
   const fortHit = () => {
@@ -11135,6 +11144,7 @@ function arenaPlan(code) {
   };
   // взрывная волна дошла до бойца с силой s
   const fling = (u, cx, cy, s) => {
+    if (u.T?.heavy) return;                     // здоровяка взрывной волной не сдвинуть (v224)
     if (u.hp <= 0 || u.kind === "barrel" || s < ARENA_WAVE.weak || u.fly) return;
     let dx = u.x - cx, dy = u.y - cy; const d = Math.hypot(dx, dy);
     if (d < 0.05) { dx = u.left ? 1 : -1; dy = 0; } else { dx /= d; dy /= d; }
@@ -11171,31 +11181,37 @@ function arenaPlan(code) {
   };
   // гоблин: охотится за рыцарем, а если тот далеко — за ближайшим из наших;
   // факел бьёт, динамит бросает, бочка поджигает фитиль
-  // поджигатель (burn): идёт к нашей башне и жжёт её факелом, на копейщика не оглядывается. Сжёг — убегает тем же мостом
-  // (иначе исход обычного боя зависел бы от того, устояла ли башня). Нет башни с прочностью — обычный факельщик.
-  const burnThink = (f) => {
+  // подрывник у нашей башни (sap, v224): выходит на бросок, размахивается и кидает динамит в башню (она каменная — её не жгут,
+  // а взрывают); на копейщика не оглядывается. Сбить его надо до броска: брошенный в башню динамит копьём не отбить.
+  // Башня рухнула — убегает тем же мостом (иначе исход обычного боя зависел бы от того, устояла ли башня).
+  const sapThink = (f) => {
     if (keep.hp <= 0) {
       const [ex, ey] = ARENA.spawn[f.from || "l"];
       f.left = ex < f.x; f.act = stepTo(f, ex, ey, f.T.speed * 1.3) ? "run" : "idle";
       if (Math.abs(f.x - ex) < 0.5) { f.hp = 0; events.push({ t, kind: "leave", id: f.id }); }
       return;
     }
-    const sx = keep.x + (f.id % 2 ? -0.88 : 0.88), sy = keep.y + 0.14 + (f.id % 3) * 0.08;
-    if (Math.hypot(f.x - sx, f.y - sy) > 0.4) { f.act = stepTo(f, sx, sy, f.T.speed) ? "run" : "idle"; return; }
+    if (Math.hypot(f.x - keep.x, f.y - keep.y) > f.T.reach || !inView(f)) { f.act = stepTo(f, keep.x, keep.y + 1.2, f.T.speed) ? "run" : "idle"; f.came = 0; return; }
     f.left = keep.x < f.x;
+    if (!f.came) { f.came = 1; f.next = Math.max(f.next, t + f.T.wind); }      // встал — примеривается перед первым броском
     if (t < f.next) { f.act = "idle"; return; }
-    f.next = t + f.T.cd; f.act = "atk"; f.busy = t + 0.5;
-    pend.push({ t: t + 0.3, fn: () => { if (f.hp > 0 && !f.fly && !(f.downTill > t)) keepHit("torch"); } });
+    f.next = t + f.T.cd; f.act = "throw"; f.busy = t + 0.63;
+    pend.push({ t: t + 0.38, fn: () => {
+      if (f.hp <= 0 || f.fly || f.downTill > t || keep.hp <= 0) return;        // сбили до броска — динамит не полетел
+      const tx = keep.x + (rnd() - 0.5) * 0.3, ty = keep.y - 0.25;
+      events.push({ t, kind: "throw", from: [f.x + (f.left ? -0.3 : 0.3), f.y - 1.0], to: [tx, ty], dur: 0.6 });
+      pend.push({ t: t + 0.6, fn: () => blast(tx, ty, 0.5, 1, ARENA_WAVE.dyn) });
+    } });
   };
   const gobThink = (f) => {
-    if (f.kind === "burn" && keep) return burnThink(f);
+    if (f.kind === "sap" && keep) return sapThink(f);
     const tg = dist(f, hero) <= 5 ? hero : nearestOf(f, "us");
     if (!tg) { f.act = "idle"; return; }
     const d = dist(f, tg);
     if (f.kind === "barrel") {
       if (d > f.T.reach) { f.act = stepTo(f, tg.x, tg.y, f.T.speed) ? "run" : "idle"; return; }
       f.act = "fuse"; f.busy = t + 99;
-      pend.push({ t: t + 0.45, fn: () => { if (f.hp > 0) blowBarrel(f); } });
+      pend.push({ t: t + 0.45, fn: () => { if (f.hp > 0 && !f.kicked) blowBarrel(f); } });
       return;
     }
     // метатель сначала выходит на видимую часть поля, потом бросает
@@ -11312,6 +11328,7 @@ function arenaPlan(code) {
       }
       if (t >= nextFrame - 1e-9) { snap(); nextFrame += 0.1; }
       if (hero.hp <= 0 || t >= A.secs || (endAt && t >= endAt)) throw STOPA;
+      if (keep && A.keep.must && keep.hp <= 0) { if (!keepEnd) keepEnd = t + 1.2; else if (t >= keepEnd) throw STOPA; }   // башню надо было уберечь — бой проигран
     }
   };
   // команды рыцаря
@@ -11326,6 +11343,28 @@ function arenaPlan(code) {
     if (f && f.hp > 0 && dist(f, hero) <= ARENA.reach + 0.3) { hits++; hurt(f, ARENA.dmg, hero); }
     live(0.25);
     if (!f) live(A.whiff ?? ARENA_MISS.whiff);               // удар мимо: рыцарь проваливается за мечом и не сразу встаёт в стойку
+    hero.act = "idle";
+  };
+  // толкнуть бочку (v224): гоблин в бочке летит прочь от копейщика и взрывается там, куда упал, — среди тех, кто бежал следом
+  const barrelBy = () => gobs().filter((f) => f.kind === "barrel" && !f.fly && !f.blown && dist(f, hero) <= ARENA.push).sort((a, b) => dist(a, hero) - dist(b, hero))[0];
+  const barrelNear = (ln) => { line = ln; stand(); live(0.05); return !!barrelBy(); };
+  const push = (ln) => {
+    line = ln; stand(); swings++;
+    const b = barrelBy();
+    hero.act = "atk"; if (b) hero.left = b.x < hero.x;
+    events.push({ t, kind: "swing", hit: !!b, push: true });
+    live(0.2);
+    if (b && b.hp > 0 && !b.blown && !b.fly) {
+      pushes++;
+      let dx = b.x - hero.x, dy = b.y - hero.y; const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
+      const len = 3.2, dur = 0.55;
+      b.kicked = true; b.fly = { x0: b.x, y0: b.y, x1: b.x + dx * len, y1: b.y + dy * len, t0: t, t1: t + dur, wet: false };
+      b.busy = t + 99; b.downTill = t + 99; b.act = "fly";
+      events.push({ t, kind: "fling", id: b.id, far: true, dur, turns: 1, dir: dx < 0 ? -1 : 1 });
+      pend.push({ t: t + dur, fn: () => blowBarrel(b) });
+    }
+    live(0.3);
+    if (!b) live(A.whiff ?? ARENA_MISS.whiff);                // толчок в пустоту — как удар мимо
     hero.act = "idle";
   };
   const heal = (ln) => {
@@ -11371,7 +11410,7 @@ function arenaPlan(code) {
     pend.push({ t: t + 0.6, fn: () => (d.fort ? fortHit() : blast(bx, by, ARENA_BLAST.dyn.r, 1, ARENA_WAVE.dyn)) });
     live(0.3); hero.act = "idle";
   };
-  const fns = { attack, heal, goToEnemy, parry };
+  const fns = { attack, heal, goToEnemy, parry, push };
   try {
     checkDefs(code, lang);
     const js = lang === "py" ? pyToJs(code) : code;
@@ -11379,7 +11418,7 @@ function arenaPlan(code) {
     const __loop = (ln) => { if (++loops > 20000) throw pyError(ln, "Цикл крутится, а время не идёт"); };
     const program = new Function("__loop", ...names, ...conds.map(condDisp), instrument(js));
     snap();
-    program(__loop, ...L.commands.map((c) => (ln) => fns[c](ln)), ...conds.map((c) => (c === "dynamiteFlying" ? dynamiteFlying : enemyNear)));
+    program(__loop, ...L.commands.map((c) => (ln) => fns[c](ln)), ...conds.map((c) => ({ dynamiteFlying, barrelNear })[c] || enemyNear));
     endedAt = t; line = 0;
     live(A.secs - t + 0.05);                    // программа кончилась — рыцарь стоит, гоблины не ждут
   } catch (e) {
@@ -11387,10 +11426,13 @@ function arenaPlan(code) {
   }
   snap();
   events.sort((a, b) => a.t - b.t);             // бросок записан наперёд — события по времени
-  const survived = hero.hp > 0 && (A.goal !== "raze" || razedAt !== null);
+  const keepLost = !!keep && !!A.keep.must && keep.hp <= 0;       // уровень, где свою башню надо уберечь (v224)
+  const survived = hero.hp > 0 && (A.goal !== "raze" || razedAt !== null) && !keepLost;
   const lost = units.filter((u) => u.side === "us" && !u.hero && u.hp <= 0).length;
   return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp, lost, healsFailed, flung, parried, heroParries, razed: razedAt !== null, fortHp: fort?.hp,
-    keepHp: keep?.hp, keepHits, crown: !!keep && survived && keep.hp > 0 };
+    keepHp: keep?.hp, keepHits, keepLost, pushes,
+    // корона (arena.keep.crown): башня устояла; clean — в неё не попал ни один динамит
+    crown: !!keep && !!A.keep.crown && survived && (A.keep.crown === "clean" ? keepHits === 0 : keep.hp > 0) };
 }
 
 // Поле арены: карта островка + слой бойцов + таймер и сердечки
@@ -11690,15 +11732,16 @@ async function runArena() {
   }
   drawCode(0);
   if (p.survived) {
-    setStatus(A.keep ? (p.crown ? tr("Победа! Вышка разрушена, а своя башня устояла — отбито динамита: {n}", { n: p.heroParries })
-        : tr("Победа! Вышка разрушена — отбито динамита: {n}. Только свою башню гоблины сожгли", { n: p.heroParries }))
+    setStatus(A.keep ? (!p.keepHits ? tr("Победа! Вышка разрушена, а своя башня цела и невредима — отбито динамита: {n}", { n: p.heroParries })
+        : p.keepHp > 0 ? tr("Победа! Вышка разрушена, своя башня устояла — отбито динамита: {n}", { n: p.heroParries })
+        : tr("Победа! Вышка разрушена — отбито динамита: {n}. Только свою башню гоблины взорвали", { n: p.heroParries }))
       : A.goal === "raze" ? tr("Победа! Вышка разрушена — отбито динамита: {n}", { n: p.heroParries })
       : tr("Победа! Рыцарь продержался {n} секунд — побеждено гоблинов: {k}", { n: A.secs, k: p.kills }), "win");
     sfx("win");
     finish();
     return win();
   }
-  if (A.goal === "raze" && p.hp > 0) {             // время вышло, а вышка стоит
+  if (A.goal === "raze" && p.hp > 0 && !p.keepLost) {   // время вышло, а вышка стоит
     setStatus(tr("Время вышло, а вышка стоит: осталось прочности {n}. Отбивай каждый динамит обратно — «если динамит летит», то копьё", { n: p.fortHp }), "fail");
     finish();
     return;
@@ -11711,6 +11754,10 @@ async function runArena() {
   let why;
   if (p.endedAt !== null && p.endedAt < A.secs - 0.5)
     why = tr("Программа кончилась на {n}-й секунде, и дальше рыцарь просто стоял. Положи команды в цикл 🔁 — он крутится весь бой", { n: Math.max(1, Math.round(p.endedAt)) });
+  else if (p.keepLost)                            // v224: свою башню надо было уберечь
+    why = tr("Башня рухнула: подрывники закидали её динамитом, а копейщик к ним так и не подошёл. Когда рядом никого — иди к врагу: ➤");
+  else if (L.commands.includes("push") && !p.pushes)   // v224: бочки рвались у ног, а толчка не было
+    why = tr("Бочки взрываются у самых ног копейщика. Спроси про бочку раньше, чем про врага рядом, — и толкни её: 🛢");
   else if (A.goal === "raze")                     // v222: копейщик у вышки — свои слова (он не «держится», а рушит вышку)
     why = L.commands.includes("heal") && !p.heals ? tr("Копейщик ни разу не полечился. Когда динамит не летит и врага рядом нет — самое время лечиться: ♥")
       : p.healsFailed >= 2 ? tr("Лечение срывалось {n} раз: если копейщика бьют, пока он лечится, ♥ не прибавляется. Лечись, когда рядом никого и динамит не летит, — в «иначе»", { n: p.healsFailed })
@@ -11780,7 +11827,7 @@ function win() {
   const written = countWrittenCommands(codeEl.value);
   // корона: на уровне был великан, и рыцарь его победил
   const giants = enemies.filter((e) => e.boss), bossShield = giants.some((e) => e.shield), bossBomb = giants.some((e) => e.bomb);
-  const keepCrown = !!L.arena?.keep;             // арена со своей башней (v223): корона — вышка разрушена, а башня устояла
+  const keepCrown = !!L.arena?.keep?.crown;             // арена со своей башней (v223): корона — вышка разрушена, а башня устояла
   const crown = keepCrown ? !!plan?.crown : giants.length > 0 && !!plan?.hpLeft && giants.every((e) => (plan.hpLeft.get(enemyKey(e.x, e.y)) || 0) <= 0);
   // путь с победой над великаном длиннее — для него свои пороги звёзд (crownPar / crownGood)
   const par = crown && L.crownPar ? L.crownPar : L.par, good = crown && L.crownGood ? L.crownGood : L.good;
@@ -11810,8 +11857,8 @@ function win() {
     : " Получилось! Для ★★★ здесь нужен цикл «повторять» — попробуй с ним.");
   else if (gem) note += newGem ? tr(" Короче, чем у разработчика (у него {n})! Это 💎.", { n: best }) : tr(" Снова короче разработчика — 💎.");
   else note += stars < 3 ? tr(" Для ★★★ нужно не больше {n}.", { n: par }) : tr(L.gem && !crown ? " Идеально — как у разработчика! Найдёшь короче — получишь 💎." : " Идеально!");
-  if (crown && keepCrown) note += newCrown ? tr(" Своя башня устояла — у тебя корона!") : tr(" Башня снова устояла.");
-  else if (keepCrown && !save.crowns?.[L.name]) note += tr(" Говорят, можно разрушить вышку и сберечь свою башню. Кто сумеет — получит корону.");
+  if (crown && keepCrown) note += newCrown ? tr(" В башню не попал ни один динамит — у тебя корона!") : tr(" Башня снова цела и невредима.");
+  else if (keepCrown && !save.crowns?.[L.name]) note += tr(" Говорят, башню можно уберечь так, что в неё не попадёт ни один динамит. Кто сумеет — получит корону.");
   else if (crown) note += bossBomb ? (newCrown ? tr(" Ты победил подрывника — у тебя корона!") : tr(" Подрывник снова повержен."))
     : bossShield ? (newCrown ? tr(" Ты победил щитоносца — у тебя корона!") : tr(" Щитоносец снова повержен."))
     : newCrown ? tr(" Ты победил великана — у тебя корона!") : tr(" Великан снова повержен.");
@@ -12510,8 +12557,8 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ===== 17. Прочитать задание вслух =====
-const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear", wait: "wait" }
-  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё", wait: "ждать" };
+const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear", wait: "wait", push: "push" }
+  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё", wait: "ждать", push: "толкни" };
 function speakGoal() {
   try {
     let t = $("title").textContent + ". " + $("goal").textContent;
@@ -13862,10 +13909,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 223;
+const APP_VERSION = 224;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 224, date: "2026-11-20", text: "Глава «Штурм» выросла до шести уровней: «Что первым?» (найди ошибку), «Своя башня» — подрывники взрывают твою башню, «Толкни бочку» — новая команда 🛢. Испытание стало труднее, а корона — только за башню, в которую не попал ни один динамит.", en: "The “Assault” chapter has grown to six levels: “What Comes First?” (find the bug), “Your Own Tower” — bombers blow up your tower, “Push the Barrel” — a new command 🛢. The challenge is tougher, and the crown is only for a tower not hit by a single stick of dynamite.", big: true },
   { v: 223, date: "2026-11-20", text: "Глава «Штурм» закончена: появилось «Штурм: испытание» с первой короной Острова гоблинов. Разрушь вышку гоблинов — и сбереги свою башню от поджигателей.", en: "The “Assault” chapter is complete: “Assault: Challenge” brings Goblin Island’s first crown. Bring down the goblin watchtower — and save your own tower from the arsonists.", big: true },
   { v: 222, date: "2026-11-20", text: "На Острове гоблинов новая глава «Штурм»: «Вышка» теперь в ней, и появился уровень «Три дела» — копьё, удар и лечение в одной рамке. Кнопка «＋ иначе» теперь есть у любой половины рамки «если».", en: "A new chapter on Goblin Island — “Assault”: “The Watchtower” moved there, plus a new level, “Three Jobs” — spear, hit and heal in one frame. The “＋ else” button is now available on any part of an “if” frame." },
   { v: 221, date: "2026-11-20", text: "У моста на первом острове третья башня. Башни теперь рушатся от взрывов, а жители с молотками их чинят", en: "A third tower by the bridge on the first island. Towers now collapse from explosions, and villagers with hammers repair them" },
