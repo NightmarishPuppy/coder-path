@@ -4866,6 +4866,22 @@ function charSheet(k, [h0, h1]) {
   im.src = TS["sk_" + k];
   return null;
 }
+// ----- глубина воды (v234) -----
+// Чем дальше от суши, тем глубже: первая клетка — по щиколотку, вторая — по колено, третья — по пояс, четвёртая — по шею.
+// wadeFrac(d) — какая доля роста под водой на расстоянии d клеток от суши; wadeInset обрезает картинку бойца снизу на эту долю.
+// Потушить огонь можно, только зайдя по пояс (WADE_WAIST).
+const WADE_PTS = [[0, 0], [0.5, 0.06], [1.5, 0.13], [2.5, 0.24], [3.5, 0.5], [4.5, 0.58]], WADE_WAIST = 2.25;   // доли — под большеголовые фигурки набора
+function wadeFrac(d) {
+  if (d <= 0) return 0;
+  for (let i = 1; i < WADE_PTS.length; i++) if (d <= WADE_PTS[i][0]) { const [x0, y0] = WADE_PTS[i - 1], [x1, y1] = WADE_PTS[i]; return y0 + (y1 - y0) * (d - x0) / (x1 - x0); }
+  return 0.58;
+}
+function wadeInset(a, d) {
+  let v = "";
+  if (d > 0) { const foot = -parseFloat(a.el.style.getPropertyValue("--foot")) / 100; v = `inset(0 0 ${((1 - foot + 78 / SK[a.key][2] * wadeFrac(d)) * 100).toFixed(1)}% 0)`; }
+  a.el.style.clipPath = a.el.style.webkitClipPath = v;
+}
+
 // ----- огоньки на горящем (v231) -----
 // Горит не «голова вообще», а то, что может гореть: перо рыцаря, волосы и ряса монаха, капюшон и балахон гоблина, рубаха
 // копейщика (шлем железный — на голове у него огня нет). Места — в точках картинки бойца: [x, y, размер, наклон в градусах].
@@ -5575,7 +5591,7 @@ async function battle(st0, B) {
     u.lie?.cancel(); u.lie = null;                    // вернулся в строй — уже не лежит
     if (u.fire) { fireSpotsOff(u.fire.fls); u.fire = null; }   // и не горит, и не в копоти (v226)
     if (u.burnt) { u.burnt = false; u.a.char = null; u.a.sheet(u.a.key); }
-    u.wetTill = 0; u.wade = null; u.a.el.style.clipPath = u.a.el.style.webkitClipPath = "";
+    u.wetTill = 0; u.wade = null; u.soak = null; u.a.el.style.clipPath = u.a.el.style.webkitClipPath = "";
     u.a.el.style.transition = "none"; u.a.at(u.x, u.y); Z(u.a, u.y, 1);
     void u.a.el.offsetWidth;
     u.a.show(true);
@@ -5634,6 +5650,7 @@ async function battle(st0, B) {
     if (u.kind === "barrel") { u.a.show(false); boom(u.x, u.y); fxAt(bigBooms, u.x, u.y, 75); blast(u.x, u.y, 1.15, u.T.dmg, 2.0, 2.6); return; }
     if (!fly) { u.lie?.cancel(); u.lie = null; u.a.show(false); skull(u.x, u.y, u); }
     if (u.post) after(8000, () => {                      // подкрепление
+      if (!u.post) return;                               // бойца за это время сняли с поста — возвращать некуда
       Object.assign(u, { x: B.respawn[0], y: B.respawn[1], hp: u.T.hp, dead: false, air: false, busy: 0, anim: "", tgt: null, via: B.via ? [...B.via] : [] });
       place(u);
     });
@@ -5657,7 +5674,7 @@ async function battle(st0, B) {
   // Через FIRE.burn огонь гаснет сам, одежда остаётся обугленной (лист перекрашивает charSheet) — до самой гибели бойца.
   // Вода тушит мигом: кого взрывом бросило в воду у самого берега, не тонет — встаёт по пояс в воде, потухший, и выходит на берег.
   // Каменная башня загорается очень редко и только сверху (деревянная обшивка): погорит и потеряет одну прочность.
-  const FIRE = B.fire ? { burn: 4500, tick: 1300, wet: 7000, tower: 0.035,
+  const FIRE = B.fire ? { burn: 4500, tick: 1000, wet: 7000, tower: 0.035,
     chance: { monk: 0.7, war: 0.2, lan: 0.2, hero: 0.15, torch: 0.3, torchp: 0.3 },
     hue: { monk: [150, 262], war: [150, 262], lan: [198, 262], hero: [150, 262], torch: [335, 12], torchp: [255, 330] },
     sheets: { monk: ["monk", "monkrun", "heal"], war: ["kwar"], lan: ["lidle", "lrun", "lratk", "ldratk", "luratk", "ldatk", "luatk"], hero: ["hidle", "hrun", "hatk"], torch: ["torch"], torchp: ["torchp"] } } : null;
@@ -5676,7 +5693,7 @@ async function battle(st0, B) {
   };
   // v228: само пламя — часть фигурки (вложено в её картинку), а не отдельная картинка рядом. Поэтому оно идёт, летит, вертится,
   // ложится на бок и отражается вместе с бойцом и никуда с головы не съезжает. firePos выше нужен только дыму и искрам.
-  const fireStat = { lit: 0, doused: 0, waded: 0, towers: 0, blown: 0 };
+  const fireStat = { lit: 0, doused: 0, waded: 0, towers: 0, blown: 0, soaked: 0 };
   const setChar = (v) => { if (v.burnt || !FIRE.hue[v.kind]) return; v.burnt = true; v.a.char = FIRE.hue[v.kind]; v.a.sheet(v.a.key); };
   const ignite = (v) => {
     if (!FIRE || v.dead || v.fire || now < (v.wetTill || 0)) return false;
@@ -5703,6 +5720,12 @@ async function battle(st0, B) {
       if (v.dead) { v.fire = null; fireSpotsOff(F.fls); continue; }
       const ax = v.air ? v.a.x : v.x, ay = v.air ? v.a.y : v.y, [fx, fy] = firePos(v);   // в полёте огонь летит вместе с бойцом
       if (now >= F.char) setChar(v);
+      // бежит тушиться (v234): ищет воду по пояс; сбило взрывом — встанет и побежит снова; воды рядом нет — огонь догорит сам
+      if (!v.soak && !v.wade && !v.air && !v.lie && !v.T.thrower && !v.noSoak && now >= (F.seek || 0)) {
+        F.seek = now + 1000;
+        const K = soakSpot(v);
+        if (K) { v.soak = { ...K, ph: "to" }; F.till = Infinity; v.busy = Infinity; v.tgt = null; } else if (F.till === Infinity) F.till = now + 2500;
+      }
       if (now >= F.puff) { F.puff = now + fireSmokeGap(); puffAt(fx + (Math.random() - 0.5) * 0.2, fy - 0.3 * ZM, 0.24, 0.45, 0.8, 900); if (Math.random() < 0.4) fxAt(flaresA, fx + (Math.random() - 0.5) * 0.3, fy - 0.1 * ZM, 60, ay + 5); }
       if (v.air) continue;
       if (now >= F.tick) {
@@ -5735,26 +5758,78 @@ async function battle(st0, B) {
   };
   // упал в воду у берега: всплеск, стоит по пояс (потухший, если горел), потом выбирается на берег — и снова в бой.
   // Пока он в воде, v.wade ведёт его по тактам (wadeTick): сам он не думает, а вырез картинки «по пояс» мельчает к берегу.
-  const wadeClip = (v, p) => (v.a.el.style.clipPath = v.a.el.style.webkitClipPath = p == null ? "" : `inset(0 0 ${Math.round(p)}% 0)`);
+  // глубина в точке: расстояние до ближайшей суши (мост — не суша), клеток; 0 — не вода
+  const depthAt = (x, y) => {
+    if (!B.water?.(x, y) || walk(x, y)) return 0;
+    for (let r = 0.25; r <= 4.5; r += 0.25) for (let k = 0; k < 12; k++) { const q = k * Math.PI / 6, px = x + Math.cos(q) * r; if (px > 0 && px < 18 && !B.water(px, y + Math.sin(q) * r)) return r; }   // за краем карты — море
+    return 5;
+  };
+  // v234: где воды не выше шеи, упавший встаёт на дно и выходит к ближайшей суше (мост и вода рядом с ним — не в счёт: там глубоко)
+  const landBy = (x, y) => {
+    for (let r = 0.5; r <= 4.25; r += 0.25) for (let k = 0; k < 16; k++) { const q = k * Math.PI / 8, px = x + Math.cos(q) * r, py = y + Math.sin(q) * r; if (walk(px, py) && (!B.inside || B.inside(px, py)) && (!B.water(px, py) || depthAt(px, py) === 0 && soakIn(px, py))) return [px, py]; }
+    return null;
+  };
   const wade = (v, x, y, [sx, sy]) => {
-    const foot = v.T.foot ?? 0.67, cut = (1 - foot + 78 / SK[v.a.key][2] * 0.42) * 100;
     getUp(v); v.x = x; v.y = y; v.busy = Infinity; fireStat.waded++;
     v.a.el.style.transition = "none"; v.a.at(x, y); Z(v.a, y, 1);
     douse(v, true); v.wetTill = now + FIRE.wet + 3000;
     fxAt(splashes, x, y, 70, y + 1); mapSfx(st, "splash", x, y);
-    v.wade = { sx, sy, go: now + 900, cut, feet: (1 - foot) * 100 - 4, d0: Math.hypot(sx - x, sy - y) || 0.1, puff: 0 };
-    wadeClip(v, cut); v.anim = ""; anim(v, "idle");
+    v.wade = { sx, sy, go: now + 900, puff: 0 };
+    wadeInset(v.a, Math.max(0.5, depthAt(x, y))); v.anim = ""; anim(v, "idle");
   };
   const wadeTick = () => {
     for (const v of units) {
       const Wd = v.wade; if (!Wd) continue;
-      if (v.dead || v.air) { v.wade = null; wadeClip(v); continue; }
+      if (v.dead || v.air) { v.wade = null; wadeInset(v.a, 0); continue; }
       if (now < Wd.go) continue;
       const d = Math.hypot(Wd.sx - v.x, Wd.sy - v.y), step = v.T.speed * 0.45 * TICK / 1000;
-      if (d <= step) { v.x = Wd.sx; v.y = Wd.sy; v.wade = null; wadeClip(v); v.busy = now + 250; v.anim = ""; continue; }
+      if (d <= step) { v.x = Wd.sx; v.y = Wd.sy; v.wade = null; wadeInset(v.a, 0); v.busy = now + 250; v.anim = ""; continue; }
       v.left = Wd.sx < v.x; v.x += (Wd.sx - v.x) / d * step; v.y += (Wd.sy - v.y) / d * step; anim(v, "run");
-      wadeClip(v, Wd.feet + (Wd.cut - Wd.feet) * Math.min(1, d / Wd.d0));
+      wadeInset(v.a, depthAt(v.x, v.y));
       if (now >= Wd.puff) { Wd.puff = now + 350; puffAt(v.x, v.y - 0.05, 0.4, 0, 0.15, 450); }
+    }
+  };
+  // v234: загорелся — сам бежит тушиться. Ищет ближайшее место, где воды по пояс (третья клетка от суши), идёт туда по прямой:
+  // по суше бегом, в воде медленнее и всё глубже; дошёл — огонь гаснет (пар), постоял и возвращается тем же путём.
+  // С моста в воду не сходят (там глубоко), через деревья и скалы не идут. Нет такого места — огонь догорит сам.
+  const soakIn = B.soak || B.inside || (() => true);
+  const soakSpot = (v) => {
+    let best = null, bc = Infinity;
+    for (let sx = v.x - 5; sx <= v.x + 5; sx += 0.5) for (let sy = v.y - 5; sy <= v.y + 5; sy += 0.5) {
+      if (!walk(sx, sy) || B.water(sx, sy) || !soakIn(sx, sy)) continue;            // место входа — настоящая суша у воды
+      const dS = Math.hypot(sx - v.x, sy - v.y); if (dS + 2 >= bc) continue;
+      let clear = true; for (let t = 0.3; t < dS && clear; t += 0.3) clear = walk(v.x + (sx - v.x) * t / dS, v.y + (sy - v.y) * t / dS);   // до входа — по прямой
+      if (!clear) continue;
+      for (let k = 0; k < 16; k++) {
+        const cx = Math.cos(k * Math.PI / 8), cy = Math.sin(k * Math.PI / 8); let t = 0.2, ok = true;
+        while (t <= 0.8 && walk(sx + cx * t, sy + cy * t)) t += 0.2;
+        if (t > 0.8) continue;
+        for (; t <= 4.5 && ok; t += 0.25) { const px = sx + cx * t, py = sy + cy * t; ok = B.water(px, py) && !walk(px, py) && soakIn(px, py);
+          if (ok && t >= 1.5 && depthAt(px, py) >= WADE_WAIST) { if (dS + t < bc) { bc = dS + t; best = { sx, sy, wx: px, wy: py }; } break; } }
+      }
+    }
+    return best;
+  };
+  const soakTick = () => {
+    for (const v of units) {
+      const K = v.soak; if (!K) continue;
+      if (v.dead) { v.soak = null; continue; }
+      if (v.air || v.lie) { if (v.air) { v.soak = null; } continue; }          // сбило с ног — встанет и пойдёт дальше; унесло — уже не до воды
+      if (K.ph === "stand") { if (now >= K.till) K.ph = "out"; continue; }
+      if (K.ph === "to" && Math.hypot(K.sx - v.x, K.sy - v.y) < 0.15) K.ph = "in";
+      const [gx, gy] = K.ph === "in" ? [K.wx, K.wy] : [K.sx, K.sy], d = Math.hypot(gx - v.x, gy - v.y), dp = depthAt(v.x, v.y);
+      const step = v.T.speed * (dp > 0 ? 0.6 : 1.25) * TICK / 1000;
+      if (dp > 0 && !K.wet) { K.wet = true; fxAt(splashes, v.x, v.y, 60, v.y + 1); mapSfx(st, "splash", v.x, v.y); }
+      if (d <= step) {
+        v.x = gx; v.y = gy;
+        if (K.ph === "to") { K.ph = "in"; continue; }
+        if (K.ph === "in") { K.ph = "stand"; K.till = now + 500; fireStat.soaked++; douse(v, true); v.wetTill = now + FIRE.wet + 3000; anim(v, "idle"); wadeInset(v.a, depthAt(gx, gy)); }
+        else { v.soak = null; wadeInset(v.a, 0); v.busy = now + 200; v.anim = ""; }
+        continue;
+      }
+      v.left = gx < v.x; v.x += (gx - v.x) / d * step; v.y += (gy - v.y) / d * step; anim(v, "run");
+      wadeInset(v.a, depthAt(v.x, v.y));
+      if (dp > 0 && now >= (K.puff || 0)) { K.puff = now + 350; puffAt(v.x, v.y - 0.05, 0.4, 0, 0.15, 450); }
     }
   };
   // Боец отлетает от взрыва в точке (x, y). s — сила, с которой волна до него дошла:
@@ -5763,11 +5838,12 @@ async function battle(st0, B) {
   //   за край карты или (опыт FLY_AT_CAMERA) «на зрителя» — прямо или под углом, в любую сторону.
   // Упал в воду — погиб (всплеск). Погибший летит телом, череп — там, где упал. Скорость вращения — flySpin: случайная, по размеру.
   const fling = (v, x, y, s) => {
+    if (v.noFling) return;                             // для тестов: бойца не сносит взрывом
     let dx = v.x - x, dy = v.y - y; const d0 = Math.hypot(dx, dy);
     if (d0 < 0.05) { const q = Math.random() * 6.28; dx = Math.cos(q); dy = Math.sin(q); } else { dx /= d0; dy /= d0; }
     const a = v.a, dir = dx < 0 ? -1 : 1, size = v.T.sc / 0.85;
     getUp(v);
-    if (v.wade) { v.wade = null; v.a.el.style.clipPath = v.a.el.style.webkitClipPath = ""; }      // стоял по пояс в воде — и снова взрыв
+    if (v.wade || v.soak) { v.wade = null; v.soak = null; wadeInset(v.a, 0); }      // стоял в воде — и снова взрыв
     v.air = true; v.busy = Infinity; v.tgt = null;
     a.el.style.transition = "none"; Z(a, v.y + 6);
     if (s >= 1.7) {
@@ -5796,7 +5872,7 @@ async function battle(st0, B) {
       v.air = false;
       // в воде у самого берега не тонет (v226): выбирается. Упал на кромку, где и так можно стоять, — просто лежит и встаёт.
       // С моста и рядом с мостом — тонет: мост не берег (v227).
-      if (!v.dead && wet()) { const sh = FIRE && (!B.inside || B.inside(lx, ly)) && shoreBy(lx, ly); if (!sh) kill(v, true); else if (!walk(lx, ly)) return wade(v, lx, ly, sh); else if (v.fire) douse(v, true); }
+      if (!v.dead && wet()) { const sh = FIRE && (!B.inside || B.inside(lx, ly)) && (shoreBy(lx, ly) || (depthAt(lx, ly) <= 3.5 && landBy(lx, ly))); if (!sh) kill(v, true); else if (!walk(lx, ly)) return wade(v, lx, ly, sh); else if (v.fire) douse(v, true); }
       if (!v.dead) {                                   // лежит секунду-две, потом встаёт
         v.x = lx; v.y = ly; v.anim = ""; anim(v, "idle");
         const down = 1000 + Math.random() * 1000; v.busy = now + down;
@@ -6124,7 +6200,7 @@ async function battle(st0, B) {
     H.stands.forEach((stand) => { const p = A("prungold", 0.8), n = A("gnug", 0.8, 0.585); Z(p, stand[1]); skRun(() => haul(p, n, stand)); });
   } else if (mount) skRun(async () => { for (;;) { await skWait(st0, skRnd(2500, 5000)); await mount.play(0, 12, 70, false); mount.frame(0, 0); } });
 
-  B.api = { blast, make, throwTnt, met, ignite, towerFireAt: (i) => towerFire(archers[i]), fling, shoreBy, fire: fireStat, burning: () => units.filter((v) => v.fire && !v.dead).length, forts: () => archers.map((q) => ({ hp: q.hp, dead: !!q.dead })), pawns: () => pawns.length };                  // для тестов: устроить взрыв или поставить бойца самому
+  B.api = { blast, make, throwTnt, met, ignite, towerFireAt: (i) => towerFire(archers[i]), fling, shoreBy, soakSpot, depthAt, landBy, fire: fireStat, burning: () => units.filter((v) => v.fire && !v.dead).length, forts: () => archers.map((q) => ({ hp: q.hp, dead: !!q.dead })), pawns: () => pawns.length };                  // для тестов: устроить взрыв или поставить бойца самому
   // ----- волны гоблинов: приходят из облаков по мосту -----
   const W = B.waves;
   let queue = [], nextWave = now + (W.first ?? 2500);
@@ -6153,7 +6229,7 @@ async function battle(st0, B) {
     for (let i = later.length - 1; i >= 0; i--) if (later[i][0] <= now) { const fn = later[i][1]; later.splice(i, 1); fn(); }
     units.forEach(think);
     archers.forEach(archerThink);
-    if (FIRE) { fireTick(); wadeTick(); }
+    if (FIRE) { fireTick(); wadeTick(); soakTick(); }
     // не стоять друг в друге
     const live = units.filter((v) => !v.dead && !v.air);
     for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
@@ -6218,7 +6294,7 @@ async function skitBeach(st0, S) {
   } };
   // fire — огонь, обугливание и вода у берега (v226); inside — где можно стоять по пояс в воде: не за краем карты (на телефоне
   // не видно) и не у моста (v227: фигурка по пояс торчала прямо из досок) — там, как и раньше, тонут
-  const B = { walk, zoom: S.zoom, towers: S.towers, forts: true, fire: true, inside: (x, y) => x > 0.6 && x < 17.7 && !(y > 49.6 && Math.abs(x - S.bridgeX) < 1.3), pawns: S.pawns, respawn: S.respawn, spawns: [S.spawn], goal: S.goal, posts: S.posts,
+  const B = { walk, zoom: S.zoom, towers: S.towers, forts: true, fire: true, soak: (x, y) => x > 0.4 && x < 17.6 && !(y > 49.6 && Math.abs(x - S.bridgeX) < 0.95), inside: (x, y) => x > 0.6 && x < 17.7 && !(y > 49.6 && Math.abs(x - S.bridgeX) < 1.3), pawns: S.pawns, respawn: S.respawn, spawns: [S.spawn], goal: S.goal, posts: S.posts,
     code: true, talk: () => (uiBlocks ? "blocks" : lang), bubPx: () => Math.min(15, Math.max(10, w.clientWidth / 18 * 0.4)),
     bubMax: 3, bubGap: () => (uiBlocks ? [3.2, 1.3] : [6, 1.3]), bubFit: true, smart: true, skulls: 6500, archer: { reach: 6.8, cd: 1150 },
     stats: { war: { hp: 9, leash: 2.3 }, lan: { hp: 9, leash: 2.5 }, monk: { hp: 6 } },
@@ -11330,6 +11406,7 @@ function arenaWalk(x, y) {
 }
 
 // v229: берег арены — места, где можно зайти в воду по пояс: [берег x, y, вода x, y]. Только то, что видно в кадре.
+const ARENA_DEEP = 0.4;
 function arenaShore() {
   const E = arenaEngine(), out = [];
   for (let x = ARENA.seen[0]; x <= ARENA.seen[1] + 0.01; x += 0.25) for (let y = 2.6; y <= 7.3; y += 0.25) {
@@ -11337,8 +11414,8 @@ function arenaShore() {
     for (let k = 0; k < 8; k++) {
       const q = k * Math.PI / 4, cx = Math.cos(q), cy = Math.sin(q);
       let r = 0.25; while (r <= 0.9 && arenaWalk(x + cx * r, y + cy * r)) r += 0.1;
-      const wx = x + cx * (r + 0.4), wy = y + cy * (r + 0.4);
-      if (r <= 0.6 && E.waterAt(wx, wy) && !arenaWalk(wx, wy) && E.waterAt(x + cx * (r + 0.7), y + cy * (r + 0.7)) && wx > 3.5 && wx < 14.5 && wy > 2.5 && wy < 7.4) { out.push([x, y, wx, wy]); break; }
+      const R = r + ARENA_DEEP * WADE_WAIST, wx = x + cx * R, wy = y + cy * R;      // место, где по пояс
+      if (r <= 0.6 && E.waterAt(wx, wy) && !arenaWalk(wx, wy) && E.waterAt(x + cx * (r + 0.3), y + cy * (r + 0.3)) && E.waterAt(x + cx * (R + 0.2), y + cy * (R + 0.2)) && wx > 3.25 && wx < 14.75 && wy > 2.3 && wy < 7.6) { out.push([x, y, wx, wy]); break; }
     }
   }
   return out;
@@ -11409,14 +11486,15 @@ function arenaPlan(code) {
     tg.scorch = (tg.scorch || 0) + 1;
     if (tg.scorch >= (tg.kind === "monk" ? 1 : FIRE.need)) ignite(tg);
   };
-  // зайти в воду и выйти: s = [берег x, y, вода x, y]; 0,25 с — вошёл (огонь погас), 0,45 с — стоит по пояс, 0,35 с — вышел
-  const wadeStart = (u, s) => { u.wadeSeq = { s, t0: t, in: false }; u.busy = t + 1.1; u.act = "wade"; };
+  // зайти в воду и выйти: s = [берег x, y, вода x, y]. 0,5 с идёт вглубь — по щиколотку, по колено, по пояс (огонь погас);
+  // 0,3 с стоит; 0,5 с выходит. На арене воды в кадре мало, поэтому «клетка глубины» здесь — 0,4 клетки поля (ARENA_DEEP).
+  const wadeStart = (u, s) => { u.wadeSeq = { s, t0: t, in: false }; u.busy = t + 1.35; u.act = "wade"; };
   const wadeTick = (u) => {
     const W = u.wadeSeq, [sx, sy, wx, wy] = W.s, k = t - W.t0;
-    const d = k < 0.25 ? k / 0.25 : k < 0.7 ? 1 : Math.max(0, 1 - (k - 0.7) / 0.35);
+    const d = k < 0.5 ? k / 0.5 : k < 0.8 ? 1 : Math.max(0, 1 - (k - 0.8) / 0.5);
     u.x = sx + (wx - sx) * d; u.y = sy + (wy - sy) * d; u.wade = d;
-    if (!W.in && k >= 0.25) { W.in = true; events.push({ t, kind: "wade", id: u.id || 0, at: [wx, wy], steam: !!u.fire }); if (u.fire) { u.fire = null; if (u.hero) douses++; } u.wetTill = t + 99; }
-    if (k >= 1.05) { u.wadeSeq = null; u.wade = 0; u.x = sx; u.y = sy; u.wetTill = t + FIRE.wet; if (u.act === "wade") u.act = "idle"; }
+    if (!W.in && k >= 0.5) { W.in = true; events.push({ t, kind: "wade", id: u.id || 0, at: [wx, wy], steam: !!u.fire }); if (u.fire) { u.fire = null; if (u.hero) douses++; } u.wetTill = t + 99; }
+    if (k >= 1.3) { u.wadeSeq = null; u.wade = 0; u.x = sx; u.y = sy; u.wetTill = t + FIRE.wet; if (u.act === "wade") u.act = "idle"; }
   };
   const monkThink = (u) => {
     if (u.fire) {                                // горит — сам бежит к воде
@@ -11988,11 +12066,7 @@ async function runArena() {
     const a = actorOf(id), kind = id ? kindOf[id] : "hero";
     if (a && CHAR_SHEETS[kind]) { a.char = CHAR_HUE[kind]; a.sheet(a.key); }
   };
-  const wadeCut = (a, d) => {
-    let v = "";
-    if (d) { const foot = -parseFloat(a.el.style.getPropertyValue("--foot")) / 100, feet = (1 - foot) * 100 - 4, cut = (1 - foot + 78 / SK[a.key][2] * 0.42) * 100; v = `inset(0 0 ${Math.round(feet + (cut - feet) * d)}% 0)`; }
-    if (a.cutV !== v) { a.cutV = v; a.el.style.clipPath = a.el.style.webkitClipPath = v; }
-  };
+  const wadeCut = (a, d) => { if ((a.cutD || 0) !== d) { a.cutD = d; wadeInset(a, d * WADE_WAIST * 1.05); } };   // d — доля пути вглубь: в конце по пояс
   if (A.fire) (async () => {                      // над горящими — дымок
     while (running && arenaRun === myRun) {
       for (const id in flames) { const a = actorOf(+id); if (a) puff(a.x + (Math.random() - 0.5) * 0.2, a.y - fireUp(+id) - 0.3, 0.24, 0.45, 0.8, 900, 950); }
@@ -14326,10 +14400,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 233;
+const APP_VERSION = 234;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 234, date: "2026-11-20", text: "Вода стала глубже от берега: по щиколотку, по колено, по пояс, по шею. Кто загорелся в бою у моста, сам бежит в воду по пояс — и возвращается.", en: "Water gets deeper away from the shore: ankle, knee, waist, neck. A fighter set on fire at the bridge now runs waist-deep into the water — and comes back." },
   { v: 233, date: "2026-11-20", text: "Огонь прозрачнее у основания и плотнее к верхушке.", en: "Fire is more transparent at the base and denser toward the top." },
   { v: 232, date: "2026-11-20", text: "Огонь стал полупрозрачным: сквозь пламя видно бойца, кончики языков тают.", en: "Fire is now translucent: you can see the fighter through the flame, and the tips fade away." },
   { v: 231, date: "2026-11-20", text: "Огонь на бойцах стал другим: маленькие язычки пламени там, где есть чему гореть, — на пере, волосах, капюшоне, одежде.", en: "Fire on fighters looks different: small tongues of flame where something can burn — plume, hair, hood, clothes." },

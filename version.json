@@ -1,13 +1,13 @@
 {
- "version": 233,
+ "version": 234,
  "date": "2026-11-20",
  "notes": [
-  "Огонь прозрачнее у основания и плотнее к верхушке."
+  "Вода стала глубже от берега: по щиколотку, по колено, по пояс, по шею. Кто загорелся в бою у моста, сам бежит в воду по пояс — и возвращается."
  ],
  "files": {
   "index.html": {
-   "size": 1127603,
-   "hash": "2d40c40163cdbfe2"
+   "size": 1134576,
+   "hash": "b1054b847b31092a"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "b5611d223c3405ae"
+   "hash": "96b800b27be1302e"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Fire is more transparent at the base and denser toward the top."
+  "Water gets deeper away from the shore: ankle, knee, waist, neck. A fighter set on fire at the bridge now runs waist-deep into the water — and comes back."
  ]
 }
