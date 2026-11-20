@@ -4808,8 +4808,10 @@ function mapStage(wrap) {
     pos: (x, y) => [x * 20 / 360 * 100, y * 20 / VH * 100], on: () => !$("mapview").hidden && !wrap.hidden, alive: () => true, ear: wrap };   // ear — карта, на которой слышны звуки этой сцены
 }
 // Актёр: x, y — точка, где он стоит (ноги)
-// Обугленный лист (v226): точки листа, чей оттенок попадает в [от, до] градусов (ткань бойца: синяя у наших, красная и
-// лиловая у гоблинов), становятся углём — тёмно-серыми, с прежней светотенью. Кожа, железо, контур и огонь факела не меняются.
+// Обугленный лист (v226, v227): тот же лист фигурки, перекрашенный в браузере. Ткань (точки с оттенком из [от, до] градусов:
+// синяя и бирюзовая у наших, красная и лиловая у гоблинов) прогорает в уголь целиком — своего цвета не остаётся, только светотень.
+// На остальном — шлеме, латах, лице — пятна копоти: тёмные кляксы, гуще к голове. Пятна привязаны к самой фигурке в каждом кадре
+// (к середине и макушке её очертаний), поэтому не «плавают», когда боец качается. Контур и огонь факела не меняются.
 // Считается один раз на лист и оттенок, в фоне; пока не готов — null.
 const CHARRED = {};
 function charSheet(k, [h0, h1]) {
@@ -4820,15 +4822,29 @@ function charSheet(k, [h0, h1]) {
   im.onload = () => {
     const c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
     const g = c.getContext("2d"); g.drawImage(im, 0, 0);
-    const d = g.getImageData(0, 0, c.width, c.height), p = d.data;
-    for (let i = 0; i < p.length; i += 4) {
-      if (p[i + 3] < 40) continue;
-      const r = p[i], gr = p[i + 1], b = p[i + 2], mx = Math.max(r, gr, b), dl = mx - Math.min(r, gr, b);
-      if (dl < 40) continue;                                     // серое, чёрное, белое — не ткань
-      const h = ((mx === r ? (gr - b) / dl : mx === gr ? (b - r) / dl + 2 : (r - gr) / dl + 4) * 60 + 360) % 360;
-      if (h0 <= h1 ? h < h0 || h > h1 : h < h0 && h > h1) continue;
-      const l = (0.3 * r + 0.59 * gr + 0.11 * b) * 0.34;
-      p[i] = l + 16; p[i + 1] = l + 9; p[i + 2] = l + 7;
+    const W = c.width, d = g.getImageData(0, 0, W, c.height), p = d.data, [cols, rows] = SK[k], fw = W / cols, fh = c.height / rows;
+    // плавный «шум» для пятен: значения в узлах сетки 6×6 точек, между узлами — сглажено
+    const rnd = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return v - Math.floor(v); };
+    const blot = (x, y) => { const gx = x / 6, gy = y / 6, x0 = Math.floor(gx), y0 = Math.floor(gy), tx = gx - x0, ty = gy - y0, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+      return (rnd(x0, y0) * (1 - sx) + rnd(x0 + 1, y0) * sx) * (1 - sy) + (rnd(x0, y0 + 1) * (1 - sx) + rnd(x0 + 1, y0 + 1) * sx) * sy; };
+    for (let fr = 0; fr < cols * rows; fr++) {
+      const ox = (fr % cols) * fw, oy = Math.floor(fr / cols) * fh;
+      let x0 = fw, x1 = -1, y0 = fh, y1 = -1;                     // очертания фигурки в кадре
+      for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (p[((oy + y) * W + ox + x) * 4 + 3] > 40) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < 0) continue;
+      const mx0 = Math.round((x0 + x1) / 2), hgt = Math.max(1, y1 - y0);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = ((oy + y) * W + ox + x) * 4; if (p[i + 3] < 40) continue;
+        const r = p[i], gr = p[i + 1], b = p[i + 2], mx = Math.max(r, gr, b), dl = mx - Math.min(r, gr, b), lum = 0.3 * r + 0.59 * gr + 0.11 * b;
+        if (lum < 46) continue;                                  // контур
+        const h = dl < 1 ? -1 : ((mx === r ? (gr - b) / dl : mx === gr ? (b - r) / dl + 2 : (r - gr) / dl + 4) * 60 + 360) % 360;
+        const cloth = dl >= 22 && (h0 <= h1 ? h >= h0 && h <= h1 : h >= h0 || h <= h1);
+        if (cloth) { const l = lum * 0.3; p[i] = l + 13; p[i + 1] = l + 9; p[i + 2] = l + 8; continue; }   // ткань — в уголь, без остатка цвета
+        if (h >= 15 && h <= 62 && dl > 90 && mx > 200) continue;  // огонь факела
+        const up = 1 - (y - y0) / hgt, n = blot(x - mx0 + 400, y - y0), t = 0.66 - 0.2 * up;                  // копоть: гуще к макушке
+        if (n > t) { const q = n > t + 0.1 ? 0.42 : 0.68; p[i] = r * q + 6; p[i + 1] = gr * q + 4; p[i + 2] = b * q + 4; }
+        else { p[i] = r * 0.9; p[i + 1] = gr * 0.88; p[i + 2] = b * 0.86; }                                     // и всё чуть закопчено
+      }
     }
     g.putImageData(d, 0, 0); CHARRED[id] = c.toDataURL();
   };
@@ -5531,12 +5547,21 @@ async function battle(st0, B) {
   // Каменная башня загорается очень редко и только сверху (деревянная обшивка): погорит и потеряет одну прочность.
   const FIRE = B.fire ? { burn: 4500, tick: 1300, wet: 7000, tower: 0.035,
     chance: { monk: 0.7, war: 0.2, lan: 0.2, hero: 0.15, torch: 0.3, torchp: 0.3 },
-    hue: { monk: [185, 255], war: [185, 255], lan: [185, 255], hero: [185, 255], torch: [335, 12], torchp: [255, 330] },
+    hue: { monk: [150, 262], war: [150, 262], lan: [150, 262], hero: [150, 262], torch: [335, 12], torchp: [255, 330] },
     sheets: { monk: ["monk", "monkrun", "heal"], war: ["kwar"], lan: ["lidle", "lrun", "lratk", "ldratk", "luratk", "ldatk", "luatk"], hero: ["hidle", "hrun", "hatk"], torch: ["torch"], torchp: ["torchp"] } } : null;
   // пламя: малое — на голове (перо, волосы), большое — на всём бойце (ряса монаха) и на башне
   const flames = FIRE ? pool("fire", 6, 0.36, 0.92) : [], flamesBig = FIRE ? pool("fire", 4, 0.62, 0.92) : [], flaresA = FIRE ? pool("flare2", 3, 1.1, 0.8) : [], flaresB = FIRE ? pool("flare3", 3, 1.3, 0.8) : [];
   [...flames, ...flamesBig, ...flaresA, ...flaresB].forEach((a) => (a.mute = true));
-  const fireUp = (v) => (v.kind === "monk" ? 0.22 : v.kind === "war" || v.kind === "lan" || v.kind === "hero" ? 0.62 : 0.45) * ZM;   // где горит: ряса — снизу доверху, у воинов — перо
+  // Где горит. fireUp — на сколько клеток выше ног: у воинов — макушка (перо), у монаха — вся ряса, у гоблина — капюшон.
+  // Огонь держится на этом месте фигурки, как бы она ни лежала: в полёте (кувырок) — в середине картинки, вокруг которой она
+  // вертится; сбитый с ног лежит на боку (поворот на четверть круга вокруг середины картинки) — огонь там, куда легла голова.
+  const fireUp = (v) => (v.kind === "monk" ? 0.3 : v.kind === "war" || v.kind === "hero" ? 0.66 : v.kind === "lan" ? 0.6 : 0.5) * ZM * (v.T.sc / 0.85);
+  const firePos = (v) => {
+    const a = v.a, S = SK[a.key][2] * v.T.sc * ZM / 64, foot = v.T.foot ?? 0.67, cy = a.y - (foot - 0.5) * S, d = fireUp(v) - (foot - 0.5) * S;
+    if (v.air) return [a.x, cy];
+    if (v.lie) { const q = (v.lieDir || 1) * (a.el.classList.contains("flip") ? -1 : 1); return [a.x + d * q, cy + 0.12 * ZM]; }
+    return [v.x, v.y - fireUp(v)];
+  };
   const fireStat = { lit: 0, doused: 0, waded: 0, towers: 0, blown: 0 };
   const setChar = (v) => { if (v.burnt || !FIRE.hue[v.kind]) return; v.burnt = true; v.a.char = FIRE.hue[v.kind]; v.a.sheet(v.a.key); };
   const ignite = (v) => {
@@ -5545,8 +5570,8 @@ async function battle(st0, B) {
     (FIRE.sheets[v.kind] || []).forEach((k) => charSheet(k, FIRE.hue[v.kind]));        // обугленные листы — заранее, пока горит
     const fl = take(v.kind === "monk" || v.T.fat ? flamesBig : flames);
     v.fire = { till: now + FIRE.burn, tick: now + FIRE.tick, char: now + FIRE.burn * 0.45, puff: 0, fl };
-    fl.el.style.transition = "none"; fl.at(v.x, v.y - fireUp(v)); fl.show(true, true); fl.play(0, 7, 90);
-    fxAt(flaresB, v.x, v.y - fireUp(v), 55, v.y + 4); flash(v); fireStat.lit++;
+    fl.el.style.transition = "none"; fl.at(...firePos(v)); fl.show(true, true); fl.play(0, 7, 90);
+    fxAt(flaresB, ...firePos(v), 55, v.y + 4); flash(v); fireStat.lit++;
     // подрывник горит недолго: огонь добирается до динамита
     if (v.T.thrower) after(900 + Math.random() * 700, () => { if (v.dead || !v.fire) return; const fat = !!v.T.fat, x = v.x, y = v.y; fireStat.blown++;
       kill(v, true); v.a.show(false, true); boom(x, y); if (fat) fxAt(hugeBooms, x, y, 80); fat ? blast(x, y, 1.1, 3, 2.3, 3.4) : blast(x, y, 0.75, 2, 0.5, 1.5); });
@@ -5563,11 +5588,11 @@ async function battle(st0, B) {
     for (const v of units) {
       const F = v.fire; if (!F) continue;
       if (v.dead) { v.fire = null; free(F.fl); continue; }
-      const ax = v.air ? v.a.x : v.x, ay = v.air ? v.a.y : v.y;           // в полёте огонь летит вместе с бойцом
-      F.fl.el.style.transition = v.air ? "none" : `left ${TICK}ms linear, top ${TICK}ms linear`;
-      F.fl.at(ax, ay - fireUp(v)); F.fl.el.style.zIndex = +v.a.el.style.zIndex + 1;
+      const ax = v.air ? v.a.x : v.x, ay = v.air ? v.a.y : v.y, [fx, fy] = firePos(v);   // в полёте огонь летит вместе с бойцом
+      F.fl.el.style.transition = v.air || v.lie ? "none" : `left ${TICK}ms linear, top ${TICK}ms linear`;
+      F.fl.at(fx, fy); F.fl.el.style.zIndex = +v.a.el.style.zIndex + 1;
       if (now >= F.char) setChar(v);
-      if (now >= F.puff) { F.puff = now + 420; puffAt(ax + (Math.random() - 0.5) * 0.2, ay - 0.95 * ZM, 0.32, 0.4, 0.8, 900); if (Math.random() < 0.4) fxAt(flaresA, ax + (Math.random() - 0.5) * 0.3, ay - 0.75 * ZM, 60, ay + 5); }
+      if (now >= F.puff) { F.puff = now + 420; puffAt(fx + (Math.random() - 0.5) * 0.2, fy - 0.3 * ZM, 0.24, 0.45, 0.8, 900); if (Math.random() < 0.4) fxAt(flaresA, fx + (Math.random() - 0.5) * 0.3, fy - 0.1 * ZM, 60, ay + 5); }
       if (v.air) continue;
       if (now >= F.tick) {
         F.tick = now + FIRE.tick; hurt(v, 1);
@@ -5591,9 +5616,10 @@ async function battle(st0, B) {
     fl.el.style.transition = "none"; fl.at(q.tx + 0.28 * ZM, q.y + 0.12 * ZM); fl.el.style.zIndex = +q.front.el.style.zIndex + 1; fl.show(true, true); fl.play(0, 7, 90);
     fxAt(flaresB, q.tx + 0.28 * ZM, q.y, 55, q.ty + 6);
   };
-  // берег рядом с точкой в воде: ближайшее место, где можно стоять, не дальше клетки
+  // берег рядом с точкой в воде: ближайшая суша, не дальше 0,9 клетки. Мост — не берег (v227): под ним вода, и на него из воды
+  // не забраться — кто упал с моста, тонет; выбираются только у самого берега.
   const shoreBy = (x, y) => {
-    for (let r = 0.25; r <= 1.1; r += 0.17) for (let k = 0; k < 16; k++) { const q = k * Math.PI / 8, px = x + Math.cos(q) * r, py = y + Math.sin(q) * r; if (walk(px, py)) return [px, py]; }
+    for (let r = 0.25; r <= 0.9; r += 0.13) for (let k = 0; k < 16; k++) { const q = k * Math.PI / 8, px = x + Math.cos(q) * r, py = y + Math.sin(q) * r; if (walk(px, py) && !B.water(px, py)) return [px, py]; }
     return null;
   };
   // упал в воду у берега: всплеск, стоит по пояс (потухший, если горел), потом выбирается на берег — и снова в бой.
@@ -5654,10 +5680,12 @@ async function battle(st0, B) {
     const wet = () => !!B.water?.(lx, ly);
     if (!v.dead && !wet()) for (; !walk(lx, ly); ) { len *= 0.6; lx = v.x + dx * len; ly = v.y + dy * len; if (len < 0.08) { lx = v.x; ly = v.y; break; } }
     const ms = far ? 600 + len * 90 : 480;
-    v.lie = tumble(a, dir * (far ? Math.max(1, flySpin(size, ms)) : 0), ms, 1, dir);
+    v.lie = tumble(a, dir * (far ? Math.max(1, flySpin(size, ms)) : 0), ms, 1, dir); v.lieDir = dir;
     a.arc(lx, ly, far ? 0.9 + len * 0.35 : 0.4, ms).then(() => {
       v.air = false;
-      if (!v.dead && wet()) { const sh = FIRE && (!B.inside || B.inside(lx, ly)) && shoreBy(lx, ly); if (sh) return wade(v, lx, ly, sh); kill(v, true); }   // у берега не тонет (v226)
+      // в воде у самого берега не тонет (v226): выбирается. Упал на кромку, где и так можно стоять, — просто лежит и встаёт.
+      // С моста и рядом с мостом — тонет: мост не берег (v227).
+      if (!v.dead && wet()) { const sh = FIRE && (!B.inside || B.inside(lx, ly)) && shoreBy(lx, ly); if (!sh) kill(v, true); else if (!walk(lx, ly)) return wade(v, lx, ly, sh); else if (v.fire) douse(v, true); }
       if (!v.dead) {                                   // лежит секунду-две, потом встаёт
         v.x = lx; v.y = ly; v.anim = ""; anim(v, "idle");
         const down = 1000 + Math.random() * 1000; v.busy = now + down;
@@ -6077,8 +6105,9 @@ async function skitBeach(st0, S) {
     const r = w.getBoundingClientRect(), k = r.height / RH;
     return r.top + S.rows[0] * k < innerHeight + 120 && r.top + S.rows[1] * k > -120;
   } };
-  // fire — огонь, обугливание и вода у берега (v226); inside — где видно на телефоне: за краем карты по пояс в воде не стоят
-  const B = { walk, zoom: S.zoom, towers: S.towers, forts: true, fire: true, inside: (x) => x > 0.6 && x < 17.4, pawns: S.pawns, respawn: S.respawn, spawns: [S.spawn], goal: S.goal, posts: S.posts,
+  // fire — огонь, обугливание и вода у берега (v226); inside — где можно стоять по пояс в воде: не за краем карты (на телефоне
+  // не видно) и не у моста (v227: фигурка по пояс торчала прямо из досок) — там, как и раньше, тонут
+  const B = { walk, zoom: S.zoom, towers: S.towers, forts: true, fire: true, inside: (x, y) => x > 0.6 && x < 17.7 && !(y > 49.6 && Math.abs(x - S.bridgeX) < 1.3), pawns: S.pawns, respawn: S.respawn, spawns: [S.spawn], goal: S.goal, posts: S.posts,
     code: true, talk: () => (uiBlocks ? "blocks" : lang), bubPx: () => Math.min(15, Math.max(10, w.clientWidth / 18 * 0.4)),
     bubMax: 3, bubGap: () => (uiBlocks ? [3.2, 1.3] : [6, 1.3]), bubFit: true, smart: true, skulls: 6500, archer: { reach: 6.8, cd: 1150 },
     stats: { war: { hp: 9, leash: 2.3 }, lan: { hp: 9, leash: 2.5 }, monk: { hp: 6 } },
@@ -14040,10 +14069,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 226;
+const APP_VERSION = 227;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 227, date: "2026-11-20", text: "Бой у моста: огонь держится на голове бойца, даже когда его сбило с ног. Обгоревшие теперь в копоти, а перо прогорает в уголь. С моста из воды больше не выбраться — только у самого берега.", en: "The bridge battle: fire now stays on a fighter’s head, even when he is knocked down. Burnt fighters are covered in soot and the plume burns to coal. No more climbing out of the water by the bridge — only right at the shore." },
   { v: 226, date: "2026-11-20", text: "Бой у моста на первом острове: гоблин с факелом может поджечь. Горящий теряет сердечки, одежда обугливается, подрывник от огня взрывается. Вода тушит: кого взрывом бросило в воду у берега, выбирается обратно.", en: "The bridge battle on the first island: a torch goblin can set things on fire. Whoever burns loses hearts and gets charred, and a bomber on fire blows up. Water puts fire out: a fighter blown into the shallows climbs back ashore.", big: true },
   { v: 225, date: "2026-11-20", text: "Из главы «Штурм» убран уровень «Что первым?» — он учил не тому. В заданиях на Python и JavaScript номер нужной строки теперь виден сразу.", en: "The level “What Comes First?” has been removed from the “Assault” chapter — it taught the wrong thing. In Python and JavaScript tasks the right line number now shows at once." },
   { v: 224, date: "2026-11-20", text: "Глава «Штурм» выросла до шести уровней: «Что первым?» (найди ошибку), «Своя башня» — подрывники взрывают твою башню, «Толкни бочку» — новая команда 🛢. Испытание стало труднее, а корона — только за башню, в которую не попал ни один динамит.", en: "The “Assault” chapter has grown to six levels: “What Comes First?” (find the bug), “Your Own Tower” — bombers blow up your tower, “Push the Barrel” — a new command 🛢. The challenge is tougher, and the crown is only for a tower not hit by a single stick of dynamite.", big: true },

@@ -1,13 +1,13 @@
 {
- "version": 226,
+ "version": 227,
  "date": "2026-11-20",
  "notes": [
-  "Бой у моста на первом острове: гоблин с факелом может поджечь. Горящий теряет сердечки, одежда обугливается, подрывник от огня взрывается. Вода тушит: кого взрывом бросило в воду у берега, выбирается обратно."
+  "Бой у моста: огонь держится на голове бойца, даже когда его сбило с ног. Обгоревшие теперь в копоти, а перо прогорает в уголь. С моста из воды больше не выбраться — только у самого берега."
  ],
  "files": {
   "index.html": {
-   "size": 1096443,
-   "hash": "8bff55494953d3bf"
+   "size": 1101134,
+   "hash": "ed7d850703dc0dd8"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "22071d89d7d4004b"
+   "hash": "02bd07e77a80c963"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The bridge battle on the first island: a torch goblin can set things on fire. Whoever burns loses hearts and gets charred, and a bomber on fire blows up. Water puts fire out: a fighter blown into the shallows climbs back ashore."
+  "The bridge battle: fire now stays on a fighter’s head, even when he is knocked down. Burnt fighters are covered in soot and the plume burns to coal. No more climbing out of the water by the bridge — only right at the shore."
  ]
 }
