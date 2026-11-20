@@ -1,21 +1,21 @@
 {
- "version": 228,
+ "version": 229,
  "date": "2026-11-20",
  "notes": [
-  "Огонь теперь держится на бойце намертво: летит, кувыркается и ложится на бок вместе с ним."
+  "Новая глава «Пожар» на острове гоблинов: факел может поджечь — спроси «горю?» и беги к воде. Сбереги монаха!"
  ],
  "files": {
   "index.html": {
-   "size": 1102272,
-   "hash": "cad59a27a9687c65"
+   "size": 1116146,
+   "hash": "062c0a8134504d22"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 79251,
-   "hash": "566dd0b1d5984a5f"
+   "size": 81312,
+   "hash": "ab8c595b196339a0"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "cc8430453cc6a7c1"
+   "hash": "08566bc603db5b38"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 36696,
-   "hash": "a78aba4b20c12ee4"
+   "size": 39062,
+   "hash": "aac2b7de566fa78a"
   },
   "art-scenes.js": {
    "size": 994253,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Fire now sticks to the fighter: it flies, tumbles and lies down together with them."
+  "A new chapter, “Blaze”, on Goblin Island: a torch can set you on fire — ask “on fire?” and run to the water. Keep the monk safe!"
  ]
 }

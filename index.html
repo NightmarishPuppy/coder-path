@@ -2301,6 +2301,8 @@ const DIRS = {
   // Арена (v224): толкнуть бочку — гоблин в бочке летит обратно и взрывается среди своих
   push:      { dx: 0, dy: 0, arrow: "🛢", axis: "a", py: "push" },
   // Ждать (v212): рыцарь стоит один такт (wait(2) — два), а часовые на поле в это время делают свой шаг.
+  // Арена (v229): бежать к воде — потушить огонь (копейщик заходит в воду по пояс и выходит)
+  goToWater: { dx: 0, dy: 0, arrow: "💧", axis: "l", py: "go_to_water" },
   wait:      { dx: 0, dy: 0, arrow: "⏳", axis: "w", py: "wait" },
 };
 const ALL_COMMANDS = Object.keys(DIRS);
@@ -2431,10 +2433,12 @@ CONDS.enemyNear = { what: "near", dx: 0, dy: 0, arrow: "◎", ru: tr("рядом
 CONDS.dynamiteFlying = { what: "tnt", dx: 0, dy: 0, arrow: "🧨", ru: tr("летит"), py: "dynamite_flying" };
 // Арена (v224): «бочка рядом» — гоблин в бочке подбежал на расстояние толчка (дальше, чем удар: бочку надо успеть оттолкнуть)
 CONDS.barrelNear = { what: "barrel", dx: 0, dy: 0, arrow: "🛢", ru: tr("рядом"), py: "barrel_near" };
+// Арена (v229): «горю» — герой горит (его подожгли факелом); огонь сам не гаснет, тушит только вода
+CONDS.onFire = { what: "fire", dx: 0, dy: 0, arrow: "🔥", ru: tr("сейчас"), py: "on_fire" };
 const COND_NAMES = Object.keys(CONDS);
 const COND_ANY = [...COND_NAMES, ...COND_NAMES.map((c) => CONDS[c].py)].join("|");
 const condKey = (name) => COND_NAMES.find((c) => c === name || CONDS[c].py === name);
-const WHAT_RU = { wall: tr("препятствие"), enemy: tr("враг"), near: tr("враг рядом"), tnt: tr("динамит летит"), barrel: tr("бочка рядом") };
+const WHAT_RU = { wall: tr("препятствие"), enemy: tr("враг"), near: tr("враг рядом"), tnt: tr("динамит летит"), barrel: tr("бочка рядом"), fire: tr("горю") };
 
 let lang = "py"; // "py" или "js"
 const disp = (name) => (lang === "py" ? DIRS[name].py : name); // как команда пишется в текущем языке
@@ -2477,6 +2481,7 @@ const CHAPTERS = [
   { name: tr("Караулы"), topic: tr("«другое если»"), isle: 6 },
   { name: tr("Обстрел"), topic: tr("копьё против динамита"), isle: 6 },
   { name: tr("Штурм"), topic: tr("разрушить вышку гоблинов"), isle: 6 },
+  { name: tr("Пожар"), topic: tr("огонь и вода"), isle: 6 },
 ];
 
 // Уровни по порядку на карте.
@@ -5547,7 +5552,7 @@ async function battle(st0, B) {
   // Каменная башня загорается очень редко и только сверху (деревянная обшивка): погорит и потеряет одну прочность.
   const FIRE = B.fire ? { burn: 4500, tick: 1300, wet: 7000, tower: 0.035,
     chance: { monk: 0.7, war: 0.2, lan: 0.2, hero: 0.15, torch: 0.3, torchp: 0.3 },
-    hue: { monk: [150, 262], war: [150, 262], lan: [150, 262], hero: [150, 262], torch: [335, 12], torchp: [255, 330] },
+    hue: { monk: [150, 262], war: [150, 262], lan: [198, 262], hero: [150, 262], torch: [335, 12], torchp: [255, 330] },
     sheets: { monk: ["monk", "monkrun", "heal"], war: ["kwar"], lan: ["lidle", "lrun", "lratk", "ldratk", "luratk", "ldatk", "luatk"], hero: ["hidle", "hrun", "hatk"], torch: ["torch"], torchp: ["torchp"] } } : null;
   // пламя: малое — на голове (перо, волосы), большое — на всём бойце (ряса монаха) и на башне
   const flames = FIRE ? pool("fire", 6, 0.36, 0.92) : [], flamesBig = FIRE ? pool("fire", 4, 0.62, 0.92) : [], flaresA = FIRE ? pool("flare2", 3, 1.1, 0.8) : [], flaresB = FIRE ? pool("flare3", 3, 1.3, 0.8) : [];
@@ -8389,7 +8394,7 @@ function drawEnemies(hpLeft) {
 // всё, что игрок уже изучил раньше (стрелки, повторять, «если», «иначе», условия): так можно найти
 // своё решение — например, победить великана. Код с этими инструментами работает и без открытия кнопки.
 let moreOpen = false;
-const ARENA_ONLY = ["heal", "goToEnemy"];
+const ARENA_ONLY = ["heal", "goToEnemy", "goToWater"];
 function addLearnedTools(lv, i) {
   if (!lv.more || lv._base) return;
   lv._base = { commands: [...lv.commands], ifs: [...(lv.ifs || [])], ifButton: !!lv.ifButton, elseButton: !!lv.elseButton, elifButton: !!lv.elifButton, loopButton: !!lv.loopButton };
@@ -11188,6 +11193,7 @@ const ARENA_UNITS = {
   barrel: { side: "gob", hp: 2, dmg: 2, reach: 0.6, cd: 0, speed: 1.7 },
   sap:    { side: "gob", hp: 2, dmg: 1, reach: 2.6, cd: 2.4, wind: 1.0, speed: 1.3 },   // v224: подрывник, который взрывает нашу башню (arena.keep)
   war:    { side: "us", hp: 6, dmg: 1, reach: 0.8, cd: 0.9, speed: 1.8, sight: 1.6 },
+  monk:   { side: "us", hp: 4, dmg: 0, reach: 0, cd: 3.0, speed: 1.9, sight: 0, heal: 1, range: 4.5 },   // v229: лечит героя; ряса вспыхивает с первого удара факелом
   lan:    { side: "us", hp: 6, dmg: 1, reach: 1.1, cd: 1.0, speed: 1.7, sight: 1.6 },
 };
 // взрывы задевают ВСЕХ в небольшом круге — и наших, и гоблинов: r — радиус (клеток), dmg — урон
@@ -11209,6 +11215,7 @@ const ARENA_ART = {
   barrel: { key: "barrel", foot: 0.72, idle: [0, 1, 200], run: [4, 3, 160], fuse: [5, 3, 150] },
   sap:    { key: "tnt", idle: [0, 6, 130], run: [1, 6, 90], throw: [2, 7, 90] },
   war:    { key: "kwar", idle: [0, 6, 140], run: [1, 6, 90], atk: [2, 6, 75] },
+  monk:   { key: "monk", sc: 0.8, idle: [0, 6, 130, "monk"], run: [0, 4, 100, "monkrun"], heal: [0, 11, 80, "heal"] },
   lan:    { key: "lidle", sc: 0.8, foot: 0.625, idle: [0, 12, 110, "lidle"], run: [0, 6, 90, "lrun"], atk: [0, 3, 120, "lratk"] },
 };
 let arenaEng = null;
@@ -11219,6 +11226,21 @@ function arenaWalk(x, y) {
   if (tw && Math.abs(x - tw[0]) < 0.62 && y > tw[1] - 0.55 && y < tw[1] + 0.15) return false;   // башня
   if (Math.abs(y - ARENA.roadY) < 0.32 && (x < 0.2 || x > 17.8 || E.roadAt(Math.floor(x), Math.floor(y)) !== ".")) return true;
   return x > 0 && x < 18 && [-0.22, 0, 0.22].every((dx) => E.groundAt(x + dx, y) === 0);
+}
+
+// v229: берег арены — места, где можно зайти в воду по пояс: [берег x, y, вода x, y]. Только то, что видно в кадре.
+function arenaShore() {
+  const E = arenaEngine(), out = [];
+  for (let x = ARENA.seen[0]; x <= ARENA.seen[1] + 0.01; x += 0.25) for (let y = 2.6; y <= 7.3; y += 0.25) {
+    if (!arenaWalk(x, y) || Math.abs(y - ARENA.roadY) < 0.8) continue;
+    for (let k = 0; k < 8; k++) {
+      const q = k * Math.PI / 4, cx = Math.cos(q), cy = Math.sin(q);
+      let r = 0.25; while (r <= 0.9 && arenaWalk(x + cx * r, y + cy * r)) r += 0.1;
+      const wx = x + cx * (r + 0.4), wy = y + cy * (r + 0.4);
+      if (r <= 0.6 && E.waterAt(wx, wy) && !arenaWalk(wx, wy) && E.waterAt(x + cx * (r + 0.7), y + cy * (r + 0.7)) && wx > 3.5 && wx < 14.5 && wy > 2.5 && wy < 7.4) { out.push([x, y, wx, wy]); break; }
+    }
+  }
+  return out;
 }
 
 // Просчёт боя по программе игрока.
@@ -11241,7 +11263,7 @@ function arenaPlan(code) {
   const add = (kind, x, y, extra) => { const T = ARENA_UNITS[kind];
     const u = { id: ++ids, kind, T, side: T.side, x, y, hp: T.hp, next: t + 0.6, busy: 0, act: "idle", left: false, ...extra };
     units.push(u); return u; };
-  for (const { kind, at, left } of A.allies || []) add(kind, at[0], at[1], { post: at, postLeft: !!left, left: !!left });
+  for (const { kind, at, left, hp } of A.allies || []) add(kind, at[0], at[1], { post: at, postLeft: !!left, left: !!left, ...(hp ? { hp } : {}) });
   const tower = A.tower ? { x: A.tower[0], y: A.tower[1] - (232 - 118) / 64 * 0.75, next: 1 } : null;   // лучник на площадке башни
   // v218: вышка гоблинов с жирным подрывником (A.fort). Он бросает жирный динамит в рыцаря; рыцарь отбивает его командой parry —
   // динамит летит обратно и рвётся на вышке. Прочность кончилась — вышка рушится (A.goal === "raze": это и есть победа).
@@ -11273,6 +11295,45 @@ function arenaPlan(code) {
     events.push({ t: t + 0.55, kind: "throw", from: [fort.x + (tx < fort.x ? -0.3 : 0.3), fort.y - 2.1], to: [tx, ty], dur: 0.85, fat: true });
     pend.push({ t: d.land, fn: () => { air.splice(air.indexOf(d), 1); if (!d.caught) blast(tx, ty, 1.0, 2, ARENA_WAVE.fat); } });
   };
+  // v229: огонь и вода (A.fire). На уровне всё наверняка, без шансов: факельщик поджигает героя каждым need-м ударом, монаха — первым
+  // (ряса). Горящий теряет ♥ раз в tick секунд, и сам огонь не гаснет — тушит только вода. «К воде»: добежать до берега, зайти
+  // по пояс, выйти; после воды wet секунд не загореться. Монах, загоревшись, бежит к воде сам. A.guard — монаха надо уберечь.
+  const FIRE = A.fire ? { need: 2, tick: 1.2, wet: 3, bias: 0, ...A.fire } : null;
+  let fires = 0, douses = 0, trips = 0, dryTrips = 0, burnHp = 0, monkHeals = 0, guardEnd = 0;
+  const SHORE = FIRE ? arenaShore() : [];
+  const waterSpot = (u) => SHORE.reduce((b, q) => (!b || Math.hypot(q[0] - u.x, q[1] - u.y) < Math.hypot(b[0] - u.x, b[1] - u.y) ? q : b), null);
+  const ignite = (u) => { if (!FIRE || u.hp <= 0 || u.fire || t < (u.wetTill || 0)) return; u.fire = { tick: t + FIRE.tick }; u.scorch = 0; if (u.hero) fires++; events.push({ t, kind: "ignite", id: u.id || 0 }); };
+  const torchHit = (f, tg) => {
+    if (!FIRE || (f.kind !== "torch" && f.kind !== "torchp") || tg.hp <= 0 || tg.fire || t < (tg.wetTill || 0)) return;
+    tg.scorch = (tg.scorch || 0) + 1;
+    if (tg.scorch >= (tg.kind === "monk" ? 1 : FIRE.need)) ignite(tg);
+  };
+  // зайти в воду и выйти: s = [берег x, y, вода x, y]; 0,25 с — вошёл (огонь погас), 0,45 с — стоит по пояс, 0,35 с — вышел
+  const wadeStart = (u, s) => { u.wadeSeq = { s, t0: t, in: false }; u.busy = t + 1.1; u.act = "wade"; };
+  const wadeTick = (u) => {
+    const W = u.wadeSeq, [sx, sy, wx, wy] = W.s, k = t - W.t0;
+    const d = k < 0.25 ? k / 0.25 : k < 0.7 ? 1 : Math.max(0, 1 - (k - 0.7) / 0.35);
+    u.x = sx + (wx - sx) * d; u.y = sy + (wy - sy) * d; u.wade = d;
+    if (!W.in && k >= 0.25) { W.in = true; events.push({ t, kind: "wade", id: u.id || 0, at: [wx, wy], steam: !!u.fire }); if (u.fire) { u.fire = null; if (u.hero) douses++; } u.wetTill = t + 99; }
+    if (k >= 1.05) { u.wadeSeq = null; u.wade = 0; u.x = sx; u.y = sy; u.wetTill = t + FIRE.wet; if (u.act === "wade") u.act = "idle"; }
+  };
+  const monkThink = (u) => {
+    if (u.fire) {                                // горит — сам бежит к воде
+      const s = (u.ws ||= waterSpot(u)), d = Math.hypot(u.x - s[0], u.y - s[1]);
+      if (d > 0.12 && stepTo(u, s[0], s[1], u.T.speed)) { u.act = "run"; return; }
+      u.ws = null;
+      if (d < 0.6) wadeStart(u, [u.x, u.y, s[2], s[3]]); else u.act = "idle";
+      return;
+    }
+    u.ws = null;
+    const [px, py] = u.post;
+    if (hero.hp > 0 && hero.hp < A.hp && !hero.fire && !hero.wadeSeq && t >= u.next && dist(u, hero) <= u.T.range && Math.hypot(u.x - px, u.y - py) < 0.3) {
+      u.next = t + u.T.cd; u.busy = t + 0.9; u.act = "heal"; u.left = hero.x < u.x;
+      pend.push({ t: t + 0.6, fn: () => { if (u.hp > 0 && hero.hp > 0 && !u.fire) { hero.hp = Math.min(A.hp, hero.hp + u.T.heal); monkHeals++; events.push({ t, kind: "mheal" }); } } });
+      return;
+    }
+    if (stepTo(u, px, py, u.T.speed)) u.act = "run"; else { u.act = "idle"; u.left = u.postLeft; }
+  };
   const gobs = () => units.filter((u) => u.side === "gob" && u.hp > 0);
   const near = () => gobs().filter((f) => dist(f, hero) <= ARENA.reach).sort((a, b) => dist(a, hero) - dist(b, hero))[0];
   const nearestAny = () => gobs().sort((a, b) => dist(a, hero) - dist(b, hero))[0];
@@ -11293,8 +11354,9 @@ function arenaPlan(code) {
     return false;
   };
   const inView = (u) => u.x > ARENA.seen[0] - 0.4 && u.x < ARENA.seen[1] + 0.4;
-  const snap = () => frames.push({ t: +t.toFixed(2), line, hero: { x: hero.x, y: hero.y, hp: hero.hp, act: hero.act, left: hero.left },
-    units: units.filter((u) => !u.hero).map((u) => ({ id: u.id, kind: u.kind, x: u.x, y: u.y, hp: u.hp, act: u.act, left: u.left, dead: u.hp <= 0 })) });
+  const snap = () => { frames.push({ t: +t.toFixed(2), line, hero: { x: hero.x, y: hero.y, hp: hero.hp, act: hero.act, left: hero.left },
+    units: units.filter((u) => !u.hero).map((u) => ({ id: u.id, kind: u.kind, x: u.x, y: u.y, hp: u.hp, act: u.act, left: u.left, dead: u.hp <= 0, ...(u.wade ? { wade: u.wade } : {}) })) });
+  if (FIRE && hero.wade) frames[frames.length - 1].hero.wade = hero.wade; };
   // ранение. Бочку можно разбить мечом или стрелой, пока фитиль не горит, — тогда взрыва нет;
   // а от другого взрыва (by === "blast") или с горящим фитилём она взрывается
   const hurt = (u, dmg, by) => {
@@ -11314,7 +11376,7 @@ function arenaPlan(code) {
   };
   // взрывная волна дошла до бойца с силой s
   const fling = (u, cx, cy, s) => {
-    if (u.hp <= 0 || u.kind === "barrel" || s < ARENA_WAVE.weak || u.fly) return;
+    if (u.hp <= 0 || u.kind === "barrel" || s < ARENA_WAVE.weak || u.fly || u.wadeSeq) return;
     let dx = u.x - cx, dy = u.y - cy; const d = Math.hypot(dx, dy);
     if (d < 0.05) { dx = u.left ? 1 : -1; dy = 0; } else { dx /= d; dy /= d; }
     const far = s >= ARENA_WAVE.far && !u.hero;      // рыцаря только сбивает с ног: улетев из боя, он терял бы его не по своей программе
@@ -11374,7 +11436,8 @@ function arenaPlan(code) {
   };
   const gobThink = (f) => {
     if (f.kind === "sap" && keep) return sapThink(f);
-    const tg = dist(f, hero) <= 5 ? hero : nearestOf(f, "us");
+    const prey = FIRE && A.guard ? units.find((u) => u.kind === "monk" && u.hp > 0) : null;      // v229: гоблины охотятся и за монахом
+    const tg = prey && dist(f, prey) <= dist(f, hero) + FIRE.bias ? prey : dist(f, hero) <= 5 ? hero : nearestOf(f, "us");
     if (!tg) { f.act = "idle"; return; }
     const d = dist(f, tg);
     if (f.kind === "barrel") {
@@ -11426,11 +11489,12 @@ function arenaPlan(code) {
       } });
     } else {
       f.act = "atk"; f.busy = t + 0.5;
-      pend.push({ t: t + 0.3, fn: () => { if (f.hp > 0 && tg.hp > 0 && dist(f, tg) < f.T.reach + 0.35) hurt(tg, f.T.dmg, f); } });
+      pend.push({ t: t + 0.3, fn: () => { if (f.hp > 0 && tg.hp > 0 && dist(f, tg) < f.T.reach + 0.35) { hurt(tg, f.T.dmg, f); torchHit(f, tg); } } });
     }
   };
   // союзник: ближайший гоблин недалеко от своего места — к нему и бить; никого — назад на место
   const allyThink = (u) => {
+    if (u.kind === "monk") return monkThink(u);
     const [px, py] = u.post;
     const tg = nearestOf(u, "gob", (v) => dist(u, v) <= u.T.sight && Math.hypot(v.x - px, v.y - py) <= u.T.sight);
     if (!tg) {
@@ -11481,6 +11545,10 @@ function arenaPlan(code) {
           }
         } else if (u.downTill && t >= u.downTill) { u.downTill = 0; if (u.act === "down" || u.act === "fly") u.act = "idle"; }
       }
+      if (FIRE) for (const u of units) {      // v229: кто в воде — входит, стоит, выходит; кто горит — теряет ♥
+        if (u.wadeSeq) wadeTick(u);
+        if (u.fire && u.hp > 0 && t >= u.fire.tick) { u.fire.tick += FIRE.tick; if (u.hero) burnHp++; hurt(u, 1, "fire"); if (u.hp <= 0) u.fire = null; }
+      }
       for (const u of units) {
         if (u.hero || u.hp <= 0 || hero.hp <= 0 || u.busy > t) continue;
         if (u.side === "gob") gobThink(u); else allyThink(u);
@@ -11489,14 +11557,15 @@ function arenaPlan(code) {
       if (fort) fortThink();
       for (let i = pend.length - 1; i >= 0; i--) if (pend[i].t <= t) { const p = pend[i]; pend.splice(i, 1); p.fn(); }
       // бойцы не стоят друг в друге и не залезают в рыцаря
-      for (const a of units) if (!a.hero && a.hp > 0 && !a.fly) {
-        for (const b of units) if (b !== a && b.hp > 0 && !b.fly) {
+      for (const a of units) if (!a.hero && a.hp > 0 && !a.fly && !a.wadeSeq) {
+        for (const b of units) if (b !== a && b.hp > 0 && !b.fly && !b.wadeSeq) {
           const d = dist(a, b), R = b.hero ? 0.5 : 0.45;
           if (d > 0 && d < R) { const k = (R - d) / d * (b.hero ? 1 : 0.5), ex = (a.x - b.x) * k, ey = (a.y - b.y) * k; if (arenaWalk(a.x + ex, a.y + ey)) { a.x += ex; a.y += ey; } }
         }
       }
       if (t >= nextFrame - 1e-9) { snap(); nextFrame += 0.1; }
       if (hero.hp <= 0 || t >= A.secs || (endAt && t >= endAt)) throw STOPA;
+      if (FIRE && A.guard && !units.some((u) => u.kind === "monk" && u.hp > 0)) { if (!guardEnd) guardEnd = t + 1.2; else if (t >= guardEnd) throw STOPA; }   // монаха надо было уберечь
       if (keep && A.keep.must && keep.hp <= 0) { if (!keepEnd) keepEnd = t + 1.2; else if (t >= keepEnd) throw STOPA; }   // башню надо было уберечь — бой проигран
     }
   };
@@ -11558,6 +11627,23 @@ function arenaPlan(code) {
     hero.act = "idle";
   };
   const enemyNear = (ln) => { line = ln; stand(); live(0.05); return !!near(); };
+  // v229: «горю?» и «к воде». К воде бегут и без огня — тогда это просто потерянное время
+  const onFire = (ln) => { line = ln; stand(); live(0.05); return !!hero.fire; };
+  const goToWater = (ln) => {
+    line = ln; stand();
+    const s = waterSpot(hero);
+    if (!s) { live(0.3); return; }
+    trips++; if (!hero.fire) dryTrips++;
+    let left = 6;
+    while (left > 0 && hero.hp > 0 && Math.hypot(hero.x - s[0], hero.y - s[1]) > 0.12) {
+      if (!hero.fly && !(hero.downTill > t)) { hero.act = "run"; if (!stepTo(hero, s[0], s[1], 2.4)) break; }
+      live(DT); left -= DT;
+    }
+    if (Math.hypot(hero.x - s[0], hero.y - s[1]) > 0.6) { hero.act = "idle"; return; }
+    wadeStart(hero, [hero.x, hero.y, s[2], s[3]]);
+    while (hero.wadeSeq) live(DT);
+    hero.act = "idle";
+  };
   const flying = () => air.filter((d) => !d.caught && d.land > t + 0.02).sort((a, b) => a.land - b.land)[0];
   const dynamiteFlying = (ln) => { line = ln; stand(); live(0.05); return !!flying(); };
   // копьё: дождаться динамита и отбить его обратно — в того, кто бросил. Динамита нет — удар в пустоту
@@ -11579,7 +11665,7 @@ function arenaPlan(code) {
     pend.push({ t: t + 0.6, fn: () => (d.fort ? fortHit() : blast(bx, by, ARENA_BLAST.dyn.r, 1, ARENA_WAVE.dyn)) });
     live(0.3); hero.act = "idle";
   };
-  const fns = { attack, heal, goToEnemy, parry, push };
+  const fns = { attack, heal, goToEnemy, parry, push, goToWater };
   try {
     checkDefs(code, lang);
     const js = lang === "py" ? pyToJs(code) : code;
@@ -11587,7 +11673,7 @@ function arenaPlan(code) {
     const __loop = (ln) => { if (++loops > 20000) throw pyError(ln, "Цикл крутится, а время не идёт"); };
     const program = new Function("__loop", ...names, ...conds.map(condDisp), instrument(js));
     snap();
-    program(__loop, ...L.commands.map((c) => (ln) => fns[c](ln)), ...conds.map((c) => ({ dynamiteFlying, barrelNear })[c] || enemyNear));
+    program(__loop, ...L.commands.map((c) => (ln) => fns[c](ln)), ...conds.map((c) => ({ dynamiteFlying, barrelNear, onFire })[c] || enemyNear));
     endedAt = t; line = 0;
     live(A.secs - t + 0.05);                    // программа кончилась — рыцарь стоит, гоблины не ждут
   } catch (e) {
@@ -11596,10 +11682,11 @@ function arenaPlan(code) {
   snap();
   events.sort((a, b) => a.t - b.t);             // бросок записан наперёд — события по времени
   const keepLost = !!keep && !!A.keep.must && keep.hp <= 0;       // уровень, где свою башню надо уберечь (v224)
-  const survived = hero.hp > 0 && (A.goal !== "raze" || razedAt !== null) && !keepLost;
+  const guardLost = !!guardEnd;                                   // v229: монаха не уберегли
+  const survived = hero.hp > 0 && (A.goal !== "raze" || razedAt !== null) && !keepLost && !guardLost;
   const lost = units.filter((u) => u.side === "us" && !u.hero && u.hp <= 0).length;
   return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp, lost, healsFailed, flung, parried, heroParries, razed: razedAt !== null, fortHp: fort?.hp,
-    keepHp: keep?.hp, keepHits, keepLost, pushes,
+    keepHp: keep?.hp, keepHits, keepLost, pushes, fires, douses, trips, dryTrips, burnHp, monkHeals, guardLost, burning: !!hero.fire,
     // корона (arena.keep.crown): башня устояла; clean — в неё не попал ни один динамит
     crown: !!keep && !!A.keep.crown && survived && (A.keep.crown === "clean" ? keepHits === 0 : keep.hp > 0) };
 }
@@ -11632,8 +11719,14 @@ function arenaStage() {
   const my = ++arenaRun;
   return { layer: arenaBox, before: null, unit: 100 / 18, pos: (x, y) => [x / 18 * 100, y / VH * 100], on: () => true, alive: () => my === arenaRun };
 }
-function arenaHudDraw(hp, max, left, fortHp, keepHp) {
-  if (L.arena.fort) {                           // прочность вышки; ниже — своей башни (v223), если она на уровне с прочностью
+function arenaHudDraw(hp, max, left, fortHp, keepHp, monkHp) {
+  if (L.arena.guard) {                          // v229: сердечки монаха, которого надо уберечь
+    let f = arenaHud.querySelector(".afort");
+    if (!f) { f = document.createElement("span"); f.className = "afort"; arenaHud.appendChild(f); }
+    const M = L.arena.allies.find((a) => a.kind === "monk")?.hp || ARENA_UNITS.monk.hp, m = Math.max(0, monkHp ?? M);
+    const html = `<span class="akeep${m <= 0 ? " lost" : ""}">${tr("Монах")} ${"♥".repeat(m)}${"♡".repeat(M - m)}</span>`;
+    if (f.dataset.h !== html) { f.dataset.h = html; f.innerHTML = html; }
+  } else if (L.arena.fort) {                           // прочность вышки; ниже — своей башни (v223), если она на уровне с прочностью
     let f = arenaHud.querySelector(".afort");
     if (!f) { f = document.createElement("span"); f.className = "afort"; arenaHud.appendChild(f); }
     const bar = (n, max) => "▮".repeat(Math.max(0, n)) + "▯".repeat(max - Math.max(0, n));
@@ -11685,7 +11778,9 @@ function arenaReset() {
   arenaHero.el.style.zIndex = Math.round(ARENA.start[1] * 40);
   arenaHudDraw(L.arena.hp, L.arena.hp, L.arena.secs);
   refreshPlan();
-  if (L.arena.goal === "raze") setStatus(tr(uiBlocks ? "Собери программу копейщика и нажми «Запустить» — разрушь вышку за {n} секунд"
+  if (L.arena.guard) setStatus(tr(uiBlocks ? "Собери программу копейщика и нажми «Запустить» — продержись {n} секунд и сбереги монаха"
+    : "Напиши программу копейщика и нажми «Запустить» — продержись {n} секунд и сбереги монаха", { n: L.arena.secs }));
+  else if (L.arena.goal === "raze") setStatus(tr(uiBlocks ? "Собери программу копейщика и нажми «Запустить» — разрушь вышку за {n} секунд"
     : "Напиши программу копейщика и нажми «Запустить» — разрушь вышку за {n} секунд", { n: L.arena.secs }));
   else setStatus(tr(uiBlocks ? "Собери программу рыцаря и нажми «Запустить» — продержись {n} секунд"
     : "Напиши программу рыцаря и нажми «Запустить» — продержись {n} секунд", { n: L.arena.secs }));
@@ -11772,14 +11867,47 @@ async function runArena() {
   };
   const upA = (a) => { a.lie?.cancel(); a.lie = null; };
   // союзники уже стоят (arenaScene) — их актёры получают номера по порядку, как в просчёте
-  scene.allies.forEach((a, k) => { actors[k + 1] = a; a.act = "idle"; });
+  const kindOf = {};
+  scene.allies.forEach((a, k) => { actors[k + 1] = a; a.act = "idle"; kindOf[k + 1] = A.allies[k].kind; });
+  // v229: огонь и вода. Пламя — часть фигурки (вложено в её картинку, как в бою у моста): идёт и поворачивается вместе с ней.
+  // Потух в воде — одежда остаётся обугленной (charSheet). В воде фигурка обрезана снизу — стоит по пояс.
+  const flames = {}, CHAR_HUE = { hero: [198, 262], monk: [150, 262] }, CHAR_SHEETS = { hero: ["lidle", "lrun", "lratk"], monk: ["monk", "monkrun", "heal"] };
+  const actorOf = (id) => (id ? actors[id] : H);
+  const fireUp = (id) => { const k = id ? kindOf[id] : "hero"; return k === "monk" ? 0.3 : k === "hero" ? 0.6 * HA.sc / 0.85 : 0.5; };
+  const flameOn = (id) => {
+    const a = actorOf(id); if (!a || flames[id]) return;
+    const kind = id ? kindOf[id] : "hero", fl = skActor(st, "fire", kind === "monk" ? 0.62 : 0.36, 0.92), pe = a.el, e = fl.el;
+    const S = parseFloat(pe.style.width) / st.unit, foot = -parseFloat(pe.style.getPropertyValue("--foot")) / 100;
+    pe.appendChild(e); e.style.transition = "none"; e.style.zIndex = 2;
+    e.style.width = parseFloat(e.style.width) / parseFloat(pe.style.width) * 100 + "%";
+    e.style.left = "50%"; e.style.top = (foot - fireUp(id) / S) * 100 + "%";
+    fl.mute = true; fl.show(true, true); fl.play(0, 7, 90); flames[id] = fl; flash(a); sfx("flare");
+    (CHAR_SHEETS[kind] || []).forEach((k) => charSheet(k, CHAR_HUE[kind]));          // обугленные листы — заранее, пока горит
+  };
+  const flameOff = (id) => {
+    const fl = flames[id]; if (!fl) return;
+    delete flames[id]; fl.el.remove();
+    const a = actorOf(id), kind = id ? kindOf[id] : "hero";
+    if (a && CHAR_SHEETS[kind]) { a.char = CHAR_HUE[kind]; a.sheet(a.key); }
+  };
+  const wadeCut = (a, d) => {
+    let v = "";
+    if (d) { const foot = -parseFloat(a.el.style.getPropertyValue("--foot")) / 100, feet = (1 - foot) * 100 - 4, cut = (1 - foot + 78 / SK[a.key][2] * 0.42) * 100; v = `inset(0 0 ${Math.round(feet + (cut - feet) * d)}% 0)`; }
+    if (a.cutV !== v) { a.cutV = v; a.el.style.clipPath = a.el.style.webkitClipPath = v; }
+  };
+  if (A.fire) (async () => {                      // над горящими — дымок
+    while (running && arenaRun === myRun) {
+      for (const id in flames) { const a = actorOf(+id); if (a) puff(a.x + (Math.random() - 0.5) * 0.2, a.y - fireUp(+id) - 0.3, 0.24, 0.45, 0.8, 900, 950); }
+      await sleep(420);
+    }
+  })();
   const Z = (a, y) => (a.el.style.zIndex = Math.round(y * 40));
   const ARCH_ROW = { up: 2, uside: 3, side: 4, dside: 5, down: 6 };
   const dirOf = (dx, dy) => { const ax = Math.abs(dx);
     return dy > 1.6 * ax ? "down" : -dy > 1.6 * ax ? "up" : dy > 0.55 * ax ? "dside" : -dy > 0.55 * ax ? "uside" : "side"; };
   const flash = (a) => a?.el.animate([{ filter: "brightness(2.4) saturate(0.3)" }, { filter: "none" }], 220);
   const quick = (ms) => Math.max(20, ms / speed);
-  let heroAct = "", ev = 0, lastBoom = 0, lastSpear = 0, lastArrow = 0;
+  let heroAct = "", ev = 0, lastBoom = 0, lastSpear = 0, lastArrow = 0, monkHp;
   for (let i = 0; i < p.frames.length; i++) {
     const fr = p.frames[i], prev = p.frames[i - 1];
     const dur = Math.max(10, ((fr.t - (prev?.t ?? 0)) * 1000) / speed);
@@ -11831,6 +11959,13 @@ async function runArena() {
         if (c) { c.el.style.transition = `left ${ms}ms linear, top ${ms}ms linear`; c.at(KP.x - 1.5, KP.y + 0.7); Z(c, KP.y + 2); tumbleA(c, 2, -1, ms, false); sleep(ms).then(() => { c.show(false, true); upA(c); }); scene.archer = null; }
       }
       if (e.kind === "leave") { const a = actors[e.id]; if (a) { a.gone = true; a.show(false); } }
+      if (e.kind === "ignite") flameOn(e.id);
+      if (e.kind === "wade") {                         // зашёл в воду: всплеск; горел — пар, огня больше нет
+        const sp = splashes[si++ % splashes.length]; sp.at(e.at[0], e.at[1] + 0.2); Z(sp, e.at[1] + 1); sp.show(true, true); sp.play(0, 9, quick(60), false).then(() => sp.show(false));
+        sfx("splash");
+        if (e.steam) { flameOff(e.id); for (let i = 0; i < 3; i++) puff(e.at[0] + (i - 1) * 0.22, e.at[1] - 0.5, 0.55, 0, 0.7, 700, 950); }
+      }
+      if (e.kind === "mheal") { fx.at(H.x ?? ARENA.start[0], H.y ?? ARENA.start[1]); Z(fx, 300); fx.show(true); fx.play(0, 11, quick(80), false).then(() => fx.show(false)); }
       if (e.kind === "throw" && e.fat) { const d = fatdyns[fdi++ % fatdyns.length]; d.el.style.transition = "none"; d.at(...e.from); Z(d, 400); d.show(true); d.play(0, 6, 70); d.arc(...e.to, 1.6, e.dur * 1000 / speed).then(() => d.show(false)); continue; }
       if (e.kind === "throw") { const d = dyns[bi++ % dyns.length]; d.el.style.transition = "none"; d.at(...e.from); Z(d, 40); d.show(true); d.play(0, 6, 70); d.arc(...e.to, 1.0, e.dur * 1000 / speed).then(() => d.show(false)); }
       if (e.kind === "boom") {
@@ -11874,6 +12009,7 @@ async function runArena() {
     const h = fr.hero;
     H.el.style.transition = `left ${dur}ms linear, top ${dur}ms linear`;
     H.at(h.x, h.y); H.x = h.x; H.y = h.y; if (h.act !== "fly" && h.act !== "down") { if (H.lie) upA(H); H.face(h.left); } Z(H, h.y);
+    if (A.fire) wadeCut(H, h.wade || 0);
     if (h.act !== heroAct) {
       heroAct = h.act;
       if (h.act === "run") H.play(...HA.run.slice(0, 3), true, HA.run[3]);
@@ -11884,8 +12020,10 @@ async function runArena() {
     for (const f of fr.units) {
       const R = ARENA_ART[f.kind];
       let a = actors[f.id];
-      if (!a) { a = actors[f.id] = skActor(st, R.key, R.sc || 0.85, R.foot); a.el.style.transition = "none"; a.at(f.x, f.y); void a.el.offsetWidth; a.show(true); a.act = ""; }
+      if (!a) { a = actors[f.id] = skActor(st, R.key, R.sc || 0.85, R.foot); a.el.style.transition = "none"; a.at(f.x, f.y); void a.el.offsetWidth; a.show(true); a.act = ""; kindOf[f.id] = f.kind; }
+      if (f.kind === "monk") monkHp = f.hp;
       if (f.dead || a.gone) continue;
+      if (A.fire) wadeCut(a, f.wade || 0);
       a.el.style.transition = `left ${dur}ms linear, top ${dur}ms linear`;
       a.at(f.x, f.y); if (f.act !== "fly" && f.act !== "down") { if (a.lie) upA(a); a.face(f.left); } Z(a, f.y);
       if (f.act !== a.act) {
@@ -11894,7 +12032,7 @@ async function runArena() {
         a.play(spec[0], spec[1], once ? quick(spec[2]) : spec[2], !once, spec[3] || R.key);
       }
     }
-    arenaHudDraw(h.hp, A.hp, A.secs - fr.t, fortHp, keepHp);
+    arenaHudDraw(h.hp, A.hp, A.secs - fr.t, fortHp, keepHp, monkHp);
     drawCode(fr.line);
     await sleep(dur);
     if (!running) return;
@@ -11904,6 +12042,7 @@ async function runArena() {
     setStatus(A.keep ? (!p.keepHits ? tr("Победа! Вышка разрушена, а своя башня цела и невредима — отбито динамита: {n}", { n: p.heroParries })
         : p.keepHp > 0 ? tr("Победа! Вышка разрушена, своя башня устояла — отбито динамита: {n}", { n: p.heroParries })
         : tr("Победа! Вышка разрушена — отбито динамита: {n}. Только свою башню гоблины взорвали", { n: p.heroParries }))
+      : A.guard ? tr("Победа! Монах цел. Огонь потушен в воде: {n}, побеждено гоблинов: {k}", { n: p.douses, k: p.kills })
       : A.goal === "raze" ? tr("Победа! Вышка разрушена — отбито динамита: {n}", { n: p.heroParries })
       : tr("Победа! Рыцарь продержался {n} секунд — побеждено гоблинов: {k}", { n: A.secs, k: p.kills }), "win");
     sfx("win");
@@ -11916,13 +12055,22 @@ async function runArena() {
     return;
   }
   // рыцарь не выдержал
-  H.play(...HA.idle.slice(0, 3), true, HA.idle[3]); H.show(false);
-  const d = deads[di++ % deads.length]; d.at(H.x, H.y); Z(d, H.y); d.show(true); d.play(0, 7, 110, false);
+  H.play(...HA.idle.slice(0, 3), true, HA.idle[3]);
+  if (p.hp <= 0) {                                // герой жив (не уберегли башню или монаха) — он остаётся стоять
+    H.show(false);
+    const d = deads[di++ % deads.length]; d.at(H.x, H.y); Z(d, H.y); d.show(true); d.play(0, 7, 110, false);
+  }
   sfx("fall");
   const sec = Math.floor(p.t);
   let why;
   if (p.endedAt !== null && p.endedAt < A.secs - 0.5)
     why = tr("Программа кончилась на {n}-й секунде, и дальше рыцарь просто стоял. Положи команды в цикл 🔁 — он крутится весь бой", { n: Math.max(1, Math.round(p.endedAt)) });
+  else if (p.guardLost)                           // v229: монаха надо было уберечь
+    why = p.dryTrips >= 2 ? tr("Монах погиб, пока копейщик бегал к воде без огня. К воде — только когда горишь: сначала спроси 🔥")
+      : tr("Монах погиб: гоблины добрались до него, а копейщика рядом не было. Когда рядом никого — иди к врагу: ➤");
+  else if (A.fire)
+    why = p.burnHp >= 3 && !p.douses ? tr("Копейщик сгорел: огонь сам не гаснет. Спроси 🔥 «горю?» — и беги к воде: 💧")
+      : tr("Копейщик не выстоял: {n} с из {m}. Посмотри, что он делает, когда горит, когда враг рядом и когда никого", { n: sec, m: A.secs });
   else if (p.keepLost)                            // v224: свою башню надо было уберечь
     why = tr("Башня рухнула: подрывники закидали её динамитом, а копейщик к ним так и не подошёл. Когда рядом никого — иди к врагу: ➤");
   else if (L.commands.includes("push") && !p.pushes)   // v224: бочки рвались у ног, а толчка не было
@@ -12726,8 +12874,8 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ===== 17. Прочитать задание вслух =====
-const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear", wait: "wait", push: "push" }
-  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё", wait: "ждать", push: "толкни" };
+const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear", wait: "wait", push: "push", goToWater: "to water" }
+  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё", wait: "ждать", push: "толкни", goToWater: "к воде" };
 function speakGoal() {
   try {
     let t = $("title").textContent + ". " + $("goal").textContent;
@@ -13001,6 +13149,8 @@ let stepFoot = 0;
 const SFX = {
   drip()   { const f = 1100 + Math.random() * 500; note(f, { dur: 0.18, vol: 0.18, type: "sine", slideTo: f * 0.55 }); },
   step()   { noise({ dur: 0.06, vol: 0.45, freq: stepFoot++ % 2 ? 900 : 700 }); note(stepFoot % 2 ? 150 : 130, { dur: 0.05, vol: 0.35 }); },
+  flare()  { noise({ dur: 0.4, vol: 0.22, freq: 2400 }); noise({ dur: 0.25, vol: 0.18, freq: 500, at: 0.05 }); },   // v229: вспыхнул огонь
+  splash() { noise({ dur: 0.32, vol: 0.4, freq: 1400 }); noise({ dur: 0.5, vol: 0.25, freq: 600, at: 0.05 }); },      // зашёл в воду
   coin()   { note(988, { dur: 0.08, type: "square", vol: 0.35 }); note(1319, { dur: 0.22, type: "square", vol: 0.35, at: 0.07 }); },
   key()    { [660, 880, 1175, 1568].forEach((f, i) => note(f, { dur: 0.14, vol: 0.5, at: i * 0.06 })); },
   unlock() { noise({ dur: 0.04, vol: 0.6, freq: 3000 }); note(523, { dur: 0.3, vol: 0.4, at: 0.05 }); note(784, { dur: 0.35, vol: 0.35, at: 0.05 }); },
@@ -14078,10 +14228,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 228;
+const APP_VERSION = 229;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 229, date: "2026-11-20", text: "Новая глава «Пожар» на острове гоблинов: факел может поджечь — спроси «горю?» и беги к воде. Сбереги монаха!", en: "A new chapter, “Blaze”, on Goblin Island: a torch can set you on fire — ask “on fire?” and run to the water. Keep the monk safe!", big: true },
   { v: 228, date: "2026-11-20", text: "Огонь теперь держится на бойце намертво: летит, кувыркается и ложится на бок вместе с ним.", en: "Fire now sticks to the fighter: it flies, tumbles and lies down together with them." },
   { v: 227, date: "2026-11-20", text: "Бой у моста: огонь держится на голове бойца, даже когда его сбило с ног. Обгоревшие теперь в копоти, а перо прогорает в уголь. С моста из воды больше не выбраться — только у самого берега.", en: "The bridge battle: fire now stays on a fighter’s head, even when he is knocked down. Burnt fighters are covered in soot and the plume burns to coal. No more climbing out of the water by the bridge — only right at the shore." },
   { v: 226, date: "2026-11-20", text: "Бой у моста на первом острове: гоблин с факелом может поджечь. Горящий теряет сердечки, одежда обугливается, подрывник от огня взрывается. Вода тушит: кого взрывом бросило в воду у берега, выбирается обратно.", en: "The bridge battle on the first island: a torch goblin can set things on fire. Whoever burns loses hearts and gets charred, and a bomber on fire blows up. Water puts fire out: a fighter blown into the shallows climbs back ashore.", big: true },
