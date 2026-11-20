@@ -1,13 +1,13 @@
 {
- "version": 232,
+ "version": 233,
  "date": "2026-11-20",
  "notes": [
-  "Огонь стал полупрозрачным: сквозь пламя видно бойца, кончики языков тают."
+  "Огонь прозрачнее у основания и плотнее к верхушке."
  ],
  "files": {
   "index.html": {
-   "size": 1127137,
-   "hash": "58af01e90516f37e"
+   "size": 1127603,
+   "hash": "2d40c40163cdbfe2"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "843e33d09434391e"
+   "hash": "b5611d223c3405ae"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Fire is now translucent: you can see the fighter through the flame, and the tips fade away."
+  "Fire is more transparent at the base and denser toward the top."
  ]
 }

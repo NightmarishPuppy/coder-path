@@ -4882,11 +4882,12 @@ const FIRE_SPOTS = {
 const FIRE_LOOKS = ["torch", "spots", "one"];
 let FIRE_LOOK = "torch";
 try { const v = localStorage.getItem("cp-fire-look"); if (FIRE_LOOKS.includes(v)) FIRE_LOOK = v; } catch (e) {}
-// v232: огонь — не твёрдое тело: он полупрозрачный (сквозь него видно бойца), а кончики языков тают совсем. Плотность — FIRE_ALPHA
-// (0,3…1; на стенде — ползунок, запоминается).
-let FIRE_ALPHA = 0.7;
-try { const v = +localStorage.getItem("cp-fire-alpha"); if (v >= 0.3 && v <= 1) FIRE_ALPHA = v; } catch (e) {}
-const FIRE_FADE = "linear-gradient(to top, #000 35%, rgba(0, 0, 0, 0.4) 100%)";
+// v232: огонь — не твёрдое тело: он полупрозрачный (сквозь него видно бойца). Плотность — FIRE_ALPHA
+// (0,3…1; на стенде — ползунок, запоминается) — это плотность верхушки.
+let FIRE_ALPHA = 0.85;
+try { const v = +localStorage.getItem("cp-fire-alpha2"); if (v >= 0.3 && v <= 1) FIRE_ALPHA = v; } catch (e) {}
+// v233: прозрачность — плавно по высоте: у основания огонь самый прозрачный (сквозь него видно, что горит), к верхушке — самый плотный
+const FIRE_FADE = "linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.75) 40%, #000 80%)";
 function fireSpotsOn(stage, a, kind) {
   const [fw, all] = FIRE_SPOTS[kind] || FIRE_SPOTS.torch, one = FIRE_LOOK === "one", torch = FIRE_LOOK === "torch";
   const spots = one ? [[kind === "monk" ? 97 : all[0][0], all[0][1] + (kind === "monk" ? 22 : 4), kind === "monk" ? 2.7 : 1.6, 0]] : all;
@@ -4945,7 +4946,7 @@ function fireLab() {
     const b = document.createElement("button"); b.dataset.s = k; b.textContent = ru; b.onclick = () => { S[k] = !S[k]; draw(); }; box.querySelector('[data-k="act"]').appendChild(b); }
   box.querySelector(".sheet-x").onclick = () => { open = false; box.remove(); };
   const rng = box.querySelector(".lab-alpha"), rv = box.querySelector(".lab-alpha-v"), showA = () => (rv.textContent = Math.round(FIRE_ALPHA * 100) + " %");
-  rng.oninput = () => { FIRE_ALPHA = +rng.value; try { localStorage.setItem("cp-fire-alpha", FIRE_ALPHA); } catch (e) {} showA(); draw(); };
+  rng.oninput = () => { FIRE_ALPHA = +rng.value; try { localStorage.setItem("cp-fire-alpha2", FIRE_ALPHA); } catch (e) {} showA(); draw(); };
   showA();
   draw();
   (async () => {                                  // дымок над горящими
@@ -14325,10 +14326,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 232;
+const APP_VERSION = 233;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 233, date: "2026-11-20", text: "Огонь прозрачнее у основания и плотнее к верхушке.", en: "Fire is more transparent at the base and denser toward the top." },
   { v: 232, date: "2026-11-20", text: "Огонь стал полупрозрачным: сквозь пламя видно бойца, кончики языков тают.", en: "Fire is now translucent: you can see the fighter through the flame, and the tips fade away." },
   { v: 231, date: "2026-11-20", text: "Огонь на бойцах стал другим: маленькие язычки пламени там, где есть чему гореть, — на пере, волосах, капюшоне, одежде.", en: "Fire on fighters looks different: small tongues of flame where something can burn — plume, hair, hood, clothes." },
   { v: 230, date: "2026-11-20", text: "На широком экране задание встаёт под поле, если правая колонка длиннее левой.", en: "On a wide screen the task moves under the field when the right column is longer than the left one." },
