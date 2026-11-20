@@ -235,7 +235,7 @@ var EN = {
   "динамит летит": "dynamite is flying",
   "бочка рядом": "barrel nearby",
   "горю": "on fire",
-  "Вид огня:": "Fire look:", "язычки от факела": "torch tongues", "костерки и дым": "small fires and smoke", "один большой, как было": "one big flame, as before",
+  "Вид огня:": "Fire look:", "Плотность огня:": "Fire density:", "язычки от факела": "torch tongues", "костерки и дым": "small fires and smoke", "один большой, как было": "one big flame, as before",
   "🔥 горит": "🔥 burning", "сбит с ног": "knocked down", "развернуть": "flip", "бежит": "running", "💧 в воде": "💧 in water", "обуглен": "charred",
   "сейчас": "now",
   "Пожар": "Blaze",

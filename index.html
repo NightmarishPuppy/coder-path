@@ -4882,6 +4882,11 @@ const FIRE_SPOTS = {
 const FIRE_LOOKS = ["torch", "spots", "one"];
 let FIRE_LOOK = "torch";
 try { const v = localStorage.getItem("cp-fire-look"); if (FIRE_LOOKS.includes(v)) FIRE_LOOK = v; } catch (e) {}
+// v232: огонь — не твёрдое тело: он полупрозрачный (сквозь него видно бойца), а кончики языков тают совсем. Плотность — FIRE_ALPHA
+// (0,3…1; на стенде — ползунок, запоминается).
+let FIRE_ALPHA = 0.7;
+try { const v = +localStorage.getItem("cp-fire-alpha"); if (v >= 0.3 && v <= 1) FIRE_ALPHA = v; } catch (e) {}
+const FIRE_FADE = "linear-gradient(to top, #000 35%, rgba(0, 0, 0, 0.4) 100%)";
 function fireSpotsOn(stage, a, kind) {
   const [fw, all] = FIRE_SPOTS[kind] || FIRE_SPOTS.torch, one = FIRE_LOOK === "one", torch = FIRE_LOOK === "torch";
   const spots = one ? [[kind === "monk" ? 97 : all[0][0], all[0][1] + (kind === "monk" ? 22 : 4), kind === "monk" ? 2.7 : 1.6, 0]] : all;
@@ -4891,7 +4896,8 @@ function fireSpotsOn(stage, a, kind) {
     e.style.width = (torch ? 46 : 34) * sz / fw * 100 + "%";
     e.style.left = x / fw * 100 + "%"; e.style.top = y / fw * 100 + "%";
     e.style.transformOrigin = `50% ${ft}%`; e.style.transform = `translate(-50%, -${ft}%) rotate(${one ? 0 : deg}deg)`;
-    fl.mute = true; fl.show(true, true); fl.play(0, 7, torch ? 100 : 90); fl.anim.t0 -= Math.random() * 700;   // огоньки пляшут не в такт
+    fl.mute = true; fl.show(true, true); e.style.opacity = FIRE_ALPHA; e.style.webkitMaskImage = e.style.maskImage = FIRE_FADE; e.style.filter = "brightness(1.2) saturate(1.35)";   // прозрачный огонь бледнеет на траве — добавляем яркости
+    fl.play(0, 7, torch ? 100 : 90); fl.anim.t0 -= Math.random() * 700;   // огоньки пляшут не в такт
     return fl;
   });
 }
@@ -4903,7 +4909,8 @@ function fireLab() {
   document.querySelector(".firelab")?.remove();
   const box = document.createElement("div"); box.className = "firelab";
   box.innerHTML = `<button class="sheet-x" aria-label="${tr("Закрыть")}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5L19 19M19 5L5 19" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></button>
-    <div class="lab-bar" data-k="look"><span>${tr("Вид огня:")}</span></div><div class="lab-stage"></div><div class="lab-bar" data-k="act"></div>`;
+    <div class="lab-bar" data-k="look"><span>${tr("Вид огня:")}</span></div>
+    <div class="lab-bar"><span>${tr("Плотность огня:")}</span><input type="range" class="lab-alpha" min="0.3" max="1" step="0.05" value="${FIRE_ALPHA}"><span class="lab-alpha-v"></span></div><div class="lab-stage"></div><div class="lab-bar" data-k="act"></div>`;
   document.body.appendChild(box);
   let open = true;
   const stage = box.querySelector(".lab-stage"), st = { layer: stage, before: null, unit: 100 / 12, pos: (x, y) => [x / 12 * 100, y / 6 * 100], on: () => open, alive: () => open };
@@ -4937,6 +4944,9 @@ function fireLab() {
   for (const [k, ru] of [["fire", tr("🔥 горит")], ["lie", tr("сбит с ног")], ["flip", tr("развернуть")], ["run", tr("бежит")], ["wet", tr("💧 в воде")], ["char", tr("обуглен")]]) {
     const b = document.createElement("button"); b.dataset.s = k; b.textContent = ru; b.onclick = () => { S[k] = !S[k]; draw(); }; box.querySelector('[data-k="act"]').appendChild(b); }
   box.querySelector(".sheet-x").onclick = () => { open = false; box.remove(); };
+  const rng = box.querySelector(".lab-alpha"), rv = box.querySelector(".lab-alpha-v"), showA = () => (rv.textContent = Math.round(FIRE_ALPHA * 100) + " %");
+  rng.oninput = () => { FIRE_ALPHA = +rng.value; try { localStorage.setItem("cp-fire-alpha", FIRE_ALPHA); } catch (e) {} showA(); draw(); };
+  showA();
   draw();
   (async () => {                                  // дымок над горящими
     while (open) {
@@ -14315,10 +14325,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 231;
+const APP_VERSION = 232;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 232, date: "2026-11-20", text: "Огонь стал полупрозрачным: сквозь пламя видно бойца, кончики языков тают.", en: "Fire is now translucent: you can see the fighter through the flame, and the tips fade away." },
   { v: 231, date: "2026-11-20", text: "Огонь на бойцах стал другим: маленькие язычки пламени там, где есть чему гореть, — на пере, волосах, капюшоне, одежде.", en: "Fire on fighters looks different: small tongues of flame where something can burn — plume, hair, hood, clothes." },
   { v: 230, date: "2026-11-20", text: "На широком экране задание встаёт под поле, если правая колонка длиннее левой.", en: "On a wide screen the task moves under the field when the right column is longer than the left one." },
   { v: 229, date: "2026-11-20", text: "Новая глава «Пожар» на острове гоблинов: факел может поджечь — спроси «горю?» и беги к воде. Сбереги монаха!", en: "A new chapter, “Blaze”, on Goblin Island: a torch can set you on fire — ask “on fire?” and run to the water. Keep the monk safe!", big: true },
