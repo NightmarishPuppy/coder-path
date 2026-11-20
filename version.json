@@ -1,13 +1,13 @@
 {
- "version": 225,
+ "version": 226,
  "date": "2026-11-20",
  "notes": [
-  "Из главы «Штурм» убран уровень «Что первым?» — он учил не тому. В заданиях на Python и JavaScript номер нужной строки теперь виден сразу."
+  "Бой у моста на первом острове: гоблин с факелом может поджечь. Горящий теряет сердечки, одежда обугливается, подрывник от огня взрывается. Вода тушит: кого взрывом бросило в воду у берега, выбирается обратно."
  ],
  "files": {
   "index.html": {
-   "size": 1083927,
-   "hash": "26d40fd755777982"
+   "size": 1096443,
+   "hash": "8bff55494953d3bf"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "a76b84aff71f15c2"
+   "hash": "22071d89d7d4004b"
   },
   "icon-192.png": {
    "size": 42164,
@@ -98,8 +98,8 @@
    "hash": "a78aba4b20c12ee4"
   },
   "art-scenes.js": {
-   "size": 985719,
-   "hash": "a0c68e8d8164c83e"
+   "size": 994253,
+   "hash": "ce08f4e71a503e1d"
   },
   "art-isle2.js": {
    "size": 80017,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The level “What Comes First?” has been removed from the “Assault” chapter — it taught the wrong thing. In Python and JavaScript tasks the right line number now shows at once."
+  "The bridge battle on the first island: a torch goblin can set things on fire. Whoever burns loses hearts and gets charred, and a bomber on fire blows up. Water puts fire out: a fighter blown into the shallows climbs back ashore."
  ]
 }

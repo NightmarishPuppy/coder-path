@@ -4769,7 +4769,8 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   duckair: [3, 1, 32], boom2: [8, 1, 192], boom3: [10, 1, 192], dust: [10, 1, 64],
   // остров 1 наряднее (v187): овцы, стройка, тренировка, костёр
   shidle: [6, 1, 128], shgrass: [12, 1, 128], shmove: [4, 1, 128], phidle: [8, 1, 192], prunham: [6, 1, 192], lrdef: [6, 1, 320], wguard: [6, 1, 192],
-  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256], gwtc: [1, 1, 256], towerbc: [1, 1, 256], towerbx: [1, 1, 256], gwt1: [4, 1, 256], gwt2: [4, 1, 256], gwt3: [4, 1, 256], gwlog: [2, 1, 80] };
+  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256], gwtc: [1, 1, 256], towerbc: [1, 1, 256], towerbx: [1, 1, 256], gwt1: [4, 1, 256], gwt2: [4, 1, 256], gwt3: [4, 1, 256], gwlog: [2, 1, 80],
+  flare1: [8, 1, 64], flare2: [10, 1, 64], flare3: [12, 1, 64] };   // огонь в боях (v226): искра, язык пламени, клуб огня с дымом
 TS.sk_fire = TS.fx_fire;
 let SK_ACTORS = [];
 let skLast = 0;
@@ -4807,6 +4808,33 @@ function mapStage(wrap) {
     pos: (x, y) => [x * 20 / 360 * 100, y * 20 / VH * 100], on: () => !$("mapview").hidden && !wrap.hidden, alive: () => true, ear: wrap };   // ear — карта, на которой слышны звуки этой сцены
 }
 // Актёр: x, y — точка, где он стоит (ноги)
+// Обугленный лист (v226): точки листа, чей оттенок попадает в [от, до] градусов (ткань бойца: синяя у наших, красная и
+// лиловая у гоблинов), становятся углём — тёмно-серыми, с прежней светотенью. Кожа, железо, контур и огонь факела не меняются.
+// Считается один раз на лист и оттенок, в фоне; пока не готов — null.
+const CHARRED = {};
+function charSheet(k, [h0, h1]) {
+  const id = k + "|" + h0 + "|" + h1;
+  if (CHARRED[id]) return CHARRED[id] === "…" ? null : CHARRED[id];
+  CHARRED[id] = "…";
+  const im = new Image();
+  im.onload = () => {
+    const c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+    const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height), p = d.data;
+    for (let i = 0; i < p.length; i += 4) {
+      if (p[i + 3] < 40) continue;
+      const r = p[i], gr = p[i + 1], b = p[i + 2], mx = Math.max(r, gr, b), dl = mx - Math.min(r, gr, b);
+      if (dl < 40) continue;                                     // серое, чёрное, белое — не ткань
+      const h = ((mx === r ? (gr - b) / dl : mx === gr ? (b - r) / dl + 2 : (r - gr) / dl + 4) * 60 + 360) % 360;
+      if (h0 <= h1 ? h < h0 || h > h1 : h < h0 && h > h1) continue;
+      const l = (0.3 * r + 0.59 * gr + 0.11 * b) * 0.34;
+      p[i] = l + 16; p[i + 1] = l + 9; p[i + 2] = l + 7;
+    }
+    g.putImageData(d, 0, 0); CHARRED[id] = c.toDataURL();
+  };
+  im.src = TS["sk_" + k];
+  return null;
+}
 function skActor(stage, key, scale, foot = 0.67) {
   const el = document.createElement("div");
   el.className = "skactor";
@@ -4819,7 +4847,8 @@ function skActor(stage, key, scale, foot = 0.67) {
   a.sheet = (k) => {
     a.key = k;
     const [c, r] = SK[k];
-    el.style.backgroundImage = `url(${TS["sk_" + k]})`;
+    // a.char — оттенки ткани, которая обуглилась (v226): тот же лист, но перекрашенный; пока его нет — обычный
+    el.style.backgroundImage = `url(${(a.char && charSheet(k, a.char)) || TS["sk_" + k]})`;
     el.style.backgroundSize = `${c * 100}% ${r * 100}%`;
   };
   a.frame = (col, row) => {
@@ -5416,6 +5445,9 @@ async function battle(st0, B) {
   // переход выключен и браузер обязан применить новое место до того, как переход включится снова
   const place = (u) => {
     u.lie?.cancel(); u.lie = null;                    // вернулся в строй — уже не лежит
+    if (u.fire) { free(u.fire.fl); u.fire = null; }   // и не горит, и не в копоти (v226)
+    if (u.burnt) { u.burnt = false; u.a.char = null; u.a.sheet(u.a.key); }
+    u.wetTill = 0; u.wade = null; u.a.el.style.clipPath = u.a.el.style.webkitClipPath = "";
     u.a.el.style.transition = "none"; u.a.at(u.x, u.y); Z(u.a, u.y, 1);
     void u.a.el.offsetWidth;
     u.a.show(true);
@@ -5491,6 +5523,103 @@ async function battle(st0, B) {
       { duration: ms, easing: grow > 1 ? "cubic-bezier(.5,0,1,.6)" : lie ? "ease-out" : "linear", fill: lie ? "forwards" : "none" });
   };
   const getUp = (v) => { v.lie?.cancel(); v.lie = null; };
+  // ----- огонь (v226; B.fire) -----
+  // Факельщик, ударив, может поджечь: монаха — легко (ряса), рыцаря и копейщика — редко (горит перо да плащ). Горящий теряет
+  // сердечко раз в FIRE.tick, огонь перекидывается на тех, кто вплотную; подрывник с динамитом от огня взрывается, бочка — сразу.
+  // Через FIRE.burn огонь гаснет сам, одежда остаётся обугленной (лист перекрашивает charSheet) — до самой гибели бойца.
+  // Вода тушит мигом: кого взрывом бросило в воду у самого берега, не тонет — встаёт по пояс в воде, потухший, и выходит на берег.
+  // Каменная башня загорается очень редко и только сверху (деревянная обшивка): погорит и потеряет одну прочность.
+  const FIRE = B.fire ? { burn: 4500, tick: 1300, wet: 7000, tower: 0.035,
+    chance: { monk: 0.7, war: 0.2, lan: 0.2, hero: 0.15, torch: 0.3, torchp: 0.3 },
+    hue: { monk: [185, 255], war: [185, 255], lan: [185, 255], hero: [185, 255], torch: [335, 12], torchp: [255, 330] },
+    sheets: { monk: ["monk", "monkrun", "heal"], war: ["kwar"], lan: ["lidle", "lrun", "lratk", "ldratk", "luratk", "ldatk", "luatk"], hero: ["hidle", "hrun", "hatk"], torch: ["torch"], torchp: ["torchp"] } } : null;
+  // пламя: малое — на голове (перо, волосы), большое — на всём бойце (ряса монаха) и на башне
+  const flames = FIRE ? pool("fire", 6, 0.36, 0.92) : [], flamesBig = FIRE ? pool("fire", 4, 0.62, 0.92) : [], flaresA = FIRE ? pool("flare2", 3, 1.1, 0.8) : [], flaresB = FIRE ? pool("flare3", 3, 1.3, 0.8) : [];
+  [...flames, ...flamesBig, ...flaresA, ...flaresB].forEach((a) => (a.mute = true));
+  const fireUp = (v) => (v.kind === "monk" ? 0.22 : v.kind === "war" || v.kind === "lan" || v.kind === "hero" ? 0.62 : 0.45) * ZM;   // где горит: ряса — снизу доверху, у воинов — перо
+  const fireStat = { lit: 0, doused: 0, waded: 0, towers: 0, blown: 0 };
+  const setChar = (v) => { if (v.burnt || !FIRE.hue[v.kind]) return; v.burnt = true; v.a.char = FIRE.hue[v.kind]; v.a.sheet(v.a.key); };
+  const ignite = (v) => {
+    if (!FIRE || v.dead || v.fire || now < (v.wetTill || 0)) return false;
+    if (v.kind === "barrel") { kill(v); return true; }
+    (FIRE.sheets[v.kind] || []).forEach((k) => charSheet(k, FIRE.hue[v.kind]));        // обугленные листы — заранее, пока горит
+    const fl = take(v.kind === "monk" || v.T.fat ? flamesBig : flames);
+    v.fire = { till: now + FIRE.burn, tick: now + FIRE.tick, char: now + FIRE.burn * 0.45, puff: 0, fl };
+    fl.el.style.transition = "none"; fl.at(v.x, v.y - fireUp(v)); fl.show(true, true); fl.play(0, 7, 90);
+    fxAt(flaresB, v.x, v.y - fireUp(v), 55, v.y + 4); flash(v); fireStat.lit++;
+    // подрывник горит недолго: огонь добирается до динамита
+    if (v.T.thrower) after(900 + Math.random() * 700, () => { if (v.dead || !v.fire) return; const fat = !!v.T.fat, x = v.x, y = v.y; fireStat.blown++;
+      kill(v, true); v.a.show(false, true); boom(x, y); if (fat) fxAt(hugeBooms, x, y, 80); fat ? blast(x, y, 1.1, 3, 2.3, 3.4) : blast(x, y, 0.75, 2, 0.5, 1.5); });
+    return true;
+  };
+  // погас: сам (догорел) или в воде (steam — облачко пара)
+  const douse = (v, steam) => {
+    const F = v.fire; if (!F) return;
+    v.fire = null; free(F.fl);
+    if (steam) { fireStat.doused++; for (let i = 0; i < 3; i++) puffAt(v.a.x + (i - 1) * 0.22, v.a.y - 0.5 * ZM, 0.55, 0, 0.7, 700); }
+    if (!v.dead && (steam ? now >= F.char - 1200 : true)) setChar(v);
+  };
+  const fireTick = () => {
+    for (const v of units) {
+      const F = v.fire; if (!F) continue;
+      if (v.dead) { v.fire = null; free(F.fl); continue; }
+      const ax = v.air ? v.a.x : v.x, ay = v.air ? v.a.y : v.y;           // в полёте огонь летит вместе с бойцом
+      F.fl.el.style.transition = v.air ? "none" : `left ${TICK}ms linear, top ${TICK}ms linear`;
+      F.fl.at(ax, ay - fireUp(v)); F.fl.el.style.zIndex = +v.a.el.style.zIndex + 1;
+      if (now >= F.char) setChar(v);
+      if (now >= F.puff) { F.puff = now + 420; puffAt(ax + (Math.random() - 0.5) * 0.2, ay - 0.95 * ZM, 0.32, 0.4, 0.8, 900); if (Math.random() < 0.4) fxAt(flaresA, ax + (Math.random() - 0.5) * 0.3, ay - 0.75 * ZM, 60, ay + 5); }
+      if (v.air) continue;
+      if (now >= F.tick) {
+        F.tick = now + FIRE.tick; hurt(v, 1);
+        if (v.dead) continue;
+        for (const w of units) if (w !== v && !w.dead && !w.air && !w.fire && dist(w, v) < 0.6 * ZM && Math.random() < (w.T.thrower || w.kind === "barrel" ? 0.6 : (FIRE.chance[w.kind] || 0) * 0.7)) ignite(w);
+      }
+      if (now >= F.till) douse(v);
+    }
+    for (const q of archers) {                                            // башня: факельщик у стены — редкая искра на обшивку
+      if (q.fire) {
+        if (q.hp <= 0) { free(q.fire.fl); q.fire = null; continue; }
+        if (now >= q.fire.puff) { q.fire.puff = now + 380; puffAt(q.tx + (Math.random() - 0.5) * 0.4, q.y - 0.5 * ZM, 0.4, 0.4, 0.9, 1000); }
+        if (now >= q.fire.till) { free(q.fire.fl); q.fire = null; towerHit(q); }
+      } else if (q.hp > 0 && Math.random() < FIRE.tower * TICK / 1000
+        && units.some((v) => !v.dead && !v.air && (v.kind === "torch" || v.kind === "torchp") && Math.hypot(v.x - q.tx, v.y - q.ty) < 1.5 * ZM)) towerFire(q);
+    }
+  };
+  const towerFire = (q) => {
+    if (!FIRE || q.fire || q.hp <= 0) return;
+    const fl = take(flamesBig); q.fire = { till: now + 3800, puff: 0, fl }; fireStat.towers++;
+    fl.el.style.transition = "none"; fl.at(q.tx + 0.28 * ZM, q.y + 0.12 * ZM); fl.el.style.zIndex = +q.front.el.style.zIndex + 1; fl.show(true, true); fl.play(0, 7, 90);
+    fxAt(flaresB, q.tx + 0.28 * ZM, q.y, 55, q.ty + 6);
+  };
+  // берег рядом с точкой в воде: ближайшее место, где можно стоять, не дальше клетки
+  const shoreBy = (x, y) => {
+    for (let r = 0.25; r <= 1.1; r += 0.17) for (let k = 0; k < 16; k++) { const q = k * Math.PI / 8, px = x + Math.cos(q) * r, py = y + Math.sin(q) * r; if (walk(px, py)) return [px, py]; }
+    return null;
+  };
+  // упал в воду у берега: всплеск, стоит по пояс (потухший, если горел), потом выбирается на берег — и снова в бой.
+  // Пока он в воде, v.wade ведёт его по тактам (wadeTick): сам он не думает, а вырез картинки «по пояс» мельчает к берегу.
+  const wadeClip = (v, p) => (v.a.el.style.clipPath = v.a.el.style.webkitClipPath = p == null ? "" : `inset(0 0 ${Math.round(p)}% 0)`);
+  const wade = (v, x, y, [sx, sy]) => {
+    const foot = v.T.foot ?? 0.67, cut = (1 - foot + 78 / SK[v.a.key][2] * 0.42) * 100;
+    getUp(v); v.x = x; v.y = y; v.busy = Infinity; fireStat.waded++;
+    v.a.el.style.transition = "none"; v.a.at(x, y); Z(v.a, y, 1);
+    douse(v, true); v.wetTill = now + FIRE.wet + 3000;
+    fxAt(splashes, x, y, 70, y + 1); mapSfx(st, "splash", x, y);
+    v.wade = { sx, sy, go: now + 900, cut, feet: (1 - foot) * 100 - 4, d0: Math.hypot(sx - x, sy - y) || 0.1, puff: 0 };
+    wadeClip(v, cut); v.anim = ""; anim(v, "idle");
+  };
+  const wadeTick = () => {
+    for (const v of units) {
+      const Wd = v.wade; if (!Wd) continue;
+      if (v.dead || v.air) { v.wade = null; wadeClip(v); continue; }
+      if (now < Wd.go) continue;
+      const d = Math.hypot(Wd.sx - v.x, Wd.sy - v.y), step = v.T.speed * 0.45 * TICK / 1000;
+      if (d <= step) { v.x = Wd.sx; v.y = Wd.sy; v.wade = null; wadeClip(v); v.busy = now + 250; v.anim = ""; continue; }
+      v.left = Wd.sx < v.x; v.x += (Wd.sx - v.x) / d * step; v.y += (Wd.sy - v.y) / d * step; anim(v, "run");
+      wadeClip(v, Wd.feet + (Wd.cut - Wd.feet) * Math.min(1, d / Wd.d0));
+      if (now >= Wd.puff) { Wd.puff = now + 350; puffAt(v.x, v.y - 0.05, 0.4, 0, 0.15, 450); }
+    }
+  };
   // Боец отлетает от взрыва в точке (x, y). s — сила, с которой волна до него дошла:
   //   до 0,6 — сбивает с ног: короткий кувырок, лежит секунду-две, потом встаёт и снова дерётся (v209: раньше делал сальто на месте
   //   и сразу бил — выглядело комично); 0,6–1,7 — подлетает и падает подальше, тоже лежит; больше — уносит насовсем:
@@ -5501,6 +5630,7 @@ async function battle(st0, B) {
     if (d0 < 0.05) { const q = Math.random() * 6.28; dx = Math.cos(q); dy = Math.sin(q); } else { dx /= d0; dy /= d0; }
     const a = v.a, dir = dx < 0 ? -1 : 1, size = v.T.sc / 0.85;
     getUp(v);
+    if (v.wade) { v.wade = null; v.a.el.style.clipPath = v.a.el.style.webkitClipPath = ""; }      // стоял по пояс в воде — и снова взрыв
     v.air = true; v.busy = Infinity; v.tgt = null;
     a.el.style.transition = "none"; Z(a, v.y + 6);
     if (s >= 1.7) {
@@ -5527,7 +5657,7 @@ async function battle(st0, B) {
     v.lie = tumble(a, dir * (far ? Math.max(1, flySpin(size, ms)) : 0), ms, 1, dir);
     a.arc(lx, ly, far ? 0.9 + len * 0.35 : 0.4, ms).then(() => {
       v.air = false;
-      if (!v.dead && wet()) kill(v, true);
+      if (!v.dead && wet()) { const sh = FIRE && (!B.inside || B.inside(lx, ly)) && shoreBy(lx, ly); if (sh) return wade(v, lx, ly, sh); kill(v, true); }   // у берега не тонет (v226)
       if (!v.dead) {                                   // лежит секунду-две, потом встаёт
         v.x = lx; v.y = ly; v.anim = ""; anim(v, "idle");
         const down = 1000 + Math.random() * 1000; v.busy = now + down;
@@ -5672,7 +5802,11 @@ async function battle(st0, B) {
     u.next = now + u.T.cd; u.busy = now + spec[1] * spec[2];
     anim(u, "atk" + now, spec);
     if (u.T.side === "us") say(u, CMD("attack"), 0.3);
-    after(spec[1] * spec[2] * 0.55, () => { if (!u.dead && dist(u, t) < u.T.reach + 0.45 * ZM) hurt(t, u.T.dmg); });
+    after(spec[1] * spec[2] * 0.55, () => {
+      if (u.dead || dist(u, t) >= u.T.reach + 0.45 * ZM) return;
+      hurt(t, u.T.dmg);
+      if (FIRE && (u.kind === "torch" || u.kind === "torchp") && !t.dead && Math.random() < (FIRE.chance[t.kind] || 0)) ignite(t);   // факел поджёг
+    });
   };
   const met = { sword: 0, spear: 0, arrow: 0, ground: 0 };   // чем встретили динамит (счётчики для тестов)
   const throwTnt = (u, t) => {
@@ -5851,7 +5985,7 @@ async function battle(st0, B) {
     H.stands.forEach((stand) => { const p = A("prungold", 0.8), n = A("gnug", 0.8, 0.585); Z(p, stand[1]); skRun(() => haul(p, n, stand)); });
   } else if (mount) skRun(async () => { for (;;) { await skWait(st0, skRnd(2500, 5000)); await mount.play(0, 12, 70, false); mount.frame(0, 0); } });
 
-  B.api = { blast, make, throwTnt, met, forts: () => archers.map((q) => ({ hp: q.hp, dead: !!q.dead })), pawns: () => pawns.length };                  // для тестов: устроить взрыв или поставить бойца самому
+  B.api = { blast, make, throwTnt, met, ignite, towerFireAt: (i) => towerFire(archers[i]), fling, shoreBy, fire: fireStat, burning: () => units.filter((v) => v.fire && !v.dead).length, forts: () => archers.map((q) => ({ hp: q.hp, dead: !!q.dead })), pawns: () => pawns.length };                  // для тестов: устроить взрыв или поставить бойца самому
   // ----- волны гоблинов: приходят из облаков по мосту -----
   const W = B.waves;
   let queue = [], nextWave = now + (W.first ?? 2500);
@@ -5880,6 +6014,7 @@ async function battle(st0, B) {
     for (let i = later.length - 1; i >= 0; i--) if (later[i][0] <= now) { const fn = later[i][1]; later.splice(i, 1); fn(); }
     units.forEach(think);
     archers.forEach(archerThink);
+    if (FIRE) { fireTick(); wadeTick(); }
     // не стоять друг в друге
     const live = units.filter((v) => !v.dead && !v.air);
     for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
@@ -5942,7 +6077,8 @@ async function skitBeach(st0, S) {
     const r = w.getBoundingClientRect(), k = r.height / RH;
     return r.top + S.rows[0] * k < innerHeight + 120 && r.top + S.rows[1] * k > -120;
   } };
-  const B = { walk, zoom: S.zoom, towers: S.towers, forts: true, pawns: S.pawns, respawn: S.respawn, spawns: [S.spawn], goal: S.goal, posts: S.posts,
+  // fire — огонь, обугливание и вода у берега (v226); inside — где видно на телефоне: за краем карты по пояс в воде не стоят
+  const B = { walk, zoom: S.zoom, towers: S.towers, forts: true, fire: true, inside: (x) => x > 0.6 && x < 17.4, pawns: S.pawns, respawn: S.respawn, spawns: [S.spawn], goal: S.goal, posts: S.posts,
     code: true, talk: () => (uiBlocks ? "blocks" : lang), bubPx: () => Math.min(15, Math.max(10, w.clientWidth / 18 * 0.4)),
     bubMax: 3, bubGap: () => (uiBlocks ? [3.2, 1.3] : [6, 1.3]), bubFit: true, smart: true, skulls: 6500, archer: { reach: 6.8, cd: 1150 },
     stats: { war: { hp: 9, leash: 2.3 }, lan: { hp: 9, leash: 2.5 }, monk: { hp: 6 } },
@@ -13904,10 +14040,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 225;
+const APP_VERSION = 226;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 226, date: "2026-11-20", text: "Бой у моста на первом острове: гоблин с факелом может поджечь. Горящий теряет сердечки, одежда обугливается, подрывник от огня взрывается. Вода тушит: кого взрывом бросило в воду у берега, выбирается обратно.", en: "The bridge battle on the first island: a torch goblin can set things on fire. Whoever burns loses hearts and gets charred, and a bomber on fire blows up. Water puts fire out: a fighter blown into the shallows climbs back ashore.", big: true },
   { v: 225, date: "2026-11-20", text: "Из главы «Штурм» убран уровень «Что первым?» — он учил не тому. В заданиях на Python и JavaScript номер нужной строки теперь виден сразу.", en: "The level “What Comes First?” has been removed from the “Assault” chapter — it taught the wrong thing. In Python and JavaScript tasks the right line number now shows at once." },
   { v: 224, date: "2026-11-20", text: "Глава «Штурм» выросла до шести уровней: «Что первым?» (найди ошибку), «Своя башня» — подрывники взрывают твою башню, «Толкни бочку» — новая команда 🛢. Испытание стало труднее, а корона — только за башню, в которую не попал ни один динамит.", en: "The “Assault” chapter has grown to six levels: “What Comes First?” (find the bug), “Your Own Tower” — bombers blow up your tower, “Push the Barrel” — a new command 🛢. The challenge is tougher, and the crown is only for a tower not hit by a single stick of dynamite.", big: true },
   { v: 223, date: "2026-11-20", text: "Глава «Штурм» закончена: появилось «Штурм: испытание» с первой короной Острова гоблинов. Разрушь вышку гоблинов — и сбереги свою башню от поджигателей.", en: "The “Assault” chapter is complete: “Assault: Challenge” brings Goblin Island’s first crown. Bring down the goblin watchtower — and save your own tower from the arsonists.", big: true },
