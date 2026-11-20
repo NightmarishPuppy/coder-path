@@ -1,13 +1,13 @@
 {
- "version": 224,
+ "version": 225,
  "date": "2026-11-20",
  "notes": [
-  "Глава «Штурм» выросла до шести уровней: «Что первым?» (найди ошибку), «Своя башня» — подрывники взрывают твою башню, «Толкни бочку» — новая команда 🛢. Испытание стало труднее, а корона — только за башню, в которую не попал ни один динамит."
+  "Из главы «Штурм» убран уровень «Что первым?» — он учил не тому. В заданиях на Python и JavaScript номер нужной строки теперь виден сразу."
  ],
  "files": {
   "index.html": {
-   "size": 1084015,
-   "hash": "c3d7a6fbf3a6c27e"
+   "size": 1083927,
+   "hash": "26d40fd755777982"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "f7d843a6634b483f"
+   "hash": "a76b84aff71f15c2"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 39539,
-   "hash": "0c65f56d8c58fb05"
+   "size": 36696,
+   "hash": "a78aba4b20c12ee4"
   },
   "art-scenes.js": {
    "size": 985719,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The “Assault” chapter has grown to six levels: “What Comes First?” (find the bug), “Your Own Tower” — bombers blow up your tower, “Push the Barrel” — a new command 🛢. The challenge is tougher, and the crown is only for a tower not hit by a single stick of dynamite."
+  "The level “What Comes First?” has been removed from the “Assault” chapter — it taught the wrong thing. In Python and JavaScript tasks the right line number now shows at once."
  ]
 }

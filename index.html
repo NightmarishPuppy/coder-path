@@ -2543,8 +2543,6 @@ function btnRefs(html) {
     // [[elsebtn]] — кнопка «＋ иначе» серой панели выбранной строки; [[elsehead]] — заголовок половины «иначе» в рамке
     .replace(/\[\[elsebtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("иначе")}</span>`)
     .replace(/\[\[elsehead\]\]/g, () => `<span class="elseref">${tr("иначе")}</span>`)
-    // [[swapbtn]] — кнопка «⇄» серой панели выбранной рамки «если»: сменить вопрос (v224)
-    .replace(/\[\[swapbtn\]\]/g, () => `<span class="elsebtnref">⇄</span>`)
     // [[elifbtn]] — кнопка «＋ другое если» серой панели; [[elifhead:moveRight:wall]] — заголовок половины «другое если»
     .replace(/\[\[elifbtn\]\]/g, () => `<span class="elsebtnref">＋ ${tr("другое если")}</span>`)
     .replace(/\[\[elifhead(?::(\w+):(\w+))?\]\]/g, (m, d, w) => `<span class="elifref">${tr("другое если")}${d ? ` <span class="ar">${DIRS[d].arrow}</span>${WHAT_RU[w]}` : ""}</span>`)
@@ -3572,7 +3570,7 @@ function loadLevel(i) {
   // (код ставим до кнопок: кнопки своих приёмов берутся из кода уровня)
   codeEl.value = save.code[codeKey()] ?? (lang === "js" ? save.code[L.name] : undefined) ?? L.starter[lang];
   buildChips();
-  if (L.funcs) $("goal").innerHTML = goalHtml();   // картинка приёма в задании — из кода
+  $("goal").innerHTML = goalHtml();   // картинка приёма и номера строк в задании ([[lineof:…]]) — из кода: рисуем заново, когда он на месте
   winBox.hidden = true;
   reset();
   requestAnimationFrame(() => requestAnimationFrame(() => { fitText(); fitBoard(true); }));
@@ -11014,7 +11012,6 @@ const ARENA_UNITS = {
   torchp: { side: "gob", hp: 3, dmg: 1, reach: 0.75, cd: 1.1, speed: 1.25 },
   tnt:    { side: "gob", hp: 2, dmg: 1, reach: 2.6, cd: 2.4, speed: 1.2 },
   barrel: { side: "gob", hp: 2, dmg: 2, reach: 0.6, cd: 0, speed: 1.7 },
-  brute:  { side: "gob", hp: 60, dmg: 1, reach: 0.9, cd: 4.4, speed: 1.1, heavy: true },   // v224: здоровяк — крупный, бьёт редко, зарубить его не успеть
   sap:    { side: "gob", hp: 2, dmg: 1, reach: 2.6, cd: 2.4, wind: 1.0, speed: 1.3 },   // v224: подрывник, который взрывает нашу башню (arena.keep)
   war:    { side: "us", hp: 6, dmg: 1, reach: 0.8, cd: 0.9, speed: 1.8, sight: 1.6 },
   lan:    { side: "us", hp: 6, dmg: 1, reach: 1.1, cd: 1.0, speed: 1.7, sight: 1.6 },
@@ -11036,7 +11033,6 @@ const ARENA_ART = {
   torchp: { key: "torchp", idle: [0, 7, 120], run: [1, 6, 90], atk: [2, 6, 85] },
   tnt:    { key: "tnt", idle: [0, 6, 130], run: [1, 6, 90], throw: [2, 7, 90] },
   barrel: { key: "barrel", foot: 0.72, idle: [0, 1, 200], run: [4, 3, 160], fuse: [5, 3, 150] },
-  brute:  { key: "torchp", sc: 1.25, idle: [0, 7, 150], run: [1, 6, 120], atk: [2, 6, 110] },
   sap:    { key: "tnt", idle: [0, 6, 130], run: [1, 6, 90], throw: [2, 7, 90] },
   war:    { key: "kwar", idle: [0, 6, 140], run: [1, 6, 90], atk: [2, 6, 75] },
   lan:    { key: "lidle", sc: 0.8, foot: 0.625, idle: [0, 12, 110, "lidle"], run: [0, 6, 90, "lrun"], atk: [0, 3, 120, "lratk"] },
@@ -11144,7 +11140,6 @@ function arenaPlan(code) {
   };
   // взрывная волна дошла до бойца с силой s
   const fling = (u, cx, cy, s) => {
-    if (u.T?.heavy) return;                     // здоровяка взрывной волной не сдвинуть (v224)
     if (u.hp <= 0 || u.kind === "barrel" || s < ARENA_WAVE.weak || u.fly) return;
     let dx = u.x - cx, dy = u.y - cy; const d = Math.hypot(dx, dy);
     if (d < 0.05) { dx = u.left ? 1 : -1; dy = 0; } else { dx /= d; dy /= d; }
@@ -13909,10 +13904,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 224;
+const APP_VERSION = 225;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 225, date: "2026-11-20", text: "Из главы «Штурм» убран уровень «Что первым?» — он учил не тому. В заданиях на Python и JavaScript номер нужной строки теперь виден сразу.", en: "The level “What Comes First?” has been removed from the “Assault” chapter — it taught the wrong thing. In Python and JavaScript tasks the right line number now shows at once." },
   { v: 224, date: "2026-11-20", text: "Глава «Штурм» выросла до шести уровней: «Что первым?» (найди ошибку), «Своя башня» — подрывники взрывают твою башню, «Толкни бочку» — новая команда 🛢. Испытание стало труднее, а корона — только за башню, в которую не попал ни один динамит.", en: "The “Assault” chapter has grown to six levels: “What Comes First?” (find the bug), “Your Own Tower” — bombers blow up your tower, “Push the Barrel” — a new command 🛢. The challenge is tougher, and the crown is only for a tower not hit by a single stick of dynamite.", big: true },
   { v: 223, date: "2026-11-20", text: "Глава «Штурм» закончена: появилось «Штурм: испытание» с первой короной Острова гоблинов. Разрушь вышку гоблинов — и сбереги свою башню от поджигателей.", en: "The “Assault” chapter is complete: “Assault: Challenge” brings Goblin Island’s first crown. Bring down the goblin watchtower — and save your own tower from the arsonists.", big: true },
   { v: 222, date: "2026-11-20", text: "На Острове гоблинов новая глава «Штурм»: «Вышка» теперь в ней, и появился уровень «Три дела» — копьё, удар и лечение в одной рамке. Кнопка «＋ иначе» теперь есть у любой половины рамки «если».", en: "A new chapter on Goblin Island — “Assault”: “The Watchtower” moved there, plus a new level, “Three Jobs” — spear, hit and heal in one frame. The “＋ else” button is now available on any part of an “if” frame." },

@@ -277,35 +277,6 @@ levels: [
       js: "while (true) {\n  if (dynamiteFlying()) {\n    parry();\n  } else if (enemyNear()) {\n    attack();\n  }\n}\n",
     },
   },
-  // Что первым? (v224): найди ошибку. В программе все три дела, но «враг рядом» спрашивают раньше, чем «динамит летит»:
-  // гоблины идут один за другим, копейщик рубится без передышки, и динамит рвётся у него под ногами. Проверки идут сверху вниз.
-  {
-    name: "Что первым?",
-    chapter: 23,
-    isle: 6,
-    lancer: true,
-    bug: true,
-    requireElif: true,
-    after: "Три дела",
-    arena: { secs: 45, hp: 8, whiff: 2, goal: "raze", fort: { at: [12.4, 4.4], hp: 5, first: 2.5, cd: 3.6 },
-      waves: [[1, "l", "brute"]] },
-    goal: "Найди ошибку: здоровяка не зарубить, и пока копейщик его бьёт, динамит рвётся у ног. Про динамит надо спрашивать первым: выбери строку [[lineof:if]], нажми [[swapbtn]], а команду под ней замени на [[btn:parry]]. В «другое если» — наоборот: [[swapbtn]] и [[btn:attack]].",
-    block: "Найди ошибку: здоровяка не зарубить, и пока копейщик его бьёт, динамит рвётся у ног. Про динамит надо спрашивать первым: нажми на «❓ если» и на [[swapbtn]], а плитку под ним замени на [[btn:parry]]. В [[elifhead]] — наоборот: [[swapbtn]] и [[btn:attack]].",
-    en: {
-      name: "What Comes First?",
-      goal: "Find the bug: the big brute can’t be cut down, and while the lancer keeps hitting him, dynamite blows up at his feet. Ask about the dynamite first: select line [[lineof:if]], tap [[swapbtn]], and replace the command under it with [[btn:parry]]. In “else if” — the other way round: [[swapbtn]] and [[btn:attack]].",
-      block: "Find the bug: the big brute can’t be cut down, and while the lancer keeps hitting him, dynamite blows up at his feet. Ask about the dynamite first: tap “❓ if” and [[swapbtn]], then replace the tile under it with [[btn:parry]]. In [[elifhead]] — the other way round: [[swapbtn]] and [[btn:attack]].",
-    },
-    commands: ["attack", "parry", "heal"],
-    ifs: ["tnt", "near"],
-    elifButton: true, elseButton: true,
-    par: 3, good: 4,
-    map: ["S........", ".........", ".........", ".........", "........."],
-    starter: {
-      py: "while True:\n    if enemy_near():\n        attack()\n    elif dynamite_flying():\n        parry()\n    else:\n        heal()\n",
-      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else if (dynamiteFlying()) {\n    parry();\n  } else {\n    heal();\n  }\n}\n",
-    },
-  },
   // Своя башня (v224): слева наша каменная башня с лучником (arena.keep, must — её надо уберечь). Подрывники (sap) идут слева,
   // встают поодаль и кидают в неё динамит. В программе уже три дела — игрок дописывает четвёртое: после лечения «к врагу».
   {
@@ -314,7 +285,7 @@ levels: [
     isle: 6,
     lancer: true,
     requireElif: true,
-    after: "Что первым?",
+    after: "Три дела",
     arena: { secs: 45, hp: 8, whiff: 2, goal: "raze", tower: [6.2, 4.2], keep: { hp: 6, must: true }, fort: { at: [12.4, 4.4], hp: 7, first: 2.5, cd: 3.6 },
       waves: [[1.5, "l", "torch"], [1.9, "r", "torch"], [3.0, "l", "sap"], [3.6, "l", "sap"], [7.5, "r", "torch"], [7.9, "l", "torch"], [11.0, "l", "sap"], [11.6, "l", "sap"], [13.5, "l", "torch"], [13.9, "r", "torch"], [19.0, "l", "sap"], [19.5, "r", "torch"], [19.6, "l", "sap"], [19.9, "l", "torch"], [25.5, "l", "torch"], [25.9, "r", "torch"], [27.0, "l", "sap"], [27.6, "l", "sap"], [31.5, "r", "torch"], [31.9, "l", "torch"], [35.0, "l", "sap"], [35.6, "l", "sap"], [37.5, "l", "torch"], [37.9, "r", "torch"], [43.0, "l", "sap"], [43.5, "r", "torch"], [43.6, "l", "sap"], [43.9, "l", "torch"]] },
     goal: "Подрывники идут взрывать твою башню с лучником — её надо уберечь. Допиши четвёртое дело: выбери строку [[lineof:else]] и нажми [[btn:goToEnemy]] — после лечения копейщик сам пойдёт к врагу.",
@@ -397,7 +368,7 @@ levels: [
 // Карта острова. Руками не править: её целиком пишет tools/gen3.py из файла раскладки.
 // @@isle6@@
 ISLES[6].map = {
-  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [210, 390], [170, 390], [90, 350], [90, 310], [90, 270], [130, 250], [170, 250], [210, 250]],
+  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [210, 390], [170, 390], [90, 350], [90, 290], [130, 250], [170, 250], [210, 250]],
   rows: [
     "....................................",
     "....................................",
