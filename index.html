@@ -1615,6 +1615,15 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
   cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .sheet-x svg { width: 20px; height: 20px; display: block; }
+/* --- Стенд огня (режим для взрослых) --- */
+.lab-open { margin-left: 6px; padding: 4px 10px; border-radius: 8px; border: 1px solid #f2a93b; background: #2a2118; color: #f2a93b; font: inherit; cursor: pointer; }
+.firelab { position: fixed; inset: 0; z-index: 95; background: #14151c; overflow: auto; padding: 10px; }
+.firelab .sheet-x { position: fixed; right: 10px; top: 10px; z-index: 3; }
+.firelab .lab-stage { position: relative; width: min(100%, 980px); aspect-ratio: 12 / 6; margin: 0 auto; background: linear-gradient(#5f9a4c 0 68%, #e6d47a 68% 74%, #4aa9a6 74%); border-radius: 12px; overflow: hidden; }
+.firelab .lab-bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px auto; max-width: 980px; }
+.firelab .lab-bar button { padding: 9px 12px; border-radius: 10px; border: 1px solid #3a3f55; background: #1f2230; color: #e8eaf2; font: inherit; cursor: pointer; }
+.firelab .lab-bar button.on { border-color: #f2a93b; color: #f2a93b; }
+.firelab .lab-bar span { align-self: center; color: #9aa0b5; }
 .sheet-x:active { transform: scale(0.94); }
 .code-big { display: flex; justify-content: center; gap: 8px; }
 .code-part {
@@ -1820,7 +1829,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
     <p class="map-note" id="cloud-note" hidden>Прогресс сохраняется в твоём аккаунте Claude</p>
     <button class="btn stats-open" id="stats-open" hidden>📊 Статистика игроков</button>
     <button class="btn stats-open" id="editor-open" hidden>✏️ Редактор уровней</button>
-    <p class="map-note dev" id="dev-note" hidden>Режим проверки: все уровни открыты. Пять раз нажми на название Coder Path, чтобы выключить.</p>
+    <p class="map-note dev" id="dev-note" hidden>Режим проверки: все уровни открыты. Пять раз нажми на название Coder Path, чтобы выключить. <button class="lab-open" id="firelab-open" type="button">🔥 Стенд огня</button></p>
   </header>
   <div class="mapwrap" data-isle="1">
     <canvas class="map-canvas" aria-hidden="true"></canvas>
@@ -4725,6 +4734,7 @@ function renderMap() {
   const all = LEVELS.reduce((s, lv) => s + (save.stars[lv.name] || 0), 0);
   $("sync-move").hidden = !syncOn || all > 0; // новое устройство без звёзд — подсказываем перенос
   $("dev-note").hidden = !save.dev;
+  $("firelab-open").onclick = fireLab;
   $("stats-open").hidden = !save.dev;
   $("editor-open").hidden = !save.dev;
   if (curIsle === 3) showBuiltBridge();
@@ -4774,7 +4784,7 @@ const SK = { torch: [7, 5, 192], tnt: [7, 3, 192], dyn: [6, 1, 64], boom: [9, 1,
   duckair: [3, 1, 32], boom2: [8, 1, 192], boom3: [10, 1, 192], dust: [10, 1, 64],
   // остров 1 наряднее (v187): овцы, стройка, тренировка, костёр
   shidle: [6, 1, 128], shgrass: [12, 1, 128], shmove: [4, 1, 128], phidle: [8, 1, 192], prunham: [6, 1, 192], lrdef: [6, 1, 320], wguard: [6, 1, 192],
-  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], gwt: [4, 1, 256], gwtx: [1, 1, 256], gwtc: [1, 1, 256], towerbc: [1, 1, 256], towerbx: [1, 1, 256], gwt1: [4, 1, 256], gwt2: [4, 1, 256], gwt3: [4, 1, 256], gwlog: [2, 1, 80],
+  scare: [1, 1, 192], wood: [1, 1, 128], housec: [1, 1, 192], houseb: [1, 1, 192], houseb2: [1, 1, 192], sign: [1, 1, 128], pumpk: [1, 1, 64], fire: [7, 1, 128], tflame: [7, 1, 40], gwt: [4, 1, 256], gwtx: [1, 1, 256], gwtc: [1, 1, 256], towerbc: [1, 1, 256], towerbx: [1, 1, 256], gwt1: [4, 1, 256], gwt2: [4, 1, 256], gwt3: [4, 1, 256], gwlog: [2, 1, 80],
   flare1: [8, 1, 64], flare2: [10, 1, 64], flare3: [12, 1, 64] };   // огонь в боях (v226): искра, язык пламени, клуб огня с дымом
 TS.sk_fire = TS.fx_fire;
 let SK_ACTORS = [];
@@ -4856,6 +4866,92 @@ function charSheet(k, [h0, h1]) {
   im.src = TS["sk_" + k];
   return null;
 }
+// ----- огоньки на горящем (v231) -----
+// Горит не «голова вообще», а то, что может гореть: перо рыцаря, волосы и ряса монаха, капюшон и балахон гоблина, рубаха
+// копейщика (шлем железный — на голове у него огня нет). Места — в точках картинки бойца: [x, y, размер, наклон в градусах].
+// Каждый огонёк вложен в картинку бойца (как пламя в v228), поэтому идёт, летит и ложится вместе с ним.
+const FIRE_SPOTS = {
+  war:    [192, [[83, 55, 1.0, -8], [76, 60, 0.7, -20], [103, 110, 0.6, 10]]],
+  lan:    [320, [[150, 180, 0.7, -10], [169, 184, 0.6, 12]]],
+  monk:   [192, [[77, 80, 0.9, -15], [115, 80, 0.9, 15], [97, 90, 0.7, 0], [87, 114, 0.7, -8], [110, 117, 0.6, 10]]],
+  torch:  [192, [[93, 67, 0.9, -10], [110, 78, 0.8, 12], [100, 114, 0.7, 0]]],
+  torchp: [192, [[93, 67, 0.9, -10], [110, 78, 0.8, 12], [100, 114, 0.7, 0]]],
+  hero:   [120, [[52, 30, 1.0, -8], [60, 70, 0.6, 8]]],
+};
+// вид огня: torch — язычки, вырезанные из факела; spots — маленькие костерки и побольше дыма; one — один большой огонь, как было
+const FIRE_LOOKS = ["torch", "spots", "one"];
+let FIRE_LOOK = "torch";
+try { const v = localStorage.getItem("cp-fire-look"); if (FIRE_LOOKS.includes(v)) FIRE_LOOK = v; } catch (e) {}
+function fireSpotsOn(stage, a, kind) {
+  const [fw, all] = FIRE_SPOTS[kind] || FIRE_SPOTS.torch, one = FIRE_LOOK === "one", torch = FIRE_LOOK === "torch";
+  const spots = one ? [[kind === "monk" ? 97 : all[0][0], all[0][1] + (kind === "monk" ? 22 : 4), kind === "monk" ? 2.7 : 1.6, 0]] : all;
+  return spots.map(([x, y, sz, deg]) => {
+    const fl = skActor(stage, torch ? "tflame" : "fire", 1, 1), e = fl.el, ft = torch ? 100 : 92;
+    a.el.appendChild(e); e.style.transition = "none"; e.style.zIndex = 2;
+    e.style.width = (torch ? 46 : 34) * sz / fw * 100 + "%";
+    e.style.left = x / fw * 100 + "%"; e.style.top = y / fw * 100 + "%";
+    e.style.transformOrigin = `50% ${ft}%`; e.style.transform = `translate(-50%, -${ft}%) rotate(${one ? 0 : deg}deg)`;
+    fl.mute = true; fl.show(true, true); fl.play(0, 7, torch ? 100 : 90); fl.anim.t0 -= Math.random() * 700;   // огоньки пляшут не в такт
+    return fl;
+  });
+}
+function fireSpotsOff(list) { for (const fl of list || []) fl.el.remove(); }
+const fireSmokeGap = () => (FIRE_LOOK === "spots" ? 230 : 420);
+// Стенд огня (режим для взрослых): все, кто умеет гореть, стоят в ряд — можно поджечь, сбить с ног, развернуть, пустить бегом,
+// поставить в воду и переключить вид огня. Выбранный вид запоминается и действует во всей игре.
+function fireLab() {
+  document.querySelector(".firelab")?.remove();
+  const box = document.createElement("div"); box.className = "firelab";
+  box.innerHTML = `<button class="sheet-x" aria-label="${tr("Закрыть")}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5L19 19M19 5L5 19" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></button>
+    <div class="lab-bar" data-k="look"><span>${tr("Вид огня:")}</span></div><div class="lab-stage"></div><div class="lab-bar" data-k="act"></div>`;
+  document.body.appendChild(box);
+  let open = true;
+  const stage = box.querySelector(".lab-stage"), st = { layer: stage, before: null, unit: 100 / 12, pos: (x, y) => [x / 12 * 100, y / 6 * 100], on: () => open, alive: () => open };
+  const DEF = [["war", "kwar", 0.85, 0.67, [0, 6, 140, "kwar"], [1, 6, 90, "kwar"], [150, 262]], ["lan", "lidle", 0.8, 0.625, [0, 12, 110, "lidle"], [0, 6, 90, "lrun"], [198, 262]],
+    ["monk", "monk", 0.8, 0.67, [0, 6, 130, "monk"], [0, 4, 100, "monkrun"], [150, 262]], ["torch", "torch", 0.85, 0.67, [0, 7, 120, "torch"], [1, 6, 90, "torch"], [335, 12]],
+    ["torchp", "torchp", 0.85, 0.67, [0, 7, 120, "torchp"], [1, 6, 90, "torchp"], [255, 330]], ["hero", "hidle", 0.85, 0.825, [0, 8, 110, "hidle"], [0, 6, 85, "hrun"], null]];
+  const S = { fire: true, lie: false, flip: false, run: false, wet: false, char: false };
+  const us = DEF.map(([kind, key, sc, foot, idle, run, hue], i) => {
+    const a = skActor(st, key, sc * 1.25, foot); a.at(1.25 + i * 1.9, 3.9); a.show(true, true); a.el.style.zIndex = 1;
+    return { kind, a, idle, run, hue, fls: null, lieA: null };
+  });
+  const draw = () => {
+    for (const u of us) {
+      const a = u.a, sp = S.run ? u.run : u.idle;
+      a.char = S.char && u.hue ? u.hue : null; if (u.hue) charSheet(sp[3], u.hue);
+      a.play(sp[0], sp[1], sp[2], true, sp[3]); a.face(S.flip);
+      fireSpotsOff(u.fls); u.fls = S.fire && !S.wet ? fireSpotsOn(st, a, u.kind) : null;
+      u.lieA?.cancel(); u.lieA = null;
+      if (S.lie && a.el.animate) { const base = `translate(-50%, ${a.el.style.getPropertyValue("--foot")})${S.flip ? " scaleX(-1)" : ""}`;
+        u.lieA = a.el.animate([{ transform: `${base} rotate(0deg)` }, { transform: `${base} rotate(90deg)` }], { duration: 350, easing: "ease-out", fill: "forwards" }); }
+      a.el.style.transition = "top 0.4s"; a.at(a.x, S.wet ? 4.75 : 3.9);
+      const ft = -parseFloat(a.el.style.getPropertyValue("--foot")) / 100, feet = (1 - ft) * 100 - 4, cut = (1 - ft + 78 / SK[a.key][2] * 0.42) * 100;
+      a.el.style.clipPath = a.el.style.webkitClipPath = S.wet ? `inset(0 0 ${Math.round(cut)}% 0)` : "";
+    }
+    box.querySelectorAll("[data-s]").forEach((b) => b.classList.toggle("on", !!S[b.dataset.s]));
+    box.querySelectorAll("[data-look]").forEach((b) => b.classList.toggle("on", b.dataset.look === FIRE_LOOK));
+  };
+  const LOOK_RU = { torch: tr("язычки от факела"), spots: tr("костерки и дым"), one: tr("один большой, как было") };
+  for (const k of FIRE_LOOKS) { const b = document.createElement("button"); b.dataset.look = k; b.textContent = LOOK_RU[k];
+    b.onclick = () => { FIRE_LOOK = k; try { localStorage.setItem("cp-fire-look", k); } catch (e) {} draw(); }; box.querySelector('[data-k="look"]').appendChild(b); }
+  for (const [k, ru] of [["fire", tr("🔥 горит")], ["lie", tr("сбит с ног")], ["flip", tr("развернуть")], ["run", tr("бежит")], ["wet", tr("💧 в воде")], ["char", tr("обуглен")]]) {
+    const b = document.createElement("button"); b.dataset.s = k; b.textContent = ru; b.onclick = () => { S[k] = !S[k]; draw(); }; box.querySelector('[data-k="act"]').appendChild(b); }
+  box.querySelector(".sheet-x").onclick = () => { open = false; box.remove(); };
+  draw();
+  (async () => {                                  // дымок над горящими
+    while (open) {
+      for (const u of us) if (u.fls) {
+        const [fw, all] = FIRE_SPOTS[u.kind], q = all[Math.floor(Math.random() * all.length)], W = SK[u.a.key][2] * parseFloat(u.a.el.style.width) / (SK[u.a.key][2] / 64 * st.unit) / 64;
+        const ft = -parseFloat(u.a.el.style.getPropertyValue("--foot")) / 100, sz = parseFloat(u.a.el.style.width) / st.unit;      // картинка бойца, клеток
+        const d = skActor(st, "dust", 0.3, 0.5), x = u.a.x + (q[0] / fw - 0.5) * sz * (S.flip ? -1 : 1), y = u.a.y + (q[1] / fw - ft) * sz - 0.25;
+        d.el.style.transition = "none"; d.at(x, y); d.el.style.zIndex = 3; d.el.style.filter = "brightness(0.45)"; d.el.style.opacity = 0.8; d.show(true, true); d.play(0, 10, 90, false); void d.el.offsetWidth;
+        d.el.style.transition = "left 900ms linear, top 900ms ease-out"; d.at(x + 0.2, y - 0.8); setTimeout(() => d.el.remove(), 900);
+      }
+      await sleep(fireSmokeGap());
+    }
+  })();
+}
+
 function skActor(stage, key, scale, foot = 0.67) {
   const el = document.createElement("div");
   el.className = "skactor";
@@ -5422,7 +5518,7 @@ async function battle(st0, B) {
   const dynsBig = pool("dyn", 2, 2, 0.5), hugeBooms = pool("boom3", 2, 2.6, 0.55), splashes = pool("splash", 2, 1.1, 0.6);
   const fxAt = (list, x, y, ms, z) => { const f = take(list); f.el.style.transition = "none"; f.at(x, y); Z(f, z ?? y + 3); f.show(true); f.play(0, SK[f.key][0], ms, false).then(() => free(f)); };
   const take = (list) => { const a = list.find((x) => !x.busy) || list[0]; a.busy = true; return a; };
-  const free = (a) => { a.busy = false; a.show(false, !!a.home); if (a.home != null) fireOff(a); };
+  const free = (a) => { a.busy = false; a.show(false); };
   const later = [];                                   // отложенные действия: [время, что сделать]
   const after = (ms, fn) => later.push([now + ms, fn]);
 
@@ -5466,7 +5562,7 @@ async function battle(st0, B) {
   // переход выключен и браузер обязан применить новое место до того, как переход включится снова
   const place = (u) => {
     u.lie?.cancel(); u.lie = null;                    // вернулся в строй — уже не лежит
-    if (u.fire) { free(u.fire.fl); u.fire = null; }   // и не горит, и не в копоти (v226)
+    if (u.fire) { fireSpotsOff(u.fire.fls); u.fire = null; }   // и не горит, и не в копоти (v226)
     if (u.burnt) { u.burnt = false; u.a.char = null; u.a.sheet(u.a.key); }
     u.wetTill = 0; u.wade = null; u.a.el.style.clipPath = u.a.el.style.webkitClipPath = "";
     u.a.el.style.transition = "none"; u.a.at(u.x, u.y); Z(u.a, u.y, 1);
@@ -5555,7 +5651,7 @@ async function battle(st0, B) {
     hue: { monk: [150, 262], war: [150, 262], lan: [198, 262], hero: [150, 262], torch: [335, 12], torchp: [255, 330] },
     sheets: { monk: ["monk", "monkrun", "heal"], war: ["kwar"], lan: ["lidle", "lrun", "lratk", "ldratk", "luratk", "ldatk", "luatk"], hero: ["hidle", "hrun", "hatk"], torch: ["torch"], torchp: ["torchp"] } } : null;
   // пламя: малое — на голове (перо, волосы), большое — на всём бойце (ряса монаха) и на башне
-  const flames = FIRE ? pool("fire", 6, 0.36, 0.92) : [], flamesBig = FIRE ? pool("fire", 4, 0.62, 0.92) : [], flaresA = FIRE ? pool("flare2", 3, 1.1, 0.8) : [], flaresB = FIRE ? pool("flare3", 3, 1.3, 0.8) : [];
+  const flames = [], flamesBig = FIRE ? pool("fire", 4, 0.62, 0.92) : [], flaresA = FIRE ? pool("flare2", 3, 1.1, 0.8) : [], flaresB = FIRE ? pool("flare3", 3, 1.3, 0.8) : [];
   [...flames, ...flamesBig, ...flaresA, ...flaresB].forEach((a) => (a.mute = true));
   // Где горит. fireUp — на сколько клеток выше ног: у воинов — макушка (перо), у монаха — вся ряса, у гоблина — капюшон.
   // Огонь держится на этом месте фигурки, как бы она ни лежала: в полёте (кувырок) — в середине картинки, вокруг которой она
@@ -5569,24 +5665,14 @@ async function battle(st0, B) {
   };
   // v228: само пламя — часть фигурки (вложено в её картинку), а не отдельная картинка рядом. Поэтому оно идёт, летит, вертится,
   // ложится на бок и отражается вместе с бойцом и никуда с головы не съезжает. firePos выше нужен только дыму и искрам.
-  const fireOn = (v, fl) => {
-    const pe = v.a.el, e = fl.el, S = parseFloat(pe.style.width) / st.unit, foot = v.T.foot ?? 0.67;
-    if (fl.home != null) fireOff(fl);
-    fl.home = e.style.width; pe.appendChild(e);
-    e.style.transition = "none"; e.style.zIndex = 2;
-    e.style.width = parseFloat(fl.home) / parseFloat(pe.style.width) * 100 + "%";
-    e.style.left = "50%"; e.style.top = (foot - fireUp(v) / S) * 100 + "%";
-  };
-  const fireOff = (fl) => { if (fl.home == null) return; fl.el.style.width = fl.home; fl.home = null; st.layer.insertBefore(fl.el, st.before || null); };
   const fireStat = { lit: 0, doused: 0, waded: 0, towers: 0, blown: 0 };
   const setChar = (v) => { if (v.burnt || !FIRE.hue[v.kind]) return; v.burnt = true; v.a.char = FIRE.hue[v.kind]; v.a.sheet(v.a.key); };
   const ignite = (v) => {
     if (!FIRE || v.dead || v.fire || now < (v.wetTill || 0)) return false;
     if (v.kind === "barrel") { kill(v); return true; }
     (FIRE.sheets[v.kind] || []).forEach((k) => charSheet(k, FIRE.hue[v.kind]));        // обугленные листы — заранее, пока горит
-    const fl = take(v.kind === "monk" || v.T.fat ? flamesBig : flames);
-    v.fire = { till: now + FIRE.burn, tick: now + FIRE.tick, char: now + FIRE.burn * 0.45, puff: 0, fl };
-    fireOn(v, fl); fl.show(true, true); fl.play(0, 7, 90);
+    const fls = fireSpotsOn(st, v.a, v.kind);
+    v.fire = { till: now + FIRE.burn, tick: now + FIRE.tick, char: now + FIRE.burn * 0.45, puff: 0, fl: fls[0], fls };
     fxAt(flaresB, ...firePos(v), 55, v.y + 4); flash(v); fireStat.lit++;
     // подрывник горит недолго: огонь добирается до динамита
     if (v.T.thrower) after(900 + Math.random() * 700, () => { if (v.dead || !v.fire) return; const fat = !!v.T.fat, x = v.x, y = v.y; fireStat.blown++;
@@ -5596,17 +5682,17 @@ async function battle(st0, B) {
   // погас: сам (догорел) или в воде (steam — облачко пара)
   const douse = (v, steam) => {
     const F = v.fire; if (!F) return;
-    v.fire = null; free(F.fl);
+    v.fire = null; fireSpotsOff(F.fls);
     if (steam) { fireStat.doused++; for (let i = 0; i < 3; i++) puffAt(v.a.x + (i - 1) * 0.22, v.a.y - 0.5 * ZM, 0.55, 0, 0.7, 700); }
     if (!v.dead && (steam ? now >= F.char - 1200 : true)) setChar(v);
   };
   const fireTick = () => {
     for (const v of units) {
       const F = v.fire; if (!F) continue;
-      if (v.dead) { v.fire = null; free(F.fl); continue; }
+      if (v.dead) { v.fire = null; fireSpotsOff(F.fls); continue; }
       const ax = v.air ? v.a.x : v.x, ay = v.air ? v.a.y : v.y, [fx, fy] = firePos(v);   // в полёте огонь летит вместе с бойцом
       if (now >= F.char) setChar(v);
-      if (now >= F.puff) { F.puff = now + 420; puffAt(fx + (Math.random() - 0.5) * 0.2, fy - 0.3 * ZM, 0.24, 0.45, 0.8, 900); if (Math.random() < 0.4) fxAt(flaresA, fx + (Math.random() - 0.5) * 0.3, fy - 0.1 * ZM, 60, ay + 5); }
+      if (now >= F.puff) { F.puff = now + fireSmokeGap(); puffAt(fx + (Math.random() - 0.5) * 0.2, fy - 0.3 * ZM, 0.24, 0.45, 0.8, 900); if (Math.random() < 0.4) fxAt(flaresA, fx + (Math.random() - 0.5) * 0.3, fy - 0.1 * ZM, 60, ay + 5); }
       if (v.air) continue;
       if (now >= F.tick) {
         F.tick = now + FIRE.tick; hurt(v, 1);
@@ -11878,19 +11964,16 @@ async function runArena() {
   const flames = {}, CHAR_HUE = { hero: [198, 262], monk: [150, 262] }, CHAR_SHEETS = { hero: ["lidle", "lrun", "lratk"], monk: ["monk", "monkrun", "heal"] };
   const actorOf = (id) => (id ? actors[id] : H);
   const fireUp = (id) => { const k = id ? kindOf[id] : "hero"; return k === "monk" ? 0.3 : k === "hero" ? 0.6 * HA.sc / 0.85 : 0.5; };
+  const spotKind = (id) => (id ? kindOf[id] : L.lancer ? "lan" : "hero");
   const flameOn = (id) => {
     const a = actorOf(id); if (!a || flames[id]) return;
-    const kind = id ? kindOf[id] : "hero", fl = skActor(st, "fire", kind === "monk" ? 0.62 : 0.36, 0.92), pe = a.el, e = fl.el;
-    const S = parseFloat(pe.style.width) / st.unit, foot = -parseFloat(pe.style.getPropertyValue("--foot")) / 100;
-    pe.appendChild(e); e.style.transition = "none"; e.style.zIndex = 2;
-    e.style.width = parseFloat(e.style.width) / parseFloat(pe.style.width) * 100 + "%";
-    e.style.left = "50%"; e.style.top = (foot - fireUp(id) / S) * 100 + "%";
-    fl.mute = true; fl.show(true, true); fl.play(0, 7, 90); flames[id] = fl; flash(a); sfx("flare");
+    const kind = id ? kindOf[id] : "hero";
+    flames[id] = fireSpotsOn(st, a, spotKind(id)); flash(a); sfx("flare");
     (CHAR_SHEETS[kind] || []).forEach((k) => charSheet(k, CHAR_HUE[kind]));          // обугленные листы — заранее, пока горит
   };
   const flameOff = (id) => {
-    const fl = flames[id]; if (!fl) return;
-    delete flames[id]; fl.el.remove();
+    if (!flames[id]) return;
+    fireSpotsOff(flames[id]); delete flames[id];
     const a = actorOf(id), kind = id ? kindOf[id] : "hero";
     if (a && CHAR_SHEETS[kind]) { a.char = CHAR_HUE[kind]; a.sheet(a.key); }
   };
@@ -11902,7 +11985,7 @@ async function runArena() {
   if (A.fire) (async () => {                      // над горящими — дымок
     while (running && arenaRun === myRun) {
       for (const id in flames) { const a = actorOf(+id); if (a) puff(a.x + (Math.random() - 0.5) * 0.2, a.y - fireUp(+id) - 0.3, 0.24, 0.45, 0.8, 900, 950); }
-      await sleep(420);
+      await sleep(fireSmokeGap());
     }
   })();
   const Z = (a, y) => (a.el.style.zIndex = Math.round(y * 40));
@@ -14232,10 +14315,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 230;
+const APP_VERSION = 231;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 231, date: "2026-11-20", text: "Огонь на бойцах стал другим: маленькие язычки пламени там, где есть чему гореть, — на пере, волосах, капюшоне, одежде.", en: "Fire on fighters looks different: small tongues of flame where something can burn — plume, hair, hood, clothes." },
   { v: 230, date: "2026-11-20", text: "На широком экране задание встаёт под поле, если правая колонка длиннее левой.", en: "On a wide screen the task moves under the field when the right column is longer than the left one." },
   { v: 229, date: "2026-11-20", text: "Новая глава «Пожар» на острове гоблинов: факел может поджечь — спроси «горю?» и беги к воде. Сбереги монаха!", en: "A new chapter, “Blaze”, on Goblin Island: a torch can set you on fire — ask “on fire?” and run to the water. Keep the monk safe!", big: true },
   { v: 228, date: "2026-11-20", text: "Огонь теперь держится на бойце намертво: летит, кувыркается и ложится на бок вместе с ним.", en: "Fire now sticks to the fighter: it flies, tumbles and lies down together with them." },

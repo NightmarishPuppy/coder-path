@@ -1,21 +1,21 @@
 {
- "version": 230,
+ "version": 231,
  "date": "2026-11-20",
  "notes": [
-  "На широком экране задание встаёт под поле, если правая колонка длиннее левой."
+  "Огонь на бойцах стал другим: маленькие язычки пламени там, где есть чему гореть, — на пере, волосах, капюшоне, одежде."
  ],
  "files": {
   "index.html": {
-   "size": 1117116,
-   "hash": "5ea50c408e1e67e3"
+   "size": 1125580,
+   "hash": "982651296bad836c"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 81312,
-   "hash": "ab8c595b196339a0"
+   "size": 81724,
+   "hash": "2443b35d72aa004d"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "03395aea03737ce7"
+   "hash": "2fafef761478241c"
   },
   "icon-192.png": {
    "size": 42164,
@@ -98,8 +98,8 @@
    "hash": "aac2b7de566fa78a"
   },
   "art-scenes.js": {
-   "size": 994253,
-   "hash": "ce08f4e71a503e1d"
+   "size": 996051,
+   "hash": "d2bb4cfe37cf6622"
   },
   "art-isle2.js": {
    "size": 80017,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "On a wide screen the task moves under the field when the right column is longer than the left one."
+  "Fire on fighters looks different: small tongues of flame where something can burn — plume, hair, hood, clothes."
  ]
 }
