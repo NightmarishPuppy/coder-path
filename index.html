@@ -5417,7 +5417,7 @@ async function battle(st0, B) {
   const dynsBig = pool("dyn", 2, 2, 0.5), hugeBooms = pool("boom3", 2, 2.6, 0.55), splashes = pool("splash", 2, 1.1, 0.6);
   const fxAt = (list, x, y, ms, z) => { const f = take(list); f.el.style.transition = "none"; f.at(x, y); Z(f, z ?? y + 3); f.show(true); f.play(0, SK[f.key][0], ms, false).then(() => free(f)); };
   const take = (list) => { const a = list.find((x) => !x.busy) || list[0]; a.busy = true; return a; };
-  const free = (a) => { a.busy = false; a.show(false); };
+  const free = (a) => { a.busy = false; a.show(false, !!a.home); if (a.home != null) fireOff(a); };
   const later = [];                                   // отложенные действия: [время, что сделать]
   const after = (ms, fn) => later.push([now + ms, fn]);
 
@@ -5562,6 +5562,17 @@ async function battle(st0, B) {
     if (v.lie) { const q = (v.lieDir || 1) * (a.el.classList.contains("flip") ? -1 : 1); return [a.x + d * q, cy + 0.12 * ZM]; }
     return [v.x, v.y - fireUp(v)];
   };
+  // v228: само пламя — часть фигурки (вложено в её картинку), а не отдельная картинка рядом. Поэтому оно идёт, летит, вертится,
+  // ложится на бок и отражается вместе с бойцом и никуда с головы не съезжает. firePos выше нужен только дыму и искрам.
+  const fireOn = (v, fl) => {
+    const pe = v.a.el, e = fl.el, S = parseFloat(pe.style.width) / st.unit, foot = v.T.foot ?? 0.67;
+    if (fl.home != null) fireOff(fl);
+    fl.home = e.style.width; pe.appendChild(e);
+    e.style.transition = "none"; e.style.zIndex = 2;
+    e.style.width = parseFloat(fl.home) / parseFloat(pe.style.width) * 100 + "%";
+    e.style.left = "50%"; e.style.top = (foot - fireUp(v) / S) * 100 + "%";
+  };
+  const fireOff = (fl) => { if (fl.home == null) return; fl.el.style.width = fl.home; fl.home = null; st.layer.insertBefore(fl.el, st.before || null); };
   const fireStat = { lit: 0, doused: 0, waded: 0, towers: 0, blown: 0 };
   const setChar = (v) => { if (v.burnt || !FIRE.hue[v.kind]) return; v.burnt = true; v.a.char = FIRE.hue[v.kind]; v.a.sheet(v.a.key); };
   const ignite = (v) => {
@@ -5570,7 +5581,7 @@ async function battle(st0, B) {
     (FIRE.sheets[v.kind] || []).forEach((k) => charSheet(k, FIRE.hue[v.kind]));        // обугленные листы — заранее, пока горит
     const fl = take(v.kind === "monk" || v.T.fat ? flamesBig : flames);
     v.fire = { till: now + FIRE.burn, tick: now + FIRE.tick, char: now + FIRE.burn * 0.45, puff: 0, fl };
-    fl.el.style.transition = "none"; fl.at(...firePos(v)); fl.show(true, true); fl.play(0, 7, 90);
+    fireOn(v, fl); fl.show(true, true); fl.play(0, 7, 90);
     fxAt(flaresB, ...firePos(v), 55, v.y + 4); flash(v); fireStat.lit++;
     // подрывник горит недолго: огонь добирается до динамита
     if (v.T.thrower) after(900 + Math.random() * 700, () => { if (v.dead || !v.fire) return; const fat = !!v.T.fat, x = v.x, y = v.y; fireStat.blown++;
@@ -5589,8 +5600,6 @@ async function battle(st0, B) {
       const F = v.fire; if (!F) continue;
       if (v.dead) { v.fire = null; free(F.fl); continue; }
       const ax = v.air ? v.a.x : v.x, ay = v.air ? v.a.y : v.y, [fx, fy] = firePos(v);   // в полёте огонь летит вместе с бойцом
-      F.fl.el.style.transition = v.air || v.lie ? "none" : `left ${TICK}ms linear, top ${TICK}ms linear`;
-      F.fl.at(fx, fy); F.fl.el.style.zIndex = +v.a.el.style.zIndex + 1;
       if (now >= F.char) setChar(v);
       if (now >= F.puff) { F.puff = now + 420; puffAt(fx + (Math.random() - 0.5) * 0.2, fy - 0.3 * ZM, 0.24, 0.45, 0.8, 900); if (Math.random() < 0.4) fxAt(flaresA, fx + (Math.random() - 0.5) * 0.3, fy - 0.1 * ZM, 60, ay + 5); }
       if (v.air) continue;
@@ -14069,10 +14078,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 227;
+const APP_VERSION = 228;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 228, date: "2026-11-20", text: "Огонь теперь держится на бойце намертво: летит, кувыркается и ложится на бок вместе с ним.", en: "Fire now sticks to the fighter: it flies, tumbles and lies down together with them." },
   { v: 227, date: "2026-11-20", text: "Бой у моста: огонь держится на голове бойца, даже когда его сбило с ног. Обгоревшие теперь в копоти, а перо прогорает в уголь. С моста из воды больше не выбраться — только у самого берега.", en: "The bridge battle: fire now stays on a fighter’s head, even when he is knocked down. Burnt fighters are covered in soot and the plume burns to coal. No more climbing out of the water by the bridge — only right at the shore." },
   { v: 226, date: "2026-11-20", text: "Бой у моста на первом острове: гоблин с факелом может поджечь. Горящий теряет сердечки, одежда обугливается, подрывник от огня взрывается. Вода тушит: кого взрывом бросило в воду у берега, выбирается обратно.", en: "The bridge battle on the first island: a torch goblin can set things on fire. Whoever burns loses hearts and gets charred, and a bomber on fire blows up. Water puts fire out: a fighter blown into the shallows climbs back ashore.", big: true },
   { v: 225, date: "2026-11-20", text: "Из главы «Штурм» убран уровень «Что первым?» — он учил не тому. В заданиях на Python и JavaScript номер нужной строки теперь виден сразу.", en: "The level “What Comes First?” has been removed from the “Assault” chapter — it taught the wrong thing. In Python and JavaScript tasks the right line number now shows at once." },

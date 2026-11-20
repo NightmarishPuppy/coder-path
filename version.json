@@ -1,13 +1,13 @@
 {
- "version": 227,
+ "version": 228,
  "date": "2026-11-20",
  "notes": [
-  "Бой у моста: огонь держится на голове бойца, даже когда его сбило с ног. Обгоревшие теперь в копоти, а перо прогорает в уголь. С моста из воды больше не выбраться — только у самого берега."
+  "Огонь теперь держится на бойце намертво: летит, кувыркается и ложится на бок вместе с ним."
  ],
  "files": {
   "index.html": {
-   "size": 1101134,
-   "hash": "ed7d850703dc0dd8"
+   "size": 1102272,
+   "hash": "cad59a27a9687c65"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "02bd07e77a80c963"
+   "hash": "cc8430453cc6a7c1"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The bridge battle: fire now stays on a fighter’s head, even when he is knocked down. Burnt fighters are covered in soot and the plume burns to coal. No more climbing out of the water by the bridge — only right at the shore."
+  "Fire now sticks to the fighter: it flies, tumbles and lies down together with them."
  ]
 }
