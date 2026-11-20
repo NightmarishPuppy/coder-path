@@ -1,13 +1,13 @@
 {
- "version": 229,
+ "version": 230,
  "date": "2026-11-20",
  "notes": [
-  "Новая глава «Пожар» на острове гоблинов: факел может поджечь — спроси «горю?» и беги к воде. Сбереги монаха!"
+  "На широком экране задание встаёт под поле, если правая колонка длиннее левой."
  ],
  "files": {
   "index.html": {
-   "size": 1116146,
-   "hash": "062c0a8134504d22"
+   "size": 1117116,
+   "hash": "5ea50c408e1e67e3"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "08566bc603db5b38"
+   "hash": "03395aea03737ce7"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "A new chapter, “Blaze”, on Goblin Island: a torch can set you on fire — ask “on fire?” and run to the water. Keep the monk safe!"
+  "On a wide screen the task moves under the field when the right column is longer than the left one."
  ]
 }
