@@ -1,13 +1,13 @@
 {
- "version": 246,
+ "version": 247,
  "date": "2026-11-21",
  "notes": [
-  "В повторе чужого прохождения кнопка называется «Играть самому», а полоска с ней всегда остаётся на виду."
+  "Рожица «слишком сложно» теперь видна на всех устройствах."
  ],
  "files": {
   "index.html": {
-   "size": 1172240,
-   "hash": "0acbc91cb822af01"
+   "size": 1172448,
+   "hash": "dcc5ffa188dbfd9d"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "57db85c30a47eae3"
+   "hash": "5b89fefa9343cf3d"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "In a friend’s replay, the bar with the “Play it myself” button now always stays in view."
+  "The “too hard” face now shows on every device."
  ]
 }

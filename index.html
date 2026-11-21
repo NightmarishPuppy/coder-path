@@ -14674,14 +14674,15 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 246;
+const APP_VERSION = 247;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 247, date: "2026-11-21", text: "Рожица «слишком сложно» теперь видна на всех устройствах.", en: "The “too hard” face now shows on every device." },
   { v: 246, date: "2026-11-21", text: "В повторе чужого прохождения кнопка называется «Играть самому», а полоска с ней всегда остаётся на виду.", en: "In a friend’s replay, the bar with the “Play it myself” button now always stays in view." },
   { v: 245, date: "2026-11-21", text: "Кнопка с самолётиком теперь отправляет другу не просто ссылку, а твоё прохождение: друг открывает её — и рыцарь проходит уровень по твоей программе.", en: "The paper-plane button now sends your friend your own run: they open the link and the knight beats the level with your program.", big: true },
   { v: 244, date: "2026-11-21", text: "В окошке победы появилась кнопка с самолётиком: одним нажатием можно отправить игру другу.", en: "The win box has a new paper-plane button: send the game to a friend in one tap." },
-  { v: 243, date: "2026-11-21", text: "После победы можно одним нажатием сказать, как тебе уровень: 😀 понравился, 😴 скучный или 🤯 слишком сложный. Это помогает делать игру лучше.", en: "After a win you can tell us in one tap how the level was: 😀 liked it, 😴 boring or 🤯 too hard. It helps make the game better." },
+  { v: 243, date: "2026-11-21", text: "После победы можно одним нажатием сказать, как тебе уровень: 😀 понравился, 😴 скучный или 😵 слишком сложный. Это помогает делать игру лучше.", en: "After a win you can tell us in one tap how the level was: 😀 liked it, 😴 boring or 😵 too hard. It helps make the game better." },
   { v: 242, date: "2026-11-21", text: "На первом острове три новых дополнительных уровня с боями — точки «＋» в стороне от дороги: «Бараны и гоблины», «Гоблины на болоте» и «Громила у кустов». Везде нельзя останавливаться на полпути.", en: "Three new bonus levels with fights on the first island — “＋” points off the road: “Rams and Goblins”, “Goblins in the Swamp” and “The Brute by the Bushes”. In all of them you can’t stop halfway." },
   { v: 241, date: "2026-11-21", text: "С верха карты первого острова убрана крепость. В Пещерах появился дополнительный уровень «Монеты над рекой» — точка «＋» в стороне от дороги, для пути дальше он не нужен.", en: "The fortress at the top of the first island’s map is gone. The Caves got a bonus level, “Coins over the River” — a “＋” point off the road; you don’t need it to move on." },
   { v: 240, date: "2026-11-21", text: "Два новых уровня в Скалах гоблинов: «Гоблин за мостом» и «Ключ за рекой» — с шаткими мостиками, на которых нельзя останавливаться.", en: "Two new levels in Goblin Cliffs: “Goblin Beyond the Bridge” and “Key Across the River” — with wobbly bridges you can’t stop on." },
@@ -15314,7 +15315,7 @@ function statRun(name) { const r = (stat.lv[name] ||= [0, 0, 0]); r[0]++; if (st
 function statTaste(id) { const q = (stat.tp ||= {}); q[id] = (q[id] || 0) + 1; statDirty = true; statSave(); statSoon(4000); }
 // отзыв об уровне: stat.fb[уровень] = "l" (понравилось) / "b" (скучно) / "h" (слишком сложно); второе нажатие на ту же рожицу — снять
 function statFeel(name, f) { const q = (stat.fb ||= {}); if (q[name] === f) delete q[name]; else q[name] = f; statDirty = true; statSave(); statSoon(1500); return q[name] || ""; }
-const FEELS = [["l", "😀", "Понравилось"], ["b", "😴", "Скучно"], ["h", "🤯", "Слишком сложно"]];
+const FEELS = [["l", "😀", "Понравилось"], ["b", "😴", "Скучно"], ["h", "😵", "Слишком сложно"]];
 function feelDraw(name) {
   const row = $("win-feel-row"), cur = (stat.fb || {})[name] || "";
   row.classList.toggle("picked", !!cur);
@@ -15431,7 +15432,7 @@ function statHtml(all) {
   }
   // уровни: сколько пробовали, прошли, сколько попыток; где застревают — пробовали, но не прошли
   h += `<h3 class="st-h">Уровни</h3><p class="st-note">Пробовали — нажимали «Запустить». Прошли — % от пробовавших (красным — меньше 60 %). Попыток — в среднем до первой победы. Бросили — пробовали, не прошли и потом не играли 3+ дня.</p>`;
-  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th><th>Без урока</th><th>😀</th><th>😴</th><th>🤯</th></tr>`;
+  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th><th>Без урока</th><th>😀</th><th>😴</th><th>😵</th></tr>`;
   let isle = 0;
   LEVELS.forEach((lv) => {
     const n = lv.isle || 1;
@@ -15456,7 +15457,7 @@ function statHtml(all) {
     h += `<tr><td>${esc(lvName(lv.name))}</td><td>${opened ? `${opened} <small>(${openedDev})</small>` : ""}</td><td>${left ? `${left} <small>(${leftDev})</small>` : ""}</td><td>${tried || ""}</td><td class="${pct !== null && pct < 60 && tried >= 3 ? "low" : ""}">${pct === null ? "" : pct + " %"}</td>`
       + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td><td>${hasGiant(lv) ? crowned : ""}</td><td>${gems || ""}</td><td>${noTool || ""}</td><td>${feel.l || ""}</td><td class="${feel.b > feel.l && feel.b >= 2 ? "low" : ""}">${feel.b || ""}</td><td class="${feel.h > feel.l && feel.h >= 2 ? "low" : ""}">${feel.h || ""}</td></tr>`;
   });
-  return h + `</table><p class="st-note">😀 😴 🤯 — отзывы игроков в окошке победы (понравилось / скучно / слишком сложно; красным — когда таких больше, чем 😀; счёт с версии 243). «Без урока» — прошли, но ни разу с тем, чему учит уровень (без цикла или приёма). «Открыли» — сколько раз уровень открывали на всех устройствах, в скобках — на скольких устройствах. «Пробовали», «Прошли», «Бросили», 👑, 💎, «Без урока» — это устройства. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
+  return h + `</table><p class="st-note">😀 😴 😵 — отзывы игроков в окошке победы (понравилось / скучно / слишком сложно; красным — когда таких больше, чем 😀; счёт с версии 243). «Без урока» — прошли, но ни разу с тем, чему учит уровень (без цикла или приёма). «Открыли» — сколько раз уровень открывали на всех устройствах, в скобках — на скольких устройствах. «Пробовали», «Прошли», «Бросили», 👑, 💎, «Без урока» — это устройства. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
 }
 async function openStats() {
   sfx("tap");
