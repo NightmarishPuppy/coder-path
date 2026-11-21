@@ -3012,7 +3012,7 @@ function isOpen(i) {
 }
 // Какой уровень советуем следующим: первый открытый и ещё не пройденный
 function suggested() {
-  const i = LEVELS.findIndex((lv, k) => !lv.isle && isOpen(k) && !passed(lv.name));
+  const i = LEVELS.findIndex((lv, k) => !lv.isle && !lv.side && isOpen(k) && !passed(lv.name));   // дополнительные не советуем (v242)
   return i === -1 ? indexOf(LAST_LEVEL().name) : i;
 }
 const indexOf = (name) => LEVELS.findIndex((lv) => lv.name === name);
@@ -14587,10 +14587,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 241;
+const APP_VERSION = 242;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 242, date: "2026-11-21", text: "На первом острове три новых дополнительных уровня с боями — точки «＋» в стороне от дороги: «Бараны и гоблины», «Гоблины на болоте» и «Громила у кустов». Везде нельзя останавливаться на полпути.", en: "Three new bonus levels with fights on the first island — “＋” points off the road: “Rams and Goblins”, “Goblins in the Swamp” and “The Brute by the Bushes”. In all of them you can’t stop halfway." },
   { v: 241, date: "2026-11-21", text: "С верха карты первого острова убрана крепость. В Пещерах появился дополнительный уровень «Монеты над рекой» — точка «＋» в стороне от дороги, для пути дальше он не нужен.", en: "The fortress at the top of the first island’s map is gone. The Caves got a bonus level, “Coins over the River” — a “＋” point off the road; you don’t need it to move on." },
   { v: 240, date: "2026-11-21", text: "Два новых уровня в Скалах гоблинов: «Гоблин за мостом» и «Ключ за рекой» — с шаткими мостиками, на которых нельзя останавливаться.", en: "Two new levels in Goblin Cliffs: “Goblin Beyond the Bridge” and “Key Across the River” — with wobbly bridges you can’t stop on." },
   { v: 239, date: "2026-11-21", text: "На двух уровнях острова 1 появились места, где нельзя останавливаться: шаткие мостики в «Тупике» и баранья тропа в «Стороже ключа».", en: "Two levels on island 1 now have places where you can’t stop: wobbly bridges in “Dead End” and a ram trail in “Key Guard”." },

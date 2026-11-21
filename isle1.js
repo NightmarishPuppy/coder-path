@@ -353,6 +353,27 @@ levels: [
 
   // ---------- Глава 2. Лес ----------
   {
+    name: "Бараны и гоблины",
+    chapter: 0,
+    side: true,
+    hint: "move_right(2)\nattack()\nmove_right(3)\nmove_down(2)\nmove_left()\nattack()\nmove_left(4)",
+    after: "Каменный лабиринт",
+    goal: "Победи двух гоблинов и дойди до двери. Гоблины стоят на бараньей тропе: бить с неё можно, останавливаться нельзя.",
+    en: {
+      name: "Rams and Goblins",
+      goal: "Beat the two goblins and reach the door. The goblins stand on a ram trail: you can strike from it, but you can’t stop on it.",
+    },
+    commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"],
+    par: 7, good: 8,
+    nostop: "rams",
+    map: [
+      "S~~G~.#",
+      "#####.#",
+      "E~~G~.#",
+    ],
+    starter: { py: "", js: "" },
+  },
+  {
     name: "Наискосок",
     chapter: 1,
     hint: "# Всё, что сдвинуто под while, повторяется по кругу\nwhile True:\n    move_right()\n    move_down()",
@@ -475,6 +496,27 @@ levels: [
 
   // ---------- Глава 3. Пещеры ----------
   // K — ключ, C — монета. Дверь открывается, когда взят ключ и собраны все монеты.
+  {
+    name: "Гоблины на болоте",
+    chapter: 1,
+    side: true,
+    hint: "move_right()\nattack()\nmove_right(3)\nattack()\nmove_right(3)",
+    after: "Лесная тропа",
+    goal: "Победи гоблинов и дойди до двери. Вокруг топь и шаткие мостики: бить с них можно, останавливаться нельзя.",
+    en: {
+      name: "Goblins in the Swamp",
+      goal: "Beat the goblins and reach the door. It’s all bog and wobbly bridges here: you can strike from them, but you can’t stop on them.",
+    },
+    commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"],
+    par: 5, good: 6,
+    nostop: "swamp", planks: [[3, 1], [6, 1]],
+    map: [
+      "########",
+      "S~G~~G~E",
+      "########",
+    ],
+    starter: { py: "", js: "" },
+  },
   {
     name: "Ключ",
     chapter: 2,
@@ -825,13 +867,35 @@ levels: [
     ],
     starter: { py: "", js: "" },
   },
+  {
+    name: "Громила у кустов",
+    chapter: 3,
+    side: true,
+    hint: "move_right(3)\nattack(2)\nmove_right(3)\nmove_down(2)\nmove_right()",
+    after: "Перевал",
+    goal: "Победи крепкого гоблина и дойди до двери. В кустах сидит подрывник: пока рыцарь идёт или бьётся, он не успевает прицелиться — рядом с кустами не останавливайся.",
+    en: {
+      name: "The Brute by the Bushes",
+      goal: "Beat the tough goblin and reach the door. A bomber hides in the bushes: while the knight walks or fights he can’t take aim — don’t stop near the bushes.",
+    },
+    commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"],
+    par: 5, good: 6,
+    nostop: "bush", bushes: [[2, 0], [5, 0]],
+    map: [
+      "########",
+      "S.~~B~.#",
+      "######.#",
+      "######.E",
+    ],
+    starter: { py: "", js: "" },
+  },
 ],
 };
 
 // Карта острова. Руками не править: её целиком пишет tools/gen3.py из файла раскладки.
 // @@isle1@@
 ISLES[1].map = {
-  nodes: [[90, 1010], [130, 1010], [170, 1010], [210, 1010], [250, 990], [230, 950], [190, 950], [150, 950], [110, 930], [130, 870], [170, 870], [210, 870], [270, 870], [310, 830], [190, 750], [130, 710], [230, 650], [290, 590], [230, 530], [250, 490], [230, 470], [150, 470], [110, 470], [110, 430], [110, 390], [70, 470], [110, 310], [50, 270], [110, 250], [190, 270], [190, 230], [270, 230], [290, 190], [290, 150], [250, 130]],
+  nodes: [[90, 1010], [130, 1010], [170, 1010], [210, 1010], [250, 990], [230, 950], [190, 950], [150, 950], [110, 930], [130, 870], [170, 870], [210, 870], [270, 870], [310, 830], [250, 910], [190, 750], [130, 710], [230, 650], [290, 590], [230, 530], [230, 730], [250, 490], [230, 470], [150, 470], [110, 470], [110, 430], [110, 390], [270, 530], [110, 310], [50, 310], [50, 270], [110, 250], [190, 270], [190, 230], [270, 230], [290, 150], [250, 130], [290, 650]],
   rows: [
     "....................................",
     "....................................",

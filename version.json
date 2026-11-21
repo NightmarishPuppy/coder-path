@@ -1,13 +1,13 @@
 {
- "version": 241,
+ "version": 242,
  "date": "2026-11-21",
  "notes": [
-  "С верха карты первого острова убрана крепость. В Пещерах появился дополнительный уровень «Монеты над рекой» — точка «＋» в стороне от дороги, для пути дальше он не нужен."
+  "На первом острове три новых дополнительных уровня с боями — точки «＋» в стороне от дороги: «Бараны и гоблины», «Гоблины на болоте» и «Громила у кустов». Везде нельзя останавливаться на полпути."
  ],
  "files": {
   "index.html": {
-   "size": 1157160,
-   "hash": "de64d714bc925047"
+   "size": 1157857,
+   "hash": "e2aa7e57a77bed85"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "658234b6c88fbf77"
+   "hash": "d9fe6956a7e63d34"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 56691,
-   "hash": "ea66d5e5b19c2167"
+   "size": 59435,
+   "hash": "d860aaf5c5704552"
   },
   "isle2.js": {
    "size": 59882,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The fortress at the top of the first island’s map is gone. The Caves got a bonus level, “Coins over the River” — a “＋” point off the road; you don’t need it to move on."
+  "Three new bonus levels with fights on the first island — “＋” points off the road: “Rams and Goblins”, “Goblins in the Swamp” and “The Brute by the Bushes”. In all of them you can’t stop halfway."
  ]
 }
