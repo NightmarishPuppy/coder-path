@@ -1,21 +1,21 @@
 {
- "version": 243,
+ "version": 244,
  "date": "2026-11-21",
  "notes": [
-  "После победы можно одним нажатием сказать, как тебе уровень: 😀 понравился, 😴 скучный или 🤯 слишком сложный. Это помогает делать игру лучше."
+  "В окошке победы появилась кнопка с самолётиком: одним нажатием можно отправить игру другу."
  ],
  "files": {
   "index.html": {
-   "size": 1161119,
-   "hash": "543f1a859e319f03"
+   "size": 1164557,
+   "hash": "b85418672d51c5db"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 84281,
-   "hash": "9324eedfc5f09279"
+   "size": 84641,
+   "hash": "f78cdbf11392dbca"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "40afcdde0db734dd"
+   "hash": "bf2f4e0f83f02afc"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "After a win you can tell us in one tap how the level was: 😀 liked it, 😴 boring or 🤯 too hard. It helps make the game better."
+  "The win box has a new paper-plane button: send the game to a friend in one tap."
  ]
 }

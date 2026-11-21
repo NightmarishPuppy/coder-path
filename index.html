@@ -446,6 +446,13 @@ html.still .enemy.job .jobtool { animation: none; }
 .feelbtn { width: 44px; height: 40px; padding: 0; font-size: 24px; line-height: 1; border-radius: 10px; border: 2px solid transparent; background: rgba(255, 255, 255, 0.07); cursor: pointer; transition: transform 0.15s, opacity 0.15s; }
 .feelbar.picked .feelbtn { opacity: 0.35; }
 .feelbar.picked .feelbtn.on { opacity: 1; border-color: var(--torch); transform: scale(1.12); }
+/* «Другу» (v244): поделиться игрой из окошка победы */
+.sharebtn { margin-left: auto; height: 40px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 700; color: #7cc4ff; border-radius: 10px; border: 2px solid rgba(124, 196, 255, 0.55); background: rgba(124, 196, 255, 0.1); cursor: pointer; white-space: nowrap; }
+.sharebtn svg { width: 18px; height: 18px; flex: none; }
+.sharebtn.done { color: var(--ok); border-color: var(--ok); }
+.win-actions { align-items: center; flex-basis: 100%; flex-wrap: wrap; }
+.sharebtn[hidden] { display: none; }
+@media (max-width: 480px) { .sharebtn { padding: 0 11px; } .sharebtn span { display: none; } .sharebtn svg { width: 22px; height: 22px; } }
 .nside-ring { fill: none; stroke: #ffd54a; stroke-width: 2; stroke-dasharray: 4 3; }
 .node.locked .nside-ring { stroke: #c9c3a8; opacity: 0.7; }
 .nside { font-size: 8.5px; font-weight: 800; text-anchor: middle; fill: #ffd54a; stroke: #2a1f14; stroke-width: 2.5; paint-order: stroke; letter-spacing: 0.3px; }
@@ -2161,6 +2168,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
           <button class="btn reset" id="win-map">Карта</button>
           <button class="btn next" id="next">Дальше</button>
           <button class="btn next" id="win-isle" hidden>К новому острову →</button>
+          <button class="sharebtn" id="win-share" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.5 2.5 2.8 10.1c-.9.4-.9 1.6.1 1.9l4.9 1.6 1.9 5.9c.3.9 1.4 1.1 2 .4l2.7-3 4.8 3.500c.7.5 1.7.1 1.900-.7l3.100-15.6c.2-1-.8-1.900-1.700-1.600ZM9.300 13.100l8.500-6.300-6.600 7.400-.4 3.300-1.500-4.400Z" fill="currentColor"/></svg><span id="win-share-t">Другу</span></button>
         </div>
       </div>
       <div class="tape-wrap">
@@ -12574,6 +12582,7 @@ function win() {
   $("win-note").textContent = note;
   // отзыв об уровне (v243): одна из трёх рожиц; не на самых первых уровнях — там не грузим лишним
   $("win-feel").hidden = LEVELS.filter((l) => save.stars[l.name] > 0).length < 3;
+  $("win-share").hidden = $("win-feel").hidden;   // «Другу» — тоже не на самых первых уровнях
   if (!$("win-feel").hidden) feelDraw(L.name);
   winBox.hidden = false;
   fitBlocks(); winIntoView();
@@ -14601,10 +14610,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 243;
+const APP_VERSION = 244;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 244, date: "2026-11-21", text: "В окошке победы появилась кнопка с самолётиком: одним нажатием можно отправить игру другу.", en: "The win box has a new paper-plane button: send the game to a friend in one tap." },
   { v: 243, date: "2026-11-21", text: "После победы можно одним нажатием сказать, как тебе уровень: 😀 понравился, 😴 скучный или 🤯 слишком сложный. Это помогает делать игру лучше.", en: "After a win you can tell us in one tap how the level was: 😀 liked it, 😴 boring or 🤯 too hard. It helps make the game better." },
   { v: 242, date: "2026-11-21", text: "На первом острове три новых дополнительных уровня с боями — точки «＋» в стороне от дороги: «Бараны и гоблины», «Гоблины на болоте» и «Громила у кустов». Везде нельзя останавливаться на полпути.", en: "Three new bonus levels with fights on the first island — “＋” points off the road: “Rams and Goblins”, “Goblins in the Swamp” and “The Brute by the Bushes”. In all of them you can’t stop halfway." },
   { v: 241, date: "2026-11-21", text: "С верха карты первого острова убрана крепость. В Пещерах появился дополнительный уровень «Монеты над рекой» — точка «＋» в стороне от дороги, для пути дальше он не нужен.", en: "The fortress at the top of the first island’s map is gone. The Caves got a bonus level, “Coins over the River” — a “＋” point off the road; you don’t need it to move on." },
@@ -15246,6 +15256,23 @@ function feelDraw(name) {
     b.type = "button"; b.className = "feelbtn" + (cur === f ? " on" : ""); b.dataset.f = f; b.textContent = face; b.title = tr(label); b.setAttribute("aria-label", tr(label)); b.setAttribute("aria-pressed", String(cur === f));
     b.onclick = () => { sfx("tap"); statFeel(name, f); feelDraw(name); }; return b; }));
 }
+// «Другу» (v244): в Telegram — окно выбора чата со ссылкой на мини-приложение, в браузере — системное «Поделиться», иначе ссылка в буфер
+function statShare() { stat.sh = (stat.sh || 0) + 1; statDirty = true; statSave(); statSoon(3000); }
+const GAME_LINKS = { tg: "https://t.me/Coderpath_bot?startapp", itch: "https://nightmarishpuppy.itch.io/coder-path", web: "https://nightmarishpuppy.github.io/coder-path/" };
+async function shareWin() {
+  sfx("tap");
+  const inTg = document.documentElement.classList.contains("tg") && typeof tg !== "undefined" && tg;
+  const url = inTg ? GAME_LINKS.tg : /itch\.zone$|hwcdn\.net$/.test(location.hostname) ? GAME_LINKS.itch : GAME_LINKS.web;
+  const text = tr("Уровень «{lv}» в Coder Path пройден! Это игра, где собираешь программу для рыцаря. Попробуй и ты:", { lv: lvName(L.name) });
+  statShare();
+  if (inTg) { const u = "https://t.me/share/url?url=" + encodeURIComponent(url) + "&text=" + encodeURIComponent(text);
+    try { if (tgOk("6.1")) tg.openTelegramLink(u); else tg.openLink(u); return; } catch (e) {} }
+  if (navigator.share) { try { await navigator.share({ title: "Coder Path", text, url }); return; } catch (e) { if (e.name === "AbortError") return; } }
+  const ok = await copyText(text + " " + url), b = $("win-share");
+  $("win-share-t").textContent = tr(ok ? "Скопировано" : "Не вышло"); b.classList.toggle("done", ok);
+  setTimeout(() => { $("win-share-t").textContent = tr("Другу"); b.classList.remove("done"); }, 2500);
+}
+$("win-share").addEventListener("click", shareWin);
 function statWin(name, crown, gem, missing, skin) { const r = (stat.lv[name] ||= [0, 0, 0]);
   if (skin) { const q = (stat.tw ||= {}); q[skin] = (q[skin] || 0) + 1; } if (!r[1]) { r[1] = 1; r[2] = r[0]; } if (crown) r[3] = 1; if (gem) r[4] = 1;
   if (!missing) r[5] = 0; else if (r[5] !== 0) r[5] = 1;
@@ -15274,7 +15301,7 @@ function statDoc() {
     stars: LEVELS.reduce((s, l) => s + (save.stars[l.name] || 0), 0), won: won.length,
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
     op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length, gems: Object.keys(save.gems || {}).length,
-    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {},
+    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {}, sh: stat.sh || 0,
   };
 }
 let statTimer = null, statLast = 0;
@@ -15320,7 +15347,7 @@ function statHtml(all) {
   };
   let h = `<div class="st-cards">${card(all.length, "устройств всего")}${card(all.filter((d) => ago(d) < 1).length, "играли за сутки")}`
     + `${card(all.filter((d) => ago(d) < 7).length, "за неделю")}${card(all.filter((d) => (now - Date.parse(d.first || 0)) / day < 7).length, "новых за неделю")}`
-    + `${card(all.filter((d) => d.won > 0).length, "прошли хоть уровень")}</div>`;
+    + `${card(all.filter((d) => d.won > 0).length, "прошли хоть уровень")}${card(all.filter((d) => d.sh > 0).length, "поделились игрой (с v244)")}</div>`;
   h += bars("Где играют", "where", { tg: "Telegram", web: "Браузер", app: "Приложение (значок)", itch: "itch.io" });
   h += bars("Система", "os", { ios: "iPhone / iPad", android: "Android", windows: "Windows", mac: "Mac", linux: "Linux", other: "Другое" });
   h += bars("Устройство", "form", { phone: "Телефон", tablet: "Планшет", desktop: "Компьютер" });
