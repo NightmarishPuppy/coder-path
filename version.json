@@ -1,13 +1,13 @@
 {
- "version": 240,
+ "version": 241,
  "date": "2026-11-21",
  "notes": [
-  "Два новых уровня в Скалах гоблинов: «Гоблин за мостом» и «Ключ за рекой» — с шаткими мостиками, на которых нельзя останавливаться."
+  "С верха карты первого острова убрана крепость. В Пещерах появился дополнительный уровень «Монеты над рекой» — точка «＋» в стороне от дороги, для пути дальше он не нужен."
  ],
  "files": {
   "index.html": {
-   "size": 1156614,
-   "hash": "23a77803bb4928c4"
+   "size": 1157160,
+   "hash": "de64d714bc925047"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "493fe3e5eeb125fa"
+   "hash": "658234b6c88fbf77"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 55662,
-   "hash": "6dcff84917f76813"
+   "size": 56691,
+   "hash": "ea66d5e5b19c2167"
   },
   "isle2.js": {
    "size": 59882,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Two new levels in Goblin Cliffs: “Goblin Beyond the Bridge” and “Key Across the River” — with wobbly bridges you can’t stop on."
+  "The fortress at the top of the first island’s map is gone. The Caves got a bonus level, “Coins over the River” — a “＋” point off the road; you don’t need it to move on."
  ]
 }
