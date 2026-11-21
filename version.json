@@ -1,21 +1,21 @@
 {
- "version": 245,
+ "version": 246,
  "date": "2026-11-21",
  "notes": [
-  "Кнопка с самолётиком теперь отправляет другу не просто ссылку, а твоё прохождение: друг открывает её — и рыцарь проходит уровень по твоей программе."
+  "В повторе чужого прохождения кнопка называется «Играть самому», а полоска с ней всегда остаётся на виду."
  ],
  "files": {
   "index.html": {
-   "size": 1171721,
-   "hash": "895a67960336cb55"
+   "size": 1172240,
+   "hash": "0acbc91cb822af01"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 85123,
-   "hash": "a20bc41f2177374b"
+   "size": 85129,
+   "hash": "4b4f93ec924aa770"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "f36f3f7cff86ecec"
+   "hash": "57db85c30a47eae3"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The paper-plane button now sends your friend your own run: they open the link and the knight beats the level with your program."
+  "In a friend’s replay, the bar with the “Play it myself” button now always stays in view."
  ]
 }

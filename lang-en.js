@@ -404,7 +404,7 @@ var EN = {
   "Как уровень?": "How was it?",
   "Другу": "Share",
   "👀 Так прошёл твой друг": "👀 This is how your friend did it",
-  "Играть сам": "Play it myself",
+  "Играть самому": "Play it myself",
   "Вот так этот уровень прошёл твой друг. Теперь твоя очередь!": "That’s how your friend beat this level. Now it’s your turn!",
   "Смотри, как я прохожу уровень «{lv}» в Coder Path. Сможешь лучше?": "Watch me beat “{lv}” in Coder Path. Can you do better?",
   "Скопировано": "Copied",

@@ -453,7 +453,8 @@ html.still .enemy.job .jobtool { animation: none; }
 .win-actions { align-items: center; flex-basis: 100%; flex-wrap: wrap; }
 .sharebtn[hidden] { display: none; }
 /* повтор по ссылке (v245): полоска над экраном уровня */
-.replaybar { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 8px; padding: 6px 10px; white-space: nowrap; border-radius: 10px; border: 2px solid #7cc4ff; background: rgba(124, 196, 255, 0.12); font-weight: 700; font-size: 15px; }
+.replaybar { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 8px; padding: 6px 10px; white-space: nowrap; border-radius: 10px; border: 2px solid #7cc4ff; background: #1a2b40; font-weight: 700; font-size: 15px;
+  position: sticky; top: calc(6px + env(safe-area-inset-top, 0px) + var(--tgt, 0px)); z-index: 30; }   /* v246: всегда на виду, не под верхним краем окна */
 .replaybar[hidden] { display: none; }
 .replaybar .btn { padding: 6px 12px; font-size: 14px; }
 @media (max-width: 480px) { .replaybar { font-size: 13px; } }
@@ -2126,7 +2127,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 </div>
 
 <div class="wrap" id="levelview" hidden>
-  <div class="replaybar" id="replay-bar" hidden><span>👀 Так прошёл твой друг</span><button class="btn next" id="replay-self" type="button">Играть сам</button></div>
+  <div class="replaybar" id="replay-bar" hidden><span>👀 Так прошёл твой друг</span><button class="btn next" id="replay-self" type="button">Играть самому</button></div>
   <header>
     <div class="toprow">
       <button class="backbtn" id="to-map">← Карта</button>
@@ -2172,7 +2173,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
         </div>
         <div class="win-actions">
           <button class="btn reset" id="win-map">Карта</button>
-          <button class="btn next" id="win-self" type="button" hidden>Играть сам</button>
+          <button class="btn next" id="win-self" type="button" hidden>Играть самому</button>
           <button class="btn next" id="next">Дальше</button>
           <button class="btn next" id="win-isle" hidden>К новому острову →</button>
           <button class="sharebtn" id="win-share" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.5 2.5 2.8 10.1c-.9.4-.9 1.6.1 1.9l4.9 1.6 1.9 5.9c.3.9 1.4 1.1 2 .4l2.7-3 4.8 3.500c.7.5 1.7.1 1.900-.7l3.100-15.6c.2-1-.8-1.900-1.700-1.600ZM9.300 13.100l8.500-6.300-6.600 7.400-.4 3.300-1.500-4.400Z" fill="currentColor"/></svg><span id="win-share-t">Другу</span></button>
@@ -14673,10 +14674,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 245;
+const APP_VERSION = 246;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 246, date: "2026-11-21", text: "В повторе чужого прохождения кнопка называется «Играть самому», а полоска с ней всегда остаётся на виду.", en: "In a friend’s replay, the bar with the “Play it myself” button now always stays in view." },
   { v: 245, date: "2026-11-21", text: "Кнопка с самолётиком теперь отправляет другу не просто ссылку, а твоё прохождение: друг открывает её — и рыцарь проходит уровень по твоей программе.", en: "The paper-plane button now sends your friend your own run: they open the link and the knight beats the level with your program.", big: true },
   { v: 244, date: "2026-11-21", text: "В окошке победы появилась кнопка с самолётиком: одним нажатием можно отправить игру другу.", en: "The win box has a new paper-plane button: send the game to a friend in one tap." },
   { v: 243, date: "2026-11-21", text: "После победы можно одним нажатием сказать, как тебе уровень: 😀 понравился, 😴 скучный или 🤯 слишком сложный. Это помогает делать игру лучше.", en: "After a win you can tell us in one tap how the level was: 😀 liked it, 😴 boring or 🤯 too hard. It helps make the game better." },
