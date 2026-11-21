@@ -1,13 +1,13 @@
 {
- "version": 247,
- "date": "2026-11-21",
+ "version": 248,
+ "date": "2026-11-22",
  "notes": [
-  "Рожица «слишком сложно» теперь видна на всех устройствах."
+  "Оценить уровень и отправить игру другу теперь можно с самой первой победы."
  ],
  "files": {
   "index.html": {
-   "size": 1172448,
-   "hash": "dcc5ffa188dbfd9d"
+   "size": 1173086,
+   "hash": "e4eea6b333f979ba"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "5b89fefa9343cf3d"
+   "hash": "1256504866cd9351"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The “too hard” face now shows on every device."
+  "You can now rate a level and send the game to a friend from your very first win."
  ]
 }

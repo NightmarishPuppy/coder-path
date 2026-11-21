@@ -459,6 +459,7 @@ html.still .enemy.job .jobtool { animation: none; }
 .replaybar .btn { padding: 6px 12px; font-size: 14px; }
 @media (max-width: 480px) { .replaybar { font-size: 13px; } }
 @media (max-width: 480px) { .sharebtn { padding: 0 11px; } .sharebtn span { display: none; } .sharebtn svg { width: 22px; height: 22px; } }
+@media (max-width: 380px) { .win-actions { gap: 6px; } .win-actions .btn { padding-left: 13px; padding-right: 13px; } .sharebtn { padding: 0 9px; } }   /* узкий телефон: самолётик в одном ряду с «Карта» и «Дальше» */
 .nside-ring { fill: none; stroke: #ffd54a; stroke-width: 2; stroke-dasharray: 4 3; }
 .node.locked .nside-ring { stroke: #c9c3a8; opacity: 0.7; }
 .nside { font-size: 8.5px; font-weight: 800; text-anchor: middle; fill: #ffd54a; stroke: #2a1f14; stroke-width: 2.5; paint-order: stroke; letter-spacing: 0.3px; }
@@ -12572,7 +12573,7 @@ function win() {
     edWon(n);
     $("win-stars").innerHTML = starsHtml(3);
     $("win-note").textContent = tr("Пройдено: в коде {n} {w}. Записал как порог ★★★.", { n, w: plural(n, "команда", "команды", "команд") });
-    nextBtn.hidden = true; $("win-isle").hidden = true; $("win-taste").hidden = true;
+    nextBtn.hidden = true; $("win-isle").hidden = true; $("win-taste").hidden = true; $("win-feel").hidden = true; $("win-share").hidden = true;   // черновик из редактора: ни отзыва, ни «Другу»
     winBox.hidden = false;
     fitBlocks(); winIntoView();
     return;
@@ -12643,9 +12644,9 @@ function win() {
   }
   $("win-note").textContent = note;
   // отзыв об уровне (v243): одна из трёх рожиц; не на самых первых уровнях — там не грузим лишним
-  $("win-feel").hidden = LEVELS.filter((l) => save.stars[l.name] > 0).length < 3;
-  $("win-share").hidden = $("win-feel").hidden;   // «Другу» — тоже не на самых первых уровнях
-  if (!$("win-feel").hidden) feelDraw(L.name);
+  // отзыв об уровне и «Другу» — с первой же победы (v248; до этого — с третьей)
+  $("win-feel").hidden = false; $("win-share").hidden = false;
+  feelDraw(L.name);
   winBox.hidden = false;
   fitBlocks(); winIntoView();
 }
@@ -14674,10 +14675,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 247;
+const APP_VERSION = 248;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 248, date: "2026-11-22", text: "Оценить уровень и отправить игру другу теперь можно с самой первой победы.", en: "You can now rate a level and send the game to a friend from your very first win." },
   { v: 247, date: "2026-11-21", text: "Рожица «слишком сложно» теперь видна на всех устройствах.", en: "The “too hard” face now shows on every device." },
   { v: 246, date: "2026-11-21", text: "В повторе чужого прохождения кнопка называется «Играть самому», а полоска с ней всегда остаётся на виду.", en: "In a friend’s replay, the bar with the “Play it myself” button now always stays in view." },
   { v: 245, date: "2026-11-21", text: "Кнопка с самолётиком теперь отправляет другу не просто ссылку, а твоё прохождение: друг открывает её — и рыцарь проходит уровень по твоей программе.", en: "The paper-plane button now sends your friend your own run: they open the link and the knight beats the level with your program.", big: true },
