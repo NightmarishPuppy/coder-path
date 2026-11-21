@@ -1258,7 +1258,7 @@ html.still .mapclouds img.bank { animation: none; }
 .skactor.behind { z-index: 0; }
 /* v236: огонь на бегущем тянется назад и вытягивается; вокруг горящего свечение; силуэт темнеет, пока горит */
 .skactor .fspot { transition: transform 0.22s ease-out; }
-.skactor.fmove .fspot { --lean: -32deg; --str: 1.3; }
+.skactor.fmove .fspot { --lean: -32deg; }   /* v238: бегущий — пламя только клонится назад, в высоту не растёт */
 .skactor .fglow { position: absolute; border-radius: 50%; pointer-events: none; z-index: 1; transform: translate(-50%, -50%);
   background: radial-gradient(circle, rgba(255, 200, 90, 0.5) 0%, rgba(255, 140, 30, 0.26) 38%, rgba(255, 90, 0, 0) 70%); animation: fglow 0.46s ease-in-out infinite alternate; }
 @keyframes fglow { from { opacity: 0.68; } to { opacity: 1; } }
@@ -4927,7 +4927,7 @@ function fireSpotsOn(stage, a, kind) {
     a.el.appendChild(e); e.classList.add("fspot"); e.style.zIndex = 2;
     e.style.width = (torch ? 46 : 34) * sz / fw * 100 + "%";
     e.style.left = x / fw * 100 + "%"; e.style.top = y / fw * 100 + "%";
-    e.style.transformOrigin = `50% ${ft}%`; e.style.transform = `translate(-50%, -${ft}%) rotate(calc(${one ? 0 : deg}deg + var(--lean, 0deg))) scaleY(var(--str, 1))`;
+    e.style.transformOrigin = `50% ${ft}%`; e.style.transform = `translate(-50%, -${ft}%) rotate(calc(${one ? 0 : deg}deg + var(--lean, 0deg)))`;
     fl.mute = true; fl.show(true, true); fireLook(e);
     fl.play(0, 7, torch ? 100 : 90); fl.anim.t0 -= Math.random() * 700;   // огоньки пляшут не в такт
     return fl;
@@ -5736,8 +5736,9 @@ async function battle(st0, B) {
     hue: { monk: [150, 262], war: [150, 262], lan: [198, 262], hero: [150, 262], torch: [335, 12], torchp: [255, 330] },
     sheets: { monk: ["monk", "monkrun", "heal"], war: ["kwar"], lan: ["lidle", "lrun", "lratk", "ldratk", "luratk", "ldatk", "luatk"], hero: ["hidle", "hrun", "hatk"], torch: ["torch"], torchp: ["torchp"] } } : null;
   // пламя: малое — на голове (перо, волосы), большое — на всём бойце (ряса монаха) и на башне
-  const flames = [], flamesBig = FIRE ? pool("fire", 4, 0.62, 0.92) : [], flaresA = FIRE ? pool("flare2", 3, 1.1, 0.8) : [], flaresB = FIRE ? pool("flare3", 3, 1.3, 0.8) : [];
-  [...flames, ...flamesBig, ...flaresA, ...flaresB].forEach((a) => (a.mute = true));
+  const flames = [], flamesBig = FIRE ? pool("fire", 4, 0.62, 0.92) : [];
+  // v238: больших непрозрачных вспышек («язык пламени» и «клуб огня» над головой) больше нет: горит только то, что рисует fireSpotsOn / fireLook
+  [...flames, ...flamesBig].forEach((a) => (a.mute = true));
   // Где горит. fireUp — на сколько клеток выше ног: у воинов — макушка (перо), у монаха — вся ряса, у гоблина — капюшон.
   // Огонь держится на этом месте фигурки, как бы она ни лежала: в полёте (кувырок) — в середине картинки, вокруг которой она
   // вертится; сбитый с ног лежит на боку (поворот на четверть круга вокруг середины картинки) — огонь там, куда легла голова.
@@ -5758,7 +5759,7 @@ async function battle(st0, B) {
     (FIRE.sheets[v.kind] || []).forEach((k) => charSheet(k, FIRE.hue[v.kind]));        // обугленные листы — заранее, пока горит
     const fls = fireSpotsOn(st, v.a, v.kind);
     v.fire = { till: now + FIRE.burn, tick: now + FIRE.tick, char: now + FIRE.burn * 0.45, puff: 0, fl: fls[0], fls };
-    fxAt(flaresB, ...firePos(v), 55, v.y + 4); flash(v); fireStat.lit++;
+    flash(v); fireStat.lit++;
     // подрывник горит недолго: огонь добирается до динамита
     if (v.T.thrower) after(900 + Math.random() * 700, () => { if (v.dead || !v.fire) return; const fat = !!v.T.fat, x = v.x, y = v.y; fireStat.blown++;
       kill(v, true); v.a.show(false, true); boom(x, y); if (fat) fxAt(hugeBooms, x, y, 80); fat ? blast(x, y, 1.1, 3, 2.3, 3.4) : blast(x, y, 0.75, 2, 0.5, 1.5); });
@@ -5783,7 +5784,7 @@ async function battle(st0, B) {
         const K = soakSpot(v);
         if (K) { v.soak = { ...K, ph: "to" }; F.till = Infinity; v.busy = Infinity; v.tgt = null; } else if (F.till === Infinity) F.till = now + 2500;
       }
-      if (now >= F.puff) { F.puff = now + fireSmokeGap(); puffAt(fx + (Math.random() - 0.5) * 0.2, fy - 0.3 * ZM, 0.24, 0.45, 0.8, 900); if (Math.random() < 0.4) fxAt(flaresA, fx + (Math.random() - 0.5) * 0.3, fy - 0.1 * ZM, 60, ay + 5); }
+      if (now >= F.puff) { F.puff = now + fireSmokeGap(); puffAt(fx + (Math.random() - 0.5) * 0.2, fy - 0.3 * ZM, 0.24, 0.45, 0.8, 900); }
       if (v.air) continue;
       if (now >= F.tick) {
         F.tick = now + FIRE.tick; hurt(v, 1);
@@ -5805,7 +5806,6 @@ async function battle(st0, B) {
     if (!FIRE || q.fire || q.hp <= 0) return;
     const fl = take(flamesBig); q.fire = { till: now + 3800, puff: 0, fl }; fireStat.towers++;
     fl.el.style.transition = "none"; fl.at(q.tx + 0.28 * ZM, q.y + 0.12 * ZM); fl.el.style.zIndex = +q.front.el.style.zIndex + 1; fl.show(true, true); fireLook(fl.el); fl.play(0, 7, 90);   // v237: тот же вид, что у огоньков на бойцах
-    fxAt(flaresB, q.tx + 0.28 * ZM, q.y, 55, q.ty + 6);
   };
   // берег рядом с точкой в воде: ближайшая суша, не дальше 0,9 клетки. Мост — не берег (v227): под ним вода, и на него из воды
   // не забраться — кто упал с моста, тонет; выбираются только у самого берега.
@@ -14585,10 +14585,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 237;
+const APP_VERSION = 238;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 238, date: "2026-11-21", text: "Огонь на бойцах снова спокойный: больше нет больших вспышек над головой, пламя не вытягивается вверх на бегу.", en: "Fire on fighters is calm again: no more big bursts above the head, and flames no longer stretch upward while running." },
   { v: 237, date: "2026-11-21", text: "Огонь на башне с лучником теперь такой же полупрозрачный, как на бойцах.", en: "Fire on the archer tower is now see-through, just like the flames on fighters." },
   { v: 236, date: "2026-11-21", text: "Огонь стал живее: пламя тянется назад за бегущим, вокруг горящего свечение, а сам он темнеет. Огонь теперь есть и в бою на заставке, и у золотой шахты; вышка гоблинов у уток иногда загорается.", en: "Fire feels more alive: flames trail behind a runner, a burning fighter glows and darkens. Fire now also appears in the title-screen battle and at the gold mine; the goblin watchtower by the ducks sometimes catches fire." },
   { v: 235, date: "2026-11-21", text: "Глава «Пожар» выросла: огонь перекидывается на тех, кто стоит рядом, деревянную вышку гоблинов можно сжечь — и новое испытание.", en: "The “Blaze” chapter has grown: fire jumps to anyone standing close, the goblins’ wooden watchtower can be burned down — and there is a new challenge.", big: true },
