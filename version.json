@@ -1,13 +1,13 @@
 {
- "version": 239,
+ "version": 240,
  "date": "2026-11-21",
  "notes": [
-  "На двух уровнях острова 1 появились места, где нельзя останавливаться: шаткие мостики в «Тупике» и баранья тропа в «Стороже ключа»."
+  "Два новых уровня в Скалах гоблинов: «Гоблин за мостом» и «Ключ за рекой» — с шаткими мостиками, на которых нельзя останавливаться."
  ],
  "files": {
   "index.html": {
-   "size": 1156185,
-   "hash": "fc002d54ec203e5d"
+   "size": 1156614,
+   "hash": "23a77803bb4928c4"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "45e6c213e4d4d5da"
+   "hash": "493fe3e5eeb125fa"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 54088,
-   "hash": "3238a23ddd0c0da1"
+   "size": 55662,
+   "hash": "6dcff84917f76813"
   },
   "isle2.js": {
    "size": 59882,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Two levels on island 1 now have places where you can’t stop: wobbly bridges in “Dead End” and a ram trail in “Key Guard”."
+  "Two new levels in Goblin Cliffs: “Goblin Beyond the Bridge” and “Key Across the River” — with wobbly bridges you can’t stop on."
  ]
 }

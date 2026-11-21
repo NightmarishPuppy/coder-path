@@ -695,6 +695,26 @@ levels: [
     starter: { py: "", js: "" },
   },
   {
+    name: "Гоблин за мостом",
+    chapter: 3,
+    hint: "move_right(3)\nattack()\nmove_right(3)",
+    after: "Крепкий гоблин",
+    goal: "Победи гоблина прямо с мостика и иди к двери. На мостике можно бить — нельзя только заканчивать на нём путь.",
+    en: {
+      name: "Goblin Beyond the Bridge",
+      goal: "Beat the goblin right from the bridge and go to the door. You can strike on the bridge — you just can’t end your path there.",
+    },
+    commands: ["moveRight", "moveDown", "moveUp", "moveLeft", "attack"],
+    par: 3, good: 4,
+    nostop: "bridge",
+    map: [
+      "#######",
+      "S.~~G.E",
+      "#######",
+    ],
+    starter: { py: "", js: "" },
+  },
+  {
     name: "Строй гоблинов",
     chapter: 3,
     hint: "while True:\n    attack()\n    move_right()",
@@ -742,6 +762,26 @@ levels: [
     },
   },
   {
+    name: "Ключ за рекой",
+    chapter: 3,
+    hint: "move_right(5)\nmove_left()\nmove_down(2)\nmove_left(4)",
+    after: "Крепкий гоблин",
+    goal: "Ключ лежит за рекой. Мостики длинные и шаткие: на них не останавливайся — запиши весь путь сразу.",
+    en: {
+      name: "Key Across the River",
+      goal: "The key lies across the river. The bridges are long and wobbly: don’t stop on them — write the whole path at once.",
+    },
+    commands: ["moveRight", "moveDown", "moveUp", "moveLeft"],
+    par: 4, good: 5,
+    nostop: "bridge",
+    map: [
+      "S.~~.K#",
+      "####.##",
+      "E.~~.##",
+    ],
+    starter: { py: "", js: "" },
+  },
+  {
     name: "Перевал",
     chapter: 3,
     challenge: true,
@@ -769,7 +809,7 @@ levels: [
 // Карта острова. Руками не править: её целиком пишет tools/gen3.py из файла раскладки.
 // @@isle1@@
 ISLES[1].map = {
-  nodes: [[90, 1010], [130, 1010], [170, 1010], [210, 1010], [250, 990], [230, 950], [190, 950], [150, 950], [110, 930], [130, 870], [170, 870], [210, 870], [270, 870], [310, 830], [190, 750], [130, 710], [230, 650], [290, 590], [230, 530], [250, 490], [230, 470], [150, 470], [110, 470], [110, 430], [110, 390], [110, 310], [50, 270], [110, 250], [190, 270], [190, 230], [270, 230], [250, 130]],
+  nodes: [[90, 1010], [130, 1010], [170, 1010], [210, 1010], [250, 990], [230, 950], [190, 950], [150, 950], [110, 930], [130, 870], [170, 870], [210, 870], [270, 870], [310, 830], [190, 750], [130, 710], [230, 650], [290, 590], [230, 530], [250, 490], [230, 470], [150, 470], [110, 470], [110, 430], [110, 390], [110, 310], [50, 270], [110, 250], [190, 270], [190, 230], [270, 230], [290, 190], [290, 150], [250, 130]],
   rows: [
     "....................................",
     "....................................",
