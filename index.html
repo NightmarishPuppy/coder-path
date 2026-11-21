@@ -4915,6 +4915,10 @@ let FIRE_ALPHA = 0.85;
 try { const v = +localStorage.getItem("cp-fire-alpha2"); if (v >= 0.3 && v <= 1) FIRE_ALPHA = v; } catch (e) {}
 // v233: прозрачность — плавно по высоте: у основания огонь самый прозрачный (сквозь него видно, что горит), к верхушке — самый плотный
 const FIRE_FADE = "linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.75) 40%, #000 80%)";
+// v237: вид огня один на всю игру — и огоньки на бойцах, и большой огонь на башнях, вышках и руинах: полупрозрачный, у основания
+// прозрачнее всего, чуть ярче (прозрачный огонь бледнеет на траве). Новый огонь — только через эту функцию.
+// Звать ПОСЛЕ show(): show ставит плотность 1 и стёр бы прозрачность.
+const fireLook = (e) => { e.style.opacity = FIRE_ALPHA; e.style.webkitMaskImage = e.style.maskImage = FIRE_FADE; e.style.filter = "brightness(1.2) saturate(1.35)"; };
 function fireSpotsOn(stage, a, kind) {
   const [fw, all] = FIRE_SPOTS[kind] || FIRE_SPOTS.torch, one = FIRE_LOOK === "one", torch = FIRE_LOOK === "torch";
   const spots = one ? [[kind === "monk" ? 97 : all[0][0], all[0][1] + (kind === "monk" ? 22 : 4), kind === "monk" ? 2.7 : 1.6, 0]] : all;
@@ -4924,7 +4928,7 @@ function fireSpotsOn(stage, a, kind) {
     e.style.width = (torch ? 46 : 34) * sz / fw * 100 + "%";
     e.style.left = x / fw * 100 + "%"; e.style.top = y / fw * 100 + "%";
     e.style.transformOrigin = `50% ${ft}%`; e.style.transform = `translate(-50%, -${ft}%) rotate(calc(${one ? 0 : deg}deg + var(--lean, 0deg))) scaleY(var(--str, 1))`;
-    fl.mute = true; fl.show(true, true); e.style.opacity = FIRE_ALPHA; e.style.webkitMaskImage = e.style.maskImage = FIRE_FADE; e.style.filter = "brightness(1.2) saturate(1.35)";   // прозрачный огонь бледнеет на траве — добавляем яркости
+    fl.mute = true; fl.show(true, true); fireLook(e);
     fl.play(0, 7, torch ? 100 : 90); fl.anim.t0 -= Math.random() * 700;   // огоньки пляшут не в такт
     return fl;
   });
@@ -5121,8 +5125,7 @@ async function skitArcher(st, [ax, ay], [gx0, gx1]) {
 async function skTowerFire(st, tx, ty) {
     const fls = [[-0.34, 0.06, 0.5], [0.3, 0.0, 0.56], [0.0, -0.2, 0.46]].map(([dx, dy, sc]) => { const f = skActor(st, "fire", sc, 0.92), e = f.el;
       f.mute = true; e.style.transition = "none"; f.at(tx + dx, ty + dy); e.style.zIndex = Math.round((ty + 0.4) * 40);
-      e.style.webkitMaskImage = e.style.maskImage = FIRE_FADE; e.style.filter = "brightness(1.2) saturate(1.35)";
-      f.show(true, true); e.style.opacity = FIRE_ALPHA; f.play(0, 7, 90); f.anim.t0 -= Math.random() * 600; return f; });
+      f.show(true, true); fireLook(e); f.play(0, 7, 90); f.anim.t0 -= Math.random() * 600; return f; });
     try {
       const till = performance.now() + skRnd(3600, 5200);
       while (performance.now() < till) {                       // дым над огнём
@@ -5801,7 +5804,7 @@ async function battle(st0, B) {
   const towerFire = (q) => {
     if (!FIRE || q.fire || q.hp <= 0) return;
     const fl = take(flamesBig); q.fire = { till: now + 3800, puff: 0, fl }; fireStat.towers++;
-    fl.el.style.transition = "none"; fl.at(q.tx + 0.28 * ZM, q.y + 0.12 * ZM); fl.el.style.zIndex = +q.front.el.style.zIndex + 1; fl.show(true, true); fl.play(0, 7, 90);
+    fl.el.style.transition = "none"; fl.at(q.tx + 0.28 * ZM, q.y + 0.12 * ZM); fl.el.style.zIndex = +q.front.el.style.zIndex + 1; fl.show(true, true); fireLook(fl.el); fl.play(0, 7, 90);   // v237: тот же вид, что у огоньков на бойцах
     fxAt(flaresB, q.tx + 0.28 * ZM, q.y, 55, q.ty + 6);
   };
   // берег рядом с точкой в воде: ближайшая суша, не дальше 0,9 клетки. Мост — не берег (v227): под ним вода, и на него из воды
@@ -6254,7 +6257,7 @@ async function battle(st0, B) {
     H.stands.forEach((stand) => { const p = A("prungold", 0.8), n = A("gnug", 0.8, 0.585); Z(p, stand[1]); skRun(() => haul(p, n, stand)); });
   } else if (mount) skRun(async () => { for (;;) { await skWait(st0, skRnd(2500, 5000)); await mount.play(0, 12, 70, false); mount.frame(0, 0); } });
 
-  B.api = { blast, make, throwTnt, met, ignite, towerFireAt: (i) => towerFire(archers[i]), fling, shoreBy, soakSpot, depthAt, landBy, fire: fireStat, burning: () => units.filter((v) => v.fire && !v.dead).length, forts: () => archers.map((q) => ({ hp: q.hp, dead: !!q.dead })), pawns: () => pawns.length };                  // для тестов: устроить взрыв или поставить бойца самому
+  B.api = { blast, make, throwTnt, met, ignite, towerFireAt: (i) => towerFire(archers[i]), fling, shoreBy, soakSpot, depthAt, landBy, fire: fireStat, burning: () => units.filter((v) => v.fire && !v.dead).length, forts: () => archers.map((q) => ({ hp: q.hp, dead: !!q.dead, flame: q.fire ? q.fire.fl.el : null })), pawns: () => pawns.length };                  // для тестов: устроить взрыв или поставить бойца самому
   // ----- волны гоблинов: приходят из облаков по мосту -----
   const W = B.waves;
   let queue = [], nextWave = now + (W.first ?? 2500);
@@ -12220,8 +12223,7 @@ async function runArena() {
     if (!FT || fortFlames.length >= FLAME_AT.length) return;
     const [dx, dy, sc] = FLAME_AT[fortFlames.length], f = skActor(st, "fire", sc, 0.92), e = f.el;
     f.mute = true; e.style.transition = "none"; f.at(FT.x + dx, FT.y + dy); e.style.zIndex = Math.round(FT.y * 40) + (dy > -0.5 ? 7 : 3);
-    e.style.opacity = FIRE_ALPHA; e.style.webkitMaskImage = e.style.maskImage = FIRE_FADE; e.style.filter = "brightness(1.2) saturate(1.35)";
-    f.show(true, true); f.play(0, 7, 90); f.anim.t0 -= Math.random() * 600;
+    f.show(true, true); fireLook(e); f.play(0, 7, 90); f.anim.t0 -= Math.random() * 600;
     fortFlames.push(f);
   };
   const fortFlamesOff = () => { fortFlames.splice(0).forEach((f) => f.el.remove()); };
@@ -12264,8 +12266,8 @@ async function runArena() {
         if (e.fire) {                                   // сгорела: подрывник наверху взорвался вместе с динамитом; на руинах догорают два огонька
           fortFlamesOff(); fortBurning = false; FT.crew.show(false, true);
           sleep(STILL ? 0 : 420).then(() => { if (arenaRun !== myRun) return; for (const [dx, sc] of [[-0.3, 0.45], [0.35, 0.38]]) { const f = skActor(st, "fire", sc, 0.92);
-            f.mute = true; f.el.style.transition = "none"; f.at(FT.x + dx, FT.y - 0.05); f.el.style.zIndex = Math.round(FT.y * 40) + 8; f.el.style.opacity = FIRE_ALPHA; f.el.style.webkitMaskImage = f.el.style.maskImage = FIRE_FADE;
-            f.show(true, true); f.play(0, 7, 95); fortFlames.push(f); } });
+            f.mute = true; f.el.style.transition = "none"; f.at(FT.x + dx, FT.y - 0.05); f.el.style.zIndex = Math.round(FT.y * 40) + 8;
+            f.show(true, true); fireLook(f.el); f.play(0, 7, 95); fortFlames.push(f); } });
         }
         FT.tw.play(0, 1, 500, true, "gwtc");               // остатки настила разлетаются, голый остов валится набок
         logs(5, FT.y - 1.2, 2);
@@ -14583,10 +14585,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 236;
+const APP_VERSION = 237;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 237, date: "2026-11-21", text: "Огонь на башне с лучником теперь такой же полупрозрачный, как на бойцах.", en: "Fire on the archer tower is now see-through, just like the flames on fighters." },
   { v: 236, date: "2026-11-21", text: "Огонь стал живее: пламя тянется назад за бегущим, вокруг горящего свечение, а сам он темнеет. Огонь теперь есть и в бою на заставке, и у золотой шахты; вышка гоблинов у уток иногда загорается.", en: "Fire feels more alive: flames trail behind a runner, a burning fighter glows and darkens. Fire now also appears in the title-screen battle and at the gold mine; the goblin watchtower by the ducks sometimes catches fire." },
   { v: 235, date: "2026-11-21", text: "Глава «Пожар» выросла: огонь перекидывается на тех, кто стоит рядом, деревянную вышку гоблинов можно сжечь — и новое испытание.", en: "The “Blaze” chapter has grown: fire jumps to anyone standing close, the goblins’ wooden watchtower can be burned down — and there is a new challenge.", big: true },
   { v: 234, date: "2026-11-20", text: "Вода стала глубже от берега: по щиколотку, по колено, по пояс, по шею. Кто загорелся в бою у моста, сам бежит в воду по пояс — и возвращается.", en: "Water gets deeper away from the shore: ankle, knee, waist, neck. A fighter set on fire at the bridge now runs waist-deep into the water — and comes back." },
