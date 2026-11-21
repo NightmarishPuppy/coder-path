@@ -1,13 +1,13 @@
 {
- "version": 235,
+ "version": 236,
  "date": "2026-11-21",
  "notes": [
-  "Глава «Пожар» выросла: огонь перекидывается на тех, кто стоит рядом, деревянную вышку гоблинов можно сжечь — и новое испытание."
+  "Огонь стал живее: пламя тянется назад за бегущим, вокруг горящего свечение, а сам он темнеет. Огонь теперь есть и в бою на заставке, и у золотой шахты; вышка гоблинов у уток иногда загорается."
  ],
  "files": {
   "index.html": {
-   "size": 1148220,
-   "hash": "818bf8d869df9694"
+   "size": 1154493,
+   "hash": "58c679123d1345ac"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "5b2cb0628f1a8d5a"
+   "hash": "22f072c4f2d3bdd3"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The “Blaze” chapter has grown: fire jumps to anyone standing close, the goblins’ wooden watchtower can be burned down — and there is a new challenge."
+  "Fire feels more alive: flames trail behind a runner, a burning fighter glows and darkens. Fire now also appears in the title-screen battle and at the gold mine; the goblin watchtower by the ducks sometimes catches fire."
  ]
 }
