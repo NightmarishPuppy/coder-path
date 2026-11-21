@@ -439,6 +439,13 @@ html.still .enemy.job .jobtool { animation: none; }
 .win-taste[hidden] { display: none; }
 .win-taste .skinbar { margin-left: 0; }
 .win-taste .skinbtn { width: 54px; height: 48px; }
+/* отзыв об уровне (v243): три рожицы в окошке победы */
+.win-feel { flex-basis: 100%; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted, #aab); }
+.win-feel[hidden] { display: none; }
+.feelbar { display: flex; gap: 8px; }
+.feelbtn { width: 44px; height: 40px; padding: 0; font-size: 24px; line-height: 1; border-radius: 10px; border: 2px solid transparent; background: rgba(255, 255, 255, 0.07); cursor: pointer; transition: transform 0.15s, opacity 0.15s; }
+.feelbar.picked .feelbtn { opacity: 0.35; }
+.feelbar.picked .feelbtn.on { opacity: 1; border-color: var(--torch); transform: scale(1.12); }
 .nside-ring { fill: none; stroke: #ffd54a; stroke-width: 2; stroke-dasharray: 4 3; }
 .node.locked .nside-ring { stroke: #c9c3a8; opacity: 0.7; }
 .nside { font-size: 8.5px; font-weight: 800; text-anchor: middle; fill: #ffd54a; stroke: #2a1f14; stroke-width: 2.5; paint-order: stroke; letter-spacing: 0.3px; }
@@ -2145,6 +2152,10 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
         <div class="win-taste" id="win-taste" hidden>
           <span>Кто пойдёт дальше:</span>
           <div class="skinbar" id="win-taste-row" role="group"></div>
+        </div>
+        <div class="win-feel" id="win-feel" hidden>
+          <span>Как уровень?</span>
+          <div class="feelbar" id="win-feel-row" role="group"></div>
         </div>
         <div class="win-actions">
           <button class="btn reset" id="win-map">Карта</button>
@@ -12561,6 +12572,9 @@ function win() {
     draw();
   }
   $("win-note").textContent = note;
+  // отзыв об уровне (v243): одна из трёх рожиц; не на самых первых уровнях — там не грузим лишним
+  $("win-feel").hidden = LEVELS.filter((l) => save.stars[l.name] > 0).length < 3;
+  if (!$("win-feel").hidden) feelDraw(L.name);
   winBox.hidden = false;
   fitBlocks(); winIntoView();
 }
@@ -14587,10 +14601,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 242;
+const APP_VERSION = 243;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 243, date: "2026-11-21", text: "После победы можно одним нажатием сказать, как тебе уровень: 😀 понравился, 😴 скучный или 🤯 слишком сложный. Это помогает делать игру лучше.", en: "After a win you can tell us in one tap how the level was: 😀 liked it, 😴 boring or 🤯 too hard. It helps make the game better." },
   { v: 242, date: "2026-11-21", text: "На первом острове три новых дополнительных уровня с боями — точки «＋» в стороне от дороги: «Бараны и гоблины», «Гоблины на болоте» и «Громила у кустов». Везде нельзя останавливаться на полпути.", en: "Three new bonus levels with fights on the first island — “＋” points off the road: “Rams and Goblins”, “Goblins in the Swamp” and “The Brute by the Bushes”. In all of them you can’t stop halfway." },
   { v: 241, date: "2026-11-21", text: "С верха карты первого острова убрана крепость. В Пещерах появился дополнительный уровень «Монеты над рекой» — точка «＋» в стороне от дороги, для пути дальше он не нужен.", en: "The fortress at the top of the first island’s map is gone. The Caves got a bonus level, “Coins over the River” — a “＋” point off the road; you don’t need it to move on." },
   { v: 240, date: "2026-11-21", text: "Два новых уровня в Скалах гоблинов: «Гоблин за мостом» и «Ключ за рекой» — с шаткими мостиками, на которых нельзя останавливаться.", en: "Two new levels in Goblin Cliffs: “Goblin Beyond the Bridge” and “Key Across the River” — with wobbly bridges you can’t stop on." },
@@ -15221,6 +15236,16 @@ function statRun(name) { const r = (stat.lv[name] ||= [0, 0, 0]); r[0]++; if (st
 // четвёртое число — победил ли великана (корона)
 // вкус: stat.tw — побед в каждой обёртке, stat.tp — сколько раз игрок сам выбирал обёртку
 function statTaste(id) { const q = (stat.tp ||= {}); q[id] = (q[id] || 0) + 1; statDirty = true; statSave(); statSoon(4000); }
+// отзыв об уровне: stat.fb[уровень] = "l" (понравилось) / "b" (скучно) / "h" (слишком сложно); второе нажатие на ту же рожицу — снять
+function statFeel(name, f) { const q = (stat.fb ||= {}); if (q[name] === f) delete q[name]; else q[name] = f; statDirty = true; statSave(); statSoon(1500); return q[name] || ""; }
+const FEELS = [["l", "😀", "Понравилось"], ["b", "😴", "Скучно"], ["h", "🤯", "Слишком сложно"]];
+function feelDraw(name) {
+  const row = $("win-feel-row"), cur = (stat.fb || {})[name] || "";
+  row.classList.toggle("picked", !!cur);
+  row.replaceChildren(...FEELS.map(([f, face, label]) => { const b = document.createElement("button");
+    b.type = "button"; b.className = "feelbtn" + (cur === f ? " on" : ""); b.dataset.f = f; b.textContent = face; b.title = tr(label); b.setAttribute("aria-label", tr(label)); b.setAttribute("aria-pressed", String(cur === f));
+    b.onclick = () => { sfx("tap"); statFeel(name, f); feelDraw(name); }; return b; }));
+}
 function statWin(name, crown, gem, missing, skin) { const r = (stat.lv[name] ||= [0, 0, 0]);
   if (skin) { const q = (stat.tw ||= {}); q[skin] = (q[skin] || 0) + 1; } if (!r[1]) { r[1] = 1; r[2] = r[0]; } if (crown) r[3] = 1; if (gem) r[4] = 1;
   if (!missing) r[5] = 0; else if (r[5] !== 0) r[5] = 1;
@@ -15249,7 +15274,7 @@ function statDoc() {
     stars: LEVELS.reduce((s, l) => s + (save.stars[l.name] || 0), 0), won: won.length,
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
     op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length, gems: Object.keys(save.gems || {}).length,
-    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {},
+    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {},
   };
 }
 let statTimer = null, statLast = 0;
@@ -15311,13 +15336,15 @@ function statHtml(all) {
   }
   // уровни: сколько пробовали, прошли, сколько попыток; где застревают — пробовали, но не прошли
   h += `<h3 class="st-h">Уровни</h3><p class="st-note">Пробовали — нажимали «Запустить». Прошли — % от пробовавших (красным — меньше 60 %). Попыток — в среднем до первой победы. Бросили — пробовали, не прошли и потом не играли 3+ дня.</p>`;
-  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th><th>Без урока</th></tr>`;
+  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th><th>Без урока</th><th>😀</th><th>😴</th><th>🤯</th></tr>`;
   let isle = 0;
   LEVELS.forEach((lv) => {
     const n = lv.isle || 1;
-    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="10">${esc(ISLE_NAMES[n])}</td></tr>`; }
+    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="13">${esc(ISLE_NAMES[n])}</td></tr>`; }
     let opened = 0, left = 0, tried = 0, won = 0, tries = 0, quit = 0, crowned = 0, gems = 0, noTool = 0, openedDev = 0, leftDev = 0;
+    const feel = { l: 0, b: 0, h: 0 };
     for (const d of all) {
+      const ff = d.fb?.[lv.name]; if (ff in feel) feel[ff]++;
       opened += d.op?.[lv.name] || 0;
       left += d.nr?.[lv.name] || 0;
       if (d.op?.[lv.name]) openedDev++;
@@ -15332,9 +15359,9 @@ function statHtml(all) {
     }
     const pct = tried ? Math.round(won / tried * 100) : null;
     h += `<tr><td>${esc(lvName(lv.name))}</td><td>${opened ? `${opened} <small>(${openedDev})</small>` : ""}</td><td>${left ? `${left} <small>(${leftDev})</small>` : ""}</td><td>${tried || ""}</td><td class="${pct !== null && pct < 60 && tried >= 3 ? "low" : ""}">${pct === null ? "" : pct + " %"}</td>`
-      + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td><td>${hasGiant(lv) ? crowned : ""}</td><td>${gems || ""}</td><td>${noTool || ""}</td></tr>`;
+      + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td><td>${hasGiant(lv) ? crowned : ""}</td><td>${gems || ""}</td><td>${noTool || ""}</td><td>${feel.l || ""}</td><td class="${feel.b > feel.l && feel.b >= 2 ? "low" : ""}">${feel.b || ""}</td><td class="${feel.h > feel.l && feel.h >= 2 ? "low" : ""}">${feel.h || ""}</td></tr>`;
   });
-  return h + `</table><p class="st-note">«Без урока» — прошли, но ни разу с тем, чему учит уровень (без цикла или приёма). «Открыли» — сколько раз уровень открывали на всех устройствах, в скобках — на скольких устройствах. «Пробовали», «Прошли», «Бросили», 👑, 💎, «Без урока» — это устройства. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
+  return h + `</table><p class="st-note">😀 😴 🤯 — отзывы игроков в окошке победы (понравилось / скучно / слишком сложно; красным — когда таких больше, чем 😀; счёт с версии 243). «Без урока» — прошли, но ни разу с тем, чему учит уровень (без цикла или приёма). «Открыли» — сколько раз уровень открывали на всех устройствах, в скобках — на скольких устройствах. «Пробовали», «Прошли», «Бросили», 👑, 💎, «Без урока» — это устройства. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
 }
 async function openStats() {
   sfx("tap");

@@ -1,21 +1,21 @@
 {
- "version": 242,
+ "version": 243,
  "date": "2026-11-21",
  "notes": [
-  "На первом острове три новых дополнительных уровня с боями — точки «＋» в стороне от дороги: «Бараны и гоблины», «Гоблины на болоте» и «Громила у кустов». Везде нельзя останавливаться на полпути."
+  "После победы можно одним нажатием сказать, как тебе уровень: 😀 понравился, 😴 скучный или 🤯 слишком сложный. Это помогает делать игру лучше."
  ],
  "files": {
   "index.html": {
-   "size": 1157857,
-   "hash": "e2aa7e57a77bed85"
+   "size": 1161119,
+   "hash": "543f1a859e319f03"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 84125,
-   "hash": "86236235aa36a8d7"
+   "size": 84281,
+   "hash": "9324eedfc5f09279"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "d9fe6956a7e63d34"
+   "hash": "40afcdde0db734dd"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Three new bonus levels with fights on the first island — “＋” points off the road: “Rams and Goblins”, “Goblins in the Swamp” and “The Brute by the Bushes”. In all of them you can’t stop halfway."
+  "After a win you can tell us in one tap how the level was: 😀 liked it, 😴 boring or 🤯 too hard. It helps make the game better."
  ]
 }
