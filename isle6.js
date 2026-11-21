@@ -389,13 +389,98 @@ levels: [
       js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n    goToEnemy();\n  }\n}\n",
     },
   },
+  // Огонь перекидывается (v235): кто простоял рядом с горящим — загорается сам. Монах идёт за копейщиком следом (follow), и ряса
+  // вспыхивает разом (sear). В программе уже есть «горю — к воде», игрок дописывает «другое если враг рядом — бей».
+  // Наоборот («враг рядом» первым) копейщик дерётся горящим, огонь перекидывается на монаха — и монаха не уберечь.
+  {
+    name: "Огонь перекидывается",
+    chapter: 24,
+    isle: 6,
+    lancer: true,
+    requireElif: true,
+    after: "Береги монаха",
+    arena: { secs: 37, hp: 9, whiff: 2, guard: true, fire: { spread: { t: 0.8 }, hunt: "hero", need: 1, sear: 1 }, allies: [{ kind: "monk", at: [8.3, 5.7], hp: 3, follow: true }],
+      waves: [[1.5, "l", "torchp"], [7.5, "r", "torchp"], [13.5, "l", "torchp"], [19.5, "r", "torchp"], [25.5, "l", "torchp"], [31.5, "r", "torchp"]] },
+    goal: "Выбери строку [[lineof:if]], нажми [[elifbtn]] — встанет вопрос «враг рядом» — и [[btn:attack]]. Новое: огонь перекидывается на того, кто стоит рядом. Монах идёт за тобой следом — поэтому про огонь спрашивай первым: загорелся — сразу к воде.",
+    block: "Нажми на «❓ если», потом [[elifbtn]] — встанет вопрос ◎ — и [[btn:attack]]. Новое: огонь перекидывается на того, кто стоит рядом. Монах идёт за тобой следом — поэтому про огонь спрашивай первым: загорелся — сразу к воде.",
+    en: {
+      name: "Fire Spreads",
+      goal: "Select line [[lineof:if]], tap [[elifbtn]] — the “enemy near” question appears — then [[btn:attack]]. New: fire jumps to anyone standing close. The monk follows right behind you — so ask about fire first: caught fire — straight to the water.",
+      block: "Tap “❓ if”, then [[elifbtn]] — the ◎ question appears — then [[btn:attack]]. New: fire jumps to anyone standing close. The monk follows right behind you — so ask about fire first: caught fire — straight to the water.",
+    },
+    commands: ["attack", "goToWater"],
+    ifs: ["fire", "near"],
+    elifButton: true, elseButton: true,
+    par: 2, good: 3,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if on_fire():\n        go_to_water()\n",
+      js: "while (true) {\n  if (onFire()) {\n    goToWater();\n  }\n}\n",
+    },
+  },
+  // Гори, вышка (v235): вышка гоблинов деревянная (fort.wood) — загорается от горящего копейщика и горит сама, пока не рухнет;
+  // подрывник наверху взрывается вместе с ней. Новая команда «к вышке» 🏚: загорелся — сначала к вышке, потом к воде.
+  // Наоборот («к воде», потом «к вышке») огня уже нет, и вышка стоит.
+  {
+    name: "Гори, вышка",
+    chapter: 24,
+    isle: 6,
+    lancer: true,
+    requireElif: true,
+    after: "Огонь перекидывается",
+    newCommands: ["goToTower"],
+    arena: { secs: 40, hp: 10, whiff: 2, goal: "raze", fire: { spread: { t: 0.8 } }, fort: { at: [12.4, 4.4], hp: 5, first: 3, cd: 5.5, wood: true, burn: 1.5 },
+      waves: [[1.5, "l", "torch"], [7.5, "r", "torch"], [13.5, "l", "torch"], [19.5, "r", "torch"], [25.5, "l", "torch"], [31.5, "r", "torch"], [37.5, "l", "torch"]] },
+    goal: "Выбери строку [[lineof:if]], нажми [[elifbtn]] — встанет вопрос «горю?» — потом [[btn:goToTower]] и [[btn:goToWater]]. Новое: вышка гоблинов деревянная. Загорелся — добеги до неё, и огонь перекинется на вышку; а уже потом — к воде.",
+    block: "Нажми на «❓ если», потом [[elifbtn]] — встанет вопрос 🔥 — потом [[btn:goToTower]] и [[btn:goToWater]]. Новое: вышка гоблинов деревянная. Загорелся — добеги до неё, и огонь перекинется на вышку; а уже потом — к воде.",
+    en: {
+      name: "Burn, Tower!",
+      goal: "Select line [[lineof:if]], tap [[elifbtn]] — the “on fire?” question appears — then [[btn:goToTower]] and [[btn:goToWater]]. New: the goblin watchtower is made of wood. Caught fire — run up to it and the fire will jump to the tower; and only then — to the water.",
+      block: "Tap “❓ if”, then [[elifbtn]] — the 🔥 question appears — then [[btn:goToTower]] and [[btn:goToWater]]. New: the goblin watchtower is made of wood. Caught fire — run up to it and the fire will jump to the tower; and only then — to the water.",
+    },
+    commands: ["attack", "goToEnemy", "goToTower", "goToWater"],
+    ifs: ["near", "fire"],
+    elifButton: true, elseButton: true,
+    par: 4, good: 5,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: {
+      py: "while True:\n    if enemy_near():\n        attack()\n    else:\n        go_to_enemy()\n",
+      js: "while (true) {\n  if (enemyNear()) {\n    attack();\n  } else {\n    goToEnemy();\n  }\n}\n",
+    },
+  },
+  // Пожар: испытание (v235). Программа пустая — три дела игрок собирает сам. Вышка крепче и горит дольше, гоблинов больше
+  // (каждый третий — крепкий). Без «к вышке» она стоит до конца боя, без воды копейщик сгорает раньше, чем она рухнет.
+  {
+    name: "Пожар: испытание",
+    chapter: 24,
+    isle: 6,
+    lancer: true,
+    challenge: true,
+    requireLoop: true,
+    requireElif: true,
+    loopButton: true, ifButton: true, elifButton: true, elseButton: true,
+    arena: { secs: 45, hp: 12, whiff: 2, goal: "raze", fire: { spread: { t: 0.8 } }, fort: { at: [12.4, 4.4], hp: 8, first: 3, cd: 5.5, wood: true, burn: 1.2 },
+      waves: [[1.5, "l", "torch"], [7, "r", "torch"], [12.5, "l", "torchp"], [18, "r", "torch"], [23.5, "l", "torch"], [29, "r", "torchp"], [34.5, "l", "torch"], [40, "r", "torch"]] },
+    goal: "Испытание: программа пустая. Сожги вышку гоблинов. Собери три дела сам: в цикле «если враг рядом» — [[btn:attack]], «другое если» горю — [[btn:goToTower]] и [[btn:goToWater]], «иначе» — [[btn:goToEnemy]].",
+    block: "Испытание: программа пустая. Сожги вышку гоблинов. Собери три дела сам: «🔁 повторять», в нём «❓ если» враг рядом — [[btn:attack]], [[elifbtn]] 🔥 — [[btn:goToTower]] и [[btn:goToWater]], [[elsebtn]] — [[btn:goToEnemy]].",
+    en: {
+      name: "Blaze: Challenge",
+      goal: "Challenge: the program is empty. Burn down the goblin watchtower. Build the three jobs yourself: in a loop, “if an enemy is near” — [[btn:attack]], “else if” on fire — [[btn:goToTower]] and [[btn:goToWater]], “else” — [[btn:goToEnemy]].",
+      block: "Challenge: the program is empty. Burn down the goblin watchtower. Build the three jobs yourself: “🔁 repeat”, in it “❓ if” an enemy is near — [[btn:attack]], [[elifbtn]] 🔥 — [[btn:goToTower]] and [[btn:goToWater]], [[elsebtn]] — [[btn:goToEnemy]].",
+    },
+    commands: ["attack", "goToEnemy", "goToTower", "goToWater"],
+    ifs: ["near", "fire"],
+    par: 4, good: 5,
+    map: ["S........", ".........", ".........", ".........", "........."],
+    starter: { py: "", js: "" },
+  },
 ],
 };
 
 // Карта острова. Руками не править: её целиком пишет tools/gen3.py из файла раскладки.
 // @@isle6@@
 ISLES[6].map = {
-  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [210, 390], [170, 390], [90, 350], [90, 290], [130, 250], [170, 250], [210, 250], [270, 210]],
+  nodes: [[190, 490], [190, 450], [230, 450], [270, 450], [290, 410], [250, 390], [210, 390], [170, 390], [90, 350], [90, 290], [130, 250], [170, 250], [210, 250], [270, 210], [230, 190], [190, 190], [150, 170]],
   rows: [
     "....................................",
     "....................................",

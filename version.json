@@ -1,21 +1,21 @@
 {
- "version": 234,
- "date": "2026-11-20",
+ "version": 235,
+ "date": "2026-11-21",
  "notes": [
-  "Вода стала глубже от берега: по щиколотку, по колено, по пояс, по шею. Кто загорелся в бою у моста, сам бежит в воду по пояс — и возвращается."
+  "Глава «Пожар» выросла: огонь перекидывается на тех, кто стоит рядом, деревянную вышку гоблинов можно сжечь — и новое испытание."
  ],
  "files": {
   "index.html": {
-   "size": 1134576,
-   "hash": "b1054b847b31092a"
+   "size": 1148220,
+   "hash": "818bf8d869df9694"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 81773,
-   "hash": "65de509f61b4df8d"
+   "size": 84125,
+   "hash": "86236235aa36a8d7"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "96b800b27be1302e"
+   "hash": "5b2cb0628f1a8d5a"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 39062,
-   "hash": "aac2b7de566fa78a"
+   "size": 47366,
+   "hash": "e08ebce6143119ea"
   },
   "art-scenes.js": {
    "size": 996051,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Water gets deeper away from the shore: ankle, knee, waist, neck. A fighter set on fire at the bridge now runs waist-deep into the water — and comes back."
+  "The “Blaze” chapter has grown: fire jumps to anyone standing close, the goblins’ wooden watchtower can be burned down — and there is a new challenge."
  ]
 }
