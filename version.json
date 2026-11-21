@@ -1,13 +1,13 @@
 {
- "version": 249,
+ "version": 250,
  "date": "2026-11-22",
  "notes": [
-  "На карте появилась кнопка с рупором — канал игры в Telegram: новости и можно написать, что понравилось"
+  "Установленная игра на iPhone и iPad: верх карты с кнопками больше не должен быть размытым"
  ],
  "files": {
   "index.html": {
-   "size": 1176135,
-   "hash": "0766c47d5114abc2"
+   "size": 1177183,
+   "hash": "4c60f6e3bbf03ff9"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "23bdd41ed27368b0"
+   "hash": "bf454782b917e14d"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "A megaphone button on the map opens the game’s Telegram channel: news and a place to tell us what you think"
+  "Installed game on iPhone and iPad: the top of the map with its buttons should no longer look blurred"
  ]
 }

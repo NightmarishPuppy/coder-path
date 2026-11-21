@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="Coder Path">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<div id="ios-edge" aria-hidden="true"></div>
 <title>Coder Path</title>
 <!-- Шрифты (Unbounded, Onest, JetBrains Mono, лицензия OFL) лежат рядом в fonts.css, а не на серверах Google:
      где Google заблокирован, игра всё равно открывается. -->
@@ -1722,6 +1723,12 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 .updbar span { flex: 1; min-width: 160px; }
 .updbar .btn { font-size: 15px; padding: 7px 14px; }
 .gearbtn { padding: 4px 6px; position: relative; }
+/* Установленная игра на iPhone / iPad (iOS 26+): система размывает верх страницы под строкой с часами, когда страница
+   прокручена. Сплошная закреплённая полоса во всю ширину под этой строкой — тогда система красит её цветом, а не размывает (v250). */
+#ios-edge { display: none; }
+@supports (-webkit-touch-callout: none) { @media (display-mode: standalone) {
+  #ios-edge { display: block; position: fixed; left: 0; right: 0; top: 0; height: env(safe-area-inset-top, 0px); background-color: #13151b; z-index: 95; }
+} }
 /* «Канал игры» (v249): рупор в верхней строке карты, появляется после нескольких пройденных уровней */
 .chanbtn { color: #7cc4ff; border-color: rgba(124, 196, 255, 0.6); }
 .chanbtn[hidden] { display: none; }
@@ -14691,10 +14698,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 249;
+const APP_VERSION = 250;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 250, date: "2026-11-22", text: "Установленная игра на iPhone и iPad: верх карты с кнопками больше не должен быть размытым", en: "Installed game on iPhone and iPad: the top of the map with its buttons should no longer look blurred" },
   { v: 249, date: "2026-11-22", text: "На карте появилась кнопка с рупором — канал игры в Telegram: новости и можно написать, что понравилось", en: "A megaphone button on the map opens the game’s Telegram channel: news and a place to tell us what you think" },
   { v: 248, date: "2026-11-22", text: "Оценить уровень и отправить игру другу теперь можно с самой первой победы.", en: "You can now rate a level and send the game to a friend from your very first win." },
   { v: 247, date: "2026-11-21", text: "Рожица «слишком сложно» теперь видна на всех устройствах.", en: "The “too hard” face now shows on every device." },
