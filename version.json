@@ -1,21 +1,21 @@
 {
- "version": 244,
+ "version": 245,
  "date": "2026-11-21",
  "notes": [
-  "В окошке победы появилась кнопка с самолётиком: одним нажатием можно отправить игру другу."
+  "Кнопка с самолётиком теперь отправляет другу не просто ссылку, а твоё прохождение: друг открывает её — и рыцарь проходит уровень по твоей программе."
  ],
  "files": {
   "index.html": {
-   "size": 1164557,
-   "hash": "b85418672d51c5db"
+   "size": 1171721,
+   "hash": "895a67960336cb55"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 84641,
-   "hash": "f78cdbf11392dbca"
+   "size": 85123,
+   "hash": "a20bc41f2177374b"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "bf2f4e0f83f02afc"
+   "hash": "f36f3f7cff86ecec"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The win box has a new paper-plane button: send the game to a friend in one tap."
+  "The paper-plane button now sends your friend your own run: they open the link and the knight beats the level with your program."
  ]
 }

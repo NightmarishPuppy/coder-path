@@ -452,6 +452,11 @@ html.still .enemy.job .jobtool { animation: none; }
 .sharebtn.done { color: var(--ok); border-color: var(--ok); }
 .win-actions { align-items: center; flex-basis: 100%; flex-wrap: wrap; }
 .sharebtn[hidden] { display: none; }
+/* повтор по ссылке (v245): полоска над экраном уровня */
+.replaybar { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 8px; padding: 6px 10px; white-space: nowrap; border-radius: 10px; border: 2px solid #7cc4ff; background: rgba(124, 196, 255, 0.12); font-weight: 700; font-size: 15px; }
+.replaybar[hidden] { display: none; }
+.replaybar .btn { padding: 6px 12px; font-size: 14px; }
+@media (max-width: 480px) { .replaybar { font-size: 13px; } }
 @media (max-width: 480px) { .sharebtn { padding: 0 11px; } .sharebtn span { display: none; } .sharebtn svg { width: 22px; height: 22px; } }
 .nside-ring { fill: none; stroke: #ffd54a; stroke-width: 2; stroke-dasharray: 4 3; }
 .node.locked .nside-ring { stroke: #c9c3a8; opacity: 0.7; }
@@ -2121,6 +2126,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
 </div>
 
 <div class="wrap" id="levelview" hidden>
+  <div class="replaybar" id="replay-bar" hidden><span>👀 Так прошёл твой друг</span><button class="btn next" id="replay-self" type="button">Играть сам</button></div>
   <header>
     <div class="toprow">
       <button class="backbtn" id="to-map">← Карта</button>
@@ -2166,6 +2172,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
         </div>
         <div class="win-actions">
           <button class="btn reset" id="win-map">Карта</button>
+          <button class="btn next" id="win-self" type="button" hidden>Играть сам</button>
           <button class="btn next" id="next">Дальше</button>
           <button class="btn next" id="win-isle" hidden>К новому острову →</button>
           <button class="sharebtn" id="win-share" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.5 2.5 2.8 10.1c-.9.4-.9 1.6.1 1.9l4.9 1.6 1.9 5.9c.3.9 1.4 1.1 2 .4l2.7-3 4.8 3.500c.7.5 1.7.1 1.900-.7l3.100-15.6c.2-1-.8-1.900-1.700-1.600ZM9.300 13.100l8.500-6.300-6.600 7.400-.4 3.300-1.500-4.400Z" fill="currentColor"/></svg><span id="win-share-t">Другу</span></button>
@@ -3050,7 +3057,8 @@ const SKIN_SPR = { fight: "kidle", work: "pw_idle", monk: "mk_idle" };
 // фигурка роли: первый кадр её анимации
 const skinIcon = (id) => `<i class="fig" style="background-image:url(${TS[SKIN_SPR[id]]});background-size:${TS_INFO[SKIN_SPR[id]][0] ?? TS_INFO[SKIN_SPR[id]]}00% 100%"></i>`;
 const skinsOf = (lv) => lv?.skins ? SKIN_IDS.filter((id) => lv.skins[id]) : [];
-const skinFor = (lv) => { const t = save.taste || "fight"; return !lv.skins ? null : lv.skins[t] ? t : lv.skins.fight ? "fight" : skinsOf(lv)[0]; };
+let replaySkin = null;   // роль из ссылки-повтора (v245)
+const skinFor = (lv) => { const t = replaySkin || save.taste || "fight"; return !lv.skins ? null : lv.skins[t] ? t : lv.skins.fight ? "fight" : skinsOf(lv)[0]; };
 function applySkin(lv) {
   if (!lv.skins) return;
   if (!lv._plain) { lv._plain = {}; SKIN_KEYS.forEach((k) => (lv._plain[k] = lv[k])); }
@@ -3568,8 +3576,51 @@ function askRole(i) {
   });
   document.body.appendChild(box);
 }
+// --- Повтор по ссылке (v245) ---
+// Игрок делится ссылкой, в которой зашиты уровень и его программа; у друга игра открывает этот уровень и сама
+// проходит его этой программой. В прогресс, сохранение и статистику уровней повтор не идёт.
+let replayOn = false, replayPending = null, replayKeep = null;   // replayPending = { i, lang, skin, code } — для ближайшего loadLevel
+const lvId = (name) => { let h = 2166136261; for (const ch of name) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36).padStart(7, "0"); };
+const b64u = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const b64uBytes = (t) => Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+async function squeeze(bytes, How) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new How("deflate-raw"))).arrayBuffer()); }
+// «r1» + уровень (7 знаков) + язык (p / j) + роль (f / w / m / 0) + сжато ли (z / u) + программа; только буквы, цифры, «-» и «_»
+async function replayPack() {
+  const raw = new TextEncoder().encode(codeEl.value.trimEnd());
+  let z = null; try { z = await squeeze(raw, CompressionStream); } catch (e) {}
+  const small = !!z && z.length < raw.length;
+  return "r1" + lvId(L.name) + (lang === "js" ? "j" : "p") + ({ fight: "f", work: "w", monk: "m" }[L.skin] || "0") + (small ? "z" : "u") + b64u(small ? z : raw);
+}
+async function replayUnpack(p) {
+  try {
+    if (!/^r1[0-9a-z]{7}[pj][fwm0][zu][A-Za-z0-9_-]+$/.test(p)) return null;
+    const i = LEVELS.findIndex((l) => !l.draft && lvId(l.name) === p.slice(2, 9));
+    if (i < 0) return null;
+    let bytes = b64uBytes(p.slice(12));
+    if (p[11] === "z") bytes = await squeeze(bytes, DecompressionStream);
+    if (!bytes.length || bytes.length > 6000) return null;
+    return { i, lang: p[9] === "j" ? "js" : "py", skin: { f: "fight", w: "work", m: "monk" }[p[10]] || null, code: new TextDecoder().decode(bytes) };
+  } catch (e) { return null; }
+}
+function replayOpen(r) {
+  replayPending = r;
+  loadLevel(r.i); showView("level");
+  setTimeout(() => { if (replayOn && levelIdx === r.i && !running) run(); }, 1400);
+}
+// «Играть сам»: уровень открыт у игрока — он же, со своей программой; новичок — первый уровень; иначе — карта
+function replayEnd() {
+  if (!replayOn || running) return;
+  const i = levelIdx, fresh = !LEVELS.some((l) => save.stars[l.name] > 0);
+  if (isOpen(i) || save.stars[LEVELS[i].name] > 0) loadLevel(i);
+  else if (fresh) loadLevel(0);
+  else { loadLevel(Math.max(0, indexOf(save.currentName))); showView("map"); }
+}
 function loadLevel(i) {
-  if (skinsOf(LEVELS[i]).length > 1 && !save.rolePicked && !save.skins?.[LEVELS[i].name + "|" + (LEVELS[i].skin || "")] && typeof TS !== "undefined") {
+  const rp = replayPending; replayPending = null; replayOn = !!rp;
+  if (rp) { replayKeep ||= { lang, uiBlocks }; lang = rp.lang; if (rp.lang === "js") uiBlocks = false; replaySkin = rp.skin; }
+  else { replaySkin = null; if (replayKeep) { lang = replayKeep.lang; uiBlocks = replayKeep.uiBlocks; replayKeep = null; } }
+  $("replay-bar").hidden = !replayOn; $("win-self").hidden = !replayOn; $("win-map").hidden = replayOn;
+  if (!replayOn && skinsOf(LEVELS[i]).length > 1 && !save.rolePicked && !save.skins?.[LEVELS[i].name + "|" + (LEVELS[i].skin || "")] && typeof TS !== "undefined") {
     // роли ещё ни разу не выбирали: сначала уровень открывается как обычно, поверх — экран выбора
     save.rolePicked = 0;
     setTimeout(() => { if (levelIdx === i && !save.rolePicked) askRole(i); }, 350);
@@ -3581,7 +3632,7 @@ function loadLevel(i) {
   moreOpen = false;
   setTimeout(() => logEv("level", { code: oneLine(codeEl.value) }), 0);
   // черновик из редактора — не уровень игры: в прогресс и статистику не идёт
-  if (!L.draft) {
+  if (!L.draft && !replayOn) {
     if (typeof statOpen === "function") statOpen(L.name);
     save.currentName = L.name;
     writeSave();
@@ -3614,7 +3665,7 @@ function loadLevel(i) {
   buildBoard();
   // для JavaScript подхватываем код, сохранённый до появления Python
   // (код ставим до кнопок: кнопки своих приёмов берутся из кода уровня)
-  codeEl.value = save.code[codeKey()] ?? (lang === "js" ? save.code[L.name] : undefined) ?? L.starter[lang];
+  codeEl.value = rp ? rp.code : save.code[codeKey()] ?? (lang === "js" ? save.code[L.name] : undefined) ?? L.starter[lang];
   buildChips();
   $("goal").innerHTML = goalHtml();   // картинка приёма и номера строк в задании ([[lineof:…]]) — из кода: рисуем заново, когда он на месте
   winBox.hidden = true;
@@ -10857,6 +10908,7 @@ function onCodeChange() {
   if (running) return;
   showProblems = false;
   if (L.draft) edKeepCode();   // программа черновика лежит в самом черновике, не в сохранении игры
+  else if (replayOn) { /* чужая программа из ссылки — в сохранение не идёт */ }
   else {
     save.code[codeKey()] = codeEl.value;
     (save.codeAt ||= {})[codeKey()] = Date.now(); // когда правили — для синхронизации
@@ -12503,7 +12555,16 @@ function toolMissing(code) {
   }
   return null;
 }
+let sharePack = "";   // ссылка-повтор для кнопки «Другу»: собирается заранее, чтобы само нажатие ничего не ждало
 function win() {
+  if (replayOn) {
+    $("win-stars").innerHTML = ""; $("win-note").textContent = tr("Вот так этот уровень прошёл твой друг. Теперь твоя очередь!");
+    nextBtn.hidden = true; $("win-isle").hidden = true; $("win-taste").hidden = true; $("win-feel").hidden = true; $("win-share").hidden = true;
+    winBox.hidden = false;
+    fitBlocks(); winIntoView();
+    return;
+  }
+  sharePack = ""; replayPack().then((p) => { sharePack = p; }, () => {});
   if (L.draft) {
     // свой уровень пройден: длина программы автора — порог ★★★
     const n = countWrittenCommands(codeEl.value);
@@ -13049,7 +13110,7 @@ function showBoard() {
   const vh = (window.visualViewport?.height || innerHeight) - (window.tgBottom || 0);
   if (r.top < top || r.bottom > vh) scrollTo({ top: Math.max(0, scrollY + r.top - top), behavior: STILL ? "auto" : "smooth" });
 }
-runBtn.addEventListener("click", () => { if (!running) { showBoard(); if (typeof statRun === "function" && !L.draft) statRun(L.name); } run(); });
+runBtn.addEventListener("click", () => { if (!running) { showBoard(); if (typeof statRun === "function" && !L.draft && !replayOn) statRun(L.name); } run(); });
 resetBtn.addEventListener("click", () => { if (!running) { winBox.hidden = true; reset(); } });
 nextBtn.addEventListener("click", () => loadLevel(levelIdx + 1));
 $("restore").addEventListener("click", () => {
@@ -13350,7 +13411,9 @@ document.querySelectorAll("#mapview .isle-svg").forEach((el) => {
   el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onMapTap(e); } });
 });
 // уйти с уровня: с обычного — на карту, с черновика — обратно в редактор
-const leaveLevel = () => { if (running) return; if (L?.draft) edClosePlay(); else showView("map"); };
+const leaveLevel = () => { if (running) return; if (L?.draft) edClosePlay(); else if (replayOn) replayEnd(); else showView("map"); };
+$("replay-self").addEventListener("click", () => { sfx("tap"); replayEnd(); });
+$("win-self").addEventListener("click", () => { sfx("tap"); replayEnd(); });
 $("to-map").addEventListener("click", leaveLevel);
 $("win-map").addEventListener("click", leaveLevel);
 $("win-isle").addEventListener("click", () => { winBox.hidden = true; const n = L.isle || 1; curIsle = n; showView("map"); startIslandRun(n + 1); });
@@ -14610,10 +14673,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 244;
+const APP_VERSION = 245;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 245, date: "2026-11-21", text: "Кнопка с самолётиком теперь отправляет другу не просто ссылку, а твоё прохождение: друг открывает её — и рыцарь проходит уровень по твоей программе.", en: "The paper-plane button now sends your friend your own run: they open the link and the knight beats the level with your program.", big: true },
   { v: 244, date: "2026-11-21", text: "В окошке победы появилась кнопка с самолётиком: одним нажатием можно отправить игру другу.", en: "The win box has a new paper-plane button: send the game to a friend in one tap." },
   { v: 243, date: "2026-11-21", text: "После победы можно одним нажатием сказать, как тебе уровень: 😀 понравился, 😴 скучный или 🤯 слишком сложный. Это помогает делать игру лучше.", en: "After a win you can tell us in one tap how the level was: 😀 liked it, 😴 boring or 🤯 too hard. It helps make the game better." },
   { v: 242, date: "2026-11-21", text: "На первом острове три новых дополнительных уровня с боями — точки «＋» в стороне от дороги: «Бараны и гоблины», «Гоблины на болоте» и «Громила у кустов». Везде нельзя останавливаться на полпути.", en: "Three new bonus levels with fights on the first island — “＋” points off the road: “Rams and Goblins”, “Goblins in the Swamp” and “The Brute by the Bushes”. In all of them you can’t stop halfway." },
@@ -15262,8 +15326,10 @@ const GAME_LINKS = { tg: "https://t.me/Coderpath_bot?startapp", itch: "https://n
 async function shareWin() {
   sfx("tap");
   const inTg = document.documentElement.classList.contains("tg") && typeof tg !== "undefined" && tg;
-  const url = inTg ? GAME_LINKS.tg : /itch\.zone$|hwcdn\.net$/.test(location.hostname) ? GAME_LINKS.itch : GAME_LINKS.web;
-  const text = tr("Уровень «{lv}» в Coder Path пройден! Это игра, где собираешь программу для рыцаря. Попробуй и ты:", { lv: lvName(L.name) });
+  const itch = /itch\.zone$|hwcdn\.net$/.test(location.hostname), pack = !itch && sharePack && sharePack.length <= 480 ? sharePack : "";   // длиннее — в ссылку Telegram не влезет
+  const url = inTg ? GAME_LINKS.tg + (pack ? "=" + pack : "") : itch ? GAME_LINKS.itch : GAME_LINKS.web + (pack ? "?r=" + pack : "");
+  const text = pack ? tr("Смотри, как я прохожу уровень «{lv}» в Coder Path. Сможешь лучше?", { lv: lvName(L.name) })
+    : tr("Уровень «{lv}» в Coder Path пройден! Это игра, где собираешь программу для рыцаря. Попробуй и ты:", { lv: lvName(L.name) });
   statShare();
   if (inTg) { const u = "https://t.me/share/url?url=" + encodeURIComponent(url) + "&text=" + encodeURIComponent(text);
     try { if (tgOk("6.1")) tg.openTelegramLink(u); else tg.openLink(u); return; } catch (e) {} }
@@ -15301,7 +15367,7 @@ function statDoc() {
     stars: LEVELS.reduce((s, l) => s + (save.stars[l.name] || 0), 0), won: won.length,
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
     op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length, gems: Object.keys(save.gems || {}).length,
-    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {}, sh: stat.sh || 0,
+    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {}, sh: stat.sh || 0, rp: stat.rp || 0,
   };
 }
 let statTimer = null, statLast = 0;
@@ -15347,7 +15413,7 @@ function statHtml(all) {
   };
   let h = `<div class="st-cards">${card(all.length, "устройств всего")}${card(all.filter((d) => ago(d) < 1).length, "играли за сутки")}`
     + `${card(all.filter((d) => ago(d) < 7).length, "за неделю")}${card(all.filter((d) => (now - Date.parse(d.first || 0)) / day < 7).length, "новых за неделю")}`
-    + `${card(all.filter((d) => d.won > 0).length, "прошли хоть уровень")}${card(all.filter((d) => d.sh > 0).length, "поделились игрой (с v244)")}</div>`;
+    + `${card(all.filter((d) => d.won > 0).length, "прошли хоть уровень")}${card(all.filter((d) => d.sh > 0).length, "поделились игрой (с v244)")}${card(all.filter((d) => d.rp > 0).length, "пришли по ссылке-повтору (с v245)")}</div>`;
   h += bars("Где играют", "where", { tg: "Telegram", web: "Браузер", app: "Приложение (значок)", itch: "itch.io" });
   h += bars("Система", "os", { ios: "iPhone / iPad", android: "Android", windows: "Windows", mac: "Mac", linux: "Linux", other: "Другое" });
   h += bars("Устройство", "form", { phone: "Телефон", tablet: "Планшет", desktop: "Компьютер" });
@@ -15908,5 +15974,17 @@ if (swOk) {
     if (!document.hidden && Date.now() - lastCheck > 30 * 60000) { lastCheck = Date.now(); checkUpdate(false); }
   });
 }
+// Повтор по ссылке (v245): ?r=… на сайте, startapp=… в Telegram — сразу открываем уровень и проигрываем программу друга
+(async () => {
+  let p = "";
+  try { const q = new URLSearchParams(location.search); p = q.get("r") || q.get("tgWebAppStartParam") || (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || ""; } catch (e) {}
+  if (!p) return;
+  try { const u = new URL(location.href); if (u.searchParams.has("r")) { u.searchParams.delete("r"); history.replaceState(null, "", u); } } catch (e) {}
+  const r = await replayUnpack(p);
+  if (!r) return;
+  stat.rp = (stat.rp || 0) + 1; statDirty = true; statSave(); statSoon(4000);
+  const go = () => replayOpen(r);
+  if ($("splash").hidden || $("splash").classList.contains("gone")) go(); else { $("start-game").click(); setTimeout(go, 80); }
+})();
 </script>
 </body></html>
