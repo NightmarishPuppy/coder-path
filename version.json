@@ -1,21 +1,21 @@
 {
- "version": 248,
+ "version": 249,
  "date": "2026-11-22",
  "notes": [
-  "Оценить уровень и отправить игру другу теперь можно с самой первой победы."
+  "На карте появилась кнопка с рупором — канал игры в Telegram: новости и можно написать, что понравилось"
  ],
  "files": {
   "index.html": {
-   "size": 1173086,
-   "hash": "e4eea6b333f979ba"
+   "size": 1176135,
+   "hash": "0766c47d5114abc2"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 85129,
-   "hash": "4b4f93ec924aa770"
+   "size": 85197,
+   "hash": "55f05c755b8c58c2"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "1256504866cd9351"
+   "hash": "23bdd41ed27368b0"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "You can now rate a level and send the game to a friend from your very first win."
+  "A megaphone button on the map opens the game’s Telegram channel: news and a place to tell us what you think"
  ]
 }

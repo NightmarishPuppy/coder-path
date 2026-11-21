@@ -15,6 +15,8 @@ var EN = {
   "программистов": "of Coders",
   "Музыка": "Music",
   "Звуки": "Sounds",
+  "Канал игры": "Game channel",
+  "Канал": "Channel",
   "Настройки": "Settings",
   "📲 Уже играл на другом устройстве? Перенести прогресс": "📲 Played on another device? Move your progress",
   "Прогресс сохраняется в твоём аккаунте Claude": "Progress is saved in your Claude account",

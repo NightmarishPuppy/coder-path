@@ -1722,6 +1722,20 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 .updbar span { flex: 1; min-width: 160px; }
 .updbar .btn { font-size: 15px; padding: 7px 14px; }
 .gearbtn { padding: 4px 6px; position: relative; }
+/* «Канал игры» (v249): рупор в верхней строке карты, появляется после нескольких пройденных уровней */
+.chanbtn { color: #7cc4ff; border-color: rgba(124, 196, 255, 0.6); }
+.chanbtn[hidden] { display: none; }
+@media (max-width: 430px) {   /* телефон: четыре кнопки в строке — плотнее, чтобы название острова не обрезалось */
+  #mapbar.has-chan .soundbar { gap: 4px; }
+  #mapbar.has-chan .snd:not(.gearbtn) { padding: 5px 6px; }
+  #mapbar.has-chan .gearbtn { padding: 4px 3px; }
+  #mapbar.has-chan .isle-pick { gap: 5px; padding-right: 6px; }
+  #mapbar.has-chan .isle-pick .eyebrow { letter-spacing: 0.02em; }
+}
+.chanbtn svg path { fill: #7cc4ff; }
+.chanbtn svg .wave { fill: none; stroke: #7cc4ff; stroke-width: 2; stroke-linecap: round; }
+.chanbtn.fresh { animation: chanGlow 1.6s ease-in-out infinite; }
+@keyframes chanGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(124, 196, 255, 0); } 50% { box-shadow: 0 0 0 5px rgba(124, 196, 255, 0.45); } }
 .gearbtn .gear-ic { width: 24px; height: 24px; image-rendering: pixelated; display: block; }
 .gear-dot { position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); border: 2px solid var(--bg); }
 .gear-dot[hidden] { display: none; }
@@ -1847,6 +1861,7 @@ html.tg .archi-top { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) 
       <span class="isle-txt"><span class="isle-kind">Остров</span><span class="eyebrow" id="isle-name">программистов</span></span><span class="isle-caret" aria-hidden="true">▾</span>
     </button>
     <div class="soundbar">
+      <button class="snd chanbtn" id="chan-btn" type="button" aria-label="Канал игры" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.5v5c0 .6.4 1 1 1h2.6l1.500 4.300c.2.5.6.7 1.100.7h1c.7 0 1.200-.7 1-1.300L10 15.500h1.500l6.900 4c.7.4 1.600-.1 1.600-.9V5.400c0-.8-.9-1.300-1.600-.9l-6.900 4H4c-.6 0-1 .4-1 1z"/><path class="wave" d="M21.500 9.500c.7.700.7 4.300 0 5"/></svg><span>Канал</span></button>
       <button class="snd snd-music" aria-label="Музыка" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico" d="M9 18V6l10-2v12"/><circle class="ico-fill" cx="7" cy="18" r="2.5"/><circle class="ico-fill" cx="17" cy="16" r="2.5"/><path class="slash" d="M4 4l16 16"/></svg><span>Музыка</span></button>
       <button class="snd snd-sfx" aria-label="Звуки" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico-fill" d="M4 9h4l5-4v14l-5-4H4z"/><path class="ico" d="M16 9a4 4 0 0 1 0 6"/><path class="slash" d="M4 4l16 16"/></svg><span>Звуки</span></button>
       <button class="snd gearbtn" aria-label="Настройки"><img class="gear-ic" alt=""><span class="gear-dot" hidden></span></button>
@@ -4681,6 +4696,7 @@ function showIsle(n) {
 }
 
 function renderMap() {
+  if (typeof chanDraw === "function") chanDraw();   // «Канал игры»: показать, когда пройдено достаточно уровней
   showIsle(curIsle);
   const D = ISLE_MAPS[curIsle], VH = D.terr.length * 20;
   const out = [];
@@ -14675,10 +14691,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 248;
+const APP_VERSION = 249;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 249, date: "2026-11-22", text: "На карте появилась кнопка с рупором — канал игры в Telegram: новости и можно написать, что понравилось", en: "A megaphone button on the map opens the game’s Telegram channel: news and a place to tell us what you think" },
   { v: 248, date: "2026-11-22", text: "Оценить уровень и отправить игру другу теперь можно с самой первой победы.", en: "You can now rate a level and send the game to a friend from your very first win." },
   { v: 247, date: "2026-11-21", text: "Рожица «слишком сложно» теперь видна на всех устройствах.", en: "The “too hard” face now shows on every device." },
   { v: 246, date: "2026-11-21", text: "В повторе чужого прохождения кнопка называется «Играть самому», а полоска с ней всегда остаётся на виду.", en: "In a friend’s replay, the bar with the “Play it myself” button now always stays in view." },
@@ -15125,6 +15142,23 @@ const DEV_TG = "selfspawned", DEV_URL = "https://t.me/" + DEV_TG;
 const COMM_URL = LOC === "en" ? "https://t.me/coderpaths" : "https://t.me/coderpathru";
 $("comm-link").href = COMM_URL;
 $("comm-link").addEventListener("click", (e) => { if (typeof tg !== "undefined" && tg && tgOk("6.1")) { e.preventDefault(); try { tg.openTelegramLink(COMM_URL); } catch (err) {} } });
+// Кнопка «Канал игры» на карте (v249): видна с пятого пройденного уровня; мигает, пока её ни разу не нажали
+const CHAN_FROM = 5, CHAN_KEY = "cp-chan-seen";
+function chanDraw() {
+  const b = $("chan-btn"); if (!b) return;
+  let seen = false; try { seen = !!localStorage.getItem(CHAN_KEY); } catch (e) {}
+  b.hidden = Object.keys(save.stars || {}).length < CHAN_FROM;
+  b.classList.toggle("fresh", !seen);
+  $("mapbar").classList.toggle("has-chan", !b.hidden);
+}
+$("chan-btn").addEventListener("click", () => {
+  try { localStorage.setItem(CHAN_KEY, "1"); } catch (e) {}
+  stat.ch = (stat.ch || 0) + 1; statDirty = true; statSave(); statSoon(3000);
+  chanDraw();
+  if (typeof tg !== "undefined" && tg && tgOk("6.1")) { try { tg.openTelegramLink(COMM_URL); return; } catch (e) {} }
+  open(COMM_URL, "_blank", "noopener");
+});
+chanDraw();
 $("rep-text").innerHTML = tr("Что-то непонятно, не получается или есть идея? Напиши разработчику в Telegram: {link}. Если застрял — нажми «Скопировать отчёт» (что ты нажимал и где застрял, без личных данных) и пришли его.", { link: `<a href="${DEV_URL}" target="_blank" rel="noopener">${DEV_URL}</a>` });
 $("rep-copy").addEventListener("click", async () => {
   const ok = await copyText(buildReport());
@@ -15372,7 +15406,7 @@ function statDoc() {
     stars: LEVELS.reduce((s, l) => s + (save.stars[l.name] || 0), 0), won: won.length,
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
     op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length, gems: Object.keys(save.gems || {}).length,
-    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {}, sh: stat.sh || 0, rp: stat.rp || 0,
+    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {}, sh: stat.sh || 0, rp: stat.rp || 0, ch: stat.ch || 0,
   };
 }
 let statTimer = null, statLast = 0;
@@ -15418,7 +15452,7 @@ function statHtml(all) {
   };
   let h = `<div class="st-cards">${card(all.length, "устройств всего")}${card(all.filter((d) => ago(d) < 1).length, "играли за сутки")}`
     + `${card(all.filter((d) => ago(d) < 7).length, "за неделю")}${card(all.filter((d) => (now - Date.parse(d.first || 0)) / day < 7).length, "новых за неделю")}`
-    + `${card(all.filter((d) => d.won > 0).length, "прошли хоть уровень")}${card(all.filter((d) => d.sh > 0).length, "поделились игрой (с v244)")}${card(all.filter((d) => d.rp > 0).length, "пришли по ссылке-повтору (с v245)")}</div>`;
+    + `${card(all.filter((d) => d.won > 0).length, "прошли хоть уровень")}${card(all.filter((d) => d.sh > 0).length, "поделились игрой (с v244)")}${card(all.filter((d) => d.rp > 0).length, "пришли по ссылке-повтору (с v245)")}${card(all.filter((d) => d.ch > 0).length, "открыли канал игры (с v249)")}</div>`;
   h += bars("Где играют", "where", { tg: "Telegram", web: "Браузер", app: "Приложение (значок)", itch: "itch.io" });
   h += bars("Система", "os", { ios: "iPhone / iPad", android: "Android", windows: "Windows", mac: "Mac", linux: "Linux", other: "Другое" });
   h += bars("Устройство", "form", { phone: "Телефон", tablet: "Планшет", desktop: "Компьютер" });
