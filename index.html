@@ -3452,6 +3452,8 @@ async function paintGround(wrap, terr, themeName, rnd) {
   } else {
     autotile(ctx, flat, AUTOTILE.grass, (x, y) => at(x, y) === "grass", W, H, C);
   }
+  // v239: баранья тропа в скалах и пещерах — тоже трава (в этих местностях траву больше ничто не рисует, и тропу было не отличить от дороги)
+  if (themeName === "mountain" || themeName === "cave") autotile(ctx, flat, AUTOTILE.grass, (x, y) => nsKind(x, y) === "rams", W, H, C);
   // смесь: песок с пучками травы — переход от пляжа к лесу
   const tufts = await Promise.all(["tuft1", "tuft2", "tuft3"].map(tsImage));
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -14585,10 +14587,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 238;
+const APP_VERSION = 239;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 239, date: "2026-11-21", text: "На двух уровнях острова 1 появились места, где нельзя останавливаться: шаткие мостики в «Тупике» и баранья тропа в «Стороже ключа».", en: "Two levels on island 1 now have places where you can’t stop: wobbly bridges in “Dead End” and a ram trail in “Key Guard”." },
   { v: 238, date: "2026-11-21", text: "Огонь на бойцах снова спокойный: больше нет больших вспышек над головой, пламя не вытягивается вверх на бегу.", en: "Fire on fighters is calm again: no more big bursts above the head, and flames no longer stretch upward while running." },
   { v: 237, date: "2026-11-21", text: "Огонь на башне с лучником теперь такой же полупрозрачный, как на бойцах.", en: "Fire on the archer tower is now see-through, just like the flames on fighters." },
   { v: 236, date: "2026-11-21", text: "Огонь стал живее: пламя тянется назад за бегущим, вокруг горящего свечение, а сам он темнеет. Огонь теперь есть и в бою на заставке, и у золотой шахты; вышка гоблинов у уток иногда загорается.", en: "Fire feels more alive: flames trail behind a runner, a burning fighter glows and darkens. Fire now also appears in the title-screen battle and at the gold mine; the goblin watchtower by the ducks sometimes catches fire." },

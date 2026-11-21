@@ -1,13 +1,13 @@
 {
- "version": 238,
+ "version": 239,
  "date": "2026-11-21",
  "notes": [
-  "Огонь на бойцах снова спокойный: больше нет больших вспышек над головой, пламя не вытягивается вверх на бегу."
+  "На двух уровнях острова 1 появились места, где нельзя останавливаться: шаткие мостики в «Тупике» и баранья тропа в «Стороже ключа»."
  ],
  "files": {
   "index.html": {
-   "size": 1155379,
-   "hash": "96a0db01a7af9387"
+   "size": 1156185,
+   "hash": "fc002d54ec203e5d"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "9cdc67fbc4ec8cb6"
+   "hash": "45e6c213e4d4d5da"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 53756,
-   "hash": "3afbf35cea2b63f3"
+   "size": 54088,
+   "hash": "3238a23ddd0c0da1"
   },
   "isle2.js": {
    "size": 59882,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Fire on fighters is calm again: no more big bursts above the head, and flames no longer stretch upward while running."
+  "Two levels on island 1 now have places where you can’t stop: wobbly bridges in “Dead End” and a ram trail in “Key Guard”."
  ]
 }
