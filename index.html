@@ -246,6 +246,15 @@ html.still .hero.hurt .kwrap { animation: none; }
 .hero.parry .k-idle, .hero.parry .k-run, .hero.parry .k-atk { display: none !important; }
 .hero.atk .k-atk { display: block; }
 .hero.atk .k-idle, .hero.atk .k-run { display: none !important; }
+/* тычок копьём вверх и вниз (v254): монах стоит над копейщиком или под ним */
+.hero.poke-r .k-parry.ppoke, .hero.poke-u .k-parry.pvup, .hero.poke-d .k-parry.pvdown { display: block; animation-direction: reverse !important; }
+.hero.poke-r .k-idle, .hero.poke-r .k-run, .hero.poke-r .k-atk, .hero.poke-u .k-idle, .hero.poke-u .k-run, .hero.poke-u .k-atk, .hero.poke-d .k-idle, .hero.poke-d .k-run, .hero.poke-d .k-atk { display: none !important; }
+/* монах подпрыгнул от тычка: тот же transform, что ставит фигурку на место (и отражает её), плюс сдвиг вверх на долю её роста */
+.skactor.yelp { animation: monkYelp 0.26s ease-out; }
+.skactor.flip.yelp { --yx: -1; }
+@keyframes monkYelp { 0%, 100% { transform: translate(-50%, var(--foot)) scaleX(var(--yx, 1)); } 35% { transform: translate(-50%, calc(var(--foot) - 17%)) scaleX(var(--yx, 1)); } }
+html.still .skactor.yelp { animation: none; }
+.route .mroute { fill: none; stroke: #cfe8ff; stroke-width: 0.06; stroke-dasharray: 0.02 0.16; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .enemy, html.still .enemy.hit .ewrap, html.still .poof { transition: none; animation: none; }
 .route .badge.a rect { stroke: var(--sword); }
@@ -3232,7 +3241,7 @@ const COIN_SVG = `<img class="coinimg" alt="" src="">`;
 
 // Копейщик на поле уровня (v185): те же листы, что у копейщиков сценок (кадр 320×320), под своими именами
 // и с числом кадров — так sprite() умеет их показывать. LN_BOTTOM — на сколько опустить кадр, чтобы ноги встали на клетку.
-for (const [a, b, n] of [["ln_idle", "sk_lidle", 12], ["ln_run", "sk_lrun", 6], ["ln_atk", "sk_lratk", 3], ["ln_up", "sk_luratk", 3], ["ln_down", "sk_ldratk", 3]]) { TS[a] = TS[b]; TS_INFO[a] = [n, 320, 320]; }
+for (const [a, b, n] of [["ln_idle", "sk_lidle", 12], ["ln_run", "sk_lrun", 6], ["ln_atk", "sk_lratk", 3], ["ln_up", "sk_luratk", 3], ["ln_down", "sk_ldratk", 3], ["ln_vup", "sk_luatk", 3], ["ln_vdown", "sk_ldatk", 3]]) { TS[a] = TS[b]; TS_INFO[a] = [n, 320, 320]; }
 const LN_BOTTOM = -108;
 // Сделать элемент-спрайт. Размеры — в процентах от клетки, ноги/основание — у нижнего края клетки.
 function sprite(key, k = 1, { bottom = 4, dur = 0.9, delay = 0, cls = "" } = {}) {
@@ -8568,11 +8577,15 @@ function buildBoard() {
   const kGuard = sprite(HK[3], 0.66, { bottom: kb, dur: 0.5, cls: "k-guard" });
   kw.append(kIdle, kRun, kAtk, kGuard);
   if (L.lancer) kw.append(sprite("ln_up", 0.66, { bottom: LN_BOTTOM, dur: 0.36, cls: "k-parry pup" }), sprite("ln_down", 0.66, { bottom: LN_BOTTOM, dur: 0.36, cls: "k-parry pdown" }));   // удар копьём вверх-вбок — отбивает динамит
+  // тычок (v254): те же три кадра удара копьём, но задом наперёд — сначала короткий укол (наконечник у спины монаха), потом выпад вслед убегающему.
+  // Обычным порядком первый же кадр — полный выпад: копьё проходило бы монаха насквозь.
+  if (L.monk) kw.append(sprite("ln_atk", 0.66, { bottom: LN_BOTTOM, dur: 0.36, cls: "k-parry ppoke" }), sprite("ln_vup", 0.66, { bottom: LN_BOTTOM, dur: 0.36, cls: "k-parry pvup" }), sprite("ln_vdown", 0.66, { bottom: LN_BOTTOM, dur: 0.36, cls: "k-parry pvdown" }));
   heroEl.appendChild(kw);
   // сердечки рыцаря — только на уровнях с гоблинами
 
   boardEl.appendChild(heroEl);
   patrolSetup();               // часовые (v212)
+  monkSetup();                 // монах, которого подгоняют копьём (v254)
   boardEl.appendChild(markEl);   // отметки (крестики, начало круга) — поверх рыцаря
 
   roundTag = document.createElement("div");
@@ -9588,6 +9601,37 @@ function buildPlan(code) {
   });
   const fallen = new Set();    // клетки, куда упало дерево: теперь это препятствие
   const wallAt = (x, y) => isWall(x, y) || fallen.has(x + "," + y);
+  // Монах (L.monk, v254): стоит и боится идти. Копейщик встал вплотную и ткнул копьём (parry) — монах срывается от него прочь:
+  // два такта бегом (две клетки за такт), потом шагом (клетка за такт), пока не упрётся (стена, гоблин, копейщик), не дойдёт до клетки,
+  // где ему снова страшно (L.monk.stops — перед дорожкой следующего часового), или не войдёт в дверь.
+  // monkLog[t] — где монах после такта t (запуск ставит его по этому списку: monkPlace). Встретил часового — crash «patrol» с who: "monk".
+  const mk = L.monk ? { x: L.monk.at[0], y: L.monk.at[1], dx: 0, dy: 0, run: 0, home: false } : null;
+  const monkLog = mk ? [{ x: mk.x, y: mk.y, n: 0 }] : null;
+  const monkAt = (x, y) => !!mk && !mk.home && mk.x === x && mk.y === y;
+  // такт монаха — ДО шага копейщика на этом такте: монах уходит первым, и копейщик может идти следом в освободившуюся клетку
+  const monkTick = () => {
+    if (!mk) return null;
+    const t = tk + 1, from = { x: mk.x, y: mk.y }, fast = mk.run > 0;
+    const pats = patrolsOf().map((seq) => [patrolAt(seq, tk), patrolAt(seq, t)]);
+    let n = 0, caught = null;
+    if (!mk.home && (mk.dx || mk.dy)) {
+      for (let k = 0; k < (fast ? 2 : 1); k++) {
+        const nx = mk.x + mk.dx, ny = mk.y + mk.dy;
+        if (exitPos && nx === exitPos.x && ny === exitPos.y) { mk.x = nx; mk.y = ny; mk.home = true; n++; break; }
+        if (wallAt(nx, ny) || goblinAt(nx, ny) || (nx === pos.x && ny === pos.y)) { mk.dx = mk.dy = 0; break; }
+        // часовой придёт в эту клетку на этом же такте — или они шагнут навстречу и поменяются местами
+        const met = pats.some(([a, b]) => (b.x === nx && b.y === ny) || (a.x === nx && a.y === ny && b.x === mk.x && b.y === mk.y));
+        mk.x = nx; mk.y = ny; n++;
+        if (met) { caught = { x: nx, y: ny }; mk.dx = mk.dy = 0; break; }
+        if ((L.monk.stops || []).some(([sx, sy]) => sx === nx && sy === ny)) { mk.dx = mk.dy = 0; break; }   // дальше страшно: встал и ждёт, пока подгонят
+      }
+      if (fast) mk.run--;
+    }
+    if (!caught && !mk.home && pats.some(([, b]) => b.x === mk.x && b.y === mk.y)) caught = { x: mk.x, y: mk.y };   // часовой сам пришёл на клетку монаха
+    monkLog[t] = { x: mk.x, y: mk.y, n, fast: fast && n > 0, home: mk.home, from, stop: !mk.dx && !mk.dy };
+    return caught;
+  };
+  const fin = (o) => (monkLog ? { ...o, monk: monkLog } : o);
   // Великан (V) сам не нападает. Ударил его — он замахивается и бьёт после СЛЕДУЮЩЕГО действия рыцаря
   // (шага или удара). Если рыцарь к этому времени отошёл с соседней клетки — замах мимо.
   let swing = null;   // { key } — великан замахнулся
@@ -9655,7 +9699,20 @@ function buildPlan(code) {
       // Удар: бьём гоблина впереди; если впереди никого — того, кто стоит рядом с другой стороны
       c.hits = [];
       for (let s = 0; s < n; s++) {
+        // тычок (v254): копьё, динамит не летит, врага рядом нет, а вплотную стоит монах — он срывается прочь от копейщика
+        let pk = null;
+        if (mk && !mk.home && name === "parry" && !fly) {
+          const ar = [face, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 0, dy: -1 }];
+          if (!ar.some((d) => goblinAt(pos.x + d.dx, pos.y + d.dy))) pk = ar.find((d) => monkAt(pos.x + d.dx, pos.y + d.dy)) || null;
+        }
+        if (pk) { mk.dx = pk.dx; mk.dy = pk.dy; mk.run = 2; face = pk; }
+        const mc = monkTick();
         tk++;
+        if (pk || mc) {
+          c.hits.push({ target: null, poke: pk ? { x: pos.x + pk.dx, y: pos.y + pk.dy } : null, face: { ...face }, hp: new Map(hpLeft), pre: [] });
+          if (mc) { crash = { cmd: i, step: s, at: mc, reason: "patrol", who: "monk", tick: tk }; break; }
+          continue;
+        }
         if (fly && name === "parry") {
           // копьё встречает динамит: он летит обратно в подрывника
           const b = fly.e, bk = enemyKey(b.x, b.y);
@@ -9738,6 +9795,9 @@ function buildPlan(code) {
       c.pre[s] = strikes(null, true); // стоял рядом с гоблином и не бил — гоблин добивает
       if (kHp <= 0) { Object.assign(dead, { cmd: i, step: s }); break; }
       const next = { x: pos.x + c.dx, y: pos.y + c.dy };
+      const mc = monkTick();                                    // монах делает свой такт первым (v254)
+      if (mc) { crash = { cmd: i, step: s, at: mc, reason: "patrol", who: "monk", tick: tk + 1 }; break; }
+      if (name !== "wait" && monkAt(next.x, next.y)) { crash = { cmd: i, step: s, at: next, reason: "monk" }; break; }
       if (wallAt(next.x, next.y)) { crash = { cmd: i, step: s, at: next, reason: fallen.has(next.x + "," + next.y) ? "tree" : "wall" }; break; }
       // Гоблин на пути работает как стена, пока его не победить
       if (goblinAt(next.x, next.y)) {
@@ -9748,6 +9808,7 @@ function buildPlan(code) {
       const atExit = !!exitPos && next.x === exitPos.x && next.y === exitPos.y;
       // Запертая дверь работает как стена
       if (atExit && doorLocked(got)) { crash = { cmd: i, step: s, at: next, reason: "locked", got: { ...got } }; break; }
+      if (atExit && mk && !mk.home) { crash = { cmd: i, step: s, at: next, reason: "monkfirst" }; break; }      // сначала в дверь должен войти монах
       if (patrolMeets(pos, next)) { crash = { cmd: i, step: s, at: next, reason: "patrol", tick: tk + 1 }; break; }
       tk++;
       pos = next;
@@ -9821,21 +9882,24 @@ function buildPlan(code) {
     const program = new Function("__loop", "__call", ...names, ...conds.map(condDisp), instrument(js));
     program(__loop, __call, ...L.commands.map(make), ...conds.map(ask));
   } catch (e) {
-    if (e === STOP) return { commands, crash, reachedAt, hpLeft, dead, endless, checks };
+    if (e === STOP) return fin({ commands, crash, reachedAt, hpLeft, dead, endless, checks });
     return { commands: [], error: explainError(e), errorLine: e.line };
   }
-  if (fly) { flyBlow(); return { commands, crash, reachedAt, hpLeft, dead, endless, checks }; }   // код кончился, а динамит летел
+  if (fly) { flyBlow(); return fin({ commands, crash, reachedAt, hpLeft, dead, endless, checks }); }   // код кончился, а динамит летел
+  // программа кончилась, а монах ещё бежит (v254): он добегает сам — и может встретить часового
+  let monkTail = 0, monkCaught = null;
+  if (mk) while ((mk.dx || mk.dy) && !mk.home && monkTail < 40 && !monkCaught) { const mc = monkTick(); tk++; monkTail++; if (mc) monkCaught = { at: mc, tick: tk }; }
   // Код кончился, а рыцарь стоит рядом с гоблином — гоблин бьёт, пока рыцарь не упадёт
   // (и великан доводит свой замах, если рыцарь остался рядом)
   // v210: программа кончилась на клетке, где нельзя останавливаться («~»): мостик рушится, баран сбивает, из кустов летит динамит
   if (!dead && L.nostop && L.map[pos.y]?.[pos.x] === "~") {
     kHp = 0;
-    return { commands, crash, reachedAt, hpLeft, dead: { by: "nostop", nostop: nsKind(pos.x, pos.y), final: true, at: { ...pos } }, finalHits: [], checks };
+    return fin({ commands, crash, reachedAt, hpLeft, dead: { by: "nostop", nostop: nsKind(pos.x, pos.y), final: true, at: { ...pos } }, finalHits: [], checks });
   }
   const last = settle();
   const finalHits = [...(last && !last.miss ? [last] : []), ...strikes(null, true)];
   if (dead) dead.final = true;
-  return { commands, crash, reachedAt, hpLeft, dead, finalHits, checks };
+  return fin({ commands, crash, reachedAt, hpLeft, dead, finalHits, checks, monkTail, monkCaught, monkHome: mk ? mk.home : undefined });
 }
 
 // Переводим ошибки JavaScript на понятный язык
@@ -10606,6 +10670,8 @@ function drawRoute(p, activeIdx = -1) {
   patrolCode();
   if (!p || p.error) return;
   const c = (v) => v + 0.5;
+  // v254: куда добежит монах — точками
+  if (p.monk && p.monk.some((m) => m.n)) svg("polyline", { class: "mroute", points: p.monk.map((m) => `${c(m.x)},${c(m.y)}`).join(" ") }, routeEl);
   // …и жёлтая метка: где и на каком шаге рыцарь с ним встретится (видна ещё до запуска)
   if (p.crash?.reason === "patrol") {
     const { x, y } = p.crash.at, g = svg("g", { class: "meet" }, markEl), t = tr("шаг") + " " + p.crash.tick, w = 0.16 * t.length + 0.14;
@@ -10887,6 +10953,7 @@ function reset() {
   const moved = hero && (hero.x !== start.x || hero.y !== start.y);
   hero = { ...start };
   patrolPlace(0);
+  monkPlace(0);
   heroEl.classList.remove("flip", "run", "sunk", "down");
   boardEl.querySelectorAll(".plank.gone, .cell.gone").forEach((e) => e.classList.remove("gone"));
   roundTag.hidden = true;
@@ -11063,8 +11130,8 @@ const patrolsOf = () => (L.patrols || []).map((pt) => (pt.seq ||= patrolSeq(pt))
 const patrolAt = (seq, t) => seq[t % seq.length];
 let patrolActs = [], patrolBubs = [], patrolTick = 0;
 function patrolSetup() {
-  patrolActs = patrolsOf().map((seq) => {
-    const a = skActor(evStage(), "torch", 0.6, 0.62);
+  patrolActs = patrolsOf().map((seq, k) => {
+    const a = skActor(evStage(), "torch", L.patrols[k].big ? 0.8 : 0.6, 0.62);      // big — крупный, грозный часовой (v254)
     a.at(seq[0].x + 0.5, seq[0].y + 0.9); a.show(true, true); a.play(0, 7, 120);
     a.el.style.zIndex = 2; a.el.classList.add("patrol");
     return a;
@@ -11100,6 +11167,57 @@ function patrolPlace(t, ms = 0) {
     a.move(x, y, ms).then(() => { if (a.x === x && a.y === y) a.play(0, 7, 120); });
   });
   patrolTick = t;
+}
+// Монах, которого подгоняют копьём (v254; расчёт — monkTick в buildPlan). Фигурка — как у часовых: житель сценок на поле уровня.
+let monkAct = null;
+const MONK_SC = 0.74;
+function monkSetup() {
+  monkAct = null;
+  if (!L.monk) return;
+  const a = skActor(evStage(), "monk", MONK_SC, 0.62);      // ростом с копейщика: копьё приходится ему в спину, а не в голову
+  a.el.style.zIndex = 2; a.el.classList.add("monkpal");
+  monkAct = a;
+  monkPlace(0);
+}
+// поставить монаха туда, где он после такта t (ms — за сколько добежать; 0 — сразу). Бежит — лист «бег», вдвое чаще кадры, если сорвался от тычка.
+function monkPlace(t, ms = 0) {
+  const a = monkAct;
+  if (!a) return null;
+  const log = t && plan && plan.monk, m = log ? log[Math.min(t, log.length - 1)] : { x: L.monk.at[0], y: L.monk.at[1] };
+  const x = m.x + 0.5, y = m.y + 0.9;
+  if (!ms) { a.at(x, y); a.face(!!L.monk.left); a.show(!m.home, true); a.play(0, 6, 150, true, "monk"); return null; }
+  if (a.x === x && a.y === y) return null;
+  if (x !== a.x) a.face(x < a.x);
+  a.play(0, 4, m.fast ? 55 : 100, true, "monkrun");
+  return a.move(x, y, ms).then(() => {
+    if (a.x !== x || a.y !== y) return;
+    if (m.home) { a.show(false); sfx("unlock"); return; }
+    const nx = log[t + 1];
+    if (m.stop || !nx || !nx.n) a.play(0, 6, 150, true, "monk");       // встал — снова стоит и дышит
+  });
+}
+// тычок: копьё доходит до монаха — он подпрыгивает и срывается с места (копейщик стоит в соседней клетке, никто никуда не подтягивается)
+async function playPoke(h, t) {
+  const a = monkAct, k = SLOW / speed, cls = h.face.dy < 0 ? "poke-u" : h.face.dy > 0 ? "poke-d" : "poke-r";
+  heroEl.classList.add(cls);                                         // первый кадр — короткий укол: наконечник у спины монаха
+  sleep(345).then(() => heroEl.classList.remove(cls));              // три кадра при любой скорости
+  sfx("spear");
+  if (a) { a.el.classList.remove("yelp"); void a.el.offsetWidth; a.el.classList.add("yelp"); }   // копьё поддело — монах подпрыгнул…
+  setStatus("Монах сорвался с места!", "", "🔱");
+  await sleep(110);                                                  // …и сорвался: выпад копья идёт уже ему вслед
+  monkPlace(t, 250 * k);
+  await wait(260);
+}
+// часовой встретил монаха
+async function monkSeen(p, i, cr) {
+  const ms = 230 * SLOW / speed;
+  patrolPlace(cr.tick, ms); monkPlace(cr.tick, ms);
+  heroEl.classList.remove("run");
+  await wait(420);
+  sfx("bump");
+  showProblems = true;
+  drawRoute(p, i);
+  setStatus(tr("Часовой заметил монаха — на шаге {n}! Подгоняй его, когда дорога свободна: пережди — {cmd}", { n: cr.tick, cmd: uiBlocks ? "⏳" : disp("wait") + "()" }), "fail");
 }
 // Что за клетка «~»: bridge — мостик, rams — баранья тропа, bush — дорога у кустов, bog — топь (только на болоте, nostop: "swamp").
 function nsKind(x, y) {
@@ -11221,12 +11339,15 @@ async function run() {
         setStatus(label, "", `${where} · ${tr("удар")} ${s + 1}/${cmd.n}`);
         if (h.face.dx) heroEl.classList.toggle("flip", h.face.dx < 0);
         const tgt = h.target && enemies.find((e) => enemyKey(e.x, e.y) === h.target);
+        if (L.monk) { patrolPlace(cmd.tk + s + 1, 230 * SLOW / speed); if (!h.poke) monkPlace(cmd.tk + s + 1, 230 * SLOW / speed); }   // такт идёт и во время удара (v254)
         if (h.parry) await playParry(h);                            // динамит прилетел — копьё отправило его обратно
+        else if (h.poke) await playPoke(h, cmd.tk + s + 1);         // тычок: монах срывается с места
         else {
           heroEl.classList.add("atk");
           sfx(h.blocked ? "bump" : tgt?.job ? "knock" : h.target ? (L.lancer ? "spear" : "hit") : "swish");
           await wait(200);
         }
+        if (p.crash && p.crash.who === "monk" && p.crash.cmd === i && p.crash.step === s) { await monkSeen(p, i, p.crash); return finish(); }
         if (h.ally) {
           const al = allyEls.find((x) => x.a.at[0] === h.ally.x && x.a.at[1] === h.ally.y);
           al?.el.classList.remove("ouch"); void al?.el.offsetWidth; al?.el.classList.add("ouch");
@@ -11346,6 +11467,7 @@ async function run() {
 
       if (p.crash && p.crash.cmd === i && p.crash.step === s) {
         await shotPending;
+        if (p.crash.who === "monk") { await monkSeen(p, i, p.crash); return finish(); }
         if (p.crash.reason === "patrol") {          // часовой доходит до места встречи (если это не клетка, где стоит рыцарь)
           const there = patrolsOf().some((seq) => { const q = patrolAt(seq, p.crash.tick); return q.x === hero.x && q.y === hero.y; });
           if (!there) patrolPlace(p.crash.tick, 230 * SLOW / speed);
@@ -11381,6 +11503,10 @@ async function run() {
             ? (left ? tr("сначала возьми ключ и собери монеты (осталось {n})", { n: left }) : tr("сначала возьми ключ"))
             : tr(items.some((it) => it.mush) ? "сначала собери все грибы (осталось {n})" : "сначала собери все монеты (осталось {n})", { n: left });
           setStatus(tr("Дверь пока заперта: {what}", { what }), "fail");
+        } else if (p.crash.reason === "monk") {
+          setStatus(tr("Монах стоит на пути — сквозь него не пройти. Встань вплотную и подгони его копьём: {cmd}", { cmd: uiBlocks ? "🔱" : disp("parry") + "()" }), "fail");
+        } else if (p.crash.reason === "monkfirst") {
+          setStatus(tr("Сначала в дверь должен войти монах. Подгони его копьём: {cmd}", { cmd: uiBlocks ? "🔱" : disp("parry") + "()" }), "fail");
         } else if (p.crash.reason === "tree") {
           setStatus(uiBlocks ? "Дерево упало прямо на дорогу! Тут поможет рамка «если»: есть препятствие — обойди"
             : "Дерево упало прямо на дорогу! Проверь это: if obstacle_right() — и обойди", "fail");
@@ -11397,6 +11523,7 @@ async function run() {
 
       heroEl.classList.toggle("run", cmd.name !== "wait");   // ждёт — стоит, а не бежит на месте
       patrolPlace(cmd.tk + s + 1, 230 * SLOW / speed);          // часовые делают свой шаг вместе с рыцарем
+      monkPlace(cmd.tk + s + 1, 230 * SLOW / speed);            // и монах — свой (v254)
       hero = cmd.cells[s];
       placeHero();
       camFollow();          // окно длинной карты едет вместе с рыцарем
@@ -11462,6 +11589,14 @@ async function run() {
   drawRoute(p, p.commands.length);
   drawTape(p, p.commands.length);
   heroEl.classList.remove("run");
+  if (p.monkTail) {                                              // программа кончилась, а монах ещё бежит — он добегает сам (v254)
+    const t0 = p.monk.length - 1 - p.monkTail;
+    for (let k = 1; k <= p.monkTail; k++) {
+      if (p.monkCaught && k === p.monkTail) { await monkSeen(p, p.commands.length, p.monkCaught); return finish(); }
+      patrolPlace(t0 + k, 230 * SLOW / speed); monkPlace(t0 + k, 230 * SLOW / speed);
+      await wait(240);
+    }
+  }
   if (p.dead?.by === "nostop") { await knightFalls(p.dead); return finish(); }   // остановился, где нельзя (v210)
   if (p.finalHits?.length) {
     await playStrikes(p.finalHits);
@@ -11480,7 +11615,8 @@ async function run() {
     sfx("almost");
     return finish();
   }
-  setStatus(L.slay ? "Почти! Ещё не все гоблины побеждены — добавь команд" : "Почти! До двери ещё немного — добавь шагов", "fail");
+  if (L.monk && p.monkHome === false) setStatus(tr("Почти! Монах ещё не дошёл до двери — встань вплотную и подгони его копьём: {cmd}", { cmd: uiBlocks ? "🔱" : disp("parry") + "()" }), "fail");
+  else setStatus(L.slay ? "Почти! Ещё не все гоблины побеждены — добавь команд" : "Почти! До двери ещё немного — добавь шагов", "fail");
   sfx("almost");
   finish();
   stepTip(p);
@@ -14694,7 +14830,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 253;
+const APP_VERSION = 254;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -14702,6 +14838,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 254, date: "2026-11-22", text: "Новый дополнительный уровень на Острове гоблинов — «Иди первым»: монах боится часовых, а копейщик подгоняет его копьём", en: "A new extra level on Goblin Island — “You Go First”: the monk is afraid of the sentries, so the lancer hurries him along with the spear" },
   { v: 253, date: "2026-11-22", text: "Номер версии стал понятнее: «0.6 beta» — игра растёт, впереди новые острова", en: "The version number is clearer now: “0.6 beta” — the game is growing, more islands ahead" },
   { v: 252, date: "2026-11-22", text: "Установленная игра: канал игры открывается сразу в Telegram, без лишнего белого окна", en: "Installed game: the game channel now opens straight in Telegram, without the extra blank window" },
   { v: 251, date: "2026-11-22", text: "Установленная игра на iPhone и iPad: кнопки вверху карты стоят чуть ниже, чтобы их не размывало; тёмная полоса убрана", en: "Installed game on iPhone and iPad: the buttons at the top of the map sit a little lower so they stay sharp; the dark strip is gone" },

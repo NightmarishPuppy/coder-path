@@ -1,21 +1,21 @@
 {
- "version": 253,
+ "version": 254,
  "date": "2026-11-22",
  "notes": [
-  "Номер версии стал понятнее: «0.6 beta» — игра растёт, впереди новые острова"
+  "Новый дополнительный уровень на Острове гоблинов — «Иди первым»: монах боится часовых, а копейщик подгоняет его копьём"
  ],
  "files": {
   "index.html": {
-   "size": 1179662,
-   "hash": "524f1b603bf3747f"
+   "size": 1192530,
+   "hash": "848d23bdec972c7d"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 85246,
-   "hash": "1218454e6b1bf6da"
+   "size": 86302,
+   "hash": "f91d1db99b7804c7"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "cf51379e57043469"
+   "hash": "224d7def38809f70"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 47366,
-   "hash": "e08ebce6143119ea"
+   "size": 49558,
+   "hash": "85ab65398a1f5b84"
   },
   "art-scenes.js": {
    "size": 996051,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "The version number is clearer now: “0.6 beta” — the game is growing, more islands ahead"
+  "A new extra level on Goblin Island — “You Go First”: the monk is afraid of the sentries, so the lancer hurries him along with the spear"
  ]
 }
