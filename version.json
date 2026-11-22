@@ -1,13 +1,13 @@
 {
- "version": 251,
+ "version": 252,
  "date": "2026-11-22",
  "notes": [
-  "Установленная игра на iPhone и iPad: кнопки вверху карты стоят чуть ниже, чтобы их не размывало; тёмная полоса убрана"
+  "Установленная игра: канал игры открывается сразу в Telegram, без лишнего белого окна"
  ],
  "files": {
   "index.html": {
-   "size": 1177412,
-   "hash": "bf1f0902ce46bac6"
+   "size": 1178766,
+   "hash": "e0095d7a91e1c172"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "b87da66e79c38e61"
+   "hash": "78a5a096c6ff2944"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Installed game on iPhone and iPad: the buttons at the top of the map sit a little lower so they stay sharp; the dark strip is gone"
+  "Installed game: the game channel now opens straight in Telegram, without the extra blank window"
  ]
 }

@@ -14694,10 +14694,11 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 251;
+const APP_VERSION = 252;
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 252, date: "2026-11-22", text: "Установленная игра: канал игры открывается сразу в Telegram, без лишнего белого окна", en: "Installed game: the game channel now opens straight in Telegram, without the extra blank window" },
   { v: 251, date: "2026-11-22", text: "Установленная игра на iPhone и iPad: кнопки вверху карты стоят чуть ниже, чтобы их не размывало; тёмная полоса убрана", en: "Installed game on iPhone and iPad: the buttons at the top of the map sit a little lower so they stay sharp; the dark strip is gone" },
   { v: 250, date: "2026-11-22", text: "Установленная игра на iPhone и iPad: верх карты с кнопками больше не должен быть размытым", en: "Installed game on iPhone and iPad: the top of the map with its buttons should no longer look blurred" },
   { v: 249, date: "2026-11-22", text: "На карте появилась кнопка с рупором — канал игры в Telegram: новости и можно написать, что понравилось", en: "A megaphone button on the map opens the game’s Telegram channel: news and a place to tell us what you think" },
@@ -15146,7 +15147,20 @@ const DEV_TG = "selfspawned", DEV_URL = "https://t.me/" + DEV_TG;
 // канал игры для игроков: английский и русский (по языку игры)
 const COMM_URL = LOC === "en" ? "https://t.me/coderpaths" : "https://t.me/coderpathru";
 $("comm-link").href = COMM_URL;
-$("comm-link").addEventListener("click", (e) => { if (typeof tg !== "undefined" && tg && tgOk("6.1")) { e.preventDefault(); try { tg.openTelegramLink(COMM_URL); } catch (err) {} } });
+// Открыть канал игры. В Telegram — прямо в нём. В установленной игре (с экрана «Домой») — сразу приложением Telegram
+// (адрес tg://): обычная ссылка открывала там белое окно-браузер, которое оставалось висеть после перехода в Telegram (v252).
+// Если за полторы секунды игра не ушла с экрана (Telegram не установлен) — открываем канал обычной ссылкой.
+function commOpen() {
+  if (typeof tg !== "undefined" && tg && tgOk("6.1")) { try { tg.openTelegramLink(COMM_URL); return; } catch (e) {} }
+  const home = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+  if (!home) { open(COMM_URL, "_blank", "noopener"); return; }
+  let left = false;
+  const seen = () => { if (document.hidden) left = true; };
+  document.addEventListener("visibilitychange", seen);
+  try { location.href = "tg://resolve?domain=" + COMM_URL.split("/").pop(); } catch (e) {}
+  setTimeout(() => { document.removeEventListener("visibilitychange", seen); if (!left && !document.hidden) open(COMM_URL, "_blank", "noopener"); }, 1500);
+}
+$("comm-link").addEventListener("click", (e) => { e.preventDefault(); commOpen(); });
 // Кнопка «Канал игры» на карте (v249): видна с пятого пройденного уровня; мигает, пока её ни разу не нажали
 const CHAN_FROM = 5, CHAN_KEY = "cp-chan-seen";
 function chanDraw() {
@@ -15160,8 +15174,7 @@ $("chan-btn").addEventListener("click", () => {
   try { localStorage.setItem(CHAN_KEY, "1"); } catch (e) {}
   stat.ch = (stat.ch || 0) + 1; statDirty = true; statSave(); statSoon(3000);
   chanDraw();
-  if (typeof tg !== "undefined" && tg && tgOk("6.1")) { try { tg.openTelegramLink(COMM_URL); return; } catch (e) {} }
-  open(COMM_URL, "_blank", "noopener");
+  commOpen();
 });
 chanDraw();
 $("rep-text").innerHTML = tr("Что-то непонятно, не получается или есть идея? Напиши разработчику в Telegram: {link}. Если застрял — нажми «Скопировать отчёт» (что ты нажимал и где застрял, без личных данных) и пришли его.", { link: `<a href="${DEV_URL}" target="_blank" rel="noopener">${DEV_URL}</a>` });
