@@ -1,13 +1,13 @@
 {
- "version": 255,
+ "version": 256,
  "date": "2026-11-22",
  "notes": [
-  "Уровень «Иди первым»: монах вскрикивает и подпрыгивает от тычка, над ним видно, когда он боится; задание понятнее, ★★★ теперь за 8 команд. На планшете задание и победа стоят справа, как положено"
+  "Уровень «Иди первым»: у монаха новый смешной звук, когда его подгоняют копьём"
  ],
  "files": {
   "index.html": {
-   "size": 1197072,
-   "hash": "0ef1251f5e0f604d"
+   "size": 1198009,
+   "hash": "e17ef80d6e714d95"
   },
   "art.js": {
    "size": 852367,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 4445,
-   "hash": "99a020cabe58c429"
+   "size": 4462,
+   "hash": "0b2f8cfe4af49f26"
   },
   "icon-192.png": {
    "size": 42164,
@@ -120,9 +120,13 @@
   "duck.mp3": {
    "size": 8301,
    "hash": "688dd765b9d20a0d"
+  },
+  "monk-poke.mp3": {
+   "size": 5477,
+   "hash": "815c169c90b25532"
   }
  },
  "notes_en": [
-  "“You Go First”: the monk yelps and jumps when poked, and you can see when he is scared; clearer task, ★★★ now takes 8 commands. On tablets the task and the win box sit on the right, as they should"
+  "“You Go First”: the monk gets a new funny sound when he is poked with the spear"
  ]
 }
