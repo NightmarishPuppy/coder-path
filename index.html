@@ -6719,6 +6719,7 @@ async function skitFlock(st, s) {
       if (a.busy) { await skWait(st, 400); continue; }
       if (await idle(a, skRnd(2500, 6500))) {                 // рыцарь рядом или овцу тронули — прочь
         const poked = !!a.poke, [hx, hy] = a.poke || mapEar(st.ear);
+        mapSfx(st, poked ? "baap" : Math.random() < 0.5 ? "baa" : "baaf", a.x, a.y);
         a.poke = null;
         // несколько мест поблизости, куда есть дорога, — берём самое дальнее от того, кто напугал
         let to = null, far = Math.hypot(a.x - hx, a.y - hy) + (poked ? -9 : 0.4);
@@ -7263,6 +7264,16 @@ function ghostStop(now) {
   setTimeout(() => { g.el.remove(); g.panel.remove(); }, now ? 0 : 700);
 }
 function ghostPoke() { ghostIdleAt = performance.now(); ghostStop(); }
+// Игрок на уровне долго ничего не трогает (v261): через 20 с рыцарь покашливает, через 45 с — зевает.
+// Каждое — один раз за заход на уровень, чтобы не надоедало.
+const idleSaid = { name: "", ahem: false, yawn: false };
+setInterval(() => {
+  if (running || STILL || $("levelview").hidden || document.hidden || typeof L === "undefined" || !L || !winBox.hidden) return;
+  if (idleSaid.name !== L.name) { idleSaid.name = L.name; idleSaid.ahem = idleSaid.yawn = false; ghostIdleAt = performance.now(); return; }
+  const idle = performance.now() - ghostIdleAt;
+  if (idle > 20000 && !idleSaid.ahem) { idleSaid.ahem = true; if (soundBuf("ahem.mp3")) sfx("ahem"); }
+  if (idle > 45000 && !idleSaid.yawn) { idleSaid.yawn = true; if (soundBuf("yawn.mp3")) sfx("yawn"); }
+}, 1000);
 for (const ev of ["pointerdown", "keydown", "wheel", "touchmove", "input"]) document.addEventListener(ev, ghostPoke, { capture: true, passive: true });
 setInterval(() => {
   if (ghost || running || STILL || $("levelview").hidden || document.hidden || performance.now() - ghostIdleAt < ghostWait()) return;
@@ -8408,7 +8419,9 @@ function starsHtml(n) {
 function levelSounds() {
   if (!actx) return;
   const bomber = (L.maps || [L.map]).some((m) => m.some((r) => r.includes("Y"))) || (L.events || []).some((e) => e.kind === "shot");
-  ["man-pain.mp3", "man-cry.mp3", "enemy-death.mp3"].forEach(soundBuf);       // голоса рыцаря и врага — на любом уровне
+  ["man-pain.mp3", "man-ow.mp3", "man-cry.mp3", "man-scream.mp3", "enemy-death.mp3", "level-win.mp3", "applause.mp3", "ahem.mp3", "yawn.mp3", "roar.mp3"].forEach(soundBuf);   // голоса рыцаря и врага, победа — на любом уровне
+  if (L.nostop === "rams") soundBuf("ram-baa.mp3");
+  if ((L.maps || [L.map]).some((m) => m.some((r) => r.includes("O")))) { soundBuf("sheep-baa.mp3"); soundBuf("sheep-baa2.mp3"); }
   if (L.patrols) soundBuf("goblin-laugh.mp3");
   if (bomber || L.arena) soundBuf("bomber-laugh.mp3");
   if (L.arena) soundBuf("game-over.mp3");
@@ -11112,7 +11125,7 @@ async function playStrikes(list) {
     const dir = st.dy > 0 ? "down" : st.dy < 0 ? "up" : "side";
     e.el.classList.toggle("face-r", st.dx > 0);
     e.el.classList.add("atk-" + dir);
-    if (!e.el.classList.contains("big") && !e.shield) sfx("gobatk");          // гоблин рычит на замахе (чёрный рыцарь — нет)
+    sfx(!e.el.classList.contains("big") && !e.shield ? "gobatk" : "roar");    // гоблин рычит на замахе; крупный враг — ревёт
     heroEl.classList.remove("run", "atk");
     heroEl.classList.add("guard");
     if (st.dx) heroEl.classList.toggle("flip", st.dx > 0); // рыцарь поворачивается к гоблину
@@ -11136,6 +11149,7 @@ function giantWindup(key, toward) {
   if (!e) return;
   e.el.classList.toggle("face-r", toward.dx > 0);
   e.el.classList.add("windup");
+  sfx("roar");
 }
 // Замах великана приходит: рыцарь рядом — удар (как у гоблинов), отошёл — меч бьёт по пустой клетке
 async function playSwing(r) {
@@ -11336,6 +11350,7 @@ async function noStopFall(kind) {
     const free = (dx) => { let n = 0; while (L.map[hero.y]?.[hero.x + dx * (n + 1)] === "~") n++; return n; };
     const dir = free(-1) >= free(1) ? 1 : -1, from = hero.x + 0.5 - dir * (Math.max(free(-1), free(1)) + 1.2);
     const ram = skActor(st, "shmove", 1.05, 0.656);
+    sfx("ram");
     ram.at(from, hero.y + 0.86); ram.face(dir < 0); ram.show(true, true); ram.play(0, 4, 24 * k);
     await ram.move(hero.x + 0.5, hero.y + 0.86, Math.abs(hero.x + 0.5 - from) * 55 * k);
     heroEl.classList.add("down");
@@ -11363,7 +11378,7 @@ async function knightFalls(why) {
   sk.style.animation = "spr7 0.7s steps(7) 1";
   heroEl.appendChild(sk);
   setTimeout(() => { sk.style.animation = "none"; sk.style.backgroundPosition = "100% 0"; }, 700);
-  sfx("fall");
+  sfx("fall"); if (!why?.bomb && !why?.ambush) sfx("hscream");     // в бою — ещё и крик (от динамита голос уже был)
   await wait(900);
   const n = why?.max || 1;
   if (why?.shield) return setStatus("Щит не пробить! Щитоносец отбивает удар и колет в ответ. Спереди его не взять…", "fail");
@@ -11471,7 +11486,7 @@ async function run() {
               e.el.parentNode.appendChild(pf); setTimeout(() => pf.remove(), 700);
               e.el.parentNode.appendChild(sprite("stone2", 0.9, { bottom: 10, cls: "poof stump" }));
             }
-            if (e.job === "sheep") e.el.classList.toggle("flee-l", h.face.dx > 0 || (!h.face.dx && Math.random() < 0.5));
+            if (e.job === "sheep") { e.el.classList.toggle("flee-l", h.face.dx > 0 || (!h.face.dx && Math.random() < 0.5)); sfx("baa"); }
             setStatus(e.job === "tree" ? "Дерево срублено — дорога свободна!" : e.job === "rock" ? "Камень расколот — дорога свободна!" : "Овца убежала — дорога свободна!", "");
           } else if (h.hp.get(h.target) <= 0) {
             e.el.classList.remove("windup");
@@ -12833,6 +12848,7 @@ function win() {
   // путь с победой над великаном длиннее — для него свои пороги звёзд (crownPar / crownGood)
   const par = crown && L.crownPar ? L.crownPar : L.par, good = crown && L.crownGood ? L.crownGood : L.good;
   const stars = Math.min(missing ? 2 : 3, written <= par ? 3 : written <= good ? 2 : 1);
+  if (stars === 3) sleep(900).then(() => sfx("applause"));      // три звезды — аплодисменты
   // 💎 «короче разработчика»: программа короче эталона разработчика (best, иначе порог ★★★) — любым способом
   const best = crown ? L.crownBest ?? par : L.best ?? L.par;
   const gem = !missing && written < best;   // с главным инструментом уровня — иначе 💎 давался бы за обход урока
@@ -13863,6 +13879,7 @@ const SFX = {
   bump()   { note(330, { dur: 0.22, vol: 0.55, slideTo: 140 }); noise({ dur: 0.08, vol: 0.4, freq: 400 }); }, // смешное "буонг"
   almost() { note(523, { dur: 0.16, vol: 0.4 }); note(440, { dur: 0.28, vol: 0.4, at: 0.15 }); },
   win()    {
+    if (recPlay("level-win.mp3", 0.55, 1, 1)) return;      // запись «уровень пройден» (Mixkit 2059); нет её — прежняя мелодия
     [523, 659, 784, 1047].forEach((f, i) => note(f, { dur: 0.18, type: "square", vol: 0.28, at: i * 0.11 }));
     [1047, 1319].forEach((f) => note(f, { dur: 0.6, vol: 0.4, at: 0.48 }));
   },
@@ -13900,8 +13917,20 @@ const SFX = {
   // арена проиграна: свист «игра окончена» (Mixkit 606); записи нет — обычный звук поражения
   gameover() { if (!recPlay("game-over.mp3", 0.55, 1, 1)) SFX.fall(); },
   // гоблин попал по щиту рыцаря: глухой "тунк"
-  // рыцарю досталось: голос (Mixkit 2173); записи нет — прежний синтезированный «ой»
-  ouch()   { if (recPlay("man-pain.mp3", 0.55)) return; noise({ dur: 0.07, vol: 0.55, freq: 500 }); note(196, { dur: 0.16, vol: 0.45, slideTo: 150 }); },
+  // три звезды — аплодисменты (Mixkit 523)
+  applause() { recPlay("applause.mp3", 0.5, 1, 1); },
+  // овца: два голоса вперемешку (Mixkit 1741 и 1763); баран с бараньей тропы (Mixkit 1760)
+  baa()    { if (sfxRare("baa", 700)) recPlay(Math.random() < 0.5 ? "sheep-baa.mp3" : "sheep-baa2.mp3", 0.5, 0.94, 1.1); },
+  ram()    { recPlay("ram-baa.mp3", 0.6, 0.95, 1.05); },
+  // рёв крупного врага — великан замахнулся, щитоносец или чёрный рыцарь бьёт (Mixkit 2781); не чаще раза в 3 с
+  roar()   { if (sfxRare("roar", 3000)) recPlay("roar.mp3", 0.5, 0.92, 1.02); },
+  // рыцарь повержен в бою — крик (Mixkit 2768), поверх обычной мелодии поражения
+  hscream() { recPlay("man-scream.mp3", 0.5, 0.97, 1.05); },
+  // игрок долго ничего не трогает: рыцарь покашливает, потом зевает (Mixkit 2226 и 2278)
+  ahem()   { recPlay("ahem.mp3", 0.45, 1, 1); },
+  yawn()   { recPlay("yawn.mp3", 0.6, 1, 1); },
+  // рыцарю досталось: два голоса вперемешку (Mixkit 2173 и 2204); записи нет — прежний синтезированный «ой»
+  ouch()   { if (recPlay(Math.random() < 0.5 ? "man-pain.mp3" : "man-ow.mp3", 0.55)) return; noise({ dur: 0.07, vol: 0.55, freq: 500 }); note(196, { dur: 0.16, vol: 0.45, slideTo: 150 }); },
   // рыцарь упал: три ноты вниз, грустно, но не страшно
   fall()   { [392, 330, 262].forEach((f, k) => note(f, { dur: 0.22, vol: 0.4, at: k * 0.18 })); note(196, { dur: 0.5, vol: 0.35, at: 0.54, slideTo: 150 }); },
   // мимо: только свист воздуха
@@ -13985,6 +14014,10 @@ const MAP_SND = {
   duck:   { gap: 1200, file: "duck.mp3", vol: 0.42 },
   // в утку попали (подлетела, перевернулась, ушла под воду) — скрипучий крик (Mixkit 11); подплывает и крякает она по-прежнему
   squawk: { gap: 700, file: "duck-squawk.mp3", vol: 0.5 },
+  // овцы в стаде: убегает от рыцаря — блеет (два голоса, Mixkit 1741 и 1763); тронули пальцем — блеет с дрожью (Mixkit 1771)
+  baa:    { gap: 1500, file: "sheep-baa.mp3", vol: 0.45 },
+  baaf:   { gap: 1500, file: "sheep-baa2.mp3", vol: 0.45 },
+  baap:   { gap: 500, file: "sheep-baa3.mp3", vol: 0.5 },
   // гоблин на вышке попал в утку и хохочет (Mixkit 745); клич рыцаря в бою (Mixkit 2172) — редко
   cackle: { gap: 5000, file: "bomber-laugh.mp3", vol: 0.45 },
   cry:    { far: 1, gap: 7000, file: "man-cry.mp3", vol: 0.4 },
@@ -15000,7 +15033,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 260;
+const APP_VERSION = 261;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15008,6 +15041,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 261, date: "2026-11-23", text: "Новые звуки: мелодия победы и аплодисменты за три звезды, овцы и бараны блеют, великан ревёт", en: "New sounds: a victory tune and applause for three stars, sheep and rams bleat, the giant roars" },
   { v: 260, date: "2026-11-23", text: "На карте у самого берега моря слышен прибой и птицы", en: "On the map, right by the seashore, you can hear the surf and seabirds" },
   { v: 259, date: "2026-11-23", text: "Новые голоса: рыцарь кричит в бою и охает, когда ему досталось; гоблин, который попал динамитом с вышки или из кустов, хохочет; монах вскрикивает", en: "New voices: the knight shouts in battle and groans when he gets hurt; a goblin who lands dynamite from a tower or from the bushes cackles; the monk yelps" },
   { v: 258, date: "2026-11-23", text: "Убран свист на карте, когда бойца уносит взрывом", en: "Removed the whistle on the map when a blast carries a fighter away" },
@@ -15693,7 +15727,7 @@ function feelDraw(name) {
   row.classList.toggle("picked", !!cur);
   row.replaceChildren(...FEELS.map(([f, face, label]) => { const b = document.createElement("button");
     b.type = "button"; b.className = "feelbtn" + (cur === f ? " on" : ""); b.dataset.f = f; b.textContent = face; b.title = tr(label); b.setAttribute("aria-label", tr(label)); b.setAttribute("aria-pressed", String(cur === f));
-    b.onclick = () => { sfx("tap"); statFeel(name, f); feelDraw(name); }; return b; }));
+    b.onclick = () => { sfx(f === "b" ? "yawn" : "tap"); statFeel(name, f); feelDraw(name); }; return b; }));
 }
 // «Другу» (v244): в Telegram — окно выбора чата со ссылкой на мини-приложение, в браузере — системное «Поделиться», иначе ссылка в буфер
 function statShare() { stat.sh = (stat.sh || 0) + 1; statDirty = true; statSave(); statSoon(3000); }

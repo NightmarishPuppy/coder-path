@@ -1,13 +1,13 @@
 {
- "version": 260,
+ "version": 261,
  "date": "2026-11-23",
  "notes": [
-  "На карте у самого берега моря слышен прибой и птицы"
+  "Новые звуки: мелодия победы и аплодисменты за три звезды, овцы и бараны блеют, великан ревёт"
  ],
  "files": {
   "index.html": {
-   "size": 1210499,
-   "hash": "8620da6cd4b58f36"
+   "size": 1214164,
+   "hash": "a78e83d48eff32f4"
   },
   "art.js": {
    "size": 852367,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 4636,
-   "hash": "761ebdb889c23b11"
+   "size": 4805,
+   "hash": "05fb0a042a456a36"
   },
   "icon-192.png": {
    "size": 42164,
@@ -164,9 +164,53 @@
   "sea.mp3": {
    "size": 387180,
    "hash": "f3beec5a19001cbf"
+  },
+  "level-win.mp3": {
+   "size": 24912,
+   "hash": "a0837c2021594bbb"
+  },
+  "applause.mp3": {
+   "size": 33062,
+   "hash": "43689a83b67754d9"
+  },
+  "sheep-baa.mp3": {
+   "size": 6104,
+   "hash": "02b51f4b0dbf6cdd"
+  },
+  "sheep-baa2.mp3": {
+   "size": 8403,
+   "hash": "7f354c79c414bd5a"
+  },
+  "sheep-baa3.mp3": {
+   "size": 7358,
+   "hash": "ca2eec3321db2c70"
+  },
+  "ram-baa.mp3": {
+   "size": 9030,
+   "hash": "58d3a31a9c8fc9a4"
+  },
+  "man-ow.mp3": {
+   "size": 3387,
+   "hash": "b97f024eb111b539"
+  },
+  "man-scream.mp3": {
+   "size": 8194,
+   "hash": "25eae51937e341e2"
+  },
+  "roar.mp3": {
+   "size": 13627,
+   "hash": "e31e8b632a6381f2"
+  },
+  "yawn.mp3": {
+   "size": 18225,
+   "hash": "af45a6a55c8bcfa2"
+  },
+  "ahem.mp3": {
+   "size": 9866,
+   "hash": "89b2e5a0732b66c6"
   }
  },
  "notes_en": [
-  "On the map, right by the seashore, you can hear the surf and seabirds"
+  "New sounds: a victory tune and applause for three stars, sheep and rams bleat, the giant roars"
  ]
 }
