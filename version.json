@@ -1,13 +1,13 @@
 {
- "version": 250,
+ "version": 251,
  "date": "2026-11-22",
  "notes": [
-  "Установленная игра на iPhone и iPad: верх карты с кнопками больше не должен быть размытым"
+  "Установленная игра на iPhone и iPad: кнопки вверху карты стоят чуть ниже, чтобы их не размывало; тёмная полоса убрана"
  ],
  "files": {
   "index.html": {
-   "size": 1177183,
-   "hash": "4c60f6e3bbf03ff9"
+   "size": 1177412,
+   "hash": "bf1f0902ce46bac6"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "bf454782b917e14d"
+   "hash": "b87da66e79c38e61"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Installed game on iPhone and iPad: the top of the map with its buttons should no longer look blurred"
+  "Installed game on iPhone and iPad: the buttons at the top of the map sit a little lower so they stay sharp; the dark strip is gone"
  ]
 }
