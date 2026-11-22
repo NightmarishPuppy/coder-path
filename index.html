@@ -4929,7 +4929,7 @@ function skTick(t) {
     }
     if (an.snd) {                                  // кадр со звуком: раз за каждый проход анимации
       const cyc = an.loop ? Math.floor(f / an.n) : 0;
-      if (cyc !== an.cyc && (f % an.n >= an.snd[0] || f >= an.n)) { an.cyc = cyc; mapSfx(a.stage, an.snd[1], a.x, a.y); }
+      if (cyc !== an.cyc && (f % an.n >= an.snd[0] || f >= an.n)) { an.cyc = cyc; mapSfx(a.stage, an.snd[1], a.x, a.y); if (a.key === "kwar") mapSfx(a.stage, "cry", a.x, a.y); }
     }
     if (f >= an.n) {
       if (an.loop) f %= an.n;
@@ -5342,6 +5342,7 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes, guard }) {
   // что стало с уткой после попадания
   const hitDuck = async (d, power) => {
     const r = Math.random();
+    setTimeout(() => mapSfx(st, "cackle", tx, ty - 1), 500);      // попал — гоблин на вышке хохочет
     await (power || r < 0.3 ? fly(d, power) : r < 0.65 ? bellyUp(d) : sink(d));
     d.state = "off";
   };
@@ -8375,9 +8376,11 @@ function starsHtml(n) {
 function levelSounds() {
   if (!actx) return;
   const bomber = (L.maps || [L.map]).some((m) => m.some((r) => r.includes("Y"))) || (L.events || []).some((e) => e.kind === "shot");
+  ["man-pain.mp3", "man-cry.mp3", "enemy-death.mp3"].forEach(soundBuf);       // голоса рыцаря и врага — на любом уровне
   if (L.patrols) soundBuf("goblin-laugh.mp3");
-  if (bomber) { soundBuf("pain-scream.mp3"); soundBuf("bomber-laugh.mp3"); }
+  if (bomber || L.arena) soundBuf("bomber-laugh.mp3");
   if (L.arena) soundBuf("game-over.mp3");
+  if (L.monk || L.arena?.guard) soundBuf("pain-scream.mp3");
   if (L.monk) { soundBuf("monk-poke.mp3"); soundBuf("monk-poke2.mp3"); }
 }
 function buildBoard() {
@@ -11328,7 +11331,7 @@ async function knightFalls(why) {
   sk.style.animation = "spr7 0.7s steps(7) 1";
   heroEl.appendChild(sk);
   setTimeout(() => { sk.style.animation = "none"; sk.style.backgroundPosition = "100% 0"; }, 700);
-  sfx(why?.bomb ? "scream" : "fall");              // от динамита — вскрик и хохот подрывника
+  sfx("fall");
   await wait(900);
   const n = why?.max || 1;
   if (why?.shield) return setStatus("Щит не пробить! Щитоносец отбивает удар и колет в ответ. Спереди его не взять…", "fail");
@@ -11395,6 +11398,7 @@ async function run() {
         else {
           heroEl.classList.add("atk");
           sfx(h.blocked ? "bump" : tgt?.job ? "knock" : h.target ? (L.lancer ? "spear" : "hit") : "swish");
+          if (h.target && !h.blocked && !tgt?.job) sfx("cry");      // боевой клич (редко: не чаще раза в 5 с)
           await wait(200);
         }
         if (p.crash && p.crash.who === "monk" && p.crash.cmd === i && p.crash.step === s) { await monkSeen(p, i, p.crash); return finish(); }
@@ -11457,7 +11461,7 @@ async function run() {
             sk.style.animation = "spr7 0.7s steps(7) 1";
             e.el.parentNode.appendChild(sk);
             setTimeout(() => { sk.style.animation = "none"; sk.style.backgroundPosition = "100% 0"; }, 700);
-            sfx("gobdie"); boardCheer();
+            sfx(e.giant || e.shield || e.boss || e.el.classList.contains("big") ? "bigdie" : "gobdie"); boardCheer();
           }
         }
         await wait(220);
@@ -11811,7 +11815,7 @@ function arenaPlan(code) {
     air.push(d);
     events.push({ t, kind: "fthrow", left: tx < fort.x });
     events.push({ t: t + 0.55, kind: "throw", from: [fort.x + (tx < fort.x ? -0.3 : 0.3), fort.y - 2.1], to: [tx, ty], dur: 0.85, fat: true });
-    pend.push({ t: d.land, fn: () => { air.splice(air.indexOf(d), 1); if (!d.caught) { if (hero.hp > 0 && Math.hypot(hero.x - tx, hero.y - ty) < 1.0) fatHits++; blast(tx, ty, 1.0, 2, ARENA_WAVE.fat); } } });
+    pend.push({ t: d.land, fn: () => { air.splice(air.indexOf(d), 1); if (!d.caught) { if (hero.hp > 0 && Math.hypot(hero.x - tx, hero.y - ty) < 1.0) { fatHits++; events.push({ t: t + 0.4, kind: "cackle" }); } blast(tx, ty, 1.0, 2, ARENA_WAVE.fat); } } });
   };
   // v229: огонь и вода (A.fire). На уровне всё наверняка, без шансов: факельщик поджигает героя каждым need-м ударом, монаха — первым
   // (ряса). Горящий теряет ♥ раз в tick секунд, и сам огонь не гаснет — тушит только вода. «К воде»: добежать до берега, зайти
@@ -12471,6 +12475,8 @@ async function runArena() {
   const upA = (a) => { a.lie?.cancel(); a.lie = null; };
   // союзники уже стоят (arenaScene) — их актёры получают номера по порядку, как в просчёте
   const kindOf = {};
+  // кто пал: гоблин — своим звуком, наш боец — голосом рыцаря, монах — вскриком (раньше у всех был звук гоблина)
+  const dieSnd = (id) => id >= 1 && id <= (A.allies || []).length ? (kindOf[id] === "monk" ? "scream" : "ouch") : "gobdie";
   scene.allies.forEach((a, k) => { actors[k + 1] = a; a.act = "idle"; kindOf[k + 1] = A.allies[k].kind; });
   // v229: огонь и вода. Пламя — часть фигурки (вложено в её картинку, как в бою у моста): идёт и поворачивается вместе с ней.
   // Потух в воде — одежда остаётся обугленной (charSheet). В воде фигурка обрезана снизу — стоит по пояс.
@@ -12603,11 +12609,12 @@ async function runArena() {
         // свист стрелы, не чаще раза в 0,5 с
         if (performance.now() - lastArrow > 500) { sfx("arrow"); lastArrow = performance.now(); }
       }
-      if (e.kind === "swing") sfx(e.hit ? "hit" : "swish");
+      if (e.kind === "swing") { sfx(e.hit ? "hit" : "swish"); if (e.hit) sfx("cry"); }
       // копейщик попал: «вжух» копья, не чаще раза в 0,4 с (на ×5 и ×10 удары идут подряд)
       if (e.kind === "spear" && performance.now() - lastSpear > 400) { sfx("spear"); lastSpear = performance.now(); }
-      if (e.kind === "hurt") { flash(H); if (e.by) sfx("gobatk"); }
-      if (e.kind === "hit") flash(actors[e.id]);
+      if (e.kind === "hurt") { flash(H); if (e.by) sfx("gobatk"); if (sfxRare("arena-ouch", 2500)) sfx("ouch"); }
+      if (e.kind === "hit") { flash(actors[e.id]); if (kindOf[e.id] === "monk") sfx("scream"); }
+      if (e.kind === "cackle") sfx("cackle");
       if (e.kind === "die") {
         const a = actors[e.id];
         const wet = (x, y) => { const sp = splashes[si++ % splashes.length]; sp.at(x, y + 0.2); Z(sp, y + 1); sp.show(true, true); sp.play(0, 9, quick(60), false).then(() => sp.show(false)); sfx("fall"); };
@@ -12620,10 +12627,10 @@ async function runArena() {
           a.el.style.transition = `left ${ms}ms linear, top ${ms}ms linear`; a.at(lx, ly); Z(a, ly + 2);
           tumbleA(a, 1, lx < e.at[0] ? -1 : 1, ms, false);
           sleep(ms).then(() => { a.show(false, true); upA(a); if (!running) return; if (e.splash) wet(lx, ly); else skullAt(lx, ly); });
-          sfx("gobdie");
+          sfx(dieSnd(e.id));
         } else {
           a?.show(false);
-          if (!e.boom) { skullAt(...(e.fly && !e.splash ? e.fly : e.at)); sfx("gobdie"); }
+          if (!e.boom) { skullAt(...(e.fly && !e.splash ? e.fly : e.at)); sfx(dieSnd(e.id)); }
         }
       }
       if (e.kind === "heal") { fx.at(H.x ?? ARENA.start[0], H.y ?? ARENA.start[1]); Z(fx, 300); fx.show(true); fx.play(0, 11, quick(80), false).then(() => fx.show(false)); }
@@ -12937,7 +12944,7 @@ async function playShot(ev) {
   await dyn.arc(tx, ty, 0.9, 150 * k);
   dyn.el.remove();
   boom.at(tx, ty + 0.1); boom.show(true);
-  sfx("boom");
+  sfx("boom"); sfx("ouch"); sleep(380).then(() => sfx("cackle"));
   heroEl.classList.remove("hurt"); void heroEl.offsetWidth; heroEl.classList.add("hurt");
   drawKnightHp(ev.hp, true);
   await boom.play(0, 9, 32 * k, false);
@@ -12957,7 +12964,7 @@ async function playBomb(ev) {
   if (e) e.el.classList.remove("throwing");
   dyn.el.remove();
   boom.at(tx, ty + 0.1); boom.show(true);
-  sfx("boom");
+  sfx("boom"); sfx("ouch"); sleep(380).then(() => sfx("cackle"));
   heroEl.classList.remove("hurt"); void heroEl.offsetWidth; heroEl.classList.add("hurt");
   drawKnightHp(ev.hp, true);
   await boom.play(0, 9, 32 * k, false);
@@ -13809,6 +13816,8 @@ function recPlay(file, vol = 0.6, lo = 0.95, hi = 1.07) {
   return true;
 }
 let yelpN = 0;
+const sfxLast = {};                                   // когда какой «редкий» звук звучал в последний раз
+const sfxRare = (k, ms) => { const t = performance.now(); if (t - (sfxLast[k] || -1e9) < ms) return false; sfxLast[k] = t; return true; };
 const SFX = {
   drip()   { const f = 1100 + Math.random() * 500; note(f, { dur: 0.18, vol: 0.18, type: "sine", slideTo: f * 0.55 }); },
   step()   { noise({ dur: 0.06, vol: 0.45, freq: stepFoot++ % 2 ? 900 : 700 }); note(stepFoot % 2 ? 150 : 130, { dur: 0.05, vol: 0.35 }); },
@@ -13836,20 +13845,29 @@ const SFX = {
     g.gain.value = 0.55;
     s.connect(g).connect(sfxBus); s.start();
   },
-  // монаха ткнули копьём: две записи по очереди (Mixkit, звуки 2889 и 2891 — их выбрал пользователь; v256–257);
-  // пока запись не скачалась — прежний синтезированный писк «ай!»
+  // монаха ткнули копьём (v259): вскрик боли (Mixkit 101) и следом «пук» — две записи по очереди (Mixkit 2889 и 2891);
+  // всё это выбрал пользователь. Пока записи не скачались — прежний синтезированный писк «ай!»
   yelp()   {
-    if (recPlay(yelpN++ % 2 ? "monk-poke2.mp3" : "monk-poke.mp3", 0.8, 0.94, 1.1)) return;
-    note(560, { dur: 0.08, vol: 0.4, type: "triangle", slideTo: 1150 }); note(1150, { dur: 0.2, vol: 0.42, type: "triangle", slideTo: 620, at: 0.075 }); noise({ dur: 0.04, vol: 0.2, freq: 3200 });
+    const scr = recPlay("pain-scream.mp3", 0.5, 0.97, 1.08), f = yelpN++ % 2 ? "monk-poke2.mp3" : "monk-poke.mp3";
+    if (soundBuf(f)) setTimeout(() => recPlay(f, 0.8, 0.94, 1.1), scr ? 150 : 0);
+    else if (!scr) { note(560, { dur: 0.08, vol: 0.4, type: "triangle", slideTo: 1150 }); note(1150, { dur: 0.2, vol: 0.42, type: "triangle", slideTo: 620, at: 0.075 }); noise({ dur: 0.04, vol: 0.2, freq: 3200 }); }
   },
+  // монаха бьют на арене — тот же вскрик, не чаще раза в 2,5 с (когда он горит, «удары» идут подряд)
+  scream() { if (sfxRare("scream", 2500)) recPlay("pain-scream.mp3", 0.5, 0.97, 1.08); },
   // часовой заметил рыцаря или монаха — гоблин смеётся (Mixkit 412); записи нет — тишина, «буонг» уже прозвучал
   laugh()  { recPlay("goblin-laugh.mp3", 0.6); },
-  // рыцаря накрыло динамитом: вскрик (Mixkit 101), а следом хохочет подрывник (Mixkit 745); записей нет — обычный звук поражения
-  scream() { if (!recPlay("pain-scream.mp3", 0.6)) return SFX.fall(); setTimeout(() => { if (save.sfx) recPlay("bomber-laugh.mp3", 0.5, 0.97, 1.05); }, 420); },
+  // горловой хохот (Mixkit 745) — гоблин, который пакостит из безопасного места и попал: подрывник на вышке,
+  // гоблин из кустов, вышка на арене. Не чаще раза в 3,5 с
+  cackle() { if (sfxRare("cackle", 3500)) recPlay("bomber-laugh.mp3", 0.5, 0.97, 1.05); },
+  // боевой клич рыцаря (Mixkit 2172) — на ударе по врагу, не чаще раза в 5 с
+  cry()    { if (sfxRare("cry", 5000)) recPlay("man-cry.mp3", 0.45); },
+  // крупный враг повержен (Mixkit 3168); записи нет — обычный звук гоблина
+  bigdie() { if (!recPlay("enemy-death.mp3", 0.6, 0.9, 1)) SFX.gobdie(); },
   // арена проиграна: свист «игра окончена» (Mixkit 606); записи нет — обычный звук поражения
   gameover() { if (!recPlay("game-over.mp3", 0.55, 1, 1)) SFX.fall(); },
   // гоблин попал по щиту рыцаря: глухой "тунк"
-  ouch()   { noise({ dur: 0.07, vol: 0.55, freq: 500 }); note(196, { dur: 0.16, vol: 0.45, slideTo: 150 }); },
+  // рыцарю досталось: голос (Mixkit 2173); записи нет — прежний синтезированный «ой»
+  ouch()   { if (recPlay("man-pain.mp3", 0.55)) return; noise({ dur: 0.07, vol: 0.55, freq: 500 }); note(196, { dur: 0.16, vol: 0.45, slideTo: 150 }); },
   // рыцарь упал: три ноты вниз, грустно, но не страшно
   fall()   { [392, 330, 262].forEach((f, k) => note(f, { dur: 0.22, vol: 0.4, at: k * 0.18 })); note(196, { dur: 0.5, vol: 0.35, at: 0.54, slideTo: 150 }); },
   // мимо: только свист воздуха
@@ -13859,7 +13877,7 @@ const SFX = {
   // пока не скачалась — прежний глухой «тунк»
   boom() {
     const buf = soundBuf("tnt-boom.mp3");
-    if (!buf) return SFX.ouch();
+    if (!buf) { noise({ dur: 0.07, vol: 0.55, freq: 500 }); note(196, { dur: 0.16, vol: 0.45, slideTo: 150 }); return; }   // запасной «бух» (голос рыцаря сюда не годится)
     const s = actx.createBufferSource(), g = actx.createGain();
     s.buffer = buf; s.playbackRate.value = 0.92 + Math.random() * 0.14;
     g.gain.value = 0.5;
@@ -13895,6 +13913,7 @@ const SFX = {
   // гоблин побеждён: предсмертный вскрик (запись, Pixabay, freesound_community — «goblin death»);
   // пока запись не скачалась — прежнее «пуф»
   gobdie() {
+    if (Math.random() < 0.33 && recPlay("enemy-death.mp3", 0.55, 1, 1.12)) return;   // каждый третий гоблин — другим голосом (Mixkit 3168)
     const buf = soundBuf("goblin-death.mp3");
     if (!buf) return SFX.poof();
     const s = actx.createBufferSource(), g = actx.createGain();
@@ -13932,6 +13951,9 @@ const MAP_SND = {
   duck:   { gap: 1200, file: "duck.mp3", vol: 0.42 },
   // в утку попали (подлетела, перевернулась, ушла под воду) — скрипучий крик (Mixkit 11); подплывает и крякает она по-прежнему
   squawk: { gap: 700, file: "duck-squawk.mp3", vol: 0.5 },
+  // гоблин на вышке попал в утку и хохочет (Mixkit 745); клич рыцаря в бою (Mixkit 2172) — редко
+  cackle: { gap: 5000, file: "bomber-laugh.mp3", vol: 0.45 },
+  cry:    { far: 1, gap: 7000, file: "man-cry.mp3", vol: 0.4 },
   // молоток по доске, топор по стволу, кирка по камню, всплеск, бревно или дерево упало, монах лечит
   knock:  { gap: 120, synth: (bus) => { noise({ dur: 0.05, vol: 0.3, freq: 650, bus }); note(210, { dur: 0.07, vol: 0.22, slideTo: 170, bus }); } },
   chop:   { gap: 220, synth: (bus) => { noise({ dur: 0.07, vol: 0.5, freq: 900, bus }); note(160, { dur: 0.09, vol: 0.3, slideTo: 110, bus }); } },
@@ -14907,7 +14929,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 258;
+const APP_VERSION = 259;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -14915,6 +14937,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 259, date: "2026-11-23", text: "Новые голоса: рыцарь кричит в бою и охает, когда ему досталось; гоблин, который попал динамитом с вышки или из кустов, хохочет; монах вскрикивает", en: "New voices: the knight shouts in battle and groans when he gets hurt; a goblin who lands dynamite from a tower or from the bushes cackles; the monk yelps" },
   { v: 258, date: "2026-11-23", text: "Убран свист на карте, когда бойца уносит взрывом", en: "Removed the whistle on the map when a blast carries a fighter away" },
   { v: 257, date: "2026-11-22", text: "Новые звуки: часовой смеётся, когда заметил рыцаря, подрывник хохочет после меткого броска, утка кричит, когда в неё попали", en: "New sounds: the sentry laughs when he spots the knight, the bomber cackles after a good throw, the duck squawks when it gets hit" },
   { v: 256, date: "2026-11-22", text: "Уровень «Иди первым»: у монаха новый смешной звук, когда его подгоняют копьём", en: "“You Go First”: the monk gets a new funny sound when he is poked with the spear" },

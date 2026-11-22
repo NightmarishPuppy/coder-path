@@ -1,13 +1,13 @@
 {
- "version": 258,
+ "version": 259,
  "date": "2026-11-23",
  "notes": [
-  "Убран свист на карте, когда бойца уносит взрывом"
+  "Новые голоса: рыцарь кричит в бою и охает, когда ему досталось; гоблин, который попал динамитом с вышки или из кустов, хохочет; монах вскрикивает"
  ],
  "files": {
   "index.html": {
-   "size": 1201279,
-   "hash": "83da27580cadeace"
+   "size": 1204811,
+   "hash": "385491e2c912028f"
   },
   "art.js": {
    "size": 852367,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 4575,
-   "hash": "5111540d3f70b075"
+   "size": 4625,
+   "hash": "4efd09481a14e51f"
   },
   "icon-192.png": {
    "size": 42164,
@@ -148,9 +148,21 @@
   "game-over.mp3": {
    "size": 23867,
    "hash": "143f348c73d4109d"
+  },
+  "man-pain.mp3": {
+   "size": 4641,
+   "hash": "d7bb47218a0a228b"
+  },
+  "man-cry.mp3": {
+   "size": 6104,
+   "hash": "b4482837f5d4cd99"
+  },
+  "enemy-death.mp3": {
+   "size": 5104,
+   "hash": "e86a8ef1b9c3221c"
   }
  },
  "notes_en": [
-  "Removed the whistle on the map when a blast carries a fighter away"
+  "New voices: the knight shouts in battle and groans when he gets hurt; a goblin who lands dynamite from a tower or from the bushes cackles; the monk yelps"
  ]
 }
