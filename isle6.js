@@ -238,13 +238,13 @@ levels: [
     monk: { at: [1, 2], stops: [[6, 2]] },
     patrols: [{ at: [3, 1], prog: [["moveDown", 2], ["moveUp", 2]], say: [1.5, 0.45], big: true },
               { at: [7, 0], prog: [["moveDown", 4], ["moveUp", 4]], say: [5.2, 3.95], big: true }],
-    goal: "Монах боится идти мимо часовых. Встань к нему вплотную и подгони копьём — [[btn:parry]]: он побежит прочь от копейщика и встанет перед следующим часовым. Часовых пережидай — [[btn:wait]]. В дверь первым должен войти монах.",
+    goal: "Подгони монаха копьём — [[btn:parry]]: он вскрикнет, побежит вперёд и встанет перед следующим часовым. Бей, когда часовой ушёл с дороги, — пережди его: [[btn:wait]]. Потом иди следом и подгоняй снова. В дверь первым входит монах.",
     en: {
       name: "You Go First",
-      goal: "The monk is afraid to walk past the sentries. Stand right next to him and give him a poke with the spear — [[btn:parry]]: he runs away from the lancer and stops before the next sentry. Wait for the sentries to pass — [[btn:wait]]. The monk has to enter the door first.",
+      goal: "Poke the monk with the spear — [[btn:parry]]: he yelps, runs ahead and stops before the next sentry. Poke when the sentry has left the road — wait for him: [[btn:wait]]. Then follow and poke again. The monk enters the door first.",
     },
     commands: ["moveRight", "wait", "parry"],
-    par: 9, good: 11,
+    par: 8, good: 10,
     map: [
       "#####Y#.#",
       "###.#.#.#",

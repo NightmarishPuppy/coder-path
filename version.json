@@ -1,21 +1,21 @@
 {
- "version": 254,
+ "version": 255,
  "date": "2026-11-22",
  "notes": [
-  "Новый дополнительный уровень на Острове гоблинов — «Иди первым»: монах боится часовых, а копейщик подгоняет его копьём"
+  "Уровень «Иди первым»: монах вскрикивает и подпрыгивает от тычка, над ним видно, когда он боится; задание понятнее, ★★★ теперь за 8 команд. На планшете задание и победа стоят справа, как положено"
  ],
  "files": {
   "index.html": {
-   "size": 1192530,
-   "hash": "848d23bdec972c7d"
+   "size": 1197072,
+   "hash": "0ef1251f5e0f604d"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 86302,
-   "hash": "f91d1db99b7804c7"
+   "size": 86367,
+   "hash": "5026b0642aeeac55"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "224d7def38809f70"
+   "hash": "99a020cabe58c429"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 49558,
-   "hash": "85ab65398a1f5b84"
+   "size": 49528,
+   "hash": "9aa8efe89a1fc849"
   },
   "art-scenes.js": {
    "size": 996051,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "A new extra level on Goblin Island — “You Go First”: the monk is afraid of the sentries, so the lancer hurries him along with the spear"
+  "“You Go First”: the monk yelps and jumps when poked, and you can see when he is scared; clearer task, ★★★ now takes 8 commands. On tablets the task and the win box sit on the right, as they should"
  ]
 }

@@ -250,11 +250,23 @@ html.still .hero.hurt .kwrap { animation: none; }
 .hero.poke-r .k-parry.ppoke, .hero.poke-u .k-parry.pvup, .hero.poke-d .k-parry.pvdown { display: block; animation-direction: reverse !important; }
 .hero.poke-r .k-idle, .hero.poke-r .k-run, .hero.poke-r .k-atk, .hero.poke-u .k-idle, .hero.poke-u .k-run, .hero.poke-u .k-atk, .hero.poke-d .k-idle, .hero.poke-d .k-run, .hero.poke-d .k-atk { display: none !important; }
 /* монах подпрыгнул от тычка: тот же transform, что ставит фигурку на место (и отражает её), плюс сдвиг вверх на долю её роста */
-.skactor.yelp { animation: monkYelp 0.26s ease-out; }
+.skactor.yelp { animation: monkYelp 0.32s ease-out; }
 .skactor.flip.yelp { --yx: -1; }
-@keyframes monkYelp { 0%, 100% { transform: translate(-50%, var(--foot)) scaleX(var(--yx, 1)); } 35% { transform: translate(-50%, calc(var(--foot) - 17%)) scaleX(var(--yx, 1)); } }
+@keyframes monkYelp { 0%, 100% { transform: translate(-50%, var(--foot)) scaleX(var(--yx, 1)); } 32% { transform: translate(-50%, calc(var(--foot) - 22%)) scaleX(var(--yx, 1)); } }
+/* облачко над монахом (v255): 😨 — боится идти, «Ай!» — ткнули. Обёртка держит место (и не даёт тексту отразиться, когда фигурка смотрит влево) */
+.mbubw { position: absolute; left: 50%; bottom: 60%; width: 0; height: 0; z-index: 7; pointer-events: none; }
+.skactor.flip .mbubw { transform: scaleX(-1); }
+.mbub { position: absolute; left: 0; bottom: 0; transform: translate(-50%, 0); white-space: nowrap; background: #fff; color: #13151b; border: 0.14em solid #13151b; border-radius: 0.7em;
+  padding: 0.05em 0.45em; font: 700 1em/1.35 Unbounded, sans-serif; box-shadow: 0 0.15em 0 rgba(0, 0, 0, 0.4); }
+.mbub::after { content: ""; position: absolute; left: 50%; top: 100%; margin-left: -0.3em; border: 0.3em solid transparent; border-top-color: #13151b; }
+.mbub.fear { opacity: 0.95; padding: 0 0.3em; }
+.mbub.pop { animation: mbubPop 0.95s ease-out forwards; }
+@keyframes mbubPop { 0% { opacity: 0; transform: translate(-50%, 30%) scale(0.3); } 13% { opacity: 1; transform: translate(-50%, -12%) scale(1.3); } 24% { transform: translate(-50%, 0) scale(1); }
+  78% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -35%) scale(1); } }
+html.still .mbub.pop { animation-duration: 0.01s; }
 html.still .skactor.yelp { animation: none; }
-.route .mroute { fill: none; stroke: #cfe8ff; stroke-width: 0.06; stroke-dasharray: 0.02 0.16; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
+.route .mroute { fill: none; stroke: #8fd0ff; stroke-width: 0.09; stroke-dasharray: 0.02 0.2; stroke-linecap: round; stroke-linejoin: round; }
+.route .mend { fill: #8fd0ff; stroke: #13151b; stroke-width: 0.03; }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .enemy, html.still .enemy.hit .ewrap, html.still .poof { transition: none; animation: none; }
 .route .badge.a rect { stroke: var(--sword); }
@@ -10440,6 +10452,8 @@ function deskWinH() {
   return deskSize.h;
 }
 function briefSide() {
+  placeBrief();      // v255: на iPad (установленная игра) окно при запуске бывало ещё не той ширины, а события «размер изменился» потом не приходило —
+                     // задание оставалось над полем, победа — под ним, и левая колонка выходила вдвое длиннее правой
   const lv = $("levelview"), brief = lv.querySelector(".brief");
   if (!brief || lv.hidden || !L) return;
   const key = `${levelIdx}|${uiBlocks}|${lang}|${innerWidth}x${deskWinH()}`;
@@ -10671,7 +10685,11 @@ function drawRoute(p, activeIdx = -1) {
   if (!p || p.error) return;
   const c = (v) => v + 0.5;
   // v254: куда добежит монах — точками
-  if (p.monk && p.monk.some((m) => m.n)) svg("polyline", { class: "mroute", points: p.monk.map((m) => `${c(m.x)},${c(m.y)}`).join(" ") }, routeEl);
+  if (p.monk && p.monk.some((m) => m.n)) {
+    svg("polyline", { class: "mroute", points: p.monk.map((m) => `${c(m.x)},${c(m.y)}`).join(" ") }, routeEl);
+    const e = p.monk[p.monk.length - 1];
+    if (!e.home) svg("circle", { class: "mend", cx: c(e.x), cy: c(e.y) - 0.3, r: 0.1 }, routeEl);      // где он встанет
+  }
   // …и жёлтая метка: где и на каком шаге рыцарь с ним встретится (видна ещё до запуска)
   if (p.crash?.reason === "patrol") {
     const { x, y } = p.crash.at, g = svg("g", { class: "meet" }, markEl), t = tr("шаг") + " " + p.crash.tick, w = 0.16 * t.length + 0.14;
@@ -11169,7 +11187,7 @@ function patrolPlace(t, ms = 0) {
   patrolTick = t;
 }
 // Монах, которого подгоняют копьём (v254; расчёт — monkTick в buildPlan). Фигурка — как у часовых: житель сценок на поле уровня.
-let monkAct = null;
+let monkAct = null, monkPokes = 0;
 const MONK_SC = 0.74;
 function monkSetup() {
   monkAct = null;
@@ -11180,20 +11198,33 @@ function monkSetup() {
   monkPlace(0);
 }
 // поставить монаха туда, где он после такта t (ms — за сколько добежать; 0 — сразу). Бежит — лист «бег», вдвое чаще кадры, если сорвался от тычка.
+// облачко над монахом: kind "fear" — стоит и боится (висит, пока стоит), "pop" — вскрик (всплывает и тает); без текста — убрать
+const MONK_YELPS = ["Ай!", "Ой-ой!", "Ух!"];
+function monkBubble(text, kind) {
+  const a = monkAct; if (!a) return;
+  a.el.querySelector(".mbubw")?.remove();
+  if (!text) return;
+  const w = document.createElement("div"), b = document.createElement("div");
+  w.className = "mbubw"; b.className = "mbub " + kind; b.textContent = text;
+  w.style.fontSize = Math.max(9, Math.round(boardEl.clientWidth / W * 0.27)) + "px";
+  w.appendChild(b); a.el.appendChild(w);
+  if (kind === "pop") setTimeout(() => { if (b.isConnected && b.classList.contains("pop")) w.remove(); }, 1000 * Math.max(1, SLOW / speed));
+}
 function monkPlace(t, ms = 0) {
   const a = monkAct;
   if (!a) return null;
   const log = t && plan && plan.monk, m = log ? log[Math.min(t, log.length - 1)] : { x: L.monk.at[0], y: L.monk.at[1] };
   const x = m.x + 0.5, y = m.y + 0.9;
-  if (!ms) { a.at(x, y); a.face(!!L.monk.left); a.show(!m.home, true); a.play(0, 6, 150, true, "monk"); return null; }
+  if (!ms) { a.at(x, y); a.face(!!L.monk.left); a.show(!m.home, true); a.play(0, 6, 150, true, "monk"); monkBubble(m.home ? "" : "😨", "fear"); return null; }
   if (a.x === x && a.y === y) return null;
   if (x !== a.x) a.face(x < a.x);
+  if (a.el.querySelector(".mbub.fear")) monkBubble("");
   a.play(0, 4, m.fast ? 55 : 100, true, "monkrun");
   return a.move(x, y, ms).then(() => {
     if (a.x !== x || a.y !== y) return;
-    if (m.home) { a.show(false); sfx("unlock"); return; }
+    if (m.home) { monkBubble(""); a.show(false); sfx("unlock"); return; }
     const nx = log[t + 1];
-    if (m.stop || !nx || !nx.n) a.play(0, 6, 150, true, "monk");       // встал — снова стоит и дышит
+    if (m.stop || !nx || !nx.n) { a.play(0, 6, 150, true, "monk"); if (!a.el.querySelector(".mbub.pop")) monkBubble("😨", "fear"); }   // встал — снова стоит и боится
   });
 }
 // тычок: копьё доходит до монаха — он подпрыгивает и срывается с места (копейщик стоит в соседней клетке, никто никуда не подтягивается)
@@ -11202,9 +11233,15 @@ async function playPoke(h, t) {
   heroEl.classList.add(cls);                                         // первый кадр — короткий укол: наконечник у спины монаха
   sleep(345).then(() => heroEl.classList.remove(cls));              // три кадра при любой скорости
   sfx("spear");
-  if (a) { a.el.classList.remove("yelp"); void a.el.offsetWidth; a.el.classList.add("yelp"); }   // копьё поддело — монах подпрыгнул…
+  if (a) {
+    a.el.classList.remove("yelp"); void a.el.offsetWidth; a.el.classList.add("yelp");   // копьё поддело — монах подпрыгнул…
+    monkBubble(tr(MONK_YELPS[monkPokes++ % MONK_YELPS.length]), "pop");                   // …вскрикнул…
+    sleep(40).then(() => sfx("yelp"));
+  }
+  const cell = a && boardEl.querySelector(`.cell[data-xy="${Math.round(a.x - 0.5)},${Math.round(a.y - 0.9)}"]`);
   setStatus("Монах сорвался с места!", "", "🔱");
-  await sleep(110);                                                  // …и сорвался: выпад копья идёт уже ему вслед
+  await sleep(140);                                                  // …и сорвался: выпад копья идёт уже ему вслед
+  if (cell && plan.monk[t] && plan.monk[t].n) { const pf = sprite("poof", 0.7, { bottom: 0, cls: "poof" }); pf.style.animation = "spr10 0.5s steps(10) 1 forwards"; cell.appendChild(pf); setTimeout(() => pf.remove(), 600); }   // пыль там, откуда он сорвался
   monkPlace(t, 250 * k);
   await wait(260);
 }
@@ -13773,6 +13810,8 @@ const SFX = {
     g.gain.value = 0.55;
     s.connect(g).connect(sfxBus); s.start();
   },
+  // монах взвизгнул от тычка (v255): короткое «ай!» — вверх и вниз
+  yelp()   { note(560, { dur: 0.08, vol: 0.4, type: "triangle", slideTo: 1150 }); note(1150, { dur: 0.2, vol: 0.42, type: "triangle", slideTo: 620, at: 0.075 }); noise({ dur: 0.04, vol: 0.2, freq: 3200 }); },
   // гоблин попал по щиту рыцаря: глухой "тунк"
   ouch()   { noise({ dur: 0.07, vol: 0.55, freq: 500 }); note(196, { dur: 0.16, vol: 0.45, slideTo: 150 }); },
   // рыцарь упал: три ноты вниз, грустно, но не страшно
@@ -14830,7 +14869,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 254;
+const APP_VERSION = 255;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -14838,6 +14877,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 255, date: "2026-11-22", text: "Уровень «Иди первым»: монах вскрикивает и подпрыгивает от тычка, над ним видно, когда он боится; задание понятнее, ★★★ теперь за 8 команд. На планшете задание и победа стоят справа, как положено", en: "“You Go First”: the monk yelps and jumps when poked, and you can see when he is scared; clearer task, ★★★ now takes 8 commands. On tablets the task and the win box sit on the right, as they should" },
   { v: 254, date: "2026-11-22", text: "Новый дополнительный уровень на Острове гоблинов — «Иди первым»: монах боится часовых, а копейщик подгоняет его копьём", en: "A new extra level on Goblin Island — “You Go First”: the monk is afraid of the sentries, so the lancer hurries him along with the spear" },
   { v: 253, date: "2026-11-22", text: "Номер версии стал понятнее: «0.6 beta» — игра растёт, впереди новые острова", en: "The version number is clearer now: “0.6 beta” — the game is growing, more islands ahead" },
   { v: 252, date: "2026-11-22", text: "Установленная игра: канал игры открывается сразу в Telegram, без лишнего белого окна", en: "Installed game: the game channel now opens straight in Telegram, without the extra blank window" },
