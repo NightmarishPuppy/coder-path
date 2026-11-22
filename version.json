@@ -1,13 +1,13 @@
 {
- "version": 256,
+ "version": 257,
  "date": "2026-11-22",
  "notes": [
-  "Уровень «Иди первым»: у монаха новый смешной звук, когда его подгоняют копьём"
+  "Новые звуки: часовой смеётся, когда заметил рыцаря, подрывник хохочет после меткого броска, утка кричит, когда в неё попали"
  ],
  "files": {
   "index.html": {
-   "size": 1198009,
-   "hash": "e17ef80d6e714d95"
+   "size": 1201041,
+   "hash": "28eb9afac5b75b53"
   },
   "art.js": {
    "size": 852367,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 4462,
-   "hash": "0b2f8cfe4af49f26"
+   "size": 4595,
+   "hash": "bd65c9b95ee91ee9"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,10 +123,38 @@
   },
   "monk-poke.mp3": {
    "size": 5477,
-   "hash": "815c169c90b25532"
+   "hash": "58309da3164c2b3c"
+  },
+  "monk-poke2.mp3": {
+   "size": 7149,
+   "hash": "bd85ccffb7d2b22d"
+  },
+  "goblin-laugh.mp3": {
+   "size": 6104,
+   "hash": "80470abe384116ed"
+  },
+  "pain-scream.mp3": {
+   "size": 4014,
+   "hash": "84e03b1757339db0"
+  },
+  "bomber-laugh.mp3": {
+   "size": 18016,
+   "hash": "61ca374055f3a561"
+  },
+  "duck-squawk.mp3": {
+   "size": 9030,
+   "hash": "01d9e37fdbb0194d"
+  },
+  "fall-whistle.mp3": {
+   "size": 12582,
+   "hash": "ad925d7ea4d15895"
+  },
+  "game-over.mp3": {
+   "size": 23867,
+   "hash": "143f348c73d4109d"
   }
  },
  "notes_en": [
-  "“You Go First”: the monk gets a new funny sound when he is poked with the spear"
+  "New sounds: the sentry laughs when he spots the knight, the bomber cackles after a good throw, the duck squawks when it gets hit"
  ]
 }

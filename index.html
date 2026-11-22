@@ -5309,7 +5309,7 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes, guard }) {
     const ms = power ? 1500 : 1150, turns = Math.max(power ? 1.5 : 0.8, flySpin(0.5, ms)) * (Math.random() < 0.5 ? -1 : 1);
     d.a.el.style.transition = "none"; d.a.show(false);
     a.el.style.transition = "none"; a.at(x0, y0 - 0.25); void a.el.offsetWidth; a.show(true); a.play(0, 3, 80);
-    mapSfx(st, "duck", x0, y0);
+    mapSfx(st, "squawk", x0, y0);
     // вращение — вместе с обычным сдвигом актёра (transform у него уже занят), поэтому сдвиг повторён в каждом кадре
     const base = `translate(-50%, ${a.el.style.getPropertyValue("--foot")})`;
     const spin = a.el.animate([{ transform: `${base} rotate(0deg)` }, { transform: `${base} rotate(${Math.round(turns * 360)}deg)` }], { duration: ms, fill: "forwards", easing: power ? "linear" : "ease-out" });
@@ -5326,7 +5326,7 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes, guard }) {
     const base = `translate(-50%, ${a.el.style.getPropertyValue("--foot")})`;
     const turn = a.el.animate([{ transform: `${base} rotate(0deg)` }, { transform: `${base} rotate(180deg)` }], { duration: 420, fill: "forwards", easing: "ease-out" });
     await a.arc(x, y - 0.15, 0.7, 420);
-    mapSfx(st, "duck", x, y);
+    mapSfx(st, "squawk", x, y);
     await skSleep(st, 1500);
     a.el.style.transition = "top 0.7s ease-in, opacity 0.7s";
     a.at(x, y + 0.2); a.show(false);
@@ -5334,6 +5334,7 @@ async function skitDuckHunt(st, { at: [tx, ty], lanes, guard }) {
     turn.cancel();
   };
   const sink = async (d) => {
+    mapSfx(st, "squawk", d.a.x, d.a.y);
     d.a.el.style.transition = "top 0.5s ease-in, opacity 0.5s";
     d.a.at(d.a.x, d.a.y + 0.25); d.a.show(false);
     await skSleep(st, 600);
@@ -6019,6 +6020,7 @@ async function battle(st0, B) {
     a.el.style.transition = "none"; Z(a, v.y + 6);
     if (s >= 1.7) {
       if (!v.dead) kill(v, true);
+      mapSfx(st, "whee", v.x, v.y);
       const gone = () => { a.show(false, true); v.air = false; };
       if (FLY_AT_CAMERA && !STILL && Math.random() < 0.7) {
         // «На зрителя». phi — угол выхода из плоскости карты: 85° — почти прямо в экран (сильно растёт, вбок почти не уходит),
@@ -8371,6 +8373,13 @@ function starsHtml(n) {
 
 function buildBoard() {
   if (actx && (L.events || []).some((e) => e.kind === "shot")) soundBuf("tnt-boom.mp3");   // засада с динамитом — звук взрыва заранее
+  if (actx) {                                           // записи, которые понадобятся на этом уровне, — заранее (v257)
+    const bomber = (L.maps || [L.map]).some((m) => m.some((r) => r.includes("Y"))) || (L.events || []).some((e) => e.kind === "shot");
+    if (L.patrols) soundBuf("goblin-laugh.mp3");
+    if (bomber) { soundBuf("pain-scream.mp3"); soundBuf("bomber-laugh.mp3"); }
+    if (L.arena) soundBuf("game-over.mp3");
+    if (L.monk) { soundBuf("monk-poke.mp3"); soundBuf("monk-poke2.mp3"); }
+  }
   const map = L.map;
   W = map[0].length; H = map.length;
   boardEl.innerHTML = "";
@@ -11215,7 +11224,7 @@ function monkPlace(t, ms = 0) {
   if (!a) return null;
   const log = t && plan && plan.monk, m = log ? log[Math.min(t, log.length - 1)] : { x: L.monk.at[0], y: L.monk.at[1] };
   const x = m.x + 0.5, y = m.y + 0.9;
-  if (!ms) { a.at(x, y); a.face(!!L.monk.left); a.show(!m.home, true); a.play(0, 6, 150, true, "monk"); monkBubble(m.home ? "" : "😨", "fear"); soundBuf("monk-poke.mp3"); return null; }   // запись — заранее: к первому тычку успеет скачаться
+  if (!ms) { a.at(x, y); a.face(!!L.monk.left); a.show(!m.home, true); a.play(0, 6, 150, true, "monk"); monkBubble(m.home ? "" : "😨", "fear"); return null; }
   if (a.x === x && a.y === y) return null;
   if (x !== a.x) a.face(x < a.x);
   if (a.el.querySelector(".mbub.fear")) monkBubble("");
@@ -11251,7 +11260,7 @@ async function monkSeen(p, i, cr) {
   patrolPlace(cr.tick, ms); monkPlace(cr.tick, ms);
   heroEl.classList.remove("run");
   await wait(420);
-  sfx("bump");
+  sfx("bump"); sleep(160).then(() => sfx("laugh"));
   showProblems = true;
   drawRoute(p, i);
   setStatus(tr("Часовой заметил монаха — на шаге {n}! Подгоняй его, когда дорога свободна: пережди — {cmd}", { n: cr.tick, cmd: uiBlocks ? "⏳" : disp("wait") + "()" }), "fail");
@@ -11316,7 +11325,7 @@ async function knightFalls(why) {
   sk.style.animation = "spr7 0.7s steps(7) 1";
   heroEl.appendChild(sk);
   setTimeout(() => { sk.style.animation = "none"; sk.style.backgroundPosition = "100% 0"; }, 700);
-  sfx("fall");
+  sfx(why?.bomb ? "scream" : "fall");              // от динамита — вскрик и хохот подрывника
   await wait(900);
   const n = why?.max || 1;
   if (why?.shield) return setStatus("Щит не пробить! Щитоносец отбивает удар и колет в ответ. Спереди его не взять…", "fail");
@@ -11514,6 +11523,7 @@ async function run() {
         void heroEl.offsetWidth;
         heroEl.classList.add("bump");
         sfx("bump");
+        if (p.crash.reason === "patrol") sleep(160).then(() => sfx("laugh"));   // часовой смеётся
         showProblems = true;
         drawRoute(p, i);
         await wait(420);
@@ -12677,7 +12687,7 @@ async function runArena() {
     H.show(false);
     const d = deads[di++ % deads.length]; d.at(H.x, H.y); Z(d, H.y); d.show(true); d.play(0, 7, 110, false);
   }
-  sfx("fall");
+  sfx("gameover");
   const sec = Math.floor(p.t);
   let why;
   if (p.endedAt !== null && p.endedAt < A.secs - 0.5)
@@ -13783,6 +13793,18 @@ function noise({ dur = 0.05, vol = 0.5, freq = 1200, at = 0, bus = sfxBus } = {}
 }
 
 let stepFoot = 0;
+// Сыграть запись (mp3 рядом с игрой): громкость vol, скорость случайная от lo до hi — чтобы подряд не звучало одинаково.
+// Запись ещё не скачалась — вернёт false (и начнёт её качать): тогда играем запасной синтезированный звук.
+function recPlay(file, vol = 0.6, lo = 0.95, hi = 1.07) {
+  const buf = soundBuf(file);
+  if (!buf) return false;
+  const s = actx.createBufferSource(), g = actx.createGain();
+  s.buffer = buf; s.playbackRate.value = lo + Math.random() * (hi - lo);
+  g.gain.value = vol;
+  s.connect(g).connect(sfxBus); s.start();
+  return true;
+}
+let yelpN = 0;
 const SFX = {
   drip()   { const f = 1100 + Math.random() * 500; note(f, { dur: 0.18, vol: 0.18, type: "sine", slideTo: f * 0.55 }); },
   step()   { noise({ dur: 0.06, vol: 0.45, freq: stepFoot++ % 2 ? 900 : 700 }); note(stepFoot % 2 ? 150 : 130, { dur: 0.05, vol: 0.35 }); },
@@ -13810,16 +13832,18 @@ const SFX = {
     g.gain.value = 0.55;
     s.connect(g).connect(sfxBus); s.start();
   },
-  // монаха ткнули копьём (v256): запись, которую выбрал пользователь, — мультяшный «пук» (Mixkit, «Funny cartoon fast splat», звук 2889);
-  // пока не скачалась — прежний синтезированный писк «ай!»
+  // монаха ткнули копьём: две записи по очереди (Mixkit, звуки 2889 и 2891 — их выбрал пользователь; v256–257);
+  // пока запись не скачалась — прежний синтезированный писк «ай!»
   yelp()   {
-    const buf = soundBuf("monk-poke.mp3");
-    if (!buf) { note(560, { dur: 0.08, vol: 0.4, type: "triangle", slideTo: 1150 }); note(1150, { dur: 0.2, vol: 0.42, type: "triangle", slideTo: 620, at: 0.075 }); noise({ dur: 0.04, vol: 0.2, freq: 3200 }); return; }
-    const s = actx.createBufferSource(), g = actx.createGain();
-    s.buffer = buf; s.playbackRate.value = 0.94 + Math.random() * 0.16;   // каждый раз чуть по-разному
-    g.gain.value = 0.7;
-    s.connect(g).connect(sfxBus); s.start();
+    if (recPlay(yelpN++ % 2 ? "monk-poke2.mp3" : "monk-poke.mp3", 0.8, 0.94, 1.1)) return;
+    note(560, { dur: 0.08, vol: 0.4, type: "triangle", slideTo: 1150 }); note(1150, { dur: 0.2, vol: 0.42, type: "triangle", slideTo: 620, at: 0.075 }); noise({ dur: 0.04, vol: 0.2, freq: 3200 });
   },
+  // часовой заметил рыцаря или монаха — гоблин смеётся (Mixkit 412); записи нет — тишина, «буонг» уже прозвучал
+  laugh()  { recPlay("goblin-laugh.mp3", 0.6); },
+  // рыцаря накрыло динамитом: вскрик (Mixkit 101), а следом хохочет подрывник (Mixkit 745); записей нет — обычный звук поражения
+  scream() { if (!recPlay("pain-scream.mp3", 0.6)) return SFX.fall(); setTimeout(() => { if (save.sfx) recPlay("bomber-laugh.mp3", 0.5, 0.97, 1.05); }, 420); },
+  // арена проиграна: свист «игра окончена» (Mixkit 606); записи нет — обычный звук поражения
+  gameover() { if (!recPlay("game-over.mp3", 0.55, 1, 1)) SFX.fall(); },
   // гоблин попал по щиту рыцаря: глухой "тунк"
   ouch()   { noise({ dur: 0.07, vol: 0.55, freq: 500 }); note(196, { dur: 0.16, vol: 0.45, slideTo: 150 }); },
   // рыцарь упал: три ноты вниз, грустно, но не страшно
@@ -13902,6 +13926,10 @@ const MAP_SND = {
   gobdie: { far: 1, gap: 320, file: "goblin-death.mp3", vol: 0.5 },
   boom:   { far: 1, gap: 500, file: "tnt-boom.mp3", vol: 0.55 },
   duck:   { gap: 1200, file: "duck.mp3", vol: 0.42 },
+  // в утку попали (подлетела, перевернулась, ушла под воду) — скрипучий крик (Mixkit 11); подплывает и крякает она по-прежнему
+  squawk: { gap: 700, file: "duck-squawk.mp3", vol: 0.5 },
+  // бойца унесло взрывом насовсем — свист (Mixkit 395, ускорен); редко: не чаще раза в четыре секунды
+  whee:   { far: 1, gap: 4000, file: "fall-whistle.mp3", vol: 0.4 },
   // молоток по доске, топор по стволу, кирка по камню, всплеск, бревно или дерево упало, монах лечит
   knock:  { gap: 120, synth: (bus) => { noise({ dur: 0.05, vol: 0.3, freq: 650, bus }); note(210, { dur: 0.07, vol: 0.22, slideTo: 170, bus }); } },
   chop:   { gap: 220, synth: (bus) => { noise({ dur: 0.07, vol: 0.5, freq: 900, bus }); note(160, { dur: 0.09, vol: 0.3, slideTo: 110, bus }); } },
@@ -14877,7 +14905,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 256;
+const APP_VERSION = 257;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -14885,6 +14913,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 257, date: "2026-11-22", text: "Новые звуки: часовой смеётся, когда заметил рыцаря, подрывник хохочет после меткого броска, утка кричит, когда в неё попали", en: "New sounds: the sentry laughs when he spots the knight, the bomber cackles after a good throw, the duck squawks when it gets hit" },
   { v: 256, date: "2026-11-22", text: "Уровень «Иди первым»: у монаха новый смешной звук, когда его подгоняют копьём", en: "“You Go First”: the monk gets a new funny sound when he is poked with the spear" },
   { v: 255, date: "2026-11-22", text: "Уровень «Иди первым»: монах вскрикивает и подпрыгивает от тычка, над ним видно, когда он боится; задание понятнее, ★★★ теперь за 8 команд. На планшете задание и победа стоят справа, как положено", en: "“You Go First”: the monk yelps and jumps when poked, and you can see when he is scared; clearer task, ★★★ now takes 8 commands. On tablets the task and the win box sit on the right, as they should" },
   { v: 254, date: "2026-11-22", text: "Новый дополнительный уровень на Острове гоблинов — «Иди первым»: монах боится часовых, а копейщик подгоняет его копьём", en: "A new extra level on Goblin Island — “You Go First”: the monk is afraid of the sentries, so the lancer hurries him along with the spear" },
