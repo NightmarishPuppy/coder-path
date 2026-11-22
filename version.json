@@ -1,13 +1,13 @@
 {
- "version": 257,
- "date": "2026-11-22",
+ "version": 258,
+ "date": "2026-11-23",
  "notes": [
-  "Новые звуки: часовой смеётся, когда заметил рыцаря, подрывник хохочет после меткого броска, утка кричит, когда в неё попали"
+  "Убран свист на карте, когда бойца уносит взрывом"
  ],
  "files": {
   "index.html": {
-   "size": 1201041,
-   "hash": "28eb9afac5b75b53"
+   "size": 1201279,
+   "hash": "83da27580cadeace"
   },
   "art.js": {
    "size": 852367,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 4595,
-   "hash": "bd65c9b95ee91ee9"
+   "size": 4575,
+   "hash": "5111540d3f70b075"
   },
   "icon-192.png": {
    "size": 42164,
@@ -145,16 +145,12 @@
    "size": 9030,
    "hash": "01d9e37fdbb0194d"
   },
-  "fall-whistle.mp3": {
-   "size": 12582,
-   "hash": "ad925d7ea4d15895"
-  },
   "game-over.mp3": {
    "size": 23867,
    "hash": "143f348c73d4109d"
   }
  },
  "notes_en": [
-  "New sounds: the sentry laughs when he spots the knight, the bomber cackles after a good throw, the duck squawks when it gets hit"
+  "Removed the whistle on the map when a blast carries a fighter away"
  ]
 }

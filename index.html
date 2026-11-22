@@ -6020,7 +6020,6 @@ async function battle(st0, B) {
     a.el.style.transition = "none"; Z(a, v.y + 6);
     if (s >= 1.7) {
       if (!v.dead) kill(v, true);
-      mapSfx(st, "whee", v.x, v.y);
       const gone = () => { a.show(false, true); v.air = false; };
       if (FLY_AT_CAMERA && !STILL && Math.random() < 0.7) {
         // «На зрителя». phi — угол выхода из плоскости карты: 85° — почти прямо в экран (сильно растёт, вбок почти не уходит),
@@ -8371,15 +8370,19 @@ function starsHtml(n) {
   return [0, 1, 2].map((k) => `<span class="${k < n ? "on" : "off"}">${k < n ? "★" : "☆"}</span>`).join("");
 }
 
+// Записи, которые понадобятся на этом уровне, — заранее (v257). Зовётся при показе уровня и ещё раз по «Запустить»:
+// если уровень открылся раньше первого нажатия игрока, звука ещё не было и качать было нечем (v258).
+function levelSounds() {
+  if (!actx) return;
+  const bomber = (L.maps || [L.map]).some((m) => m.some((r) => r.includes("Y"))) || (L.events || []).some((e) => e.kind === "shot");
+  if (L.patrols) soundBuf("goblin-laugh.mp3");
+  if (bomber) { soundBuf("pain-scream.mp3"); soundBuf("bomber-laugh.mp3"); }
+  if (L.arena) soundBuf("game-over.mp3");
+  if (L.monk) { soundBuf("monk-poke.mp3"); soundBuf("monk-poke2.mp3"); }
+}
 function buildBoard() {
   if (actx && (L.events || []).some((e) => e.kind === "shot")) soundBuf("tnt-boom.mp3");   // засада с динамитом — звук взрыва заранее
-  if (actx) {                                           // записи, которые понадобятся на этом уровне, — заранее (v257)
-    const bomber = (L.maps || [L.map]).some((m) => m.some((r) => r.includes("Y"))) || (L.events || []).some((e) => e.kind === "shot");
-    if (L.patrols) soundBuf("goblin-laugh.mp3");
-    if (bomber) { soundBuf("pain-scream.mp3"); soundBuf("bomber-laugh.mp3"); }
-    if (L.arena) soundBuf("game-over.mp3");
-    if (L.monk) { soundBuf("monk-poke.mp3"); soundBuf("monk-poke2.mp3"); }
-  }
+  levelSounds();
   const map = L.map;
   W = map[0].length; H = map.length;
   boardEl.innerHTML = "";
@@ -11343,6 +11346,7 @@ async function knightFalls(why) {
 // ===== 13. Запуск =====
 let shotPending = Promise.resolve();   // динамит из засады ещё летит (рыцарь при этом идёт дальше)
 async function run() {
+  if (save.sfx && audio()) levelSounds();
   if (L.arena) return runArena();
   if (running) return;
   shotPending = Promise.resolve();
@@ -13928,8 +13932,6 @@ const MAP_SND = {
   duck:   { gap: 1200, file: "duck.mp3", vol: 0.42 },
   // в утку попали (подлетела, перевернулась, ушла под воду) — скрипучий крик (Mixkit 11); подплывает и крякает она по-прежнему
   squawk: { gap: 700, file: "duck-squawk.mp3", vol: 0.5 },
-  // бойца унесло взрывом насовсем — свист (Mixkit 395, ускорен); редко: не чаще раза в четыре секунды
-  whee:   { far: 1, gap: 4000, file: "fall-whistle.mp3", vol: 0.4 },
   // молоток по доске, топор по стволу, кирка по камню, всплеск, бревно или дерево упало, монах лечит
   knock:  { gap: 120, synth: (bus) => { noise({ dur: 0.05, vol: 0.3, freq: 650, bus }); note(210, { dur: 0.07, vol: 0.22, slideTo: 170, bus }); } },
   chop:   { gap: 220, synth: (bus) => { noise({ dur: 0.07, vol: 0.5, freq: 900, bus }); note(160, { dur: 0.09, vol: 0.3, slideTo: 110, bus }); } },
@@ -14905,7 +14907,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 257;
+const APP_VERSION = 258;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -14913,6 +14915,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 258, date: "2026-11-23", text: "Убран свист на карте, когда бойца уносит взрывом", en: "Removed the whistle on the map when a blast carries a fighter away" },
   { v: 257, date: "2026-11-22", text: "Новые звуки: часовой смеётся, когда заметил рыцаря, подрывник хохочет после меткого броска, утка кричит, когда в неё попали", en: "New sounds: the sentry laughs when he spots the knight, the bomber cackles after a good throw, the duck squawks when it gets hit" },
   { v: 256, date: "2026-11-22", text: "Уровень «Иди первым»: у монаха новый смешной звук, когда его подгоняют копьём", en: "“You Go First”: the monk gets a new funny sound when he is poked with the spear" },
   { v: 255, date: "2026-11-22", text: "Уровень «Иди первым»: монах вскрикивает и подпрыгивает от тычка, над ним видно, когда он боится; задание понятнее, ★★★ теперь за 8 команд. На планшете задание и победа стоят справа, как положено", en: "“You Go First”: the monk yelps and jumps when poked, and you can see when he is scared; clearer task, ★★★ now takes 8 commands. On tablets the task and the win box sit on the right, as they should" },
