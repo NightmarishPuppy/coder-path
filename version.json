@@ -1,13 +1,13 @@
 {
- "version": 259,
+ "version": 260,
  "date": "2026-11-23",
  "notes": [
-  "Новые голоса: рыцарь кричит в бою и охает, когда ему досталось; гоблин, который попал динамитом с вышки или из кустов, хохочет; монах вскрикивает"
+  "На карте у самого берега моря слышен прибой и птицы"
  ],
  "files": {
   "index.html": {
-   "size": 1204811,
-   "hash": "385491e2c912028f"
+   "size": 1210499,
+   "hash": "8620da6cd4b58f36"
   },
   "art.js": {
    "size": 852367,
@@ -26,8 +26,8 @@
    "hash": "fb0023f9b9dc42e3"
   },
   "sw.js": {
-   "size": 4625,
-   "hash": "4efd09481a14e51f"
+   "size": 4636,
+   "hash": "761ebdb889c23b11"
   },
   "icon-192.png": {
    "size": 42164,
@@ -160,9 +160,13 @@
   "enemy-death.mp3": {
    "size": 5104,
    "hash": "e86a8ef1b9c3221c"
+  },
+  "sea.mp3": {
+   "size": 387180,
+   "hash": "f3beec5a19001cbf"
   }
  },
  "notes_en": [
-  "New voices: the knight shouts in battle and groans when he gets hurt; a goblin who lands dynamite from a tower or from the bushes cackles; the monk yelps"
+  "On the map, right by the seashore, you can hear the surf and seabirds"
  ]
 }

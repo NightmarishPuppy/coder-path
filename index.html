@@ -4602,7 +4602,39 @@ function mapEngine(D, FOG = []) {   // FOG — где сбоку от остро
     if (cx < 0 || cy < 0 || cx >= RW || cy >= RH) return true;          // за краем карты — море
     return !hAt(cx, cy) && !faceAt(cx, cy) && !mapLand(Math.floor(x * 2), Math.floor(y * 2));
   }
-  return { startMapScene, RH, RW, groundAt, roadAt, waterAt, trees: mapTrees(), tide: tideApi };
+  // Насколько рыцарь «у моря» (v260, для звука прибоя): 1 — у самой воды или на пляже, 0 — в глубине острова.
+  // Море — вода, до которой можно доплыть от края карты, не протискиваясь в узкие места: озёра, лужи и речки
+  // в одну клетку шириной морем не считаются. Считается один раз, по мелкой сетке (полклетки).
+  let seaCore = null;
+  function seaNear(x, y) {
+    const FW = RW * 2, FH = RH * 2, wat = (fx, fy) => fx < 0 || fy < 0 || fx >= FW || fy >= FH || waterAt((fx + 0.5) / 2, (fy + 0.5) / 2);
+    if (!seaCore) {
+      const open = (fx, fy) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!wat(fx + dx, fy + dy)) return false; return true; };
+      seaCore = new Set();
+      const todo = [];
+      const add = (fx, fy) => { const k = fy * FW + fx; if (fx < 0 || fy < 0 || fx >= FW || fy >= FH || seaCore.has(k) || !open(fx, fy)) return; seaCore.add(k); todo.push([fx, fy]); };
+      for (let fx = 0; fx < FW; fx++) { add(fx, 0); add(fx, FH - 1); }
+      for (let fy = 0; fy < FH; fy++) { add(0, fy); add(FW - 1, fy); }
+      while (todo.length) { const [fx, fy] = todo.pop(); add(fx + 1, fy); add(fx - 1, fy); add(fx, fy + 1); add(fx, fy - 1); }
+    }
+    const px = x * 2, py = y * 2, cx = Math.floor(px), cy = Math.floor(py);
+    let best = 99;
+    for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) {
+      const fx = cx + dx, fy = cy + dy;
+      if (fx < -1 || fy < -1 || fx > FW || fy > FH) continue;
+      if (fx < 0 || fy < 0 || fx >= FW || fy >= FH || seaCore.has(fy * FW + fx)) best = Math.min(best, Math.hypot(fx + 0.5 - px, fy + 0.5 - py) / 2);
+    }
+    // «Только у самого берега, в районе песка и скал» (слова пользователя). Два случая, берётся больший:
+    // 1) рыцарь у самой воды (скалистый берег): best — до середины ближайшей клетки открытого моря, а она сама
+    //    в 0,75 клетки от суши; ближе 1,8 — в полную силу, дальше 3 — тишина;
+    // 2) рыцарь на пляже: вокруг него (полторы клетки) песок, и море недалеко.
+    const clamp = (v) => Math.max(0, Math.min(1, v));
+    let sandN = 0, allN = 0;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) { allN++; if (mapAt(cx + dx, cy + dy) === "s") sandN++; }
+    const beach = best < 4.5 ? clamp((sandN / allN - 0.1) / 0.3) : 0;
+    return Math.max(clamp((3.0 - best) / 1.2), beach);
+  }
+  return { startMapScene, RH, RW, groundAt, roadAt, waterAt, seaNear, trees: mapTrees(), tide: tideApi };
 }
 
 // Карта открывается там, где стоит рыцарь: если его не видно с верха страницы (телефон: остров высокий,
@@ -13756,6 +13788,8 @@ function audioRebuild() {
   try { stopMusic(); } catch (e) {}
   try { waterSrc?.stop(); } catch (e) {}
   waterSrc = null; waterGain = null;
+  try { seaSrc?.stop(); } catch (e) {}
+  seaSrc = null; seaGain = null;
   const old = actx;
   actx = null;
   try { old.close(); } catch (e) {}
@@ -14099,11 +14133,15 @@ function updatePlace() {
   const D = ISLE_MAPS[curIsle], mine = isleLevels(curIsle);
   let best = null, bd = Infinity;
   mine.forEach(([lv], k) => { const [nx, ny] = D.nodes[k] || [0, 0]; const dd = Math.hypot(nx / 20 - hx, ny / 20 - hy); if (dd < bd) { bd = dd; best = lv; } });
-  setPlace(MOOD_OF_CHAPTER(best), 0.45 * Math.max(0, Math.min(1, (near - 0.1) / 0.4)) ** 1.3);
+  // у самого берега моря — запись прибоя с птицами (v260, только на карте): там обычный плеск воды уступает ей место
+  let sea = E.seaNear ? E.seaNear(hx, hy) : 0;
+  if (sea < 0.15) sea = 0;                              // еле слышный прибой в глубине острова не нужен
+  setPlace(MOOD_OF_CHAPTER(best), 0.45 * Math.max(0, Math.min(1, (near - 0.1) / 0.4)) ** 1.3 * (1 - sea), sea);
 }
-function setPlace(moodIdx, water) {
+function setPlace(moodIdx, water, sea = 0) {
   setTune(moodIdx);
   waterLevel = water;
+  seaLevel = sea;
   applyWater();
 }
 // Короткие записи (шаги по листве и т. п.): скачиваются один раз при первом использовании
@@ -14124,8 +14162,41 @@ function loadWater() {
     .then((buf) => { waterBuf = buf; applyWater(); }).catch(() => { waterLoading = null; });
   return waterLoading;
 }
+// Море (v260): запись прибоя с птицами (Mixkit, звук 1185 «Sea waves with birds loop» — выбрал пользователь: «только у самого
+// берега на глобальной карте, в районе песка и скал, на уровнях не использовать»). Громкость seaLevel задаёт updatePlace —
+// на карте по близости открытого моря, везде ещё — ноль. В файле перед записью и после неё по 0,3 с её же продолжения:
+// повтор длиной ровно в запись (SEA_LOOP) выходит без стыка, как бы браузер ни сдвинул начало mp3.
+const SEA_LOOP = [0.15, 38.0415], SEA_VOL = 0.5;
+let seaBuf = null, seaLoading = null, seaSrc = null, seaGain = null, seaLevel = 0;
+function applySea() {
+  const want = save.music && musicTimer && !document.hidden ? seaLevel * SEA_VOL : 0;
+  if (want > 0 && !seaBuf) {
+    seaLoading ||= fetch("sea.mp3").then((r) => r.arrayBuffer()).then((b) => new Promise((ok, bad) => actx.decodeAudioData(b, ok, bad)))
+      .then((buf) => { seaBuf = buf; applySea(); }).catch(() => { seaLoading = null; });
+    return;
+  }
+  if (!seaBuf) return;
+  if (want > 0 && !seaSrc) {
+    seaGain = actx.createGain(); seaGain.gain.value = 0.0001;
+    seaGain.connect(musicBus);
+    seaSrc = actx.createBufferSource();
+    seaSrc.buffer = seaBuf; seaSrc.loop = true;
+    seaSrc.loopStart = SEA_LOOP[0]; seaSrc.loopEnd = SEA_LOOP[0] + SEA_LOOP[1];
+    seaSrc.connect(seaGain);
+    seaSrc.start(actx.currentTime, SEA_LOOP[0] + Math.random() * 30);
+  }
+  if (!seaGain) return;
+  seaGain.gain.cancelScheduledValues(actx.currentTime);
+  seaGain.gain.setTargetAtTime(Math.max(0.0001, want), actx.currentTime, 0.9);   // плавно, за пару секунд
+  if (want === 0 && seaSrc) {
+    const src = seaSrc, g = seaGain;
+    seaSrc = null; seaGain = null;
+    setTimeout(() => { try { src.stop(); g.disconnect(); } catch (e) {} }, 4000);
+  }
+}
 function applyWater() {
   if (!actx) return;
+  applySea();
   const want = save.music && musicTimer && !document.hidden ? waterLevel * 0.55 : 0;
   if (want > 0 && !waterBuf) { loadWater(); return; }
   if (!waterBuf) return;
@@ -14929,7 +15000,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 259;
+const APP_VERSION = 260;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -14937,6 +15008,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 260, date: "2026-11-23", text: "На карте у самого берега моря слышен прибой и птицы", en: "On the map, right by the seashore, you can hear the surf and seabirds" },
   { v: 259, date: "2026-11-23", text: "Новые голоса: рыцарь кричит в бою и охает, когда ему досталось; гоблин, который попал динамитом с вышки или из кустов, хохочет; монах вскрикивает", en: "New voices: the knight shouts in battle and groans when he gets hurt; a goblin who lands dynamite from a tower or from the bushes cackles; the monk yelps" },
   { v: 258, date: "2026-11-23", text: "Убран свист на карте, когда бойца уносит взрывом", en: "Removed the whistle on the map when a blast carries a fighter away" },
   { v: 257, date: "2026-11-22", text: "Новые звуки: часовой смеётся, когда заметил рыцаря, подрывник хохочет после меткого броска, утка кричит, когда в неё попали", en: "New sounds: the sentry laughs when he spots the knight, the bomber cackles after a good throw, the duck squawks when it gets hit" },
