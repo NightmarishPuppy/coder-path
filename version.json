@@ -1,21 +1,21 @@
 {
- "version": 252,
+ "version": 253,
  "date": "2026-11-22",
  "notes": [
-  "Установленная игра: канал игры открывается сразу в Telegram, без лишнего белого окна"
+  "Номер версии стал понятнее: «0.6 beta» — игра растёт, впереди новые острова"
  ],
  "files": {
   "index.html": {
-   "size": 1178766,
-   "hash": "e0095d7a91e1c172"
+   "size": 1179662,
+   "hash": "524f1b603bf3747f"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 85197,
-   "hash": "55f05c755b8c58c2"
+   "size": 85246,
+   "hash": "1218454e6b1bf6da"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4445,
-   "hash": "78a5a096c6ff2944"
+   "hash": "cf51379e57043469"
   },
   "icon-192.png": {
    "size": 42164,
@@ -123,6 +123,6 @@
   }
  },
  "notes_en": [
-  "Installed game: the game channel now opens straight in Telegram, without the extra blank window"
+  "The version number is clearer now: “0.6 beta” — the game is growing, more islands ahead"
  ]
 }

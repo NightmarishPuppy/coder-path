@@ -526,6 +526,7 @@ var EN = {
   "Обновить сейчас": "Update now",
   "⟲ Начать игру заново…": "⟲ Start the game over…",
   "Версия": "Version",
+  "{s} · сборка {n}": "{s} · build {n}",
   "· сохранено": "· saved",
   "· сохраняю…": "· saving…",
   "· сохраню, когда будет интернет": "· will save when online",
