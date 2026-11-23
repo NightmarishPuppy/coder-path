@@ -5688,6 +5688,8 @@ const SIEGE_UNITS = {
   lan: { side: "us", hp: 7, dmg: 2, reach: 1.1, cd: 1000, speed: 1.7, sight: 4.5, leash: 5, key: "lidle", sc: 0.8, foot: 0.625 },
   hero: { side: "us", hp: 10, dmg: 2, reach: 0.8, cd: 700, speed: 2.0, sight: 5, leash: 5, key: "hidle", sc: 0.85, foot: 0.825 },
   monk: { side: "us", hp: 4, heal: 2, reach: 3.5, cd: 3200, speed: 1.6, sight: 1.6, key: "monk", sc: 0.8 },
+  // лучник на земле (v263): стреляет, как лучник с башни, а увидев подрывника или бочку, идёт к ближайшему огню и поджигает стрелу
+  arch: { side: "us", hp: 5, dmg: 1, reach: 4.6, cd: 1500, speed: 1.7, sight: 5, leash: 3, key: "archer", sc: 0.8 },
   torch: { side: "gob", hp: 3, dmg: 1, reach: 0.75, cd: 850, speed: 1.5, sight: 4, key: "torch", sc: 0.85 },
   torchp: { side: "gob", hp: 4, dmg: 1, reach: 0.75, cd: 800, speed: 1.35, sight: 4, key: "torchp", sc: 0.85 },
   tnt: { side: "gob", hp: 2, dmg: 2, reach: 2.7, cd: 2300, speed: 1.4, sight: 4, key: "tnt", sc: 0.85, thrower: true },
@@ -5815,9 +5817,9 @@ async function battle(st0, B) {
     place(u);
     return u;
   };
-  const IDLE = { war: [0, 6, 140, "kwar"], lan: [0, 12, 110, "lidle"], monk: [0, 6, 150, "monk"], hero: [0, 8, 110, "hidle"],
+  const IDLE = { war: [0, 6, 140, "kwar"], lan: [0, 12, 110, "lidle"], monk: [0, 6, 150, "monk"], hero: [0, 8, 110, "hidle"], arch: [0, 6, 150, "archer"],
     torch: [0, 7, 120], torchp: [0, 7, 120], tnt: [0, 6, 130], tntbig: [0, 6, 170], barrel: [0, 1, 200] };
-  const RUN = { war: [1, 6, 90, "kwar"], lan: [0, 6, 90, "lrun"], monk: [0, 4, 100, "monkrun"], hero: [0, 6, 85, "hrun"],
+  const RUN = { war: [1, 6, 90, "kwar"], lan: [0, 6, 90, "lrun"], monk: [0, 4, 100, "monkrun"], hero: [0, 6, 85, "hrun"], arch: [1, 6, 90, "archer"],
     torch: [1, 6, 90], torchp: [1, 6, 90], tnt: [1, 6, 90], tntbig: [1, 6, 130], barrel: [4, 3, 160] };
   const anim = (u, name, spec) => {
     if (u.anim === name) return;
@@ -5855,7 +5857,9 @@ async function battle(st0, B) {
     u.dead = true;
     // бочек стало меньше, зато взрыв мощнее (v208): большой взрыв и взрывная волна
     if (u.kind === "barrel") { u.a.show(false); boom(u.x, u.y); fxAt(bigBooms, u.x, u.y, 75); blast(u.x, u.y, 1.15, u.T.dmg, 2.0, 2.6); return; }
-    if (!fly) { u.lie?.cancel(); u.lie = null; u.a.show(false); skull(u.x, u.y, u); }
+    if (!fly) { u.lie?.cancel(); u.lie = null; u.a.show(false); skull(u.x, u.y, u);
+      if (FIRE && (u.kind === "torch" || u.kind === "torchp") && Math.random() < 0.5) torchDrop(u.x + (u.left ? -0.3 : 0.3) * ZM, u.y); }   // v263: факел упал и горит
+    if (u.job) { u.job.fl?.el.remove(); u.job = null; }
     if (u.post) after(8000, () => {                      // подкрепление
       if (!u.post) return;                               // бойца за это время сняли с поста — возвращать некуда
       Object.assign(u, { x: B.respawn[0], y: B.respawn[1], hp: u.T.hp, dead: false, air: false, busy: 0, anim: "", tgt: null, via: B.via ? [...B.via] : [] });
@@ -5901,7 +5905,7 @@ async function battle(st0, B) {
   };
   // v228: само пламя — часть фигурки (вложено в её картинку), а не отдельная картинка рядом. Поэтому оно идёт, летит, вертится,
   // ложится на бок и отражается вместе с бойцом и никуда с головы не съезжает. firePos выше нужен только дыму и искрам.
-  const fireStat = { lit: 0, doused: 0, waded: 0, towers: 0, blown: 0, soaked: 0 };
+  const fireStat = { lit: 0, doused: 0, waded: 0, towers: 0, blown: 0, soaked: 0, torches: 0, arrows: 0, arrowHit: 0 };
   const setChar = (v) => { if (v.burnt || !FIRE.hue[v.kind]) return; v.burnt = true; v.a.char = FIRE.hue[v.kind]; v.a.sheet(v.a.key); };
   const ignite = (v) => {
     if (!FIRE || v.dead || v.fire || now < (v.wetTill || 0)) return false;
@@ -5911,9 +5915,16 @@ async function battle(st0, B) {
     v.fire = { till: now + FIRE.burn, tick: now + FIRE.tick, char: now + FIRE.burn * 0.45, puff: 0, fl: fls[0], fls };
     flash(v); fireStat.lit++;
     // подрывник горит недолго: огонь добирается до динамита
-    if (v.T.thrower) after(900 + Math.random() * 700, () => { if (v.dead || !v.fire) return; const fat = !!v.T.fat, x = v.x, y = v.y; fireStat.blown++;
-      kill(v, true); v.a.show(false, true); boom(x, y); if (fat) fxAt(hugeBooms, x, y, 80); fat ? blast(x, y, 1.1, 3, 2.3, 3.4) : blast(x, y, 0.75, 2, 0.5, 1.5); });
+    if (v.T.thrower) after(900 + Math.random() * 700, () => { if (v.dead || !v.fire) return; blowUp(v); });
     return true;
+  };
+  // динамит на подрывнике взорвался: от огня — как раньше; от горящей стрелы (hard) — сильнее, соседей раскидывает
+  const blowUp = (v, hard) => {
+    if (v.dead) return; const fat = !!v.T.fat, x = v.x, y = v.y; fireStat.blown++;
+    kill(v, true); v.a.show(false, true); boom(x, y);
+    if (fat) { fxAt(hugeBooms, x, y, 80); blast(x, y, 1.1, 3, 2.3, 3.4); }
+    else if (hard) { fxAt(bigBooms, x, y, 75); blast(x, y, FA.blast[0], FA.blast[1], FA.blast[2], FA.blast[3]); }
+    else blast(x, y, 0.75, 2, 0.5, 1.5);
   };
   // погас: сам (догорел) или в воде (steam — облачко пара)
   const douse = (v, steam) => {
@@ -6329,6 +6340,7 @@ async function battle(st0, B) {
   const think = (u) => {
     if (u.dead || now < u.busy) return;
     if (u.kind === "monk") return monkThink(u);
+    if (u.kind === "arch") return archThink(u);
     if (u.T.side === "us") {
       const [px, py] = u.post;
       const t = nearest(u, (v) => Math.hypot(v.x - px, v.y - py) <= u.T.leash);
@@ -6364,6 +6376,8 @@ async function battle(st0, B) {
     after(300, () => {
       if (t.dead || t.air) return;
       const ex = t.x, ey = t.y - 0.35 * ZM;
+      // башня горит — стрела с неё уходит горящей (v263): по подрывнику или бочке
+      if (FIRE && ar.fire && (t.T.thrower || t.kind === "barrel")) return void flyFire(ar.x + (ex < ar.x ? -0.2 : 0.2) * ZM, ar.y - 0.35 * ZM, t, ex, ey).then(([x, y]) => fireHit(t, x, y));
       fireArrow(ar, ex, ey, Math.max(260, Math.hypot(ex - ar.x, ey - ar.y) * 90)).then(() => { if (!t.dead) hurt(t, AR.dmg); });
     });
   };
@@ -6374,6 +6388,132 @@ async function battle(st0, B) {
     a.sheet(ax >= ay ? "arrow" : ey > sy ? "arrowd" : "arrowu"); a.frame(0, 0); a.face(ax >= ay && ex < sx);
     a.el.style.transition = "none"; a.at(sx, sy); Z(a, 200); a.show(true, true);     // сразу, без проявления: иначе стрелу в полёте не видно (v191)
     return a.move(ex, ey, ms).then(() => free(a));
+  };
+  // ----- горящая стрела (v263; только там, где есть огонь: B.fire) -----
+  // Поджечь стрелу можно от всего, что горит рядом: от горящего бойца (своего или гоблина), от факела, который остался
+  // лежать после факельщика, от горящей башни, от стрелы, что воткнулась в землю и догорает. Лучник идёт к огню, только
+  // когда на поле есть подрывник или бочка: динамит от такой стрелы взрывается сразу, соседей раскидывает.
+  // Как в жизни: зажжённую стрелу пускают слабее (иначе пламя сорвёт), поэтому она летит медленнее обычной и по высокой дуге;
+  // огонь — у наконечника и тянется назад, за стрелой остаётся дымный след. Размер пламени — как у факела гоблина:
+  // сама стрела на телефоне — пара миллиметров, читается только огонь и след.
+  // FA: cd — пауза между горящими стрелами одного лучника; light — сколько держит стрелу в огне; seek — как далеко от поста
+  // идёт за огнём (клеток); safe — не стреляет по подрывнику, если свои ближе (клеток); blast — взрыв подрывника от стрелы [круг урона, урон, сила волны, дальность волны]
+  const FA = { cd: 4500, light: 700, seek: 3.2, safe: 1.5, blast: [0.85, 2, 1.3, 2.3], ...B.fireArrow };
+  const torches = [];
+  const torchDrop = (x, y, ms = 7000) => {
+    if (!FIRE || STILL || torches.length >= 4 || !walk(x, y)) return null;
+    const fl = A("tflame", 0.8, 1); fl.mute = true; fl.el.style.transition = "none"; fl.at(x, y); Z(fl, y); fl.show(true, true); fireLook(fl.el); fl.play(0, 7, 100);
+    const t = { x, y, till: now + ms, fl, puff: 0 }; torches.push(t); fireStat.torches++;
+    return t;
+  };
+  const torchTick = () => {
+    for (let i = torches.length - 1; i >= 0; i--) { const t = torches[i];
+      if (now >= t.till) { t.fl.el.remove(); torches.splice(i, 1); puffAt(t.x, t.y - 0.1 * ZM, 0.3, 0.6, 0.5, 700); continue; }
+      if (now >= t.puff) { t.puff = now + 700; puffAt(t.x, t.y - 0.45 * ZM, 0.22, 0.45, 0.6, 800); } }
+  };
+  // всё, от чего сейчас можно поджечь: [x, y, горит ли ещё]
+  const fireSources = () => [
+    ...units.filter((v) => v.fire && !v.dead && !v.air && !v.wade).map((v) => ({ pos: () => [v.x, v.y], live: () => !!v.fire && !v.dead && !v.air, gob: v.T.side === "gob" })),
+    ...torches.map((t) => ({ pos: () => [t.x, t.y], live: () => torches.includes(t) })),
+    ...archers.filter((q) => q.fire).map((q) => ({ pos: () => [q.tx, q.ty + 0.3 * ZM], live: () => !!q.fire })),
+  ];
+  // полёт: по дуге, стрела повёрнута по ходу; цель движется — стрела доворачивает за ней
+  const flyFire = (sx, sy, t, ex, ey) => new Promise((res) => {
+    fireStat.arrows++;
+    const a = A("arrow", 0.75, 0.5), e = a.el; a.mute = true;
+    e.style.transformOrigin = "0 0"; e.style.transition = "none"; e.style.zIndex = 99500; a.frame(0, 0);
+    const fl = skActor(st, "tflame", 1, 1), f = fl.el; fl.mute = true; e.appendChild(f);
+    f.style.width = "100%"; f.style.left = "80%"; f.style.top = "50%"; f.style.zIndex = 2;
+    f.style.transformOrigin = "50% 100%"; f.style.transform = "translate(-50%, -100%) rotate(-90deg)";
+    fl.show(true, true); f.style.filter = "brightness(1.25) saturate(1.4)"; fl.play(0, 7, 70);
+    const glow = document.createElement("div"); glow.className = "fglow"; glow.style.width = glow.style.height = "220%"; glow.style.left = "70%"; glow.style.top = "50%"; e.appendChild(glow);
+    const D = Math.hypot(ex - sx, ey - sy), ms = Math.max(560, D / ZM * 170), h = Math.min(1.5, 0.3 + D / ZM * 0.17) * ZM, t0 = performance.now();
+    let px = sx, py = sy, puff = 0;
+    e.style.rotate = Math.atan2(ey - sy - 4 * h, ex - sx) + "rad"; a.at(sx, sy); a.show(true, true);
+    const step = (tm) => {
+      if (t && !t.dead && !t.air) { ex = t.x; ey = t.y - 0.35 * ZM; }
+      const k = Math.min(1, Math.max(0, (tm - t0) / ms)), x = sx + (ex - sx) * k, y = sy + (ey - sy) * k - h * 4 * k * (1 - k);
+      if (Math.hypot(x - px, y - py) > 0.01) e.style.rotate = Math.atan2(y - py, x - px) + "rad";
+      const px0 = px, py0 = py; a.at(x, y); px = x; py = y;
+      if (tm >= puff && k > 0.1) { puff = tm + 70; const q = Math.hypot(x - px0, y - py0) || 1;      // дым — позади стрелы, чтобы не закрывал огонь
+        puffAt(x - (x - px0) / q * 0.5 * ZM - 0.2, y - (y - py0) / q * 0.5 * ZM, 0.2 * ZM, 0.6, 0.1, 480); }
+      if (k < 1) requestAnimationFrame(step); else { e.remove(); res([ex, ey]); }
+    };
+    requestAnimationFrame(step);
+  });
+  // долетела: подрывник взрывается сразу, бочка тоже; остальным — рана и огонь; мимо — воткнулась и догорает (от неё тоже можно поджечь)
+  const fireHit = (t, x, y) => {
+    if (t && !t.dead && !t.air && Math.hypot(t.x - x, t.y - 0.35 * ZM - y) < 0.7 * ZM) {
+      fireStat.arrowHit++;
+      if (t.T.thrower) return blowUp(t, true);
+      if (t.kind === "barrel") return kill(t);
+      hurt(t, 2); if (!t.dead) ignite(t);
+      return;
+    }
+    torchDrop(x, y + 0.35 * ZM, 3500);
+  };
+  // кого стоит поджечь: подрывник или бочка в пределах выстрела от поста
+  const fireTarget = (u) => {
+    let t = null, bd = Infinity;
+    for (const v of units) if (!v.dead && !v.air && !v.fire && (v.T.thrower || v.kind === "barrel")) {
+      const d = Math.hypot(v.x - u.post[0], v.y - u.post[1]); if (d >= bd || d > u.T.reach + 1.2 * ZM) continue;
+      if (units.some((w) => !w.dead && !w.air && w.T.side === "us" && dist(w, v) < FA.safe * ZM)) continue;      // рядом свои — взрыв раскидал бы и их
+      bd = d; t = v; }
+    return t;
+  };
+  const bowAt = (u) => [u.x + (u.left ? -0.22 : 0.22) * ZM, u.y - 0.42 * ZM];
+  const archShoot = (u, t, lit) => {
+    u.left = t.x < u.x - 0.05;
+    u.next = now + u.T.cd; u.busy = now + 8 * 55;
+    anim(u, "atk" + now, [ARCH_ROW[dirOf(t.x - u.x, t.y - u.y)], 8, 55, "archer"]);
+    say(u, CMD("shoot"), lit ? 1 : 0.3);
+    after(300, () => {
+      const J = lit ? u.job : null; if (J) { J.fl?.el.remove(); u.job = null; u.faNext = now + FA.cd; }
+      if (u.dead || u.air) return;
+      const [bx, by] = bowAt(u), ex = t.x, ey = t.y - 0.35 * ZM;
+      if (lit) return void flyFire(bx, by, t.dead || t.air ? null : t, ex, ey).then(([x, y]) => fireHit(t, x, y));
+      if (t.dead || t.air) return;
+      fireArrow({ x: u.x, y: u.y - 0.1 * ZM }, ex, ey, Math.max(260, Math.hypot(ex - u.x, ey - u.y) * 90)).then(() => { if (!t.dead) hurt(t, u.T.dmg); });
+    });
+  };
+  const archThink = (u) => {
+    const J = u.job, drop = () => { J.fl?.el.remove(); u.job = null; u.faNext = now + 1500; };
+    if (J) {
+      if (u.air || u.lie) return drop();
+      if (J.ph === "to") {
+        if (!J.src.live() || now > J.give) return drop();
+        const [fx, fy] = J.src.pos(), d = Math.hypot(fx - u.x, fy - u.y);
+        if (d > 0.62 * ZM) { if (!stepTo(u, fx, fy)) { anim(u, "idle"); if (now > J.give - 2500) drop(); } return; }
+        // дошёл: опускает стрелу в огонь — огонёк переходит на неё
+        J.ph = "light"; J.till = now + FA.light; u.left = fx < u.x; anim(u, "idle");
+        const fl = J.fl = A("tflame", 0.45, 1); fl.mute = true; fl.el.style.transition = "none"; fl.at(fx, fy - 0.2 * ZM); fl.el.style.zIndex = 99400; fl.show(true, true); fireLook(fl.el); fl.play(0, 7, 80);
+        void fl.el.offsetWidth; fl.move(...bowAt(u), 320);
+        return;
+      }
+      if (J.ph === "light") {
+        if (now < J.till) return;
+        // цель: подрывник или бочка; их уже нет — в ближайшего гоблина, чтобы огонь не пропал
+        const t = fireTarget(u) || nearest(u, (v) => dist(u, v) <= u.T.reach + 1.2 * ZM);
+        if (!t) return drop();
+        J.ph = "aim"; archShoot(u, t, true);
+      }
+      return;
+    }
+    if (FIRE && now >= (u.faNext || 0) && fireTarget(u)) {
+      let best = null, bd = Infinity;
+      for (const s of fireSources()) {
+        const [fx, fy] = s.pos(), d = Math.hypot(fx - u.x, fy - u.y);
+        if (Math.hypot(fx - u.post[0], fy - u.post[1]) > FA.seek * ZM || d >= bd) continue;
+        // к огню, вокруг которого рубятся гоблины, не лезет
+        if (units.filter((v) => !v.dead && !v.air && v.T.side === "gob" && !v.fire && Math.hypot(v.x - fx, v.y - fy) < 0.9 * ZM).length) continue;
+        bd = d; best = s;
+      }
+      if (best) { u.job = { ph: "to", src: best, give: now + 5000 }; u.tgt = null; return; }
+      u.faNext = now + 600;
+    }
+    const t = nearest(u, (v) => dist(u, v) <= u.T.reach);
+    if (t) { if (now >= u.next) archShoot(u, t, false); else { u.left = t.x < u.x - 0.05; anim(u, "idle"); } return; }
+    if (!goPost(u)) { u.left = u.postLeft; anim(u, "idle"); }
   };
 
   // ----- наши на постах -----
@@ -6407,7 +6547,7 @@ async function battle(st0, B) {
     H.stands.forEach((stand) => { const p = A("prungold", 0.8), n = A("gnug", 0.8, 0.585); Z(p, stand[1]); skRun(() => haul(p, n, stand)); });
   } else if (mount) skRun(async () => { for (;;) { await skWait(st0, skRnd(2500, 5000)); await mount.play(0, 12, 70, false); mount.frame(0, 0); } });
 
-  B.api = { blast, make, throwTnt, met, ignite, towerFireAt: (i) => towerFire(archers[i]), fling, shoreBy, soakSpot, depthAt, landBy, fire: fireStat, burning: () => units.filter((v) => v.fire && !v.dead).length, forts: () => archers.map((q) => ({ hp: q.hp, dead: !!q.dead, flame: q.fire ? q.fire.fl.el : null })), pawns: () => pawns.length };                  // для тестов: устроить взрыв или поставить бойца самому
+  B.api = { blast, make, throwTnt, met, ignite, torchDrop, flyFire, fireHit, torches, towerFireAt: (i) => towerFire(archers[i]), fling, shoreBy, soakSpot, depthAt, landBy, fire: fireStat, burning: () => units.filter((v) => v.fire && !v.dead).length, forts: () => archers.map((q) => ({ hp: q.hp, dead: !!q.dead, flame: q.fire ? q.fire.fl.el : null })), pawns: () => pawns.length };                  // для тестов: устроить взрыв или поставить бойца самому
   // ----- волны гоблинов: приходят из облаков по мосту -----
   const W = B.waves;
   let queue = [], nextWave = now + (W.first ?? 2500);
@@ -6436,7 +6576,7 @@ async function battle(st0, B) {
     for (let i = later.length - 1; i >= 0; i--) if (later[i][0] <= now) { const fn = later[i][1]; later.splice(i, 1); fn(); }
     units.forEach(think);
     archers.forEach(archerThink);
-    if (FIRE) { fireTick(); wadeTick(); soakTick(); }
+    if (FIRE) { fireTick(); wadeTick(); soakTick(); torchTick(); }
     // не стоять друг в друге
     const live = units.filter((v) => !v.dead && !v.air);
     for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
@@ -6484,7 +6624,8 @@ async function skitSiege(st0, S) {
 const BEACH = {
   zoom: 1.3, towers: [[14.4, 47.2], [16.45, 47.2], [15.9, 45.0]], pawns: [[15.2, 46.5], [14.3, 46.2]], goal: [15.4, 47.6], spawn: [15.5, 53.8], bridgeX: 15.5, respawn: [14.4, 47.5],
   posts: [{ kind: "war", at: [14.9, 48.25] }, { kind: "lan", at: [16.2, 48.3], left: true },
-    { kind: "lan", at: [14.0, 48.95] }, { kind: "war", at: [16.6, 49.0], left: true }, { kind: "monk", at: [17.0, 47.75], left: true }],
+    { kind: "lan", at: [14.0, 48.95] }, { kind: "war", at: [16.6, 49.0], left: true }, { kind: "monk", at: [17.0, 47.75], left: true },
+    { kind: "arch", at: [15.45, 47.95] }],
   rows: [43, 54.5],                                   // какие ряды карты занимает бой (видно ли его на экране)
 };
 async function skitBeach(st0, S) {
@@ -15055,7 +15196,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 262;
+const APP_VERSION = 263;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15063,6 +15204,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 263, date: "2026-11-23", text: "В бою у моста появился лучник: он поджигает стрелу от огня рядом — от горящего бойца, упавшего факела или горящей башни — и взрывает ею гоблина с динамитом. Камень в воде у моста убран.", en: "A new archer joins the bridge battle: he lights an arrow from any fire nearby — a burning fighter, a dropped torch or a burning tower — and blows up the dynamite goblin with it. The rock in the water by the bridge is gone." },
   { v: 262, date: "2026-11-23", text: "Программа часового теперь ходит вместе с ним — облачком над головой", en: "The sentry’s program now walks with him — in a bubble above his head" },
   { v: 261, date: "2026-11-23", text: "Новые звуки: мелодия победы и аплодисменты за три звезды, овцы и бараны блеют, великан ревёт", en: "New sounds: a victory tune and applause for three stars, sheep and rams bleat, the giant roars" },
   { v: 260, date: "2026-11-23", text: "На карте у самого берега моря слышен прибой и птицы", en: "On the map, right by the seashore, you can hear the surf and seabirds" },
