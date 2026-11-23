@@ -276,8 +276,10 @@ html.still .enemy, html.still .enemy.hit .ewrap, html.still .poof { transition: 
 .route .meet circle { fill: #ffd34d33; stroke: #ffd34d; stroke-width: 0.06; }
 .route .meet rect { fill: #ffd34d; }
 .route .meet text { fill: #1b1b22; font-size: 0.2px; font-weight: 800; text-anchor: middle; dominant-baseline: central; }
-.pcode { position: absolute; transform: translate(-50%, -50%); z-index: 5; pointer-events: none; white-space: pre; background: #15151cdd; border: 1px solid #b7e07a88; border-radius: 8px;
+.pcode { position: absolute; transform: translateX(-50%); z-index: 5; pointer-events: none; white-space: pre; background: #15151cdd; border: 1px solid #b7e07a88; border-radius: 8px;
   padding: 3px 6px; font: 600 11px/1.25 ui-monospace, Menlo, Consolas, monospace; color: #e9e6da; }
+.pcode::after { content: ""; position: absolute; left: calc(50% + var(--tail, 0px)); top: 100%; margin-left: -7px; border: 7px solid transparent; border-top-color: #15151cee; }
+.pcode.below::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: #15151cee; }
 .pcode .m { margin: 0 1px; } .pcode .m.h { color: var(--torch); } .pcode .m.v { color: var(--frost); } .pcode i { color: var(--loop); font-style: normal; }
 .route.marks { z-index: 6; }
 .route .cross { stroke: #b3262b; stroke-width: 0.085; stroke-linecap: square; }
@@ -7266,11 +7268,12 @@ function ghostStop(now) {
 function ghostPoke() { ghostIdleAt = performance.now(); ghostStop(); }
 // Игрок на уровне долго ничего не трогает (v261): через 20 с рыцарь покашливает, через 45 с — зевает.
 // Каждое — один раз за заход на уровень, чтобы не надоедало.
-const idleSaid = { name: "", ahem: false, yawn: false };
+// Свой отсчёт (since): часы призрака-подсказки (ghostIdleAt) не трогаем — в v261 их сброс здесь ломал показ призрака в тесте.
+const idleSaid = { name: "", since: 0, ahem: false, yawn: false };
 setInterval(() => {
   if (running || STILL || $("levelview").hidden || document.hidden || typeof L === "undefined" || !L || !winBox.hidden) return;
-  if (idleSaid.name !== L.name) { idleSaid.name = L.name; idleSaid.ahem = idleSaid.yawn = false; ghostIdleAt = performance.now(); return; }
-  const idle = performance.now() - ghostIdleAt;
+  if (idleSaid.name !== L.name) { idleSaid.name = L.name; idleSaid.ahem = idleSaid.yawn = false; idleSaid.since = performance.now(); return; }
+  const idle = performance.now() - Math.max(ghostIdleAt, idleSaid.since);
   if (idle > 20000 && !idleSaid.ahem) { idleSaid.ahem = true; if (soundBuf("ahem.mp3")) sfx("ahem"); }
   if (idle > 45000 && !idleSaid.yawn) { idleSaid.yawn = true; if (soundBuf("yawn.mp3")) sfx("yawn"); }
 }, 1000);
@@ -11198,7 +11201,7 @@ const NOSTOP_TEXT = {
   bush: "Засада! Рыцарь остановился у кустов — и подрывник успел бросить динамит. Запиши весь путь мимо кустов сразу и запусти один раз",
 };
 // Часовые (v212): гоблин ходит по своей программе, пока идёт программа игрока: один шаг рыцаря (или «ждать») — один шаг часового.
-// В уровне: patrols: [{ at: [x, y], prog: [["moveDown", 2], ["moveUp", 2]], say: [x, y] }] — программа должна вернуть его на место (ходит по кругу).
+// В уровне: patrols: [{ at: [x, y], prog: [["moveDown", 2], ["moveUp", 2]] }] — программа должна вернуть его на место (ходит по кругу).
 function patrolSeq(pt) {
   const seq = [{ x: pt.at[0], y: pt.at[1] }];
   for (const [cmd, n] of pt.prog) for (let k = 0; k < n; k++) { const l = seq[seq.length - 1]; seq.push({ x: l.x + DIRS[cmd].dx, y: l.y + DIRS[cmd].dy }); }
@@ -11218,20 +11221,38 @@ function patrolSetup() {
   patrolBubs = (L.patrols || []).map((pt) => {
     const b = document.createElement("div");
     b.className = "pcode";
-    const [bx, by] = pt.say || [pt.at[0] + 0.5, pt.at[1] - 0.3];
-    b.style.left = bx / W * 100 + "%"; b.style.top = by / H * 100 + "%";
     boardEl.appendChild(b);
     return b;
   });
   patrolTick = 0;
   patrolCode();
 }
+// Программа часового — облачко с хвостиком над его головой, ходит вместе с ним (v262: раньше стояло на месте, и новичку
+// было не понять, чья это программа). x, y — где стоят ноги часового (в клетках); ms — за сколько он туда дойдёт.
+// У верхнего края поля облачко встаёт под ногами; у боковых — сдвигается внутрь, а хвостик остаётся над часовым.
+function patrolBubAt(k, x, y, ms = 0) {
+  const b = patrolBubs[k];
+  if (!b) return;
+  b.pos = [x, y];
+  const bw = boardEl.clientWidth || 1, bh = boardEl.clientHeight || 1, hw = b.offsetWidth / 2 + 2, hh = b.offsetHeight;
+  const cx = x / W * bw, px = Math.max(hw, Math.min(bw - hw, cx));
+  let top = (y - (L.patrols[k].big ? 0.86 : 0.64)) / H * bh - hh - 8;      // голова часового — в 0,64 клетки над ногами (у крупного — 0,86)
+  const below = top < 2;
+  if (below) top = y / H * bh + 10;
+  b.style.transition = ms ? `left ${ms}ms linear, top ${ms}ms linear` : "none";
+  b.style.left = px / bw * 100 + "%"; b.style.top = top / bh * 100 + "%";
+  b.classList.toggle("below", below);
+  b.style.setProperty("--tail", Math.round(cx - px) + "px");
+}
+window.addEventListener("resize", () => setTimeout(() => patrolBubs.forEach((b, k) => { if (b.isConnected && b.pos) patrolBubAt(k, ...b.pos); }), 60));
 // программа часового над ним: в блоках — значки плиток, в Python / JavaScript — код
 function patrolCode() {
   (L.patrols || []).forEach((pt, k) => {
     if (!patrolBubs[k]) return;
     patrolBubs[k].innerHTML = uiBlocks ? `<i>🔁</i> ` + pt.prog.map(([c, n]) => `<span class="m ${DIRS[c].axis}">${DIRS[c].arrow}${n}</span>`).join(" ")
       : (lang === "py" ? `<i>while True:</i>\n` : `<i>while (true) {</i>\n`) + pt.prog.map(([c, n]) => `  ${disp(c)}(${n})${lang === "py" ? "" : ";"}`).join("\n") + (lang === "py" ? "" : "\n<i>}</i>");
+    const a = patrolActs[k];
+    if (a) patrolBubAt(k, ...(patrolBubs[k].pos || [a.x, a.y]));      // размер облачка изменился — поставить заново
   });
 }
 // поставить часовых туда, где они стоят на такте t (ms — за сколько дойти; 0 — сразу)
@@ -11240,7 +11261,8 @@ function patrolPlace(t, ms = 0) {
     const a = patrolActs[k], to = patrolAt(seq, t);
     if (!a) return;
     const x = to.x + 0.5, y = to.y + 0.9;
-    if (!ms || (a.x === x && a.y === y)) { a.at(x, y); return; }
+    if (!ms || (a.x === x && a.y === y)) { a.at(x, y); patrolBubAt(k, x, y); return; }
+    patrolBubAt(k, x, y, ms);
     if (x !== a.x) a.face(x < a.x);
     a.play(1, 6, 90);
     a.move(x, y, ms).then(() => { if (a.x === x && a.y === y) a.play(0, 7, 120); });
@@ -15033,7 +15055,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 261;
+const APP_VERSION = 262;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15041,6 +15063,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 262, date: "2026-11-23", text: "Программа часового теперь ходит вместе с ним — облачком над головой", en: "The sentry’s program now walks with him — in a bubble above his head" },
   { v: 261, date: "2026-11-23", text: "Новые звуки: мелодия победы и аплодисменты за три звезды, овцы и бараны блеют, великан ревёт", en: "New sounds: a victory tune and applause for three stars, sheep and rams bleat, the giant roars" },
   { v: 260, date: "2026-11-23", text: "На карте у самого берега моря слышен прибой и птицы", en: "On the map, right by the seashore, you can hear the surf and seabirds" },
   { v: 259, date: "2026-11-23", text: "Новые голоса: рыцарь кричит в бою и охает, когда ему досталось; гоблин, который попал динамитом с вышки или из кустов, хохочет; монах вскрикивает", en: "New voices: the knight shouts in battle and groans when he gets hurt; a goblin who lands dynamite from a tower or from the bushes cackles; the monk yelps" },

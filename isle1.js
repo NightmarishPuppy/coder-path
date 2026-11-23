@@ -282,7 +282,7 @@ levels: [
     chapter: 0,
     after: "Поворот",
     hint: "wait()\nmove_right(6)",
-    patrols: [{ at: [3, 0], prog: [["moveDown", 2], ["moveUp", 2]], say: [5, 0.5] }],
+    patrols: [{ at: [3, 0], prog: [["moveDown", 2], ["moveUp", 2]] }],
     goal: "Пережди часового: сначала [[btn:wait]], потом иди к двери. Гоблин ходит туда-сюда — над ним его программа. Жёлтая метка на поле показывает, где вы встретитесь.",
     en: {
       name: "The Sentry",
@@ -303,7 +303,7 @@ levels: [
     chapter: 0,
     after: "Поворот",
     hint: "wait()\nmove_right(4)\nmove_down(3)",
-    patrols: [{ at: [2, 3], prog: [["moveUp", 2], ["moveRight", 2], ["moveDown", 2], ["moveLeft", 2]], say: [0.95, 3.4] }],
+    patrols: [{ at: [2, 3], prog: [["moveUp", 2], ["moveRight", 2], ["moveDown", 2], ["moveLeft", 2]] }],
     goal: "Пропусти часового и иди следом, у него за спиной. Он ходит по кругу и не оборачивается.",
     en: {
       name: "Behind His Back",

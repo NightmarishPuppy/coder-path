@@ -1,13 +1,13 @@
 {
- "version": 261,
+ "version": 262,
  "date": "2026-11-23",
  "notes": [
-  "Новые звуки: мелодия победы и аплодисменты за три звезды, овцы и бараны блеют, великан ревёт"
+  "Программа часового теперь ходит вместе с ним — облачком над головой"
  ],
  "files": {
   "index.html": {
-   "size": 1214164,
-   "hash": "a78e83d48eff32f4"
+   "size": 1216582,
+   "hash": "b5da97dc2995083e"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "05fb0a042a456a36"
+   "hash": "ffe96685ceb61128"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 59435,
-   "hash": "d860aaf5c5704552"
+   "size": 59402,
+   "hash": "4804880ee1c3ec5b"
   },
   "isle2.js": {
    "size": 59882,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 49528,
-   "hash": "9aa8efe89a1fc849"
+   "size": 49492,
+   "hash": "39e8453889e5ffa4"
   },
   "art-scenes.js": {
    "size": 996051,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "New sounds: a victory tune and applause for three stars, sheep and rams bleat, the giant roars"
+  "The sentry’s program now walks with him — in a bubble above his head"
  ]
 }

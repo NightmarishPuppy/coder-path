@@ -236,8 +236,8 @@ levels: [
     after: "Обстрел: испытание",
     lancer: true,
     monk: { at: [1, 2], stops: [[6, 2]] },
-    patrols: [{ at: [3, 1], prog: [["moveDown", 2], ["moveUp", 2]], say: [1.5, 0.45], big: true },
-              { at: [7, 0], prog: [["moveDown", 4], ["moveUp", 4]], say: [5.2, 3.95], big: true }],
+    patrols: [{ at: [3, 1], prog: [["moveDown", 2], ["moveUp", 2]], big: true },
+              { at: [7, 0], prog: [["moveDown", 4], ["moveUp", 4]], big: true }],
     goal: "Подгони монаха копьём — [[btn:parry]]: он вскрикнет, побежит вперёд и встанет перед следующим часовым. Бей, когда часовой ушёл с дороги, — пережди его: [[btn:wait]]. Потом иди следом и подгоняй снова. В дверь первым входит монах.",
     en: {
       name: "You Go First",
