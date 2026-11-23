@@ -1,13 +1,13 @@
 {
- "version": 263,
+ "version": 264,
  "date": "2026-11-23",
  "notes": [
-  "В бою у моста появился лучник: он поджигает стрелу от огня рядом — от горящего бойца, упавшего факела или горящей башни — и взрывает ею гоблина с динамитом. Камень в воде у моста убран."
+  "Бой у моста: сражённый гоблин с факелом теперь падает и лежит, а факел ещё горит. Лучник берёт от него огонь, отходит на своё место и стреляет горящей стрелой оттуда."
  ],
  "files": {
   "index.html": {
-   "size": 1228388,
-   "hash": "c102d763d9b56ff0"
+   "size": 1232137,
+   "hash": "3bde74d5ff8dd234"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "73731de216b1d66a"
+   "hash": "17aecabe3651b6f0"
   },
   "icon-192.png": {
    "size": 42164,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "A new archer joins the bridge battle: he lights an arrow from any fire nearby — a burning fighter, a dropped torch or a burning tower — and blows up the dynamite goblin with it. The rock in the water by the bridge is gone."
+  "Bridge battle: a fallen torch goblin now lies on the ground with the torch still burning. The archer takes fire from it, falls back to his spot and shoots the burning arrow from there."
  ]
 }
