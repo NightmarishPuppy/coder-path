@@ -2393,6 +2393,10 @@ const DIRS = {
   // Арена (v235): бежать к вышке гоблинов — она деревянная и загорается от того, кто горит рядом
   goToTower:  { dx: 0, dy: 0, arrow: "🏚", axis: "g", py: "go_to_tower" },
   wait:      { dx: 0, dy: 0, arrow: "⏳", axis: "w", py: "wait" },
+  // Арена с лучником (v265): взять огонь у упавшего факельщика, отойти на своё место, выстрелить (горящая стрела взрывает динамит)
+  getFire:   { dx: 0, dy: 0, arrow: "🔥", axis: "g", py: "get_fire" },
+  fallBack:  { dx: 0, dy: 0, arrow: "↩", axis: "g", py: "fall_back" },
+  shoot:     { dx: 0, dy: 0, arrow: "🏹", axis: "a", py: "shoot" },
 };
 const ALL_COMMANDS = Object.keys(DIRS);
 const PY_NAMES = ALL_COMMANDS.map((c) => DIRS[c].py);
@@ -8977,7 +8981,7 @@ function drawEnemies(hpLeft) {
 // всё, что игрок уже изучил раньше (стрелки, повторять, «если», «иначе», условия): так можно найти
 // своё решение — например, победить великана. Код с этими инструментами работает и без открытия кнопки.
 let moreOpen = false;
-const ARENA_ONLY = ["heal", "goToEnemy", "goToWater", "goToTower"];
+const ARENA_ONLY = ["heal", "goToEnemy", "goToWater", "goToTower", "getFire", "fallBack", "shoot"];
 function addLearnedTools(lv, i) {
   if (!lv.more || lv._base) return;
   lv._base = { commands: [...lv.commands], ifs: [...(lv.ifs || [])], ifButton: !!lv.ifButton, elseButton: !!lv.elseButton, elifButton: !!lv.elifButton, loopButton: !!lv.loopButton };
@@ -11978,6 +11982,7 @@ const ARENA_ART = {
   monk:   { key: "monk", sc: 0.8, idle: [0, 6, 130, "monk"], run: [0, 4, 100, "monkrun"], heal: [0, 11, 80, "heal"] },
   lan:    { key: "lidle", sc: 0.8, foot: 0.625, idle: [0, 12, 110, "lidle"], run: [0, 6, 90, "lrun"], atk: [0, 3, 120, "lratk"] },
 };
+const arenaStart = () => L?.arena?.start || ARENA.start;   // где стоит герой в начале боя (у лучника — позади своих)
 let arenaEng = null;
 function arenaEngine() { return (arenaEng ||= mapEngine(ISLE_MAPS[ARENA.map])); }
 // где можно стоять: трава островка или дорога с мостами (за краем карты — тоже дорога)
@@ -12015,7 +12020,7 @@ function arenaPlan(code) {
   const A = L.arena, DT = 0.05;
   let seed = A.seed || 7;                       // свой «случай»: одна и та же программа — один и тот же бой (seed уровня подобран под баланс, v217)
   const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
-  const hero = { id: 0, kind: "hero", side: "us", hero: true, x: ARENA.start[0], y: ARENA.start[1], hp: A.hp, act: "idle", left: false };
+  const hero = { id: 0, kind: "hero", side: "us", hero: true, x: arenaStart()[0], y: arenaStart()[1], hp: A.hp, act: "idle", left: false };
   const units = [hero], frames = [], events = [], pend = [];
   const waves = [...A.waves].sort((a, b) => a[0] - b[0]).map(([t, side, kind]) => ({ t, side, kind }));
   let t = 0, nextFrame = 0, line = 0, ids = 0, loops = 0, endedAt = null, heals = 0, hits = 0, kills = 0, swings = 0, healsFailed = 0;
@@ -12023,6 +12028,7 @@ function arenaPlan(code) {
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const add = (kind, x, y, extra) => { const T = ARENA_UNITS[kind];
     const u = { id: ++ids, kind, T, side: T.side, x, y, hp: T.hp, next: t + 0.6, busy: 0, act: "idle", left: false, ...extra };
+    if (A.archer?.hp?.[kind]) u.hp = A.archer.hp[kind];          // у уровня с лучником свои ♥ у гоблинов (подрывника простой стрелой не снять)
     units.push(u); return u; };
   for (const { kind, at, left, hp, follow } of A.allies || []) add(kind, at[0], at[1], { post: [...at], postLeft: !!left, left: !!left, ...(hp ? { hp } : {}), ...(follow ? { follow: true } : {}) });
   const tower = A.tower ? { x: A.tower[0], y: A.tower[1] - (232 - 118) / 64 * 0.75, next: 1 } : null;   // лучник на площадке башни
@@ -12039,6 +12045,10 @@ function arenaPlan(code) {
     if (keep.hp <= 0) events.push({ t, kind: "keepdown" });
   };
   let keepHits = 0, keepEnd = 0, pushes = 0;
+  // v265: уровень с лучником. reach — дальность выстрела, lie — сколько лежит упавший факельщик с горящим факелом, light — сколько держит стрелу в огне
+  const ARCH = A.archer ? { reach: 6.5, lie: 6, light: 0.5, ...A.archer } : null;   // на таком уровне союзники динамит не отбивают: это дело лучника
+  const fireSrc = [];
+  let fireTaken = 0, fireShots = 0, fireKills = 0, plainShots = 0, noFire = 0, backs = 0;
   const air = [];                               // динамит, который летит в рыцаря: { land — когда упадёт, tx, ty, fort / gob — кто бросил }
   let razedAt = null, endAt = 0, heroParries = 0;
   const fortHit = () => {
@@ -12166,7 +12176,7 @@ function arenaPlan(code) {
     return false;
   };
   const inView = (u) => u.x > ARENA.seen[0] - 0.4 && u.x < ARENA.seen[1] + 0.4;
-  const snap = () => { frames.push({ t: +t.toFixed(2), line, hero: { x: hero.x, y: hero.y, hp: hero.hp, act: hero.act, left: hero.left },
+  const snap = () => { frames.push({ t: +t.toFixed(2), line, hero: { x: hero.x, y: hero.y, hp: hero.hp, act: hero.act, left: hero.left, ...(hero.lit ? { lit: true } : {}) },
     units: units.filter((u) => !u.hero).map((u) => ({ id: u.id, kind: u.kind, x: u.x, y: u.y, hp: u.hp, act: u.act, left: u.left, dead: u.hp <= 0, ...(u.wade ? { wade: u.wade } : {}) })) });
   if (FIRE && hero.wade) frames[frames.length - 1].hero.wade = hero.wade; };
   // ранение. Бочку можно разбить мечом или стрелой, пока фитиль не горит, — тогда взрыва нет;
@@ -12179,6 +12189,8 @@ function arenaPlan(code) {
     if (u.side === "gob") kills++;
     if (u.kind === "barrel" && (by === "blast" || u.act === "fuse")) return blowBarrel(u);
     const e = { t, kind: "die", id: u.id, at: [u.x, u.y] };
+    // v265: факельщик, сражённый не взрывом, падает и лежит ARCH.lie секунд, факел ещё горит — от него лучник берёт огонь
+    if (ARCH && by !== "blast" && (u.kind === "torch" || u.kind === "torchp") && inView(u)) { e.lie = ARCH.lie; fireSrc.push({ x: u.x, y: u.y, till: t + ARCH.lie }); }
     if (by === "blast" && blastAt) {             // погиб от взрыва — тело отлетает от него (в воду — всплеск)
       const dx = u.x - blastAt[0], dy = u.y - blastAt[1], d = Math.hypot(dx, dy) || 1, len = 0.9 + rnd() * 1.4;
       e.fly = [u.x + dx / d * len, u.y + dy / d * len]; e.dur = 0.5; e.splash = !!arenaEngine().waterAt(...e.fly);
@@ -12257,7 +12269,7 @@ function arenaPlan(code) {
     }
     if (SPREAD && f.fire) { f.act = "idle"; return; }                                             // подрывник с горящим фитилём замер
     const prey = FIRE && A.guard && FIRE.hunt !== "hero" ? units.find((u) => u.kind === "monk" && u.hp > 0) : null;      // v229: гоблины охотятся и за монахом
-    const tg = FIRE?.hunt === "hero" ? hero : prey && dist(f, prey) <= dist(f, hero) + FIRE.bias ? prey : dist(f, hero) <= 5 ? hero : nearestOf(f, "us");
+    const tg = ARCH ? nearestOf(f, "us") : FIRE?.hunt === "hero" ? hero : prey && dist(f, prey) <= dist(f, hero) + FIRE.bias ? prey : dist(f, hero) <= 5 ? hero : nearestOf(f, "us");
     if (!tg) { f.act = "idle"; return; }
     const d = dist(f, tg);
     if (f.kind === "barrel") {
@@ -12290,7 +12302,7 @@ function arenaPlan(code) {
       pend.push({ t: t + 0.98, fn: () => {
         if (d) { air.splice(air.indexOf(d), 1); if (d.caught) return; }
         // союзник у места падения встречает динамит мечом или копьём
-        const can = (u) => u.side === "us" && !u.hero && u.hp > 0 && !u.fly && !(u.downTill > t) && ARENA_PARRY[u.kind] && Math.hypot(u.x - tx, u.y - ty) <= ARENA_PARRY[u.kind][0];
+        const can = (u) => !ARCH && u.side === "us" && !u.hero && u.hp > 0 && !u.fly && !(u.downTill > t) && ARENA_PARRY[u.kind] && Math.hypot(u.x - tx, u.y - ty) <= ARENA_PARRY[u.kind][0];
         const who = units.filter(can).sort((a, b) => Math.hypot(a.x - tx, a.y - ty) - Math.hypot(b.x - tx, b.y - ty))[0];
         if (who && rnd() < ARENA_PARRY[who.kind][1]) {
           parried++; who.act = "atk"; who.busy = t + 0.45; who.left = f.x < who.x;
@@ -12388,6 +12400,7 @@ function arenaPlan(code) {
       if (t >= nextFrame - 1e-9) { snap(); nextFrame += 0.1; }
       if (hero.hp <= 0 || t >= A.secs || (endAt && t >= endAt)) throw STOPA;
       if (FIRE && A.guard && !units.some((u) => u.kind === "monk" && u.hp > 0)) { if (!guardEnd) guardEnd = t + 1.2; else if (t >= guardEnd) throw STOPA; }   // монаха надо было уберечь
+      if (ARCH?.guard && units.some((u) => u.side === "us" && !u.hero && u.hp <= 0)) { if (!guardEnd) guardEnd = t + 1.2; else if (t >= guardEnd) throw STOPA; }   // v265: своих надо уберечь
       if (keep && A.keep.must && keep.hp <= 0) { if (!keepEnd) keepEnd = t + 1.2; else if (t >= keepEnd) throw STOPA; }   // башню надо было уберечь — бой проигран
     }
   };
@@ -12483,6 +12496,70 @@ function arenaPlan(code) {
     while (wait > 0 && hero.hp > 0 && fort.hp > 0 && !fort.fire && hero.fire) { live(DT); wait -= DT; }
     live(0.15);
   };
+  // ----- лучник (v265, A.archer) -----
+  // «Взять огонь»: добежать до ближайшего упавшего факельщика, пока его факел горит, и поджечь стрелу. Огня нет — потерянное время.
+  // «Отойти»: вернуться на своё место позади своих. «Выстрел»: в ближайшего гоблина; стрела горит — в подрывника:
+  // динамит взрывается сразу и раскидывает соседей. Простая стрела подрывника только ранит.
+  const getFire = (ln) => {
+    line = ln; stand();
+    const src = fireSrc.filter((q) => q.till > t + 0.4).sort((a, b) => Math.hypot(a.x - hero.x, a.y - hero.y) - Math.hypot(b.x - hero.x, b.y - hero.y))[0];
+    if (!src || hero.lit) { hero.act = "idle"; noFire++; live(0.2); return; }
+    let left = 5;
+    while (left > 0 && hero.hp > 0 && src.till > t && Math.hypot(hero.x - src.x, hero.y - src.y) > 0.6) {
+      if (!hero.fly && !(hero.downTill > t)) { hero.act = "run"; if (!stepTo(hero, src.x, src.y, 2.4)) break; }
+      live(DT); left -= DT;
+    }
+    hero.act = "idle";
+    if (hero.hp <= 0 || src.till <= t || Math.hypot(hero.x - src.x, hero.y - src.y) > 0.9) { noFire++; return; }      // не успел: факел погас
+    hero.left = src.x < hero.x;
+    events.push({ t, kind: "getfire", from: [src.x, src.y] });
+    live(ARCH.light);
+    if (hero.hp > 0) { hero.lit = true; fireTaken++; }
+  };
+  const fallBack = (ln) => {
+    line = ln; stand(); backs++;
+    const [gx, gy] = arenaStart();
+    let left = 5;
+    while (left > 0 && hero.hp > 0 && Math.hypot(hero.x - gx, hero.y - gy) > 0.12) {
+      if (!hero.fly && !(hero.downTill > t)) { hero.act = "run"; if (!stepTo(hero, gx, gy, 2.4)) break; }
+      live(DT); left -= DT;
+    }
+    hero.act = "idle"; hero.left = false; live(0.1);
+  };
+  const shoot = (ln) => {
+    line = ln; stand(); swings++;
+    const can = (f) => inView(f) && !f.fly && dist(f, hero) <= ARCH.reach;
+    const tg = (hero.lit && gobs().filter((f) => can(f) && (f.kind === "tnt" || f.kind === "barrel")).sort((a, b) => dist(a, hero) - dist(b, hero))[0])
+      || gobs().filter(can).sort((a, b) => dist(a, hero) - dist(b, hero))[0];
+    if (!tg) { hero.act = "idle"; live(0.5); return; }            // стрелять не в кого — ждёт (огонь на стреле держится)
+    hero.act = "atk"; hero.left = tg.x < hero.x;
+    live(0.3);
+    if (hero.hp <= 0 || hero.fly || hero.downTill > t) { hero.act = "idle"; return; }
+    const from = [hero.x + (hero.left ? -0.25 : 0.25), hero.y - 0.4], to = [tg.x, tg.y - 0.35], d = Math.hypot(to[0] - from[0], to[1] - from[1]);
+    if (hero.lit) {
+      hero.lit = false; fireShots++;
+      const fly = Math.max(0.5, d * 0.14);
+      events.push({ t, kind: "farrow", from, to, id: tg.id, dur: fly });
+      pend.push({ t: t + fly, fn: () => {
+        if (tg.hp <= 0) return;
+        hits++;
+        if (tg.kind === "barrel") return blowBarrel(tg);
+        if (tg.kind === "tnt" || tg.kind === "sap") {              // динамит взорвался на подрывнике
+          tg.hp = 0; kills++; fireKills++;
+          if (ARCH.need && fireKills >= ARCH.need && !endAt) endAt = t + 1.6;      // взорваны все, кого надо, — победа
+          events.push({ t, kind: "die", id: tg.id, at: [tg.x, tg.y], boom: true });
+          return blast(tg.x, tg.y, ARENA_BLAST.barrel.r, 2, ARENA_WAVE.barrel);
+        }
+        hurt(tg, 2, hero);
+      } });
+    } else {
+      plainShots++;
+      const fly = d * 0.075;
+      events.push({ t, kind: "arrow", from, to, dur: fly });
+      pend.push({ t: t + fly, fn: () => { if (tg.hp > 0) { hits++; hurt(tg, ARENA.dmg, hero); } } });
+    }
+    live(0.35); hero.act = "idle";
+  };
   const flying = () => air.filter((d) => !d.caught && d.land > t + 0.02).sort((a, b) => a.land - b.land)[0];
   const dynamiteFlying = (ln) => { line = ln; stand(); live(0.05); return !!flying(); };
   // копьё: дождаться динамита и отбить его обратно — в того, кто бросил. Динамита нет — удар в пустоту
@@ -12504,7 +12581,7 @@ function arenaPlan(code) {
     pend.push({ t: t + 0.6, fn: () => (d.fort ? fortHit() : blast(bx, by, ARENA_BLAST.dyn.r, 1, ARENA_WAVE.dyn)) });
     live(0.3); hero.act = "idle";
   };
-  const fns = { attack, heal, goToEnemy, parry, push, goToWater, goToTower };
+  const fns = { attack, heal, goToEnemy, parry, push, goToWater, goToTower, getFire, fallBack, shoot };
   try {
     checkDefs(code, lang);
     const js = lang === "py" ? pyToJs(code) : code;
@@ -12522,11 +12599,11 @@ function arenaPlan(code) {
   events.sort((a, b) => a.t - b.t);             // бросок записан наперёд — события по времени
   const keepLost = !!keep && !!A.keep.must && keep.hp <= 0;       // уровень, где свою башню надо уберечь (v224)
   const guardLost = !!guardEnd;                                   // v229: монаха не уберегли
-  const survived = hero.hp > 0 && (A.goal !== "raze" || razedAt !== null) && !keepLost && !guardLost;
+  const survived = hero.hp > 0 && (A.goal !== "raze" || razedAt !== null) && !keepLost && !guardLost && (!ARCH?.need || fireKills >= ARCH.need);
   const lost = units.filter((u) => u.side === "us" && !u.hero && u.hp <= 0).length;
   return { arena: true, commands: [], frames, events, survived, t, endedAt, heals, hits, kills, swings, hp: hero.hp, lost, healsFailed, flung, parried, heroParries, razed: razedAt !== null, fortHp: fort?.hp,
     keepHp: keep?.hp, keepHits, keepLost, pushes, fires, douses, trips, dryTrips, burnHp, monkHeals, guardLost, burning: !!hero.fire,
-    monkFires, monkSpread, gobFires, fortLit, fortTrips, fortDry, sapBlown, fatHits,
+    monkFires, monkSpread, gobFires, fortLit, fortTrips, fortDry, sapBlown, fatHits, fireTaken, fireShots, fireKills, plainShots, noFire, backs,
     // корона (arena.keep.crown): башня устояла; clean — в неё не попал ни один динамит.
     // v235: arena.crown === "monk" — монах за весь бой ни разу не загорелся
     // arena.crown === "nodyn" — в копейщика не попал ни один жирный динамит с вышки
@@ -12584,7 +12661,7 @@ function arenaHudDraw(hp, max, left, fortHp, keepHp, monkHp) {
 }
 let arenaHero = null;
 // кто идёт на арену: рыцарь, а на уровнях копейщика (lancer) — копейщик
-const arenaHeroArt = () => (L.lancer ? { key: "lidle", sc: 0.8, foot: 0.625, idle: [0, 12, 110, "lidle"], run: [0, 6, 90, "lrun"], atk: [0, 3, 120, "lratk"] }
+const arenaHeroArt = () => (L.archer ? { key: "archer", sc: 0.85, idle: [0, 6, 150, "archer"], run: [1, 6, 90, "archer"], atk: [4, 8, 55, "archer"] } : L.lancer ? { key: "lidle", sc: 0.8, foot: 0.625, idle: [0, 12, 110, "lidle"], run: [0, 6, 90, "lrun"], atk: [0, 3, 120, "lratk"] }
   : { key: "hidle", sc: 0.85, foot: 0.825, idle: [0, 8, 110, "hidle"], run: [0, 6, 85, "hrun"], atk: [0, 4, 110, "hatk"] });
 // башня с лучником и союзники на своих местах (до запуска и в начале боя)
 function arenaScene(st) {
@@ -12618,8 +12695,8 @@ function arenaReset() {
   arenaScene(st);
   const HA = arenaHeroArt();
   arenaHero = skActor(st, HA.key, HA.sc, HA.foot);
-  arenaHero.at(...ARENA.start); arenaHero.show(true); arenaHero.play(...HA.idle.slice(0, 3), true, HA.idle[3]);
-  arenaHero.el.style.zIndex = Math.round(ARENA.start[1] * 40);
+  arenaHero.at(...arenaStart()); arenaHero.show(true); arenaHero.play(...HA.idle.slice(0, 3), true, HA.idle[3]);
+  arenaHero.el.style.zIndex = Math.round(arenaStart()[1] * 40);
   arenaHudDraw(L.arena.hp, L.arena.hp, L.arena.secs);
   refreshPlan();
   if (L.arena.guard) setStatus(tr(uiBlocks ? "Собери программу копейщика и нажми «Запустить» — продержись {n} секунд и сбереги монаха"
@@ -12628,6 +12705,8 @@ function arenaReset() {
     : "Напиши программу копейщика и нажми «Запустить» — сожги вышку за {n} секунд", { n: L.arena.secs }));
   else if (L.arena.goal === "raze") setStatus(tr(uiBlocks ? "Собери программу копейщика и нажми «Запустить» — разрушь вышку за {n} секунд"
     : "Напиши программу копейщика и нажми «Запустить» — разрушь вышку за {n} секунд", { n: L.arena.secs }));
+  else if (L.archer) setStatus(tr(uiBlocks ? "Собери программу лучника и нажми «Запустить» — взорви подрывников: {k}"
+    : "Напиши программу лучника и нажми «Запустить» — взорви подрывников: {k}", { k: L.arena.archer.need }));
   else setStatus(tr(uiBlocks ? "Собери программу рыцаря и нажми «Запустить» — продержись {n} секунд"
     : "Напиши программу рыцаря и нажми «Запустить» — продержись {n} секунд", { n: L.arena.secs }));
 }
@@ -12694,7 +12773,7 @@ async function runArena() {
       await sleep(Math.max(200, 640 - 110 * keepSmoke));
     }
   })();
-  const H = skActor(st, HA.key, HA.sc, HA.foot); H.at(...ARENA.start); H.show(true);
+  const H = skActor(st, HA.key, HA.sc, HA.foot); H.at(...arenaStart()); H.show(true);
   const fx = skActor(st, "healfx", 0.8);
   const pool = (k, n, sc, foot) => Array.from({ length: n }, () => skActor(st, k, sc, foot));
   const booms = pool("boom", 5, 0.9, 0.6), dyns = pool("dyn", 3, 1, 0.5), deads = pool("dead", 8, 0.9, 0.75), arrows = pool("arrow", 4, 0.75, 0.5);
@@ -12760,6 +12839,51 @@ async function runArena() {
     }
   })();
   const Z = (a, y) => (a.el.style.zIndex = Math.round(y * 40));
+  // v265: упавший факельщик лежит на боку, потемневший и неподвижный, факел в руке горит; потом — череп (как в бою у моста)
+  const corpseA = (a, e) => {
+    const dir = a.x < H.x ? -1 : 1, k = 0.85 / 64, [x, y] = e.at, ms = e.lie * 1000 / speed;
+    a.play(0, 1, 1000, true); a.face(false); a.act = "dead";
+    tumbleA(a, 0, dir, quick(300), true);
+    const dim = a.el.animate([{ filter: "none" }, { filter: "saturate(0.6) brightness(0.86)" }], { duration: quick(500), fill: "forwards" });
+    const fl = skActor(st, "tflame", 0.8, 1); fl.mute = true; fl.el.style.transition = "none";
+    fl.at(x + dir * 14 * k, y - 0.17 * 192 * k - dir * 30 * k + 0.1); fl.el.style.zIndex = Math.round(y * 40) + 1; fl.show(true, true); fireLook(fl.el); fl.play(0, 7, 100);
+    sfx(dieSnd(e.id));
+    sleep(ms).then(() => { fl.el.remove(); dim.cancel(); a.show(false); upA(a); if (!running || arenaRun !== myRun) return;
+      const d = deads[di++ % deads.length]; d.at(x, y); Z(d, y); d.mute = true; d.show(true); d.play(0, 7, quick(110), false); });
+  };
+  // огонёк на луке: стрела зажжена (вложен в картинку лучника — бежит и поворачивается вместе с ним)
+  let bowFl = null;
+  const bowFire = (on) => {
+    if (on === !!bowFl) return;
+    if (!on) { bowFl.el.remove(); bowFl = null; return; }
+    const fl = bowFl = skActor(st, "tflame", 1, 1), e = fl.el; fl.mute = true; H.el.appendChild(e);
+    e.style.width = "21%"; e.style.left = "64%"; e.style.top = "54%"; e.style.zIndex = 2; e.style.transformOrigin = "50% 100%"; e.style.transform = "translate(-50%, -100%)";
+    fl.show(true, true); fireLook(e); fl.play(0, 7, 80);
+  };
+  // горящая стрела: по дуге, повёрнута по ходу, огонь у наконечника тянется назад, позади дым; доворачивает за целью
+  const fireArrowA = (e) => {
+    if (STILL) return;
+    const a = skActor(st, "arrow", 0.75, 0.5), el = a.el; a.mute = true;
+    el.style.transformOrigin = "0 0"; el.style.transition = "none"; el.style.zIndex = 990; a.frame(0, 0);
+    const fl = skActor(st, "tflame", 1, 1), f = fl.el; fl.mute = true; el.appendChild(f);
+    f.style.width = "100%"; f.style.left = "80%"; f.style.top = "50%"; f.style.zIndex = 2; f.style.transformOrigin = "50% 100%"; f.style.transform = "translate(-50%, -100%) rotate(-90deg)";
+    fl.show(true, true); f.style.filter = "brightness(1.25) saturate(1.4)"; fl.play(0, 7, 70);
+    const glow = document.createElement("div"); glow.className = "fglow"; glow.style.width = glow.style.height = "220%"; glow.style.left = "70%"; glow.style.top = "50%"; el.appendChild(glow);
+    const [sx, sy] = e.from; let [ex, ey] = e.to;
+    const D = Math.hypot(ex - sx, ey - sy), ms = e.dur * 1000 / speed, h = Math.min(1.5, 0.3 + D * 0.17), t0 = performance.now(), tg = actors[e.id];
+    let px = sx, py = sy, pf = 0;
+    el.style.rotate = Math.atan2(ey - sy - 4 * h, ex - sx) + "rad"; a.at(sx, sy); a.show(true, true);
+    const step = (tm) => {
+      if (tg && !tg.gone) { ex = tg.x; ey = tg.y - 0.35; }
+      const q = Math.min(1, Math.max(0, (tm - t0) / ms)), x = sx + (ex - sx) * q, y = sy + (ey - sy) * q - h * 4 * q * (1 - q);
+      const mv = Math.hypot(x - px, y - py);
+      if (mv > 0.01) el.style.rotate = Math.atan2(y - py, x - px) + "rad";
+      if (tm >= pf && q > 0.1 && mv > 0) { pf = tm + 70 / Math.min(3, speed); puff(x - (x - px) / mv * 0.5 - 0.2, y - (y - py) / mv * 0.5, 0.2, 0.6, 0.1, 480, 985); }
+      a.at(x, y); px = x; py = y;
+      if (q < 1 && arenaRun === myRun) requestAnimationFrame(step); else el.remove();
+    };
+    requestAnimationFrame(step);
+  };
   const ARCH_ROW = { up: 2, uside: 3, side: 4, dside: 5, down: 6 };
   const dirOf = (dx, dy) => { const ax = Math.abs(dx);
     return dy > 1.6 * ax ? "down" : -dy > 1.6 * ax ? "up" : dy > 0.55 * ax ? "dside" : -dy > 0.55 * ax ? "uside" : "side"; };
@@ -12848,6 +12972,8 @@ async function runArena() {
         // свист стрелы, не чаще раза в 0,5 с
         if (performance.now() - lastArrow > 500) { sfx("arrow"); lastArrow = performance.now(); }
       }
+      if (e.kind === "getfire") { spark([e.from[0], e.from[1] + 0.3], [H.x, H.y - 0.1]); sfx("flare"); }
+      if (e.kind === "farrow") { fireArrowA(e); if (performance.now() - lastArrow > 300) { sfx("arrow"); lastArrow = performance.now(); } }
       if (e.kind === "swing") { sfx(e.hit ? "hit" : "swish"); if (e.hit) sfx("cry"); }
       // копейщик попал: «вжух» копья, не чаще раза в 0,4 с (на ×5 и ×10 удары идут подряд)
       if (e.kind === "spear" && performance.now() - lastSpear > 400) { sfx("spear"); lastSpear = performance.now(); }
@@ -12860,7 +12986,8 @@ async function runArena() {
         const skullAt = (x, y) => { const d = deads[di++ % deads.length]; d.at(x, y); Z(d, y); d.show(true); d.play(0, 7, quick(110), false); };
         if (a) a.gone = true;
         if (flames[e.id]) { fireSpotsOff(flames[e.id]); delete flames[e.id]; }      // сгорел или погиб горящим — огоньки гаснут вместе с ним
-        if (e.sunk) { a?.show(false); upA(a || {}); wet(...e.at); }
+        if (e.lie && a && !STILL && a.el.animate) corpseA(a, e);
+        else if (e.sunk) { a?.show(false); upA(a || {}); wet(...e.at); }
         else if (e.fly && a && !STILL) {                 // тело отлетает от взрыва: на землю — череп, в воду — всплеск
           const ms = quick(e.dur * 1000), [lx, ly] = e.fly;
           a.el.style.transition = `left ${ms}ms linear, top ${ms}ms linear`; a.at(lx, ly); Z(a, ly + 2);
@@ -12879,6 +13006,7 @@ async function runArena() {
     H.el.style.transition = `left ${dur}ms linear, top ${dur}ms linear`;
     H.at(h.x, h.y); H.x = h.x; H.y = h.y; if (h.act !== "fly" && h.act !== "down") { if (H.lie) upA(H); H.face(h.left); } Z(H, h.y);
     if (A.fire) wadeCut(H, h.wade || 0);
+    if (L.archer) bowFire(!!h.lit);
     if (h.act !== heroAct) {
       heroAct = h.act;
       if (h.act === "run") H.play(...HA.run.slice(0, 3), true, HA.run[3]);
@@ -12914,6 +13042,7 @@ async function runArena() {
       : A.guard ? tr("Победа! Монах цел. Огонь потушен в воде: {n}, побеждено гоблинов: {k}", { n: p.douses, k: p.kills })
       : A.fort?.wood ? tr("Победа! Вышка сгорела дотла — и подрывник взлетел на воздух вместе со своим динамитом")
       : A.goal === "raze" ? tr("Победа! Вышка разрушена — отбито динамита: {n}", { n: p.heroParries })
+      : L.archer ? tr("Победа! Подрывников взорвано горящей стрелой: {k}", { k: p.fireKills })
       : tr("Победа! Рыцарь продержался {n} секунд — побеждено гоблинов: {k}", { n: A.secs, k: p.kills }), "win");
     sfx("win");
     finish();
@@ -12942,6 +13071,11 @@ async function runArena() {
   let why;
   if (p.endedAt !== null && p.endedAt < A.secs - 0.5)
     why = tr("Программа кончилась на {n}-й секунде, и дальше рыцарь просто стоял. Положи команды в цикл 🔁 — он крутится весь бой", { n: Math.max(1, Math.round(p.endedAt)) });
+  else if (L.archer)                              // v265: лучник
+    why = !p.fireTaken ? tr("Простая стрела подрывника только ранит. Возьми огонь у упавшего гоблина — 🔥: горящая стрела взрывает динамит")
+      : !p.backs && p.hp <= 0 ? tr("Лучник остался с огнём среди гоблинов, и его достали. Взял огонь — отойди ↩ и стреляй издалека")
+      : !p.fireShots ? tr("Лучник взял огонь, но так и не выстрелил. После «отойти» поставь выстрел: 🏹")
+      : tr("Подрывников взорвано: {k} из {n}. Порядок такой: взять огонь 🔥, отойти ↩, выстрел 🏹 — и всё это в цикле", { k: p.fireKills, n: A.archer.need || 0 });
   else if (p.guardLost && p.monkSpread)           // v235: монах загорелся от копейщика
     why = tr("Монах загорелся от копейщика: огонь перекидывается на того, кто стоит рядом. Про огонь спрашивай первым — и сразу к воде: 💧");
   else if (A.fort?.wood && !p.fortLit && !(p.burnHp >= 3 && !p.douses))
@@ -13770,7 +13904,7 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ===== 17. Прочитать задание вслух =====
-const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear", wait: "wait", push: "push", goToWater: "to water", goToTower: "to the tower" }
+const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear", wait: "wait", push: "push", goToWater: "to water", goToTower: "to the tower", getFire: "get fire", fallBack: "fall back", shoot: "shoot" }
   : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё", wait: "ждать", push: "толкни", goToWater: "к воде", goToTower: "к вышке" };
 function speakGoal() {
   try {
@@ -15225,7 +15359,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 264;
+const APP_VERSION = 265;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15233,6 +15367,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 265, date: "2026-11-23", text: "Новый дополнительный уровень на острове гоблинов — «Горящая стрела»: ты лучник. Возьми огонь у упавшего гоблина, отойди и выстрели — горящая стрела взрывает динамит.", en: "A new bonus level on Goblin Island — “Burning Arrow”: you are the archer. Take fire from a fallen goblin, fall back and shoot — a burning arrow blows up the dynamite.", big: true },
   { v: 264, date: "2026-11-23", text: "Бой у моста: сражённый гоблин с факелом теперь падает и лежит, а факел ещё горит. Лучник берёт от него огонь, отходит на своё место и стреляет горящей стрелой оттуда.", en: "Bridge battle: a fallen torch goblin now lies on the ground with the torch still burning. The archer takes fire from it, falls back to his spot and shoots the burning arrow from there." },
   { v: 263, date: "2026-11-23", text: "В бою у моста появился лучник: он поджигает стрелу от огня рядом — от горящего бойца, упавшего факела или горящей башни — и взрывает ею гоблина с динамитом. Камень в воде у моста убран.", en: "A new archer joins the bridge battle: he lights an arrow from any fire nearby — a burning fighter, a dropped torch or a burning tower — and blows up the dynamite goblin with it. The rock in the water by the bridge is gone." },
   { v: 262, date: "2026-11-23", text: "Программа часового теперь ходит вместе с ним — облачком над головой", en: "The sentry’s program now walks with him — in a bubble above his head" },

@@ -1,21 +1,21 @@
 {
- "version": 264,
+ "version": 265,
  "date": "2026-11-23",
  "notes": [
-  "Бой у моста: сражённый гоблин с факелом теперь падает и лежит, а факел ещё горит. Лучник берёт от него огонь, отходит на своё место и стреляет горящей стрелой оттуда."
+  "Новый дополнительный уровень на острове гоблинов — «Горящая стрела»: ты лучник. Возьми огонь у упавшего гоблина, отойди и выстрели — горящая стрела взрывает динамит."
  ],
  "files": {
   "index.html": {
-   "size": 1232137,
-   "hash": "3bde74d5ff8dd234"
+   "size": 1244542,
+   "hash": "fa5239f166c70cd2"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 86367,
-   "hash": "5026b0642aeeac55"
+   "size": 88134,
+   "hash": "516ab9d88b2fdd79"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "17aecabe3651b6f0"
+   "hash": "c5a08b7f95bec097"
   },
   "icon-192.png": {
    "size": 42164,
@@ -94,8 +94,8 @@
    "hash": "e896c7e68cfa6371"
   },
   "isle6.js": {
-   "size": 49492,
-   "hash": "39e8453889e5ffa4"
+   "size": 52368,
+   "hash": "7319bcde04d7f37d"
   },
   "art-scenes.js": {
    "size": 996051,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "Bridge battle: a fallen torch goblin now lies on the ground with the torch still burning. The archer takes fire from it, falls back to his spot and shoots the burning arrow from there."
+  "A new bonus level on Goblin Island — “Burning Arrow”: you are the archer. Take fire from a fallen goblin, fall back and shoot — a burning arrow blows up the dynamite."
  ]
 }
