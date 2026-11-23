@@ -1,13 +1,13 @@
 {
- "version": 265,
+ "version": 266,
  "date": "2026-11-23",
  "notes": [
-  "Новый дополнительный уровень на острове гоблинов — «Горящая стрела»: ты лучник. Возьми огонь у упавшего гоблина, отойди и выстрели — горящая стрела взрывает динамит."
+  "Небольшие улучшения внутри игры."
  ],
  "files": {
   "index.html": {
-   "size": 1244542,
-   "hash": "fa5239f166c70cd2"
+   "size": 1247468,
+   "hash": "17c98afd9e383cbc"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "c5a08b7f95bec097"
+   "hash": "9f398b2818b23c18"
   },
   "icon-192.png": {
    "size": 42164,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "A new bonus level on Goblin Island — “Burning Arrow”: you are the archer. Take fire from a fallen goblin, fall back and shoot — a burning arrow blows up the dynamite."
+  "Small improvements inside the game."
  ]
 }

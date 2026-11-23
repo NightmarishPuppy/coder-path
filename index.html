@@ -15359,7 +15359,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 265;
+const APP_VERSION = 266;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15367,6 +15367,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 266, date: "2026-11-23", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 265, date: "2026-11-23", text: "Новый дополнительный уровень на острове гоблинов — «Горящая стрела»: ты лучник. Возьми огонь у упавшего гоблина, отойди и выстрели — горящая стрела взрывает динамит.", en: "A new bonus level on Goblin Island — “Burning Arrow”: you are the archer. Take fire from a fallen goblin, fall back and shoot — a burning arrow blows up the dynamite.", big: true },
   { v: 264, date: "2026-11-23", text: "Бой у моста: сражённый гоблин с факелом теперь падает и лежит, а факел ещё горит. Лучник берёт от него огонь, отходит на своё место и стреляет горящей стрелой оттуда.", en: "Bridge battle: a fallen torch goblin now lies on the ground with the torch still burning. The archer takes fire from it, falls back to his spot and shoots the burning arrow from there." },
   { v: 263, date: "2026-11-23", text: "В бою у моста появился лучник: он поджигает стрелу от огня рядом — от горящего бойца, упавшего факела или горящей башни — и взрывает ею гоблина с динамитом. Камень в воде у моста убран.", en: "A new archer joins the bridge battle: he lights an arrow from any fire nearby — a burning fighter, a dropped torch or a burning tower — and blows up the dynamite goblin with it. The rock in the water by the bridge is gone." },
@@ -16039,6 +16040,21 @@ if (!stat || !/^[a-z0-9]{16}$/.test(stat.id || "")) {
   stat = { id, first: new Date().toISOString(), opens: 0, lv: {} };
 }
 stat.opens = (stat.opens || 0) + 1;
+// Откуда пришёл игрок (v266): метка в ссылке — …/coder-path/?from=coub, в Telegram — t.me/Coderpath_bot?startapp=from_coub.
+// Запоминается один раз, при первом запуске игры на устройстве: кто уже играл, тот «не с этой площадки».
+// Метки нет — берём сайт, с которого перешли (если браузер его сообщил). Только имя площадки, ничего о человеке.
+function statSource() {
+  const ok = (t) => (/^[a-z0-9_-]{2,16}$/i.test(t || "") ? t.toLowerCase() : "");
+  try {
+    const q = new URLSearchParams(location.search), sp = q.get("tgWebAppStartParam") || window.Telegram?.WebApp?.initDataUnsafe?.start_param || "";
+    const tag = ok(q.get("from")) || (/^from_/.test(sp) ? ok(sp.slice(5)) : "");
+    if (tag) return tag;
+    const h = document.referrer ? new URL(document.referrer).hostname.replace(/^www\./, "") : "";
+    if (h && h !== location.hostname) return "ref:" + h.slice(0, 30);
+  } catch (e) {}
+  return "";
+}
+if (stat.opens === 1 && stat.src === undefined) stat.src = statSource();
 const statSave = () => { try { localStorage.setItem(STAT_KEY, JSON.stringify(stat)); } catch (e) {} };
 statSave();
 const statOn = () => /\.github\.io$|(^|\.)itch\.zone$|(^|\.)hwcdn\.net$/.test(location.hostname) && !window.claude && !save.dev;   // сайт, Telegram и itch.io
@@ -16106,7 +16122,7 @@ function statDoc() {
     stars: LEVELS.reduce((s, l) => s + (save.stars[l.name] || 0), 0), won: won.length,
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
     op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length, gems: Object.keys(save.gems || {}).length,
-    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {}, sh: stat.sh || 0, rp: stat.rp || 0, ch: stat.ch || 0,
+    taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {}, sh: stat.sh || 0, rp: stat.rp || 0, ch: stat.ch || 0, src: stat.src || "",
   };
 }
 let statTimer = null, statLast = 0;
@@ -16153,6 +16169,15 @@ function statHtml(all) {
   let h = `<div class="st-cards">${card(all.length, "устройств всего")}${card(all.filter((d) => ago(d) < 1).length, "играли за сутки")}`
     + `${card(all.filter((d) => ago(d) < 7).length, "за неделю")}${card(all.filter((d) => (now - Date.parse(d.first || 0)) / day < 7).length, "новых за неделю")}`
     + `${card(all.filter((d) => d.won > 0).length, "прошли хоть уровень")}${card(all.filter((d) => d.sh > 0).length, "поделились игрой (с v244)")}${card(all.filter((d) => d.rp > 0).length, "пришли по ссылке-повтору (с v245)")}${card(all.filter((d) => d.ch > 0).length, "открыли канал игры (с v249)")}</div>`;
+  // откуда пришли (v266): по метке в ссылке; сколько из них прошли первый уровень и пять уровней
+  {
+    const N = { coub: "Coub", tiktok: "TikTok", tg: "Telegram (канал, чат)", pikabu: "Pikabu", dtf: "DTF", itch: "itch.io", yt: "YouTube", vk: "VK", ig: "Instagram" }, g = {};
+    for (const d of all) if (d.src) { const q = (g[d.src] ||= [0, 0, 0, 0]); q[0]++; if (d.won > 0) q[1]++; if (d.won >= 5) q[2]++; if ((now - Date.parse(d.first || 0)) / day < 7) q[3]++; }
+    const rows = Object.entries(g).sort((a, b) => b[1][0] - a[1][0]);
+    h += `<h3 class="st-h">Откуда пришли (с v266)</h3><p class="st-note">Метка в ссылке: <b>?from=coub</b> на сайте, <b>?startapp=from_coub</b> у бота. Считается один раз — при первом запуске игры на устройстве. «ref:…» — метки не было, сайт назвал браузер.</p>`
+      + (rows.length ? `<table class="st-tbl"><tr><th>Откуда</th><th>Устройств</th><th>Прошли уровень</th><th>Прошли 5 уровней</th><th>Новых за неделю</th></tr>`
+        + rows.map(([k, q]) => `<tr><td>${esc(N[k] || k)}</td><td>${q[0]}</td><td>${q[1]}</td><td>${q[2]}</td><td>${q[3]}</td></tr>`).join("") + `</table>` : `<p class="st-note">Пока никого с меткой.</p>`);
+  }
   h += bars("Где играют", "where", { tg: "Telegram", web: "Браузер", app: "Приложение (значок)", itch: "itch.io" });
   h += bars("Система", "os", { ios: "iPhone / iPad", android: "Android", windows: "Windows", mac: "Mac", linux: "Linux", other: "Другое" });
   h += bars("Устройство", "form", { phone: "Телефон", tablet: "Планшет", desktop: "Компьютер" });
@@ -16717,7 +16742,7 @@ if (swOk) {
 (async () => {
   let p = "";
   try { const q = new URLSearchParams(location.search); p = q.get("r") || q.get("tgWebAppStartParam") || (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || ""; } catch (e) {}
-  if (!p) return;
+  if (!p || /^from_/.test(p)) return;                                  // from_… — метка площадки (v266), не повтор
   try { const u = new URL(location.href); if (u.searchParams.has("r")) { u.searchParams.delete("r"); history.replaceState(null, "", u); } } catch (e) {}
   const r = await replayUnpack(p);
   if (!r) return;
