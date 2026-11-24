@@ -1,13 +1,13 @@
 {
- "version": 270,
+ "version": 271,
  "date": "2026-11-25",
  "notes": [
-  "На iPhone и iPad звук больше не отстаёт после возврата в игру"
+  "Небольшие улучшения внутри игры"
  ],
  "files": {
   "index.html": {
-   "size": 1267120,
-   "hash": "51d06179f3080b75"
+   "size": 1268811,
+   "hash": "82ddc45452007003"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "3c16a5ed572c32d9"
+   "hash": "010f20678e96cffa"
   },
   "icon-192.png": {
    "size": 42164,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "On iPhone and iPad sound no longer lags after you return to the game"
+  "Small improvements inside the game"
  ]
 }

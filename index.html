@@ -1630,7 +1630,7 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 .ed-cmd.on { border-color: var(--torch); color: #fff; background: #3a2f1c; }
 .ed-par { font-size: 13px; color: var(--muted); }
 .ed-main .btn { flex: 1 1 0; }
-.stats-box { max-width: 720px; }
+.sheet-box.stats-box { max-width: 980px; }
 .st-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin: 10px 0 14px; }
 .st-card { background: #1d2029; border: 1px solid #2c3040; border-radius: 10px; padding: 8px 10px; }
 .st-card b { display: block; font-size: 22px; color: #ffd54a; }
@@ -1654,6 +1654,18 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 .st-tbl th:first-child, .st-tbl td:first-child { text-align: left; }
 .st-tbl tr.isle td { background: #1a1d26; color: #ffd54a; font-weight: 600; text-align: left; }
 .st-tbl td.low { color: #ff8a6a; font-weight: 600; }
+/* таблица уровней (v271): своя рамка с прокруткой в обе стороны — названия столбцов и уровней всегда на виду, между столбцами видная граница */
+.st-wrap { overflow: auto; max-height: 78vh; -webkit-overflow-scrolling: touch; border: 1px solid #4a5166; border-radius: 8px; background: #14161d; }
+.st-wrap .st-tbl { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+.st-wrap .st-tbl th, .st-wrap .st-tbl td { padding: 6px 8px; border-bottom: 1px solid #2f3444; border-right: 1px solid #4a5166; background: #14161d; white-space: nowrap; }
+.st-wrap .st-tbl tr:nth-child(even) td { background: #191c25; }
+.st-wrap .st-tbl th { position: sticky; top: 0; z-index: 2; background: #2a3044; color: #fff; border-bottom: 2px solid #f0a63a; white-space: normal; max-width: 6.5em; vertical-align: bottom; }
+.st-wrap .st-tbl th:first-child, .st-wrap .st-tbl td:first-child { position: sticky; left: 0; z-index: 1; white-space: normal; min-width: 7.5em; max-width: 9.5em; border-right: 2px solid #6a738c; }
+.st-wrap .st-tbl th:first-child { z-index: 3; }
+.st-wrap .st-tbl td:first-child { background: #1d212c; }
+.st-wrap .st-tbl tr.isle td { background: #2a2618; position: static; max-width: none; border-right: 0; }
+.st-wrap .st-tbl tr.isle td span { position: sticky; left: 8px; }
+.st-wrap .st-tbl th:last-child, .st-wrap .st-tbl td:last-child { border-right: 0; }
 .st-note { font-size: 12px; color: #8d93a5; }
 .sheet-box { margin-top: auto; flex: none; }
 @media (min-width: 600px) { .sheet-box { margin-bottom: auto; } }
@@ -15408,7 +15420,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 270;
+const APP_VERSION = 271;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15416,6 +15428,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 271, date: "2026-11-25", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
   { v: 270, date: "2026-11-25", text: "На iPhone и iPad звук больше не отстаёт после возврата в игру", en: "On iPhone and iPad sound no longer lags after you return to the game" },
   { v: 269, date: "2026-11-25", text: "Звуки уровня плавно затихают, когда уходишь с него", en: "Level sounds fade out smoothly when you leave the level" },
   { v: 268, date: "2026-11-24", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
@@ -16317,11 +16330,11 @@ function statHtml(all) {
   }
   // уровни: сколько пробовали, прошли, сколько попыток; где застревают — пробовали, но не прошли
   h += `<h3 class="st-h">Уровни</h3><p class="st-note">Пробовали — нажимали «Запустить». Прошли — % от пробовавших (красным — меньше 60 %). Попыток — в среднем до первой победы. Бросили — пробовали, не прошли и потом не играли 3+ дня.</p>`;
-  h += `<table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th><th>Без урока</th><th>😀</th><th>😴</th><th>😵</th></tr>`;
+  h += `<div class="st-wrap"><table class="st-tbl"><tr><th>Уровень</th><th>Открыли</th><th>Ушли без «Запустить»</th><th>Пробовали</th><th>Прошли</th><th>Попыток</th><th>Бросили</th><th>👑</th><th>💎</th><th>Без урока</th><th>😀</th><th>😴</th><th>😵</th></tr>`;
   let isle = 0;
   LEVELS.forEach((lv) => {
     const n = lv.isle || 1;
-    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="13">${esc(ISLE_NAMES[n])}</td></tr>`; }
+    if (n !== isle) { isle = n; h += `<tr class="isle"><td colspan="13"><span>${esc(ISLE_NAMES[n])}</span></td></tr>`; }
     let opened = 0, left = 0, tried = 0, won = 0, tries = 0, quit = 0, crowned = 0, gems = 0, noTool = 0, openedDev = 0, leftDev = 0;
     const feel = { l: 0, b: 0, h: 0 };
     for (const d of all) {
@@ -16342,7 +16355,7 @@ function statHtml(all) {
     h += `<tr><td>${esc(lvName(lv.name))}</td><td>${opened ? `${opened} <small>(${openedDev})</small>` : ""}</td><td>${left ? `${left} <small>(${leftDev})</small>` : ""}</td><td>${tried || ""}</td><td class="${pct !== null && pct < 60 && tried >= 3 ? "low" : ""}">${pct === null ? "" : pct + " %"}</td>`
       + `<td>${won ? (tries / won).toFixed(1) : ""}</td><td>${quit || ""}</td><td>${hasGiant(lv) ? crowned : ""}</td><td>${gems || ""}</td><td>${noTool || ""}</td><td>${feel.l || ""}</td><td class="${feel.b > feel.l && feel.b >= 2 ? "low" : ""}">${feel.b || ""}</td><td class="${feel.h > feel.l && feel.h >= 2 ? "low" : ""}">${feel.h || ""}</td></tr>`;
   });
-  return h + `</table><p class="st-note">😀 😴 😵 — отзывы игроков в окошке победы (понравилось / скучно / слишком сложно; красным — когда таких больше, чем 😀; счёт с версии 243). «Без урока» — прошли, но ни разу с тем, чему учит уровень (без цикла или приёма). «Открыли» — сколько раз уровень открывали на всех устройствах, в скобках — на скольких устройствах. «Пробовали», «Прошли», «Бросили», 👑, 💎, «Без урока» — это устройства. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
+  return h + `</table></div><p class="st-note">😀 😴 😵 — отзывы игроков в окошке победы (понравилось / скучно / слишком сложно; красным — когда таких больше, чем 😀; счёт с версии 243). «Без урока» — прошли, но ни разу с тем, чему учит уровень (без цикла или приёма). «Открыли» — сколько раз уровень открывали на всех устройствах, в скобках — на скольких устройствах. «Пробовали», «Прошли», «Бросили», 👑, 💎, «Без урока» — это устройства. «Ушли без «Запустить»» — открыли и ушли, не нажав «Запустить» (последний уровень перед выходом засчитывается при следующем открытии). Устройства, где закрыт Google, отметок не присылают. Устройство в режиме для взрослых не отмечается.</p>`;
 }
 // Устройства разработчика (v268): на экране статистики по умолчанию скрыты, кнопка сверху показывает их обратно.
 // Узнаются по приметам из отметки; у отметок без подробностей (до v267) примета одна — «планшет на iOS».
