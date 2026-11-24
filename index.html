@@ -14166,7 +14166,7 @@ function audioRevive() {
     if (actx && actx.state === "running" && actx.currentTime === t && !document.hidden) audioRebuild();
   }, 500);
 }
-function audioRebuild() {
+function audioRebuild(why) {
   const music = !!musicTimer;
   try { stopMusic(); } catch (e) {}
   try { waterSrc?.stop(); } catch (e) {}
@@ -14178,7 +14178,7 @@ function audioRebuild() {
   try { old.close(); } catch (e) {}
   audio();   // новый движок; готовые записи (вода, шаги, удары) переиспользуются
   if (music) startMusic();
-  if (latHint === "playback" || !LIGHT) logEv("set", { b: "звук перезапущен (часы звука стояли)" });
+  if (why || latHint === "playback" || !LIGHT) logEv("set", { b: "звук перезапущен (" + (why || "часы звука стояли") + ")" });
 }
 
 // Одна нота: частота, длительность, форма волны, громкость, сдвиг по времени
@@ -15060,10 +15060,18 @@ document.querySelectorAll(".snd-sfx").forEach((b) => b.addEventListener("click",
 }));
 
 // Браузер разрешает звук только после первого касания — тогда и включаем музыку
-document.addEventListener("pointerdown", () => { audioRevive(); if (save.music) startMusic(); }, { capture: true });
-// Ушли с вкладки — музыку на паузу; вернулись — разбудить звук и снова включить фон
+document.addEventListener("pointerdown", () => {
+  if (audioStale) { audioStale = false; if (actx) audioRebuild("после возврата в игру"); }   // пересоздаём по касанию: iPhone и iPad разрешают звук только так
+  audioRevive(); if (save.music) startMusic(); }, { capture: true });
+// Ушли с вкладки — музыку на паузу; вернулись — разбудить звук и снова включить фон.
+// v270: на iPhone и iPad после возврата из другого приложения звук начинает отставать от картинки на секунду-две
+// (шаги звучат, когда рыцарь уже стоит, мелодия победы опаздывает) и сам не выправляется — после перерыва дольше
+// двух секунд звук там пересоздаётся при первом касании.
+const AUDIO_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 0);
+let audioStale = false, audioHidAt = 0;
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) stopMusic(); else if (actx) { audioRevive(); if (save.music) startMusic(); }
+  if (document.hidden) { audioHidAt = performance.now(); stopMusic(); }
+  else if (actx) { if (AUDIO_IOS && audioHidAt && performance.now() - audioHidAt > 2000) audioStale = true; audioRevive(); if (save.music) startMusic(); }
 });
 if (save.music === undefined) save.music = true;
 if (save.sfx === undefined) save.sfx = true;
@@ -15400,7 +15408,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 269;
+const APP_VERSION = 270;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15408,6 +15416,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 270, date: "2026-11-25", text: "На iPhone и iPad звук больше не отстаёт после возврата в игру", en: "On iPhone and iPad sound no longer lags after you return to the game" },
   { v: 269, date: "2026-11-25", text: "Звуки уровня плавно затихают, когда уходишь с него", en: "Level sounds fade out smoothly when you leave the level" },
   { v: 268, date: "2026-11-24", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
   { v: 267, date: "2026-11-24", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },

@@ -1,13 +1,13 @@
 {
- "version": 269,
+ "version": 270,
  "date": "2026-11-25",
  "notes": [
-  "Звуки уровня плавно затихают, когда уходишь с него"
+  "На iPhone и iPad звук больше не отстаёт после возврата в игру"
  ],
  "files": {
   "index.html": {
-   "size": 1265839,
-   "hash": "45a993fc31002d25"
+   "size": 1267120,
+   "hash": "51d06179f3080b75"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "5d43e350691f51eb"
+   "hash": "3c16a5ed572c32d9"
   },
   "icon-192.png": {
    "size": 42164,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "Level sounds fade out smoothly when you leave the level"
+  "On iPhone and iPad sound no longer lags after you return to the game"
  ]
 }
