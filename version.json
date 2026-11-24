@@ -1,13 +1,13 @@
 {
- "version": 268,
- "date": "2026-11-24",
+ "version": 269,
+ "date": "2026-11-25",
  "notes": [
-  "Небольшие улучшения внутри игры"
+  "Звуки уровня плавно затихают, когда уходишь с него"
  ],
  "files": {
   "index.html": {
-   "size": 1261932,
-   "hash": "f7e9feb1e7c93cf9"
+   "size": 1265839,
+   "hash": "45a993fc31002d25"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "ed29e72be96f33e1"
+   "hash": "5d43e350691f51eb"
   },
   "icon-192.png": {
    "size": 42164,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "Small improvements inside the game"
+  "Level sounds fade out smoothly when you leave the level"
  ]
 }

@@ -3682,6 +3682,7 @@ function replayEnd() {
   else { loadLevel(Math.max(0, indexOf(save.currentName))); showView("map"); }
 }
 function loadLevel(i) {
+  sfxCut();                                  // звуки прошлого уровня (и мелодия победы) сюда не переходят
   const rp = replayPending; replayPending = null; replayOn = !!rp;
   if (rp) { replayKeep ||= { lang, uiBlocks }; lang = rp.lang; if (rp.lang === "js") uiBlocks = false; replaySkin = rp.skin; }
   else { replaySkin = null; if (replayKeep) { lang = replayKeep.lang; uiBlocks = replayKeep.uiBlocks; replayKeep = null; } }
@@ -4673,6 +4674,7 @@ function mapToHero() {
   if (y > innerHeight * 0.8) scrollTo(0, Math.max(0, y - innerHeight * 0.55));
 }
 function showView(v) {
+  if (v !== "level" && !$("levelview").hidden) sfxCut();   // ушли с уровня — его звуки плавно гаснут
   if (v === "map" && !$("levelview").hidden) {   // с уровня — на его остров
     logEv("map"); curIsle = isleOf(L);
     if (typeof tg !== "undefined" && tg) setTimeout(() => tgAutoUpdate("map"), 600);   // скачанное обновление в Telegram — сейчас, на карте
@@ -13193,7 +13195,7 @@ function win() {
   // путь с победой над великаном длиннее — для него свои пороги звёзд (crownPar / crownGood)
   const par = crown && L.crownPar ? L.crownPar : L.par, good = crown && L.crownGood ? L.crownGood : L.good;
   const stars = Math.min(missing ? 2 : 3, written <= par ? 3 : written <= good ? 2 : 1);
-  if (stars === 3) sleep(900).then(() => sfx("applause"));      // три звезды — аплодисменты
+  if (stars === 3) { const ep = sfxEpoch; sleep(900).then(() => ep === sfxEpoch && sfx("applause")); }      // три звезды — аплодисменты
   // 💎 «короче разработчика»: программа короче эталона разработчика (best, иначе порог ★★★) — любым способом
   const best = crown ? L.crownBest ?? par : L.best ?? L.par;
   const gem = !missing && written < best;   // с главным инструментом уровня — иначе 💎 давался бы за обход урока
@@ -14102,7 +14104,11 @@ function audio() {
     if (!AC) return null;
     // balanced — звуку дают чуть больше запаса времени, меньше риск щелчков
     // playback — самый большой запас времени: звук чуть позже нажатия, зато без треска
-    try { actx = new AC(LIGHT ? { latencyHint: "playback" } : undefined); } catch (e) { actx = new AC(); }
+    try { actx = new AC(LIGHT ? { latencyHint: latHint } : undefined); } catch (e) { actx = new AC(); }
+    // v269: на части устройств «playback» даёт запас в секунду и больше — звук шагов и победы приходит, когда рыцарь уже стоит.
+    // Через пару секунд смотрим, сколько вышло на деле; больше 0,3 с — пересоздаём звук с запасом поменьше.
+    if (LIGHT && latHint === "playback") setTimeout(() => { const lag = audioLag();
+      if (actx && latHint === "playback" && lag > 0.3) { latHint = "balanced"; audioRebuild(); logEv("set", { b: "звук: запас " + lag.toFixed(2) + " с, уменьшен" }); } }, 2500);
     master = actx.createGain();
     master.gain.value = 0.9;
     // ограничитель: когда звуки складываются, громкость не переваливает за предел и не "рвётся"
@@ -14132,6 +14138,22 @@ function audio() {
 // ===== Звук после перерыва (версия 103) =====
 // При каждом касании и при возврате в игру: разбудить звук; а если он считается включённым,
 // но его часы стоят (так бывает на iPhone/iPad после смены наушников) — собрать звук заново.
+let latHint = "playback";
+const audioLag = () => (actx ? (actx.baseLatency || 0) + (actx.outputLatency || 0) : 0);   // насколько звук отстаёт от картинки, с
+// Уход с уровня (v269): всё, что на нём звучит, плавно гаснет за четверть секунды; то, что ещё не успело начаться, не прозвучит.
+// Правило пользователя: «при выходе с уровня сразу должно быть плавное затухание всех его звуков».
+let sfxEpoch = 0;
+function sfxCut() {
+  try {                                      // при запуске игры зовётся раньше, чем готов звук, — тогда просто ничего не делает
+    sfxEpoch++;
+    if (!actx || !sfxBus || actx.state === "closed") return;
+    const old = sfxBus, t = actx.currentTime;
+    sfxBus = actx.createGain(); sfxBus.gain.value = old.gain.value; sfxBus.connect(master);
+    if (mapBus) { mapBus.disconnect(); mapBus.connect(sfxBus); }      // звуки карты — сразу на новую шину
+    old.gain.setValueAtTime(old.gain.value, t); old.gain.linearRampToValueAtTime(0.0001, t + 0.25);
+    setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 400);
+  } catch (e) {}
+}
 function audioRevive() {
   if (!actx || document.hidden) return;
   const st = actx.state;
@@ -14152,11 +14174,11 @@ function audioRebuild() {
   try { seaSrc?.stop(); } catch (e) {}
   seaSrc = null; seaGain = null;
   const old = actx;
-  actx = null;
+  actx = null; mapBus = null;                // шина звуков карты принадлежала старому движку
   try { old.close(); } catch (e) {}
   audio();   // новый движок; готовые записи (вода, шаги, удары) переиспользуются
   if (music) startMusic();
-  logEv("set", { b: "звук перезапущен (часы звука стояли)" });
+  if (latHint === "playback" || !LIGHT) logEv("set", { b: "звук перезапущен (часы звука стояли)" });
 }
 
 // Одна нота: частота, длительность, форма волны, громкость, сдвиг по времени
@@ -15378,7 +15400,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 268;
+const APP_VERSION = 269;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15386,6 +15408,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 269, date: "2026-11-25", text: "Звуки уровня плавно затихают, когда уходишь с него", en: "Level sounds fade out smoothly when you leave the level" },
   { v: 268, date: "2026-11-24", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
   { v: 267, date: "2026-11-24", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
   { v: 266, date: "2026-11-23", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
@@ -16167,6 +16190,8 @@ function statTech(ua, touch, hi) {
 }
 try { navigator.userAgentData?.getHighEntropyValues(["platformVersion", "model"]).then((v) => {
   stat.hi = { pv: String(v.platformVersion || "").slice(0, 12), model: String(v.model || "").slice(0, 30) }; statSave(); }).catch(() => {}); } catch (e) {}
+// часовой пояс системы (v269), например «Europe/Berlin»: по нему видно, из каких краёв играют
+function statZone() { try { const z = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; return /^[A-Za-z0-9_\/+-]{3,40}$/.test(z) ? z : ""; } catch (e) { return ""; } }
 function statDoc() {
   const ua = navigator.userAgent, touch = navigator.maxTouchPoints > 0;
   const T = statTech(ua, touch, { ...(stat.hi || {}), brands: navigator.userAgentData?.brands }), os = T.os;
@@ -16181,7 +16206,7 @@ function statDoc() {
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
     op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length, gems: Object.keys(save.gems || {}).length,
     taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {}, sh: stat.sh || 0, rp: stat.rp || 0, ch: stat.ch || 0, src: stat.src || "",
-    sys: T.sys, br: T.br, bv: T.bv, eng: T.eng, model: T.model, brand: T.brand, sl, st: APP_STAGE,
+    sys: T.sys, br: T.br, bv: T.bv, eng: T.eng, model: T.model, brand: T.brand, sl, st: APP_STAGE, tz: statZone(),
     scr: touch ? m + "×" + Math.max(screen.width, screen.height) : screen.width + "×" + screen.height,
   };
 }
@@ -16263,6 +16288,8 @@ function statHtml(all) {
     h += drill("Язык системы", prim, new Proxy({}, { get: (o, k) => (k === "" ? "Неизвестно" : nm(k) + " (" + k + ")") }), (d) => d.sl && nm(d.sl) + " (" + d.sl + ")",
       "Язык телефона или компьютера, а не игры: по нему видно, на какой язык переводить следующим.");
   }
+  h += drill("Откуда играют (часовой пояс)", (d) => (d.tz || "").split("/")[0], { Europe: "Европа", Asia: "Азия", America: "Америка", Africa: "Африка", Australia: "Австралия", Pacific: "Тихий океан", Atlantic: "Атлантика", Indian: "Индийский океан", Etc: "Без пояса (UTC)", UTC: "Без пояса (UTC)", "": "Неизвестно" },
+    (d) => (d.tz || "").replace(/_/g, " "), "Часовой пояс телефона или компьютера: страну не называет, но край виден. Собирается с v269.");
   {
     // последний пройденный уровень дороги на том острове, до которого дошло устройство (доп. уровни не в счёт)
     const road = LEVELS.filter((l) => !l.side && !l.draft), at = {};
@@ -16310,13 +16337,14 @@ function statHtml(all) {
 }
 // Устройства разработчика (v268): на экране статистики по умолчанию скрыты, кнопка сверху показывает их обратно.
 // Узнаются по приметам из отметки; у отметок без подробностей (до v267) примета одна — «планшет на iOS».
-const STAT_MINE = [(d) => d.os === "ios" && d.form === "tablet", (d) => /^CLT-/.test(d.model || "")];
+const STAT_MINE = [(d) => d.os === "ios" && d.form === "tablet", (d) => /^CLT-/.test(d.model || ""),
+  (d) => d.sys === "Windows 10" && d.br === "Chrome" && d.scr === "1920×1080" && d.sl === "en-US" && (!d.tz || d.tz === "Europe/Moscow")];
 let statAll = [], statMineShown = false;
 function statDraw() {
   const mine = statAll.filter((d) => STAT_MINE.some((f) => f(d))), T = statTech(navigator.userAgent, navigator.maxTouchPoints > 0, { ...(stat.hi || {}), brands: navigator.userAgentData?.brands });
-  const here = [T.sys, T.br, [T.brand, T.model].filter(Boolean).join(" ") || "экран " + screen.width + "×" + screen.height, navigator.language].join(" · ").replace(/[&<>]/g, "");
+  const here = [T.sys, T.br, [T.brand, T.model].filter(Boolean).join(" ") || "экран " + screen.width + "×" + screen.height, navigator.language, statZone()].join(" · ").replace(/[&<>]/g, "");
   $("stats-body").innerHTML = `<p class="st-note"><button class="btn st-mine" id="st-mine" type="button">${statMineShown ? "Скрыть мои устройства" : "Показать и мои устройства"}</button>`
-    + `${statMineShown ? "Показаны все устройства" : "Мои устройства скрыты"}: похожих на мои — <b>${mine.length}</b> из ${statAll.length} (все iPad и Huawei P20 Pro).<br>Это устройство: <b>${here}</b></p>`
+    + `${statMineShown ? "Показаны все устройства" : "Мои устройства скрыты"}: похожих на мои — <b>${mine.length}</b> из ${statAll.length} (все iPad, Huawei P20 Pro и компьютер с Windows 10).<br>Это устройство: <b>${here}</b></p>`
     + statHtml(statMineShown ? statAll : statAll.filter((d) => !mine.includes(d)));
   $("st-mine").onclick = () => { sfx("tap"); statMineShown = !statMineShown; statDraw(); };
 }
