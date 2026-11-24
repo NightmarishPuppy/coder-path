@@ -1637,6 +1637,16 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 .st-bar { display: grid; grid-template-columns: 9em 1fr 3.2em; gap: 6px; align-items: center; font-size: 13px; margin: 3px 0; }
 .st-bar i { display: block; height: 10px; border-radius: 5px; background: #f0a63a; min-width: 2px; }
 .st-bar em { font-style: normal; text-align: right; color: #a8adbd; }
+.st-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-dr > summary { list-style: none; cursor: pointer; border-radius: 6px; }
+.st-dr > summary::-webkit-details-marker { display: none; }
+.st-dr > summary .st-bar span::before { content: "▸ "; color: #f0a63a; }
+.st-dr[open] > summary .st-bar span::before { content: "▾ "; }
+.st-dr[open] > summary { background: #ffffff10; }
+.st-dr[open] { margin-bottom: 8px; }
+.st-dr > summary .st-bar { grid-template-columns: minmax(0, 14em) 1fr 3.2em; }
+.st-sub { grid-template-columns: minmax(0, 15em) 1fr 3.2em; padding-left: 16px; font-size: 12px; }
+.st-sub i { background: #7fb6e8; height: 8px; }
 .st-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .st-tbl th, .st-tbl td { padding: 4px 5px; border-bottom: 1px solid #262a36; text-align: right; }
 .st-tbl th:first-child, .st-tbl td:first-child { text-align: left; }
@@ -15359,7 +15369,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 266;
+const APP_VERSION = 267;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15367,6 +15377,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 267, date: "2026-11-24", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
   { v: 266, date: "2026-11-23", text: "Небольшие улучшения внутри игры.", en: "Small improvements inside the game." },
   { v: 265, date: "2026-11-23", text: "Новый дополнительный уровень на острове гоблинов — «Горящая стрела»: ты лучник. Возьми огонь у упавшего гоблина, отойди и выстрели — горящая стрела взрывает динамит.", en: "A new bonus level on Goblin Island — “Burning Arrow”: you are the archer. Take fire from a fallen goblin, fall back and shoot — a burning arrow blows up the dynamite.", big: true },
   { v: 264, date: "2026-11-23", text: "Бой у моста: сражённый гоблин с факелом теперь падает и лежит, а факел ещё горит. Лучник берёт от него огонь, отходит на своё место и стреляет горящей стрелой оттуда.", en: "Bridge battle: a fallen torch goblin now lies on the ground with the torch still burning. The archer takes fire from it, falls back to his spot and shoots the burning arrow from there." },
@@ -16027,7 +16038,7 @@ document.querySelectorAll(".sheet").forEach((sh) => {
 
 // ===== Статистика игроков (версия 116) =====
 // Анонимная отметка в базе (коллекция stats): случайный номер устройства (не код игрока и не Telegram),
-// где играют (Telegram / браузер / установленное приложение), система, телефон или планшет, язык, версия,
+// где играют (Telegram / браузер / установленное приложение), система, браузер, телефон или планшет и его модель, язык, версия,
 // прогресс и по каждому уровню — сколько раз нажимали «Запустить» и прошли ли. Имён и личных данных нет.
 // Пишем при запуске игры, после победы и когда игру сворачивают. Только с сайта игры (github.io), не в режиме
 // для взрослых и не в приложении Claude. Смотреть — экран «📊 Статистика игроков» в режиме для взрослых.
@@ -16108,11 +16119,48 @@ function statOpen(name) {
   statVisit = { name, ran: false };
   statDirty = true; statSave(); statSoon(4000);
 }
+// Подробности об устройстве (v267): браузер и его движок, точная система (iPhone или iPad, Windows 10 или 11, версия Android,
+// HarmonyOS), марка и модель телефона, размер экрана, язык системы. Только то, что браузер сам сообщает любому сайту; о человеке — ничего.
+// hi — «подробные» сведения, которые Chrome, Edge и другие на Chromium отдают по отдельному запросу (настоящая версия системы и модель).
+function statTech(ua, touch, hi) {
+  hi = hi || {};
+  const num = (re) => { const m = ua.match(re); return m ? m[1].replace(/_/g, ".") : ""; }, maj = (v) => String(v || "").split(".")[0];
+  const iosDev = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) || (/Macintosh/.test(ua) && touch) ? "iPad" : /iPod/.test(ua) ? "iPod" : "";
+  const os = iosDev ? "ios" : /HarmonyOS|OpenHarmony|ArkWeb/i.test(ua) ? "harmony" : /Android/.test(ua) ? "android" : /Windows/.test(ua) ? "windows"
+    : /Macintosh/.test(ua) ? "mac" : /CrOS/.test(ua) ? "chromeos" : /Linux/.test(ua) ? "linux" : "other";
+  // модель телефона: Chromium её прячет («K»), но отдаёт по запросу; встроенные браузеры (Telegram, Samsung, Huawei, Mi) пишут прямо
+  let model = String(hi.model || "").trim() || num(/Android [\d.]+; (?:[a-z]{2}[-_][A-Za-z]{2}; |HarmonyOS; )*([^;)]+?)(?: Build\/[^;)]*)?[;)]/);
+  if (/^(K|wv|Mobile|Tablet|Android)$/i.test(model)) model = "";
+  model = model.replace(/^SAMSUNG /i, "").slice(0, 30);
+  const brand = iosDev ? "Apple" : !model ? "" : /^(SM-|GT-|Galaxy)/i.test(model) ? "Samsung" : /Redmi|POCO|Xiaomi|^Mi[ X]|^M2\d{3}|^2\d{4,}/i.test(model) ? "Xiaomi"
+    : /^Pixel/i.test(model) ? "Google" : /HONOR/i.test(model) ? "Honor" : /HUAWEI|^[A-Z]{3}-[A-Z]{1,2}\d{2}/.test(model) ? "Huawei / Honor" : /^RMX/i.test(model) ? "Realme"
+    : /^CPH|OPPO|^P[A-Z]{3}\d/.test(model) ? "OPPO" : /vivo|^V\d{4}/i.test(model) ? "vivo" : /Infinix/i.test(model) ? "Infinix" : /TECNO/i.test(model) ? "Tecno"
+    : /OnePlus|^(LE|NE|IN|KB|GM|HD)\d{4}/.test(model) ? "OnePlus" : /moto|^XT\d{4}/i.test(model) ? "Motorola" : /Nokia/i.test(model) ? "Nokia" : /^LM-|^LG/i.test(model) ? "LG"
+    : /Lenovo|^TB-/i.test(model) ? "Lenovo" : /ASUS|^ZS\d/i.test(model) ? "Asus" : /ZTE|nubia/i.test(model) ? "ZTE" : /^A0\d\d$|Nothing/i.test(model) ? "Nothing" : "";
+  const pv = String(hi.pv || ""), nt = num(/Windows NT (\d+\.\d+)/);
+  const sys = iosDev ? iosDev + " · " + (iosDev === "iPad" ? "iPadOS" : "iOS") + ((maj(num(/OS (\d+[_\d]*) like Mac/) || num(/Version\/(\d+)/)) && " " + maj(num(/OS (\d+[_\d]*) like Mac/) || num(/Version\/(\d+)/))) || "")
+    : os === "harmony" ? "HarmonyOS" + (num(/HarmonyOS[ \/]?(\d+)/) && " " + num(/HarmonyOS[ \/]?(\d+)/))
+    : os === "android" ? (maj(pv) > 0 ? "Android " + maj(pv) : / K\)/.test(ua) || !num(/Android (\d+)/) ? "Android, версия скрыта" : "Android " + num(/Android (\d+)/))
+    : os === "windows" ? (/Windows Phone/.test(ua) ? "Windows Phone" : nt === "10.0" ? (pv ? (maj(pv) >= 13 ? "Windows 11" : "Windows 10") : "Windows 10 или 11")
+      : { "6.3": "Windows 8.1", "6.2": "Windows 8", "6.1": "Windows 7", "6.0": "Windows Vista", "5.1": "Windows XP" }[nt] || "Windows")
+    : os === "mac" ? "macOS" + (maj(pv) > 0 ? " " + maj(pv) : "") : os === "chromeos" ? "ChromeOS" : os === "linux" ? "Linux" : "Другая";
+  const hint = (hi.brands || []).map((b) => b.brand).find((b) => b && !/Not.?A.?Brand|^Chromium$/i.test(b)) || "";
+  const br = /musical_ly|Bytedance|TikTok/i.test(ua) ? "TikTok (встроенный)" : /Instagram/.test(ua) ? "Instagram (встроенный)" : /FBAN|FBAV/.test(ua) ? "Facebook (встроенный)"
+    : /VKAndroidApp|vkclient|VKiOS/i.test(ua) ? "VK (встроенный)" : /Telegram/i.test(ua) ? "Telegram (встроенный)"
+    : /Edg(e|A|iOS)?\//.test(ua) ? "Edge" : /OPR\/|OPT\/|Opera/.test(ua) ? "Opera" : /YaBrowser|YaSearchBrowser/.test(ua) ? "Яндекс Браузер" : /SamsungBrowser/.test(ua) ? "Samsung Internet"
+    : /HuaweiBrowser/.test(ua) ? "Huawei Browser" : /MiuiBrowser/.test(ua) ? "Mi Browser" : /Vivaldi/.test(ua) ? "Vivaldi" : /DuckDuckGo/.test(ua) ? "DuckDuckGo"
+    : /Firefox|FxiOS/.test(ua) ? "Firefox" : /CriOS/.test(ua) ? "Chrome" : /; wv\)/.test(ua) ? "WebView Android (внутри приложения)"
+    : hint ? hint.replace(/^Google |^Microsoft /, "").replace("YaBrowser", "Яндекс Браузер").slice(0, 24) : /Chrome\//.test(ua) ? "Chrome"
+    : iosDev && !/Safari\//.test(ua) ? "WebView iOS (внутри приложения)" : /Safari\//.test(ua) ? "Safari" : "Другой";
+  const eng = iosDev ? "webkit" : /Firefox\//.test(ua) ? "gecko" : /Chrome\//.test(ua) ? "blink" : /Safari\//.test(ua) ? "webkit" : "other";
+  return { os, sys, br, bv: +(num(/(?:Firefox|FxiOS)\/(\d+)/) || num(/(?:Chrome|CriOS)\/(\d+)/) || num(/Version\/(\d+)/)) || 0, eng, model: iosDev || model, brand };
+}
+try { navigator.userAgentData?.getHighEntropyValues(["platformVersion", "model"]).then((v) => {
+  stat.hi = { pv: String(v.platformVersion || "").slice(0, 12), model: String(v.model || "").slice(0, 30) }; statSave(); }).catch(() => {}); } catch (e) {}
 function statDoc() {
   const ua = navigator.userAgent, touch = navigator.maxTouchPoints > 0;
-  const os = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && touch) ? "ios" : /Android/.test(ua) ? "android"
-    : /Windows/.test(ua) ? "windows" : /Macintosh/.test(ua) ? "mac" : /Linux|CrOS/.test(ua) ? "linux" : "other";
-  const m = Math.min(screen.width, screen.height);
+  const T = statTech(ua, touch, { ...(stat.hi || {}), brands: navigator.userAgentData?.brands }), os = T.os;
+  const m = Math.min(screen.width, screen.height), sl = /^[A-Za-z0-9-]{2,12}$/.test(navigator.language || "") ? navigator.language : "";
   const won = LEVELS.filter((l) => save.stars[l.name] > 0);
   return {
     v: APP_VERSION, first: stat.first, last: new Date().toISOString(), opens: stat.opens,
@@ -16123,6 +16171,8 @@ function statDoc() {
     isle: Math.max(1, ...won.map((l) => l.isle || 1)), cur: save.currentName || "", lv: stat.lv,
     op: stat.op || {}, nr: stat.nr || {}, crowns: Object.keys(save.crowns || {}).length, gems: Object.keys(save.gems || {}).length,
     taste: save.taste || "", tw: stat.tw || {}, tp: stat.tp || {}, fb: stat.fb || {}, sh: stat.sh || 0, rp: stat.rp || 0, ch: stat.ch || 0, src: stat.src || "",
+    sys: T.sys, br: T.br, bv: T.bv, eng: T.eng, model: T.model, brand: T.brand, sl, st: APP_STAGE,
+    scr: touch ? m + "×" + Math.max(screen.width, screen.height) : screen.width + "×" + screen.height,
   };
 }
 let statTimer = null, statLast = 0;
@@ -16166,6 +16216,17 @@ function statHtml(all) {
     return `<h3 class="st-h">${title}</h3>` + Object.entries(c).sort((a, b) => b[1] - a[1]).map(([k, n]) =>
       `<div class="st-bar"><span>${esc(names[k] || k)}</span><i style="width:${(n / max * 100).toFixed(1)}%"></i><em>${n}</em></div>`).join("");
   };
+  // строка с подробностями (v267): нажал — раскрылась разбивка. top(d) — группа, sub(d) — подробность, order — свой порядок подробностей
+  const NO = "нет подробностей (не заходили с v267)";
+  const drill = (title, top, names, sub, note, order) => {
+    const g = {};
+    for (const d of all) { const k = top(d) ?? "?", q = (g[k] ||= { n: 0, s: {} }), t = sub(d) || NO; q.n++; q.s[t] = (q.s[t] || 0) + 1; }
+    const max = Math.max(1, ...Object.values(g).map((q) => q.n));
+    return `<h3 class="st-h">${title}</h3>` + (note ? `<p class="st-note">${note}</p>` : "") + Object.entries(g).sort((a, b) => b[1].n - a[1].n).map(([k, q]) =>
+      `<details class="st-dr"><summary><div class="st-bar"><span>${esc(names[k] || k)}</span><i style="width:${(q.n / max * 100).toFixed(1)}%"></i><em>${q.n}</em></div></summary>`
+      + Object.entries(q.s).sort(order || ((a, b) => (a[0] === NO) - (b[0] === NO) || b[1] - a[1])).map(([t, n]) =>
+        `<div class="st-bar st-sub"><span title="${esc(t)}">${esc(t)}</span><i style="width:${(n / q.n * 100).toFixed(1)}%"></i><em>${n}</em></div>`).join("") + `</details>`).join("");
+  };
   let h = `<div class="st-cards">${card(all.length, "устройств всего")}${card(all.filter((d) => ago(d) < 1).length, "играли за сутки")}`
     + `${card(all.filter((d) => ago(d) < 7).length, "за неделю")}${card(all.filter((d) => (now - Date.parse(d.first || 0)) / day < 7).length, "новых за неделю")}`
     + `${card(all.filter((d) => d.won > 0).length, "прошли хоть уровень")}${card(all.filter((d) => d.sh > 0).length, "поделились игрой (с v244)")}${card(all.filter((d) => d.rp > 0).length, "пришли по ссылке-повтору (с v245)")}${card(all.filter((d) => d.ch > 0).length, "открыли канал игры (с v249)")}</div>`;
@@ -16179,11 +16240,28 @@ function statHtml(all) {
         + rows.map(([k, q]) => `<tr><td>${esc(N[k] || k)}</td><td>${q[0]}</td><td>${q[1]}</td><td>${q[2]}</td><td>${q[3]}</td></tr>`).join("") + `</table>` : `<p class="st-note">Пока никого с меткой.</p>`);
   }
   h += bars("Где играют", "where", { tg: "Telegram", web: "Браузер", app: "Приложение (значок)", itch: "itch.io" });
-  h += bars("Система", "os", { ios: "iPhone / iPad", android: "Android", windows: "Windows", mac: "Mac", linux: "Linux", other: "Другое" });
-  h += bars("Устройство", "form", { phone: "Телефон", tablet: "Планшет", desktop: "Компьютер" });
-  h += bars("Язык", "lang", { ru: "Русский", en: "English" });
-  h += bars("Дальше всего дошли", "isle", ISLE_NAMES);
-  h += bars("Версия игры", "v", {});
+  h += `<p class="st-note"><b>Строки со стрелкой ▸ раскрываются по нажатию.</b> Подробности (браузер, точная система, модель, экран, язык системы) собираются с v267 и появляются у устройства, когда оно зайдёт в игру после обновления. Windows 10 и 11 различают только Chrome, Edge, Яндекс и другие на Chromium; ноутбук это или настольный компьютер, браузер не сообщает.</p>`;
+  h += drill("Браузер", (d) => d.eng || "", { blink: "Chromium", webkit: "WebKit (Safari)", gecko: "Gecko (Firefox)", other: "Другой движок", "": "Неизвестно" }, (d) => d.br,
+    "Сверху — движок, внутри — сам браузер. На iPhone и iPad любой браузер работает на WebKit.");
+  h += drill("Система", (d) => d.os, { ios: "iPhone / iPad", android: "Android", harmony: "HarmonyOS (Huawei)", windows: "Windows", mac: "Mac", linux: "Linux", chromeos: "ChromeOS", other: "Другое" }, (d) => d.sys);
+  h += drill("Устройство", (d) => d.form, { phone: "Телефон", tablet: "Планшет", desktop: "Компьютер" },
+    (d) => !d.sys ? "" : d.form === "desktop" ? "экран " + (d.scr || "?") : [d.brand, d.model].filter(Boolean).join(" · ") || "марка скрыта, экран " + (d.scr || "?"));
+  h += bars("Язык игры", "lang", { ru: "Русский", en: "English" });
+  {
+    let dn = null; try { dn = new Intl.DisplayNames(["ru"], { type: "language" }); } catch (e) {}
+    const nm = (t) => { try { return dn ? dn.of(t) : t; } catch (e) { return t; } }, prim = (d) => (d.sl || "").split("-")[0].toLowerCase();
+    h += drill("Язык системы", prim, new Proxy({}, { get: (o, k) => (k === "" ? "Неизвестно" : nm(k) + " (" + k + ")") }), (d) => d.sl && nm(d.sl) + " (" + d.sl + ")",
+      "Язык телефона или компьютера, а не игры: по нему видно, на какой язык переводить следующим.");
+  }
+  {
+    // последний пройденный уровень дороги на том острове, до которого дошло устройство (доп. уровни не в счёт)
+    const road = LEVELS.filter((l) => !l.side && !l.draft), at = {};
+    const far = (d) => { let best = null; for (const l of road) if (d.lv?.[l.name]?.[1] && (l.isle || 1) === (d.isle || 1)) best = l;
+      if (!best) return d.won > 0 ? "прогресс с другого устройства" : "ни одного уровня";
+      const t = (road.filter((l) => (l.isle || 1) === (best.isle || 1)).indexOf(best) + 1) + ". " + lvName(best.name); at[t] = road.indexOf(best); return t; };
+    h += drill("Дальше всего дошли", (d) => d.isle, ISLE_NAMES, far, "Внутри острова — последний пройденный уровень дороги (по порядку): видно, на каком уровне встают.", (a, b) => (at[a[0]] ?? -1) - (at[b[0]] ?? -1));
+  }
+  h += drill("Версия игры", (d) => d.st || (d.v >= 253 ? "0.6 beta" : "до 0.6 beta"), {}, (d) => "сборка " + d.v, "", (a, b) => parseInt(b[0].slice(7)) - parseInt(a[0].slice(7)));
   // вкус: что на поле выбирают (по устройствам, где уже есть уровни с обёртками)
   {
     const N = { fight: "⚔ Рыцарь", work: "🪓 Работник", monk: "🍄 Монах" }, sum = (key) => { const c = {}; for (const d of all) for (const k in d[key] || {}) c[k] = (c[k] || 0) + d[key][k]; return c; };
