@@ -1,13 +1,13 @@
 {
- "version": 267,
+ "version": 268,
  "date": "2026-11-24",
  "notes": [
   "Небольшие улучшения внутри игры"
  ],
  "files": {
   "index.html": {
-   "size": 1258091,
-   "hash": "dc1bbff5e24c6b0f"
+   "size": 1261932,
+   "hash": "f7e9feb1e7c93cf9"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "58ce0300a630eb7b"
+   "hash": "ed29e72be96f33e1"
   },
   "icon-192.png": {
    "size": 42164,
