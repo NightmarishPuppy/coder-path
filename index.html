@@ -11229,6 +11229,7 @@ function refreshPlan() {
 }
 
 function reset() {
+  patrolIdleStop();
   if (L.arena) return arenaReset();
   showProblems = false;
   // поваленные деревья снова стоят, лесорубы снова рубят
@@ -11241,6 +11242,7 @@ function reset() {
   const moved = hero && (hero.x !== start.x || hero.y !== start.y);
   hero = { ...start };
   patrolPlace(0);
+  patrolIdleStart();
   monkPlace(0);
   heroEl.classList.remove("flip", "run", "sunk", "down");
   boardEl.querySelectorAll(".plank.gone, .cell.gone").forEach((e) => e.classList.remove("gone"));
@@ -11477,6 +11479,33 @@ function patrolPlace(t, ms = 0) {
     a.move(x, y, ms).then(() => { if (a.x === x && a.y === y) a.play(0, 7, 120); });
   });
   patrolTick = t;
+}
+// Часовые до запуска (v273): ходят по своей программе сами, медленнее, чем в бою, — пользователь: «иначе игра смотрится слишком мёртвой».
+// Такт (patrolTick) не трогают: по «Запустить» (и по любой правке программы) часовой сразу встаёт на место, откуда начнёт.
+let patrolIdleTimer = 0;
+function patrolIdleStop() {
+  clearTimeout(patrolIdleTimer); patrolIdleTimer = 0;
+  patrolActs.forEach((a) => { a.el.style.transition = "none"; a.play(0, 7, 120); });
+  patrolBubs.forEach((b) => { b.style.transition = "none"; });
+}
+function patrolIdleStart() {
+  clearTimeout(patrolIdleTimer);
+  if (!patrolActs.length || STILL) return;
+  let t = 0;
+  const step = () => {
+    if (running || $("levelview").hidden || !patrolActs.length || !patrolActs[0].el.isConnected) return;
+    t++;
+    patrolsOf().forEach((seq, k) => {
+      const a = patrolActs[k], to = patrolAt(seq, t), x = to.x + 0.5, y = to.y + 0.9;
+      if (!a || (a.x === x && a.y === y)) return;
+      patrolBubAt(k, x, y, 620);
+      if (x !== a.x) a.face(x < a.x);
+      a.play(1, 6, 110);
+      a.move(x, y, 620).then(() => { if (!running && a.x === x && a.y === y) a.play(0, 7, 120); });
+    });
+    patrolIdleTimer = setTimeout(step, 900);
+  };
+  patrolIdleTimer = setTimeout(step, 1200);
 }
 // Монах, которого подгоняют копьём (v254; расчёт — monkTick в buildPlan). Фигурка — как у часовых: житель сценок на поле уровня.
 let monkAct = null, monkPokes = 0;
@@ -15430,7 +15459,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 272;
+const APP_VERSION = 273;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15438,6 +15467,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 273, date: "2026-11-26", text: "Часовые ходят по своему пути ещё до «Запустить»", en: "Sentries walk their route even before you tap “Run”" },
   { v: 272, date: "2026-11-26", text: "«Починка»: подсказки теперь ведут по шагам, задание понятнее", en: "“Fix It”: hints now guide you step by step, clearer task" },
   { v: 271, date: "2026-11-25", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },
   { v: 270, date: "2026-11-25", text: "На iPhone и iPad звук больше не отстаёт после возврата в игру", en: "On iPhone and iPad sound no longer lags after you return to the game" },

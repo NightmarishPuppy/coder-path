@@ -1,13 +1,13 @@
 {
- "version": 272,
+ "version": 273,
  "date": "2026-11-26",
  "notes": [
-  "«Починка»: подсказки теперь ведут по шагам, задание понятнее"
+  "Часовые ходят по своему пути ещё до «Запустить»"
  ],
  "files": {
   "index.html": {
-   "size": 1270480,
-   "hash": "8ee8f31429563f9d"
+   "size": 1272155,
+   "hash": "d2c2baf81b5d7147"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "26ea0c11b5705a40"
+   "hash": "553a7d47e9f56cfc"
   },
   "icon-192.png": {
    "size": 42164,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "“Fix It”: hints now guide you step by step, clearer task"
+  "Sentries walk their route even before you tap “Run”"
  ]
 }
