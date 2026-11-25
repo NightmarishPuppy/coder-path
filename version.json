@@ -1,21 +1,21 @@
 {
- "version": 271,
- "date": "2026-11-25",
+ "version": 272,
+ "date": "2026-11-26",
  "notes": [
-  "Небольшие улучшения внутри игры"
+  "«Починка»: подсказки теперь ведут по шагам, задание понятнее"
  ],
  "files": {
   "index.html": {
-   "size": 1268811,
-   "hash": "82ddc45452007003"
+   "size": 1270480,
+   "hash": "8ee8f31429563f9d"
   },
   "art.js": {
    "size": 852367,
    "hash": "b3e81f564c2d9d08"
   },
   "lang-en.js": {
-   "size": 88134,
-   "hash": "516ab9d88b2fdd79"
+   "size": 88584,
+   "hash": "d2779c121478af43"
   },
   "fonts.css": {
    "size": 234903,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "010f20678e96cffa"
+   "hash": "26ea0c11b5705a40"
   },
   "icon-192.png": {
    "size": 42164,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "Small improvements inside the game"
+  "“Fix It”: hints now guide you step by step, clearer task"
  ]
 }
