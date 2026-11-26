@@ -281,6 +281,24 @@ html.still .enemy, html.still .enemy.hit .ewrap, html.still .poof { transition: 
 .pcode::after { content: ""; position: absolute; left: calc(50% + var(--tail, 0px)); top: 100%; margin-left: -7px; border: 7px solid transparent; border-top-color: #15151cee; }
 .pcode.below::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: #15151cee; }
 .pcode .m { margin: 0 1px; } .pcode .m.h { color: var(--torch); } .pcode .m.v { color: var(--frost); } .pcode i { color: var(--loop); font-style: normal; }
+.pcode { transition: opacity 0.4s; } .pcode.gone { opacity: 0; } .pcode .m.w { color: #e8d9a8; }
+/* v275: что видит часовой — светлые клетки перед ним; значок «❗» / «❓» над головой; камень (на старте, в полёте, в руках) */
+.pviews i { position: absolute; z-index: 1; pointer-events: none; background: rgba(255, 255, 255, 0.3); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6); border-radius: 14%; transition: opacity 0.2s; }
+.pmark { position: absolute; z-index: 6; transform: translate(-50%, -100%); font-size: clamp(16px, 5vw, 26px); pointer-events: none; animation: pmark 0.35s ease-out; text-shadow: 0 1px 2px #000; }
+@keyframes pmark { 0% { transform: translate(-50%, -40%) scale(0.4); opacity: 0; } 70% { transform: translate(-50%, -110%) scale(1.15); opacity: 1; } 100% { transform: translate(-50%, -100%) scale(1); } }
+.skactor.patrol.ouch { animation: pouch 0.32s ease-out; }
+@keyframes pouch { 0%, 100% { filter: none; } 35% { filter: brightness(2.3) saturate(0.4); } }
+.flystone { position: absolute; z-index: 6; width: 3.2%; min-width: 10px; transform: translate(-50%, -50%); image-rendering: pixelated; pointer-events: none; transition: opacity 0.9s 0.4s; }
+.flystone.down { opacity: 0; }
+.cell .stoneit { position: absolute; z-index: 3; right: -12%; bottom: 26%; width: 30%; image-rendering: pixelated; pointer-events: none; transition: opacity 0.25s, transform 0.25s; }
+.cell .stoneit.taken { opacity: 0; transform: translateY(-60%) scale(0.6); }
+.aimg { height: 1.05em; vertical-align: -0.15em; image-rendering: pixelated; }
+.itemstag .inv { display: inline-flex; align-items: center; gap: 3px; }
+.itemstag .inv b { display: inline-flex; align-items: center; justify-content: center; width: 1.5em; height: 1.5em; border: 1px dashed #ffffff66; border-radius: 5px; }
+.itemstag .inv.got b { border-style: solid; border-color: var(--torch); animation: invpop 0.4s ease-out; }
+.itemstag .inv b img { width: 1.1em; image-rendering: pixelated; }
+@keyframes invpop { 0% { transform: scale(0.5); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+html.still .pmark, html.still .itemstag .inv.got b, html.still .skactor.patrol.ouch { animation: none; }
 .route.marks { z-index: 6; }
 .route .cross { stroke: #b3262b; stroke-width: 0.085; stroke-linecap: square; }
 .route .cross-under { stroke: #2a1012; stroke-width: 0.15; stroke-linecap: square; opacity: 0.75; }
@@ -584,16 +602,6 @@ html.still .route .fight .sw { animation: none; }
 .hero.run .k-idle { display: none; }
 .hero.flip .kwrap { transform: scaleX(-1); }
 /* рыцарь выжидает часового (v274): топчется, оглядывается (flip по таймеру), над ним облачко с точками */
-.hero.pwait .kwrap { animation: kstomp 0.56s ease-in-out infinite; }
-.hero.pwait.flip .kwrap { animation-name: kstompf; }
-@keyframes kstomp { 0%, 50%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-5%) rotate(-4deg); } 75% { transform: translateY(-5%) rotate(4deg); } }
-@keyframes kstompf { 0%, 50%, 100% { transform: scaleX(-1) translateY(0) rotate(0); } 25% { transform: scaleX(-1) translateY(-5%) rotate(-4deg); } 75% { transform: scaleX(-1) translateY(-5%) rotate(4deg); } }
-.hero .hthink { display: none; position: absolute; left: 50%; bottom: 96%; transform: translateX(-50%); z-index: 4; gap: 3px; padding: 4px 7px; background: #fff; border: 2px solid #1c1a22; border-radius: 12px; }
-.hero .hthink::after { content: ""; position: absolute; left: 30%; bottom: -7px; width: 6px; height: 6px; background: #fff; border: 2px solid #1c1a22; border-radius: 50%; }
-.hero.pwait .hthink { display: flex; }
-.hero .hthink i { width: 6px; height: 6px; border-radius: 50%; background: #1c1a22; animation: kdot 0.9s ease-in-out infinite; }
-.hero .hthink i:nth-child(2) { animation-delay: 0.15s; } .hero .hthink i:nth-child(3) { animation-delay: 0.3s; }
-@keyframes kdot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
 /* v210: остановился, где нельзя, — искупался (мостик) или сбит с ног (баран, динамит из кустов) */
 .hero .kwrap { transition: transform 0.3s, opacity 0.4s; transform-origin: 50% 85%; }
 .hero.sunk .kwrap { transform: translateY(34%) scale(0.85); opacity: 0; }
@@ -610,6 +618,8 @@ html.still .route .fight .sw { animation: none; }
 .cell.ns-rams::after { content: ""; position: absolute; inset: 30% 0; pointer-events: none;
   background: radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 0 0 / 14px 9px, radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 7px 4px / 14px 9px; }
 .hero.bump .kwrap { animation: bump 0.35s ease; }
+.hero.pick .kwrap { animation: kpick 0.4s ease; }   /* v275: нагнулся за камнем */
+@keyframes kpick { 0%, 100% { transform: none; } 45% { transform: translateY(8%) scaleY(0.88); } }
 @keyframes bump {
   0%, 100% { translate: 0 0; }
   25% { translate: -8% 0; }
@@ -618,7 +628,7 @@ html.still .route .fight .sw { animation: none; }
 }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .hero { transition: none; }
-html.still .hero.bump .kwrap { animation: none; }
+html.still .hero.bump .kwrap { animation: none; } html.still .hero.pick .kwrap { animation: none; }
 .loopview {
   position: absolute; top: 6px; right: 6px; z-index: 7;
   display: flex; align-items: center; gap: 2px;
@@ -2435,12 +2445,16 @@ const DIRS = {
   // Арена (v235): бежать к вышке гоблинов — она деревянная и загорается от того, кто горит рядом
   goToTower:  { dx: 0, dy: 0, arrow: "🏚", axis: "g", py: "go_to_tower" },
   wait:      { dx: 0, dy: 0, arrow: "⏳", axis: "w", py: "wait" },
+  // Камень (v275): рыцарь подбирает камушек на старте (один такт, без числа). Заметил часовой — рыцарь сам кидает камень, и часовой уходит на звук.
+  takeStone: { dx: 0, dy: 0, arrow: "🌑", axis: "w", py: "take_stone", bare: true, icon: "stone1" },   // на кнопке и плитке — картинка камня (значок тёмный, его плохо видно)
   // Арена с лучником (v265): взять огонь у упавшего факельщика, отойти на своё место, выстрелить (горящая стрела взрывает динамит)
   getFire:   { dx: 0, dy: 0, arrow: "🔥", axis: "g", py: "get_fire" },
   fallBack:  { dx: 0, dy: 0, arrow: "↩", axis: "g", py: "fall_back" },
   shoot:     { dx: 0, dy: 0, arrow: "🏹", axis: "a", py: "shoot" },
 };
 const ALL_COMMANDS = Object.keys(DIRS);
+const arrowHtml = (d) => (d.icon ? `<img class="aimg" alt="${d.arrow}" src="${TS[d.icon]}">` : d.arrow);
+const isBare = (nm) => !!(DIRS[nm] || DIRS[ALL_COMMANDS.find((c) => DIRS[c].py === nm)])?.bare;   // команда без числа: take_stone()
 const PY_NAMES = ALL_COMMANDS.map((c) => DIRS[c].py);
 const ANY_NAME = [...ALL_COMMANDS, ...PY_NAMES].join("|");      // для поиска в тексте
 // Свои приёмы (функции): def stair(): в Python, function stair() { в JavaScript.
@@ -2661,7 +2675,7 @@ function codeLineOf(key, k = 1) {
 }
 function btnRefs(html) {
   return html
-    .replace(/\[\[btn:(\w+)\]\]/g, (m, n) => `<span class="chipref ${DIRS[n].axis}${uiBlocks ? " big" : ""}">${uiBlocks ? DIRS[n].arrow : `${DIRS[n].arrow} ${disp(n)}`}</span>`)
+    .replace(/\[\[btn:(\w+)\]\]/g, (m, n) => `<span class="chipref ${DIRS[n].axis}${uiBlocks ? " big" : ""}">${uiBlocks ? arrowHtml(DIRS[n]) : `${arrowHtml(DIRS[n])} ${disp(n)}`}</span>`)
     .replace(/\[\[line:(\d+)\]\]/g, (m, n) => `<span class="lineref">${n}</span>`)
     // Для Python / JavaScript (v207): номер строки по её смыслу — он разный в двух языках (в JavaScript есть строки со скобкой «}»).
     // [[lineof:def:2]] — заголовок второго приёма, [[lineof:if]] — первая строка «если», [[lineof:moveRight]] — первая строка с этой командой;
@@ -8643,7 +8657,6 @@ function levelSounds() {
   ["man-pain.mp3", "man-ow.mp3", "man-cry.mp3", "man-scream.mp3", "enemy-death.mp3", "level-win.mp3", "applause.mp3", "ahem.mp3", "yawn.mp3", "roar.mp3"].forEach(soundBuf);   // голоса рыцаря и врага, победа — на любом уровне
   if (L.nostop === "rams") soundBuf("ram-baa.mp3");
   if ((L.maps || [L.map]).some((m) => m.some((r) => r.includes("O")))) { soundBuf("sheep-baa.mp3"); soundBuf("sheep-baa2.mp3"); }
-  if (L.patrols) soundBuf("goblin-laugh.mp3");
   if (bomber || L.arena) soundBuf("bomber-laugh.mp3");
   if (L.arena) soundBuf("game-over.mp3");
   if (L.monk || L.arena?.guard) soundBuf("pain-scream.mp3");
@@ -8878,6 +8891,12 @@ function buildBoard() {
 
   boardEl.appendChild(heroEl);
   patrolSetup();               // часовые (v212)
+  // камушек на дороге (v275): лежит на старте, пока рыцарь его не подобрал
+  stoneEl = null;
+  if (L.stone) {
+    const sc = stoneCell(), cell = boardEl.querySelector(`.cell[data-xy="${sc.x},${sc.y}"]`);
+    if (cell) { stoneEl = document.createElement("img"); stoneEl.className = "stoneit"; stoneEl.src = TS.stone1; stoneEl.alt = ""; cell.appendChild(stoneEl); }
+  }
   monkSetup();                 // монах, которого подгоняют копьём (v254)
   boardEl.appendChild(markEl);   // отметки (крестики, начало круга) — поверх рыцаря
 
@@ -8923,7 +8942,7 @@ function buildBoard() {
   itemsTag = document.createElement("div");
   itemsTag.className = "itemstag";
   itemsTag.id = "itemstag";
-  itemsTag.hidden = !items.length && (!enemies.length || !!L.first || !!L.calm);
+  itemsTag.hidden = !items.length && !L.stone && (!enemies.length || !!L.first || !!L.calm);
   // над полем один ряд: слева счётчик, справа — картинки обёрток (что будет на поле)
   const top = document.createElement("div");
   top.className = "boardtop"; top.id = "boardtop";
@@ -8979,13 +8998,15 @@ const coinsTotal = () => items.filter((it) => it.type === "coin").length;
 const doorLocked = (got) => (needKey() && !got.key) || got.coins < coinsTotal();
 
 // Рисуем предметы и счётчик по тому, что уже собрано (got = { key, coins, taken })
+let stoneEl = null;
 function drawItems(got) {
   lastGot = got;
+  stoneEl?.classList.toggle("taken", !!got.stone);
   items.forEach((it) => it.el.classList.toggle("taken", got.taken.has(`${it.x},${it.y}`)));
   exitCell?.classList.toggle("locked", doorLocked(got));
   // у копейщика сердечек нет: динамит либо отбит, либо нет
   const hearts = !L.lancer && (!L.first && !L.calm && enemies.some((e) => !e.job) || evs().some((e) => e.kind !== "fell"));
-  if (!items.length && !hearts) return;
+  if (!items.length && !hearts && !L.stone) return;
   let html = "";
   if (hearts) {
     html += `<span class="khearts${knightHp ? "" : " zero"}" aria-label="${tr("Сердечки рыцаря: {n} из {m}", { n: knightHp, m: KNIGHT_HP })}">${tr("рыцарь")} ` +
@@ -8993,9 +9014,11 @@ function drawItems(got) {
   }
   if (needKey()) html += `<span class="${got.key ? "got" : ""}">${KEY_SVG}${tr(got.key ? "есть" : "нет")}</span>`;
   if (coinsTotal()) html += `<span class="${got.coins === coinsTotal() ? "got" : ""}"><img alt="" src="${items.some((it) => it.mush) ? TS.mush3 : TS.coin}">${got.coins}/${coinsTotal()}</span>`;
+  // что в руках (v275): камень подобрал — лежит в окошке; бросил — окошко снова пустое
+  if (L.stone) html += `<span class="inv${got.stone === 1 ? " got" : ""}" aria-label="${tr(got.stone === 1 ? "В руках камень" : "В руках ничего")}">🎒<b>${got.stone === 1 ? `<img alt="" src="${TS.stone1}">` : ""}</b></span>`;
   itemsTag.innerHTML = html;
 }
-const noneGot = () => ({ key: false, coins: 0, taken: new Set() });
+const noneGot = () => ({ key: false, coins: 0, taken: new Set(), stone: 0 });   // stone: 0 — не брал, 1 — в руках, 2 — бросил
 const enemyKey = (x, y) => `${x},${y}`;
 // hpLeft — Map "x,y" → сколько ударов ещё выдержит гоблин
 function fullHp() { return new Map(enemies.map((e) => [enemyKey(e.x, e.y), e.hp])); }
@@ -9061,6 +9084,13 @@ function buildChips() {
   };
   const extra = (b, on) => { if (on) { b.classList.add("extra"); b.hidden = !moreOpen; } };
   L.commands.forEach((name) => {
+    if (DIRS[name].icon) {       // кнопка с картинкой вместо значка
+      const b = add("add-" + name, "mv " + DIRS[name].axis + (L.newCommands?.includes(name) ? " new" : ""), "", () => selLine && DEF_LINE.test(codeEl.value.split("\n")[selLine - 1] ?? "") ? putIntoDef(disp(name))
+        : selLine ? putCommandOnLine(disp(name)) : insertLine(disp(name) + (lang === "py" ? "()" : "();")));
+      b.innerHTML = arrowHtml(DIRS[name]) + (uiBlocks ? "" : " " + disp(name));
+      extra(b, isExtra("cmd", name));
+      return;
+    }
     extra(add("add-" + name, "mv " + DIRS[name].axis + (L.newCommands?.includes(name) ? " new" : ""), uiBlocks ? DIRS[name].arrow : `${DIRS[name].arrow} ${disp(name)}`,
       () => selLine && DEF_LINE.test(codeEl.value.split("\n")[selLine - 1] ?? "") ? putIntoDef(disp(name))
         : selLine ? putCommandOnLine(disp(name)) : insertLine(disp(name) + (lang === "py" ? "()" : "();"))), isExtra("cmd", name));
@@ -9259,7 +9289,7 @@ function setLastNumber(n) {
   const re = new RegExp(`\\b(${ANY_NAME})\\s*\\(\\s*\\d*\\s*\\)`, "g");
   let last = null, m;
   while ((m = re.exec(text))) last = m;
-  if (!last) return;
+  if (!last || isBare(last[1])) return;      // у take_stone() числа нет
   codeEl.value = text.slice(0, last.index) + `${last[1]}(${n === 1 ? "" : n})` + text.slice(last.index + last[0].length);
   onCodeChange();
 }
@@ -9432,7 +9462,7 @@ function setNumberOnLine(n) {
       if (setCallArg(lines, j, n)) return;
       i = j;
     }
-    lines[i] = (lines[i] ?? "").replace(CMD_ON_LINE(), (m, name, open, args, close) => `${name}(${n === 1 ? "" : n})`);
+    lines[i] = (lines[i] ?? "").replace(CMD_ON_LINE(), (m, name, open, args, close) => isBare(name) ? m : `${name}(${n === 1 ? "" : n})`);
   });
 }
 
@@ -9892,6 +9922,14 @@ function buildPlan(code) {
     const a = patrolAt(seq, tk), b = patrolAt(seq, tk + 1);
     return (b.x === to.x && b.y === to.y) || (a.x === to.x && a.y === to.y && b.x === from.x && b.y === from.y);
   });
+  // Уровни с камнем (L.stone, v275): часовой видит на 2 клетки туда, куда идёт (стены закрывают), а когда оглядывается — во все стороны.
+  // Кто на следующем такте увидит рыцаря в клетке to (или они шагнут навстречу) — номер часового, иначе -1. Отвлечённые (pGone) уже ушли.
+  const pGone = new Set();
+  const patrolSpots = (from, to) => patrolsOf().findIndex((seq, k) => {
+    if (pGone.has(k)) return false;
+    const a = patrolAt(seq, tk), b = patrolAt(seq, tk + 1);
+    return (a.x === to.x && a.y === to.y && b.x === from.x && b.y === from.y) || patrolSees(b, to.x, to.y, wallAt);
+  });
   const fallen = new Set();    // клетки, куда упало дерево: теперь это препятствие
   const wallAt = (x, y) => isWall(x, y) || fallen.has(x + "," + y);
   // Монах (L.monk, v254): стоит и боится идти. Копейщик встал вплотную и ткнул копьём (parry) — монах срывается от него прочь:
@@ -9979,6 +10017,7 @@ function buildPlan(code) {
   };
   const make = (name) => (line, n) => {
     if (n === undefined) n = 1;
+    if (DIRS[name].bare && n !== 1) throw pyError(line, tr("{c}() — без числа: камень берут один раз", { c: disp(name) }));
     if (!Number.isInteger(n) || n < 1 || n > MAX_STEPS) {
       throw pyError(line, `${disp(name)}(${n}): ` + tr(isHit(name) ? "число ударов должно быть целым от 1 до {max}" : "число шагов должно быть целым от 1 до {max}", { max: MAX_STEPS }));
     }
@@ -10082,7 +10121,8 @@ function buildPlan(code) {
       if (commands.length >= 100) throw new Error("Рыцарь сделал 100 команд и так и не дошёл. Он ходит по кругу?");
       return;
     }
-    if (name !== "wait") face = { dx: c.dx, dy: c.dy };
+    const still = name === "wait" || name === "takeStone";     // стоит на месте: ждёт или подбирает камень
+    if (!still) face = { dx: c.dx, dy: c.dy };
     c.pre = [];
     for (let s = 0; s < n; s++) {
       c.pre[s] = strikes(null, true); // стоял рядом с гоблином и не бил — гоблин добивает
@@ -10090,7 +10130,7 @@ function buildPlan(code) {
       const next = { x: pos.x + c.dx, y: pos.y + c.dy };
       const mc = monkTick();                                    // монах делает свой такт первым (v254)
       if (mc) { crash = { cmd: i, step: s, at: mc, reason: "patrol", who: "monk", tick: tk + 1 }; break; }
-      if (name !== "wait" && monkAt(next.x, next.y)) { crash = { cmd: i, step: s, at: next, reason: "monk" }; break; }
+      if (!still && monkAt(next.x, next.y)) { crash = { cmd: i, step: s, at: next, reason: "monk" }; break; }
       if (wallAt(next.x, next.y)) { crash = { cmd: i, step: s, at: next, reason: fallen.has(next.x + "," + next.y) ? "tree" : "wall" }; break; }
       // Гоблин на пути работает как стена, пока его не победить
       if (goblinAt(next.x, next.y)) {
@@ -10102,7 +10142,18 @@ function buildPlan(code) {
       // Запертая дверь работает как стена
       if (atExit && doorLocked(got)) { crash = { cmd: i, step: s, at: next, reason: "locked", got: { ...got } }; break; }
       if (atExit && mk && !mk.home) { crash = { cmd: i, step: s, at: next, reason: "monkfirst" }; break; }      // сначала в дверь должен войти монах
-      if (patrolMeets(pos, next)) { crash = { cmd: i, step: s, at: next, reason: "patrol", tick: tk + 1 }; break; }
+      if (name === "takeStone") {
+        // камень лежит только на старте (L.stone.at — если не там) и один
+        const sc = stoneCell();
+        if (got.stone || pos.x !== sc.x || pos.y !== sc.y) { crash = { cmd: i, step: s, at: { ...pos }, reason: "nostone", had: got.stone }; break; }
+        got.stone = 1;
+      }
+      if (L.stone) {
+        // часовой заметил: камень в руках — рыцарь сам кидает его, часовой уходит на звук (дальше его нет); камня нет — бой, рыцарь падает
+        const k = patrolSpots(pos, next);
+        if (k >= 0 && got.stone === 1) { got.stone = 2; pGone.add(k); (c.th ||= [])[s] = { by: k, tick: tk + 1, to: stoneNoise(k, tk + 1) }; }
+        else if (k >= 0) { crash = { cmd: i, step: s, at: next, reason: "spotted", by: k, tick: tk + 1 }; break; }
+      } else if (patrolMeets(pos, next)) { crash = { cmd: i, step: s, at: next, reason: "patrol", tick: tk + 1 }; break; }
       tk++;
       pos = next;
       c.cells.push({ ...pos });
@@ -10333,6 +10384,7 @@ function tileHtml(t, active, err) {
   const key = ALL_COMMANDS.find((c) => c === t.name || DIRS[c].py === t.name);
   const d = DIRS[key];
   if (t.v) return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.v}"><span class="ar">${d.arrow}</span><span class="nn nv">${esc(t.v)}</span></button>`;
+  if (d.bare) return `<button class="tile ${d.axis} bare${cls}" data-line="${t.line}" aria-label="${d.py}"><span class="ar">${arrowHtml(d)}</span></button>`;
   return `<button class="tile ${d.axis}${cls}" data-line="${t.line}" aria-label="${d.py} ${t.n}"><span class="ar">${d.arrow}</span><span class="nn">${t.n}</span></button>`;
 }
 function blockHtml(it, active, err) {
@@ -10972,7 +11024,7 @@ function drawRoute(p, activeIdx = -1) {
     if (!e.home) svg("circle", { class: "mend", cx: c(e.x), cy: c(e.y) - 0.3, r: 0.1 }, routeEl);      // где он встанет
   }
   // …и жёлтая метка: где и на каком шаге рыцарь с ним встретится (видна ещё до запуска)
-  if (p.crash?.reason === "patrol") {
+  if (p.crash?.reason === "patrol" || p.crash?.reason === "spotted") {
     const { x, y } = p.crash.at, g = svg("g", { class: "meet" }, markEl), t = tr("шаг") + " " + p.crash.tick, w = 0.16 * t.length + 0.14;
     svg("circle", { cx: c(x), cy: c(y), r: 0.36 }, g);
     svg("rect", { x: c(x) - w / 2, y: c(y) - 0.62, width: w, height: 0.28, rx: 0.14 }, g);
@@ -11098,7 +11150,7 @@ function drawRoute(p, activeIdx = -1) {
   // Где рыцарь упрётся: короткая стрелка «пытается шагнуть» с последней клетки
   // и крестик на клетке, которая не пускает. Видно и до запуска, чтобы было понятно,
   // с какой клетки и куда не получится пройти.
-  if (crashCmd) {
+  if (crashCmd && p.crash.reason !== "nostone") {
     const last = crashCmd.cells.length ? crashCmd.cells[crashCmd.cells.length - 1] : crashCmd.from;
     const at = p.crash.at, dx = at.x - last.x, dy = at.y - last.y;
     const g = svg("g", { class: "blocked" + (showProblems ? " hit" : "") }, markEl);
@@ -11110,9 +11162,10 @@ function drawRoute(p, activeIdx = -1) {
     svg("polyline", { class: "try-under", points: pts }, g);
     svg("polyline", { class: "try", points: pts }, g);
     const r = 0.2, X = c(at.x), Y = c(at.y);
-    if (p.crash.reason !== "patrol") svg("circle", { class: "x-bg", cx: X, cy: Y, r: 0.3 }, g);
+    const noX = ["patrol", "spotted", "nostone"].includes(p.crash.reason);
+    if (!noX) svg("circle", { class: "x-bg", cx: X, cy: Y, r: 0.3 }, g);
     // встреча с часовым — не крестик, а жёлтая метка «шаг N» (нарисована выше)
-    for (const [ax, ay, bx, by] of p.crash.reason === "patrol" ? [] : [[X - r, Y - r, X + r, Y + r], [X - r, Y + r, X + r, Y - r]]) {
+    for (const [ax, ay, bx, by] of noX ? [] : [[X - r, Y - r, X + r, Y + r], [X - r, Y + r, X + r, Y - r]]) {
       svg("line", { class: "x-under", x1: ax, y1: ay, x2: bx, y2: by }, g);
       svg("line", { class: "x", x1: ax, y1: ay, x2: bx, y2: by }, g);
     }
@@ -11194,7 +11247,7 @@ function drawTape(p, activeIdx = -1, walked = 0) {
       const isWalked = i < activeIdx || (i === activeIdx && s < walked);
       cells += `<i class="${isWalked ? "walked" : ""}"></i>`;
     }
-    card.innerHTML = `<span class="arrow">${i + 1} ${cmd.arrow}</span>${cmd.n}<span class="cells">${cells}</span>`;
+    card.innerHTML = `<span class="arrow">${i + 1} ${arrowHtml(cmd)}</span>${cmd.bare ? "" : cmd.n}<span class="cells">${cells}</span>`;
     (group || tapeEl).appendChild(card);
   });
 }
@@ -11252,6 +11305,7 @@ function reset() {
   const moved = hero && (hero.x !== start.x || hero.y !== start.y);
   hero = { ...start };
   // часовые (v274): если уже гуляют — правка программы их не трогает, только такт расчёта снова 0; иначе — на место и гулять
+  patrolRevive();      // ушедший в кусты часовой снова на месте (v275)
   if (patrolIdleTimer && !running) patrolTick = 0; else { patrolPlace(0); if (!running) patrolIdleStart(0); }
   monkPlace(0);
   heroEl.classList.remove("flip", "run", "sunk", "down");
@@ -11422,22 +11476,53 @@ const NOSTOP_TEXT = {
   bush: "Засада! Рыцарь остановился у кустов — и подрывник успел бросить динамит. Запиши весь путь мимо кустов сразу и запусти один раз",
 };
 // Часовые (v212): гоблин ходит по своей программе, пока идёт программа игрока: один шаг рыцаря (или «ждать») — один шаг часового.
-// В уровне: patrols: [{ at: [x, y], prog: [["moveDown", 2], ["moveUp", 2]] }] — программа должна вернуть его на место (ходит по кругу).
+// В уровне: patrols: [{ at: [x, y], prog: [["moveDown", 2], ["look", 2], ["moveUp", 2]] }] — программа должна вернуть его на место (ходит по кругу).
+// "look" (v275) — стоит и оглядывается по сторонам. У каждой точки пути f — куда он смотрит (куда шёл последним), look — оглядывается.
 function patrolSeq(pt) {
   const seq = [{ x: pt.at[0], y: pt.at[1] }];
-  for (const [cmd, n] of pt.prog) for (let k = 0; k < n; k++) { const l = seq[seq.length - 1]; seq.push({ x: l.x + DIRS[cmd].dx, y: l.y + DIRS[cmd].dy }); }
+  for (const [cmd, n] of pt.prog) for (let k = 0; k < n; k++) {
+    const l = seq[seq.length - 1];
+    seq.push(cmd === "look" ? { x: l.x, y: l.y } : { x: l.x + DIRS[cmd].dx, y: l.y + DIRS[cmd].dy });
+  }
   seq.pop();
+  seq.forEach((e, t) => {
+    const p = seq[(t + seq.length - 1) % seq.length];
+    e.f = { dx: Math.sign(e.x - p.x), dy: Math.sign(e.y - p.y) };
+    e.look = !e.f.dx && !e.f.dy;
+  });
   return seq;
 }
 const patrolsOf = () => (L.patrols || []).map((pt) => (pt.seq ||= patrolSeq(pt)));
 const patrolAt = (seq, t) => seq[t % seq.length];
-let patrolActs = [], patrolBubs = [], patrolTick = 0;
+// что видит часовой из точки e: свою клетку и SIGHT клеток туда, куда смотрит (оглядывается — во все четыре стороны); стена закрывает
+const SIGHT = 2;
+function patrolSight(e, wall = isWall) {
+  const out = [];
+  for (const d of e.look ? [{ dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 }] : [e.f])
+    for (let k = 1; k <= SIGHT; k++) {
+      const x = e.x + d.dx * k, y = e.y + d.dy * k;
+      if (x < 0 || y < 0 || x >= W || y >= H || wall(x, y)) break;
+      out.push({ x, y });
+    }
+  return out;
+}
+const patrolSees = (e, x, y, wall) => (e.x === x && e.y === y) || patrolSight(e, wall).some((c) => c.x === x && c.y === y);
+// камень: лежит на старте (или в L.stone.at); куда его кинуть — ближайшее к часовому место из L.stone.noise (там кусты, туда он и уйдёт)
+const stoneCell = () => (L.stone?.at ? { x: L.stone.at[0], y: L.stone.at[1] } : { ...start });
+function stoneNoise(k, t) {
+  const e = patrolAt(patrolsOf()[k], t);
+  return (L.stone?.noise || [[e.x, e.y]]).slice().sort((a, b) => Math.abs(a[0] - e.x) + Math.abs(a[1] - e.y) - Math.abs(b[0] - e.x) - Math.abs(b[1] - e.y))[0];
+}
+let patrolActs = [], patrolBubs = [], patrolViews = [], patrolTick = 0;
+const patrolGone = new Set();      // кого отвлёк камень (ушёл в кусты) — до сброса его нет
 function patrolSetup() {
   clearTimeout(patrolIdleTimer); patrolIdleTimer = 0; patrolIdleT = 0;     // прошлый уровень гулял своими часовыми
+  patrolGone.clear();
   patrolActs = patrolsOf().map((seq, k) => {
     const a = skActor(evStage(), "torch", L.patrols[k].big ? 0.8 : 0.6, 0.62);      // big — крупный, грозный часовой (v254)
     a.at(seq[0].x + 0.5, seq[0].y + 0.9); a.show(true, true); a.play(0, 7, 120);
     a.el.style.zIndex = 2; a.el.classList.add("patrol");
+    Object.assign(a, { ri: 0, q: [], gen: 0, tick: 400 });
     return a;
   });
   patrolBubs = (L.patrols || []).map((pt) => {
@@ -11446,8 +11531,16 @@ function patrolSetup() {
     boardEl.appendChild(b);
     return b;
   });
+  // что видит часовой — светлые клетки перед ним (только на уровнях с камнем: там часовые смотрят)
+  patrolViews = L.stone ? patrolActs.map(() => { const v = document.createElement("div"); v.className = "pviews"; boardEl.appendChild(v); return v; }) : [];
   patrolTick = 0;
   patrolCode();
+  patrolsOf().forEach((seq, k) => patrolView(k, seq[0]));
+}
+function patrolView(k, e) {
+  const v = patrolViews[k]; if (!v) return;
+  v.innerHTML = patrolGone.has(k) || !e ? "" : patrolSight(e).map((c) =>
+    `<i style="left:${c.x / W * 100}%;top:${c.y / H * 100}%;width:${100 / W}%;height:${100 / H}%"></i>`).join("");
 }
 // Программа часового — облачко с хвостиком над его головой, ходит вместе с ним (v262: раньше стояло на месте, и новичку
 // было не понять, чья это программа). x, y — где стоят ноги часового (в клетках); ms — за сколько он туда дойдёт.
@@ -11467,80 +11560,197 @@ function patrolBubAt(k, x, y, ms = 0) {
   b.style.setProperty("--tail", Math.round(cx - px) + "px");
 }
 window.addEventListener("resize", () => setTimeout(() => patrolBubs.forEach((b, k) => { if (b.isConnected && b.pos) patrolBubAt(k, ...b.pos); }), 60));
-// программа часового над ним: в блоках — значки плиток, в Python / JavaScript — код
+// программа часового над ним: в блоках — значки плиток, в Python / JavaScript — код. "look" — оглядеться (👀)
+const PLOOK = { arrow: "👀", py: "look_around", js: "lookAround" };
 function patrolCode() {
   (L.patrols || []).forEach((pt, k) => {
     if (!patrolBubs[k]) return;
-    patrolBubs[k].innerHTML = uiBlocks ? `<i>🔁</i> ` + pt.prog.map(([c, n]) => `<span class="m ${DIRS[c].axis}">${DIRS[c].arrow}${n}</span>`).join(" ")
-      : (lang === "py" ? `<i>while True:</i>\n` : `<i>while (true) {</i>\n`) + pt.prog.map(([c, n]) => `  ${disp(c)}(${n})${lang === "py" ? "" : ";"}`).join("\n") + (lang === "py" ? "" : "\n<i>}</i>");
+    const nm = (c) => (c === "look" ? PLOOK[lang === "py" ? "py" : "js"] : disp(c));
+    patrolBubs[k].innerHTML = uiBlocks ? `<i>🔁</i> ` + pt.prog.map(([c, n]) => c === "look" ? `<span class="m w">${PLOOK.arrow}${n}</span>` : `<span class="m ${DIRS[c].axis}">${DIRS[c].arrow}${n}</span>`).join(" ")
+      : (lang === "py" ? `<i>while True:</i>\n` : `<i>while (true) {</i>\n`) + pt.prog.map(([c, n]) => `  ${nm(c)}(${n})${lang === "py" ? "" : ";"}`).join("\n") + (lang === "py" ? "" : "\n<i>}</i>");
     const a = patrolActs[k];
     if (a) patrolBubAt(k, ...(patrolBubs[k].pos || [a.x, a.y]));      // размер облачка изменился — поставить заново
   });
 }
-// поставить часовых туда, где они стоят на такте t (ms — за сколько дойти; 0 — сразу)
+// Ходьба часовых (v275). У каждого: ri — номер точки пути, куда он идёт (или где стоит); q — клетки, которые ещё пройти.
+// patrolPlace(t, ms) — к такту t часовой должен быть в точке t. Идёт по своему пути (короткой стороной), за ms на шаг;
+// отстал (до запуска гулял в другом месте) — бежит быстрее, до трёх клеток за такт, и догоняет. ms = 0 — поставить сразу.
 function patrolPlace(t, ms = 0) {
   patrolsOf().forEach((seq, k) => {
-    const a = patrolActs[k], to = patrolAt(seq, t);
-    if (!a) return;
-    const x = to.x + 0.5, y = to.y + 0.9;
-    if (!ms || (a.x === x && a.y === y)) { a.at(x, y); patrolBubAt(k, x, y); return; }
-    patrolBubAt(k, x, y, ms);
-    if (x !== a.x) a.face(x < a.x);
-    a.play(1, 6, 90);
-    a.move(x, y, ms).then(() => { if (a.x === x && a.y === y) a.play(0, 7, 120); });
+    const a = patrolActs[k], n = seq.length, ti = t % n;
+    if (!a || patrolGone.has(k)) return;
+    if (!ms) {
+      a.gen++; a.q = []; a.ri = ti; a.busy = false;
+      const to = seq[ti], x = to.x + 0.5, y = to.y + 0.9;
+      a.el.style.transition = "none"; a.at(x, y); void a.el.offsetWidth; a.el.style.transition = "";
+      a.play(0, 7, 120); patrolBubAt(k, x, y); patrolView(k, to);
+      return;
+    }
+    a.tick = ms;
+    if (a.ri === ti) { if (seq[ti].look) patrolLook(k, ms); return; }
+    const fw = (ti - a.ri + n) % n, bw = (a.ri - ti + n) % n, dir = fw <= bw ? 1 : -1;
+    for (let j = a.ri; j !== ti;) { j = (j + dir + n) % n; a.q.push(j); }
+    a.ri = ti;
+    patrolWork(k);
   });
   patrolTick = t;
 }
-// Часовые до запуска (v273–274): ходят по своей программе сами — пользователь: «иначе игра смотрится слишком мёртвой».
-// Клики игрока их не трогают (v273 сбрасывал часового на место при каждой правке — «самый убогий способ»). По «Запустить»
-// рыцарь ждёт, пока часовые сами дойдут до мест, откуда начинается расчёт (patrolSync), — и топчется, оглядываясь.
-let patrolIdleTimer = 0, patrolIdleT = 0, patrolBusyTill = 0;
-const IDLE_STEP = 620, IDLE_GAP = 900;
-function patrolStepTo(t, ms) {
-  patrolsOf().forEach((seq, k) => {
-    const a = patrolActs[k], to = patrolAt(seq, t), x = to.x + 0.5, y = to.y + 0.9;
-    if (!a || (a.x === x && a.y === y)) return;
+async function patrolWork(k) {
+  const a = patrolActs[k], seq = patrolsOf()[k];
+  if (a.busy) return;
+  a.busy = true;
+  const gen = a.gen;
+  while (a.q.length && gen === a.gen && !patrolGone.has(k)) {
+    const j = a.q.shift(), e = seq[j], x = e.x + 0.5, y = e.y + 0.9;
+    if (a.x === x && a.y === y) { patrolView(k, e); if (e.look && !a.q.length) patrolLook(k, a.tick); continue; }
+    const ms = Math.max(a.tick / 3, a.tick / (a.q.length + 1));
     patrolBubAt(k, x, y, ms);
+    patrolView(k, e);
     if (x !== a.x) a.face(x < a.x);
-    a.play(1, 6, ms < 400 ? 80 : 110);
-    a.move(x, y, ms).then(() => { if (a.x === x && a.y === y) a.play(0, 7, 120); });
-  });
-  patrolIdleT = t; patrolBusyTill = performance.now() + ms;
+    a.play(1, 6, ms < a.tick * 0.8 ? 70 : 110);
+    await a.move(x, y, ms);
+  }
+  if (gen !== a.gen) return;
+  a.busy = false;
+  if (!patrolGone.has(k)) a.play(0, 7, 120);
 }
+// оглядывается: поворачивается в одну сторону, потом в другую
+function patrolLook(k, ms) {
+  const a = patrolActs[k], gen = a.gen, was = a.el.classList.contains("flip");
+  a.play(0, 7, 120);
+  a.face(!was);
+  setTimeout(() => { if (gen === a.gen && !patrolGone.has(k)) a.face(was); }, ms / 2);
+}
+// Часовые до запуска (v273–274): ходят по своей программе сами — пользователь: «иначе игра смотрится слишком мёртвой».
+// Клики игрока их не трогают. По «Запустить» рыцарь сразу идёт, а часовой, если гулял не там, догоняет своё место бегом (v275).
+let patrolIdleTimer = 0, patrolIdleT = 0;
+const IDLE_STEP = 820, IDLE_GAP = 1150;       // до тревоги — медленно, вальяжно
 function patrolIdleStart(from = 0) {
   clearTimeout(patrolIdleTimer); patrolIdleTimer = 0;
   patrolIdleT = from;
   if (!patrolActs.length || STILL) return;
   const step = () => {
     if (running || $("levelview").hidden || !patrolActs.length || !patrolActs[0].el.isConnected) { patrolIdleTimer = 0; return; }
-    patrolStepTo(patrolIdleT + 1, IDLE_STEP);
+    patrolIdleT++;
+    patrolPlace(patrolIdleT, IDLE_STEP);
     patrolIdleTimer = setTimeout(step, IDLE_GAP);
   };
   patrolIdleTimer = setTimeout(step, 1200);
 }
-const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-async function patrolSync() {
-  clearTimeout(patrolIdleTimer); patrolIdleTimer = 0;
-  const seqs = patrolsOf(); if (!seqs.length) return;
-  const cyc = seqs.reduce((m, q) => m * q.length / gcd(m, q.length), 1), ms = 230 * SLOW / speed;
-  let left = patrolBusyTill - performance.now();
-  if (patrolIdleT % cyc === 0) { if (left > 0) await sleep(left); }
-  else {
-    heroWaiting(true);
-    if (left > 0) await sleep(left);
-    for (let t = patrolIdleT + 1; ; t++) { patrolStepTo(t, ms); await sleep(ms + 60); if (t % cyc === 0) break; }
-    heroWaiting(false);
+// после сброса ушедший в кусты часовой возвращается на своё место
+function patrolRevive() {
+  if (!patrolGone.size) return;
+  const ks = [...patrolGone];
+  patrolGone.clear();
+  for (const k of ks) {
+    const a = patrolActs[k]; if (!a) continue;
+    a.el.classList.remove("gone");
+    a.show(false, true);
+    const seq = patrolsOf()[k], e = seq[a.ri % seq.length];
+    a.gen++; a.q = []; a.busy = false;
+    a.el.style.transition = "none"; a.at(e.x + 0.5, e.y + 0.9); void a.el.offsetWidth; a.el.style.transition = "";
+    a.play(0, 7, 120); a.show(true);
+    patrolBubs[k]?.classList.remove("gone"); patrolBubAt(k, e.x + 0.5, e.y + 0.9); patrolView(k, e);
   }
-  patrolIdleT = 0; patrolTick = 0;
+  patrolMarks.forEach((m) => m.remove()); patrolMarks = [];
 }
-// рыцарь выжидает: топчется на месте, оглядывается по сторонам, над головой — облачко «думаю» с точками
-let heroLook = 0;
-function heroWaiting(on) {
-  clearInterval(heroLook);
-  if (!heroEl.querySelector(".hthink")) { const b = document.createElement("div"); b.className = "hthink"; b.innerHTML = "<i></i><i></i><i></i>"; heroEl.appendChild(b); }
-  heroEl.classList.toggle("pwait", on);
-  heroEl.classList.remove("flip");
-  if (on) { let k = 0; heroLook = setInterval(() => heroEl.classList.toggle("flip", ++k % 2 === 1), 760); }
+// значок над головой часового: «❗» — заметил, «❓» — услышал камень
+let patrolMarks = [];
+function patrolMark(k, text, ms = 900) {
+  const a = patrolActs[k]; if (!a) return;
+  const m = document.createElement("div");
+  m.className = "pmark"; m.textContent = text;
+  const up = (L.patrols[k].big ? 1.25 : 1.0) / H * 100;
+  boardEl.appendChild(m); patrolMarks.push(m);
+  // идёт следом за часовым: его место берём прямо с экрана (a.x — уже точка, куда он идёт)
+  const follow = () => {
+    if (!m.isConnected) return;
+    const bw = boardEl.clientWidth || 1, bh = boardEl.clientHeight || 1;
+    m.style.left = a.el.offsetLeft / bw * 100 + "%"; m.style.top = a.el.offsetTop / bh * 100 - up + "%";
+    requestAnimationFrame(follow);
+  };
+  follow();
+  if (ms) setTimeout(() => m.remove(), ms);
+  return m;
+}
+// Рыцаря заметили, а камень в руках — он сам кидает его в кусты; часовой оборачивается на звук, идёт туда и исчезает в кустах.
+// Остальные часовые ходят дальше, не останавливаясь. Не ждём: рыцарь идёт своей дорогой, пока камень летит.
+async function patrolThrow(th) {
+  const k = th.by, a = patrolActs[k], gen = a?.gen;
+  if (!a) return;
+  patrolGone.add(k);
+  patrolView(k, null);
+  const [nx, ny] = th.to, k2 = SLOW / speed;
+  // камень летит по дуге
+  const st = document.createElement("img");
+  st.className = "flystone"; st.src = TS.stone1; st.alt = "";
+  boardEl.appendChild(st);
+  const x0 = hero.x + 0.5, y0 = hero.y + 0.45, x1 = nx + 0.5, y1 = ny + 0.7, fly = 190 * k2, t0 = performance.now();   // такт — 230·k2: камень летит меньше такта, часовой успевает уйти с дороги
+  sfx("swish");
+  await new Promise((res) => {
+    const f = (t) => {
+      const q = Math.min(1, (t - t0) / fly), x = x0 + (x1 - x0) * q, y = y0 + (y1 - y0) * q - 1.3 * 4 * q * (1 - q);
+      st.style.left = x / W * 100 + "%"; st.style.top = y / H * 100 + "%";
+      q < 1 ? requestAnimationFrame(f) : res();
+    };
+    requestAnimationFrame(f);
+  });
+  sfx("knock");
+  st.classList.add("down");
+  setTimeout(() => st.remove(), 1600);
+  while (a.busy && gen === a.gen) await sleep(30);       // часовой доходит свой шаг
+  if (gen !== a.gen) return;
+  patrolMark(k, "❓", 700);
+  if (x1 !== a.x) a.face(x1 < a.x);
+  a.play(0, 7, 120);
+  await sleep(70 * k2);
+  if (gen !== a.gen) return;
+  // идёт на звук, а оттуда — в кусты (ещё полклетки дальше) и тает
+  const dx = Math.sign(nx + 0.5 - a.x), dy = Math.sign(ny + 0.9 - a.y);
+  const ox = dx || (nx === 0 ? -1 : nx === W - 1 ? 1 : 0), oy = dy || (ny === 0 ? -1 : ny === H - 1 ? 1 : 0);
+  const d = Math.abs(nx + 0.5 - a.x) + Math.abs(ny + 0.9 - a.y);
+  patrolBubs[k]?.classList.add("gone");
+  a.play(1, 6, 110);
+  if (d > 0.05) await a.move(nx + 0.5, ny + 0.9, d * 180 * k2);
+  if (gen !== a.gen) return;
+  a.el.classList.add("gone");
+  a.el.style.transition = `left ${700 * k2}ms linear, top ${700 * k2}ms linear, opacity ${700 * k2}ms`;
+  a.at(nx + 0.5 + ox * 0.7, ny + 0.9 + oy * 0.7); a.el.style.opacity = 0;
+}
+// Рыцаря заметили, а камня нет: часовой бросается к нему, рыцарь успевает один раз дать сдачи — и падает (v275: сильный часовой не прощает)
+async function patrolKills(p) {
+  const cr = p.crash, k = cr.by, a = patrolActs[k], k2 = SLOW / speed;
+  patrolPlace(cr.tick, 230 * k2);
+  heroEl.classList.remove("run");
+  await wait(240 * k2);
+  while (a.busy) await sleep(30);
+  patrolMark(k, "❗", 1400);
+  sfx("roar");
+  await wait(320);
+  // бежит вплотную к рыцарю
+  const sx = Math.sign(a.x - (hero.x + 0.5)), sy = Math.sign(a.y - (hero.y + 0.9));
+  const fx = sx || sy ? sx : -Math.sign(cr.at.x - hero.x) || 1, fy = sx || sy ? sy : 0;
+  const tx = hero.x + 0.5 + fx * 0.62, ty = hero.y + 0.9 + fy * 0.62;
+  if (Math.abs(tx - a.x) > 0.02) a.face(tx < a.x);
+  a.play(1, 6, 60);
+  await a.move(tx, ty, Math.max(160, (Math.abs(tx - a.x) + Math.abs(ty - a.y)) * 150));
+  patrolBubs[k]?.classList.add("gone");
+  if (fx) heroEl.classList.toggle("flip", fx < 0);
+  // рыцарь бьёт — часовой отшатнулся
+  heroEl.classList.add("atk");
+  sfx("hit");
+  a.el.classList.remove("ouch"); void a.el.offsetWidth; a.el.classList.add("ouch");
+  await wait(330);
+  heroEl.classList.remove("atk");
+  // часовой бьёт в ответ
+  if (fx) a.face(fx > 0);
+  a.play(fy > 0 ? 4 : fy < 0 ? 3 : 2, 6, 70, false);
+  sfx("gobatk");
+  await wait(300);
+  showProblems = true;
+  drawRoute(p, cr.cmd);
+  await knightFalls({ spotted: true, tick: cr.tick });
+  patrolBubs[k]?.classList.remove("gone");
 }
 // Монах, которого подгоняют копьём (v254; расчёт — monkTick в buildPlan). Фигурка — как у часовых: житель сценок на поле уровня.
 let monkAct = null, monkPokes = 0;
@@ -11607,7 +11817,7 @@ async function monkSeen(p, i, cr) {
   patrolPlace(cr.tick, ms); monkPlace(cr.tick, ms);
   heroEl.classList.remove("run");
   await wait(420);
-  sfx("bump"); sleep(160).then(() => sfx("laugh"));
+  sfx("bump");
   showProblems = true;
   drawRoute(p, i);
   setStatus(tr("Часовой заметил монаха — на шаге {n}! Подгоняй его, когда дорога свободна: пережди — {cmd}", { n: cr.tick, cmd: uiBlocks ? "⏳" : disp("wait") + "()" }), "fail");
@@ -11676,6 +11886,9 @@ async function knightFalls(why) {
   sfx("fall"); if (!why?.bomb && !why?.ambush) sfx("hscream");     // в бою — ещё и крик (от динамита голос уже был)
   await wait(900);
   const n = why?.max || 1;
+  if (why?.spotted) return setStatus(uiBlocks
+    ? tr("Часовой заметил рыцаря на шаге {n}! Сильного часового не победить. Подбери камень на старте — {c} — и рыцарь сам кинет его, а часовой уйдёт на звук", { n: why.tick, c: "🌑" })
+    : tr("Часовой заметил рыцаря на шаге {n}! Сильного часового не победить. Подбери камень на старте — {c} — и рыцарь сам кинет его, а часовой уйдёт на звук", { n: why.tick, c: disp("takeStone") + "()" }), "fail");
   if (why?.shield) return setStatus("Щит не пробить! Щитоносец отбивает удар и колет в ответ. Спереди его не взять…", "fail");
   if (why?.giant) return setStatus("Великан достал рыцаря! Он бьёт медленно, с замахом: после удара не стой рядом с ним", "fail");
   if (n >= 5) return setStatus("Чёрный рыцарь слишком силён — с ним не справиться. Не подходи к нему: если он впереди, обойди подальше", "fail");
@@ -11708,14 +11921,15 @@ async function run() {
   setDisabled(true);
   // длинную карту листали — сначала окно возвращается к рыцарю
   if (camFollow("page")) await sleep(520);
-  if (patrolActs.length) await patrolSync();     // ждём, пока часовые сами дойдут до мест, откуда считали путь
+  // часовые (v275): рыцарь не ждёт — сразу идёт; кто гулял не на своём месте, догоняет его бегом (patrolPlace)
+  clearTimeout(patrolIdleTimer); patrolIdleTimer = 0;
   let walkedTotal = 0;
 
   for (let i = 0; i < p.commands.length; i++) {
     const cmd = p.commands[i];
     await shotPending;                       // дерево ещё падает — сначала пусть упадёт
     await showChecks(p, i);
-    const label = `${disp(cmd.name)}(${cmd.n})`;
+    const label = `${disp(cmd.name)}(${DIRS[cmd.name].bare ? "" : cmd.n})`;
     activeVia = cmd.via || 0;
     drawCode(cmd.line);
     drawRoute(p, i);
@@ -11865,6 +12079,7 @@ async function run() {
       if (p.crash && p.crash.cmd === i && p.crash.step === s) {
         await shotPending;
         if (p.crash.who === "monk") { await monkSeen(p, i, p.crash); return finish(); }
+        if (p.crash.reason === "spotted") { await patrolKills(p); return finish(); }
         if (p.crash.reason === "patrol") {          // часовой доходит до места встречи (если это не клетка, где стоит рыцарь)
           const there = patrolsOf().some((seq) => { const q = patrolAt(seq, p.crash.tick); return q.x === hero.x && q.y === hero.y; });
           if (!there) patrolPlace(p.crash.tick, 230 * SLOW / speed);
@@ -11874,11 +12089,14 @@ async function run() {
         void heroEl.offsetWidth;
         heroEl.classList.add("bump");
         sfx("bump");
-        if (p.crash.reason === "patrol") sleep(160).then(() => sfx("laugh"));   // часовой смеётся
         showProblems = true;
         drawRoute(p, i);
         await wait(420);
-        if (p.crash.reason === "patrol") {
+        if (p.crash.reason === "nostone") {
+          setStatus(p.crash.had ? tr("Камень уже у рыцаря — второй раз брать нечего") : uiBlocks
+            ? tr("Камень лежит на старте — подбери его там: первая плитка {c}", { c: "🌑" })
+            : tr("Камень лежит на старте — подбери его там, первой командой: {c}", { c: disp("takeStone") + "()" }), "fail");
+        } else if (p.crash.reason === "patrol") {
           setStatus(tr("Часовой не пустил: вы встретились на шаге {n}. Пережди его — {cmd} — и иди, когда дорога свободна", { n: p.crash.tick, cmd: uiBlocks ? "⏳" : disp("wait") + "()" }), "fail");
         } else if (p.crash.reason === "goblin" && p.crash.shield) {
           setStatus("Щитоносец стоит на пути — сквозь него не пройти", "fail");
@@ -11919,8 +12137,10 @@ async function run() {
         return finish();
       }
 
-      heroEl.classList.toggle("run", cmd.name !== "wait");   // ждёт — стоит, а не бежит на месте
+      const still = cmd.name === "wait" || cmd.name === "takeStone";
+      heroEl.classList.toggle("run", !still);   // ждёт или подбирает камень — стоит, а не бежит на месте
       patrolPlace(cmd.tk + s + 1, 230 * SLOW / speed);          // часовые делают свой шаг вместе с рыцарем
+      if (cmd.th?.[s]) patrolThrow(cmd.th[s]);                  // заметили — рыцарь кинул камень (не ждём: идёт дальше)
       monkPlace(cmd.tk + s + 1, 230 * SLOW / speed);            // и монах — свой (v254)
       hero = cmd.cells[s];
       placeHero();
@@ -11928,12 +12148,13 @@ async function run() {
       // звуки шага и подобранных предметов
       const before = s ? cmd.got[s - 1] : (i ? p.commands[i - 1].got.at(-1) : null) || noneGot();
       const now = cmd.got[s];
-      if (speed < 5 && cmd.name !== "wait") sfx("step");
+      if (speed < 5 && !still) sfx("step");
+      if (now.stone === 1 && !before.stone) { sfx("knock"); heroEl.classList.remove("pick"); void heroEl.offsetWidth; heroEl.classList.add("pick"); }
       if (now.key && !before.key) sfx("key");
       if (now.coins > before.coins) sfx("coin");
       if (items.length && doorLocked(before) && !doorLocked(now)) setTimeout(() => sfx("unlock"), 180);
       drawItems(now);
-      if (cmd.name !== "wait") walkedTotal++;
+      if (!still) walkedTotal++;
       if (cmd.sw?.[s]) {
         // замах великана: рыцарь успел отойти — мимо, остался рядом — удар
         heroEl.classList.remove("run");
@@ -14013,8 +14234,8 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ===== 17. Прочитать задание вслух =====
-const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear", wait: "wait", push: "push", goToWater: "to water", goToTower: "to the tower", getFire: "get fire", fallBack: "fall back", shoot: "shoot" }
-  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё", wait: "ждать", push: "толкни", goToWater: "к воде", goToTower: "к вышке" };
+const SAY = EN_ON ? { moveRight: "right", moveLeft: "left", moveDown: "down", moveUp: "up", attack: "attack", work: "work", parry: "spear", wait: "wait", takeStone: "take stone", push: "push", goToWater: "to water", goToTower: "to the tower", getFire: "get fire", fallBack: "fall back", shoot: "shoot" }
+  : { moveRight: "вправо", moveLeft: "влево", moveDown: "вниз", moveUp: "вверх", attack: "удар", work: "работа", parry: "копьё", wait: "ждать", takeStone: "камень", push: "толкни", goToWater: "к воде", goToTower: "к вышке" };
 function speakGoal() {
   try {
     let t = $("title").textContent + ". " + $("goal").textContent;
@@ -14360,8 +14581,6 @@ const SFX = {
   },
   // монаха бьют на арене — тот же вскрик, не чаще раза в 2,5 с (когда он горит, «удары» идут подряд)
   scream() { if (sfxRare("scream", 2500)) recPlay("pain-scream.mp3", 0.5, 0.97, 1.08); },
-  // часовой заметил рыцаря или монаха — гоблин смеётся (Mixkit 412); записи нет — тишина, «буонг» уже прозвучал
-  laugh()  { recPlay("goblin-laugh.mp3", 0.6); },
   // горловой хохот (Mixkit 745) — гоблин, который пакостит из безопасного места и попал: подрывник на вышке,
   // гоблин из кустов, вышка на арене. Не чаще раза в 3,5 с
   cackle() { if (sfxRare("cackle", 3500)) recPlay("bomber-laugh.mp3", 0.5, 0.97, 1.05); },
@@ -15496,7 +15715,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 274;
+const APP_VERSION = 275;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15504,6 +15723,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 275, date: "2026-11-26", text: "Часовые ожили: ходят не спеша, останавливаются и оглядываются, а светлые клетки показывают, куда они смотрят. Заметит рыцаря — бой, и сильного часового не победить. Вместо «ждать» — новая команда «камень»: подбери камушек на старте, и рыцарь сам кинет его, когда его заметят, — часовой уйдёт на звук в кусты. Рыцарь больше не ждёт часовых перед запуском, а гоблин не смеётся.", en: "The sentries came alive: they stroll, stop and look around, and light cells show where they are looking. If one spots the knight, there is a fight, and a strong sentry can’t be beaten. Instead of “wait” there is a new command, “stone”: pick up a pebble at the start, and when the knight is spotted he throws it himself — the sentry goes off into the bushes after the sound. The knight no longer waits for the sentries before a run, and the goblin no longer laughs." },
   { v: 274, date: "2026-11-26", text: "Часовые гуляют сами, а рыцарь по «Запустить» выжидает удобный момент", en: "Sentries walk on their own, and after “Run” the knight waits for the right moment" },
   { v: 273, date: "2026-11-26", text: "Часовые ходят по своему пути ещё до «Запустить»", en: "Sentries walk their route even before you tap “Run”" },
   { v: 272, date: "2026-11-26", text: "«Починка»: подсказки теперь ведут по шагам, задание понятнее", en: "“Fix It”: hints now guide you step by step, clearer task" },
