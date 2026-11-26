@@ -7404,22 +7404,59 @@ function boardSkits1(st, cand, cellOv) {
     if (kind === "chop") {
       const out = c.x === 0 ? [-1, 0] : c.x === W - 1 ? [1, 0] : c.y === H - 1 ? [0, 1] : [0, -1];
       skRun(() => boardWoodcutter(st, c, tree, cellOv[c.y][c.x + tree], out));
-    } else skRun(() => ({ monk: boardMonk, sheep: boardSheep, archer: boardArcher, lancer: boardLancer, camp: boardCamp, builder: boardBuilder, picker: boardPicker })[kind](st, x, y, left));
+    } else skRun(() => ({ monk: boardMonk, sheep: boardSheep, archer: boardArcher, lancer: boardLancer, camp: boardCamp, builder: boardBuilder, picker: boardPicker })[kind](st, x, y, left, tree, picks.filter((q) => q !== c)));
   });
 }
-// Лучник-дозорный: время от времени (и на радостях) пускает стрелу в небо
-async function boardArcher(st, x, y, left) {
-  const a = skActor(st, "archb", 0.75), ar = skActor(st, "arrowu", 0.75, 0.5);
+// Лучник-дозорный: время от времени (и на радостях) стреляет. Стрела никогда не летит над клетками, по которым может пройти
+// рыцарь (v279, просьба пользователя) и над другими жителями поля: в соседнее дерево, в небо — если над лучником одни заросли,
+// вбок за край поля — если там одни заросли. Некуда — не стреляет, а смотрит по сторонам.
+async function boardArcher(st, x, y, left, tree = 0, others = []) {
+  const a = skActor(st, "archb", 0.75), ar = skActor(st, "arrowu", 0.75, 0.5), sides = [0, 1].map(() => skActor(st, "arrow", 0.75, 0.55));
+  const cx = Math.floor(x), cy = Math.floor(y);
+  // сюда может зайти рыцарь — или там стоит другой житель поля (стрелять в него тоже нельзя)
+  const open = (i, j) => (i >= 0 && j >= 0 && i < W && j < H && !isWall(i, j)) || others.some((q) => q.x === i && q.y === j);
+  const shot = () => {
+    if (tree) return { kind: "tree", f: tree };
+    if ([1, 2, 3, 4, 5].every((d) => !open(cx, cy - d))) return { kind: "up" };
+    for (const f of left ? [-1, 1] : [1, -1]) {
+      let ok = true;
+      for (let i = cx + f; i >= 0 && i < W; i += f) if (open(i, cy)) { ok = false; break; }
+      if (ok) return { kind: "edge", f };
+    }
+    return null;
+  };
   a.at(x, y); a.face(left); a.show(true); a.play(0, 6, 150);
   for (;;) {
-    const joy = await skWaitCheer(st, skRnd(8000, 16000));
+    const joy = await skWaitCheer(st, skRnd(8000, 16000)), sh = shot();
+    if (!sh) {
+      // некуда стрелять — оглядывается (на радостях — быстро)
+      for (let k = joy ? 3 : 2; k > 0; k--) { a.face(!a.el.classList.contains("flip")); await skSleep(st, joy ? 280 : 900); }
+      a.face(left);
+      continue;
+    }
     for (let k = joy ? 2 : 1; k > 0; k--) {
-      a.play(2, 8, 80, false);
-      await skSleep(st, 430);
-      ar.at(x, y - 1.1); ar.show(true, true);
-      ar.move(x, y - 5.5, 650).then(() => ar.show(false));
+      if (sh.kind === "up") {
+        a.play(2, 8, 80, false);
+        await skSleep(st, 430);
+        ar.at(x, y - 1.1); ar.show(true, true);
+        ar.move(x, y - 5.5, 650).then(() => ar.show(false));
+      } else {
+        const f = sh.f, side = sides[k % 2];
+        a.face(f < 0); side.face(f < 0); side.frame(0, 0);
+        a.play(4, 8, 80, false);
+        await skSleep(st, 430);
+        side.at(x + f * 0.55, y - 0.6); side.show(true, true);
+        if (sh.kind === "tree") {
+          // в ствол соседнего дерева: воткнулась (кадр без наконечника) и через пару секунд пропала
+          side.move(x + f * 0.82, y - 0.6, 90).then(async () => { side.frame(0, 1); await skSleep(st, 2200); side.show(false); });
+        } else {
+          const to = f > 0 ? W + 1.5 : -1.5;
+          side.move(to, y - 0.6, Math.abs(to - x) * 90).then(() => side.show(false, true));
+        }
+      }
       await skSleep(st, 330);
     }
+    a.face(left);
     a.play(0, 6, 150);
   }
 }
@@ -15801,7 +15838,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 278;
+const APP_VERSION = 279;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15809,6 +15846,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 279, date: "2026-11-26", text: "Лучники на полях уровней больше не стреляют над дорогой рыцаря и над другими жителями: стрела летит в соседнее дерево, в небо или за край поля через заросли. Если стрелять некуда, лучник просто смотрит по сторонам.", en: "Archers on level fields no longer shoot over the knight’s road or over other villagers: the arrow goes into a nearby tree, into the sky or off the edge over the bushes. If there is nowhere to shoot, the archer just looks around." },
   { v: 278, date: "2026-11-26", text: "Когда часовой замечает рыцаря, всё происходит живее: рыцарь успевает шагнуть на видное место, поворачивается к часовому и поднимает щит, а часовой сразу бросает свой дозор и бежит к нему.", en: "When a sentry spots the knight, it now feels alive: the knight manages to step into view, turns to the sentry and raises his shield, and the sentry drops his watch at once and runs at him." },
   { v: 277, date: "2026-11-26", text: "Часовые по-честному: подобрал камень — рыцарь дожидается нужного момента и идёт у часового за спиной, не вплотную. Вплотную часовой замечает всегда. Без камня рыцарь идёт сразу, а часовые ходят как ходили — никто никого не догоняет.", en: "Fair sentries: once the knight picks up the stone, he waits for the right moment and walks behind the sentry’s back, not right next to him. A sentry always notices the knight in a neighbouring cell. Without the stone the knight goes at once, and the sentries keep walking as they were." },
   { v: 276, date: "2026-11-26", text: "Исправлено: после того как рыцарь подбирал камень, он оказывался в тёмной рамке и стоял мимо клетки.", en: "Fixed: after picking up the stone, the knight got a dark frame and stood off his cell." },

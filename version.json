@@ -1,13 +1,13 @@
 {
- "version": 278,
+ "version": 279,
  "date": "2026-11-26",
  "notes": [
-  "Когда часовой замечает рыцаря, всё происходит живее: рыцарь успевает шагнуть на видное место, поворачивается к часовому и поднимает щит, а часовой сразу бросает свой дозор и бежит к нему."
+  "Лучники на полях уровней больше не стреляют над дорогой рыцаря и над другими жителями: стрела летит в соседнее дерево, в небо или за край поля через заросли. Если стрелять некуда, лучник просто смотрит по сторонам."
  ],
  "files": {
   "index.html": {
-   "size": 1302772,
-   "hash": "1793f22df32ef592"
+   "size": 1305878,
+   "hash": "87e0134460536018"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4785,
-   "hash": "c8a2983fe9c5aa18"
+   "hash": "1b04927350be57ae"
   },
   "icon-192.png": {
    "size": 42164,
@@ -207,6 +207,6 @@
   }
  },
  "notes_en": [
-  "When a sentry spots the knight, it now feels alive: the knight manages to step into view, turns to the sentry and raises his shield, and the sentry drops his watch at once and runs at him."
+  "Archers on level fields no longer shoot over the knight’s road or over other villagers: the arrow goes into a nearby tree, into the sky or off the edge over the bushes. If there is nowhere to shoot, the archer just looks around."
  ]
 }
