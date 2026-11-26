@@ -583,6 +583,17 @@ html.still .route .fight .sw { animation: none; }
 .hero.run .k-run { display: block; }
 .hero.run .k-idle { display: none; }
 .hero.flip .kwrap { transform: scaleX(-1); }
+/* рыцарь выжидает часового (v274): топчется, оглядывается (flip по таймеру), над ним облачко с точками */
+.hero.pwait .kwrap { animation: kstomp 0.56s ease-in-out infinite; }
+.hero.pwait.flip .kwrap { animation-name: kstompf; }
+@keyframes kstomp { 0%, 50%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-5%) rotate(-4deg); } 75% { transform: translateY(-5%) rotate(4deg); } }
+@keyframes kstompf { 0%, 50%, 100% { transform: scaleX(-1) translateY(0) rotate(0); } 25% { transform: scaleX(-1) translateY(-5%) rotate(-4deg); } 75% { transform: scaleX(-1) translateY(-5%) rotate(4deg); } }
+.hero .hthink { display: none; position: absolute; left: 50%; bottom: 96%; transform: translateX(-50%); z-index: 4; gap: 3px; padding: 4px 7px; background: #fff; border: 2px solid #1c1a22; border-radius: 12px; }
+.hero .hthink::after { content: ""; position: absolute; left: 30%; bottom: -7px; width: 6px; height: 6px; background: #fff; border: 2px solid #1c1a22; border-radius: 50%; }
+.hero.pwait .hthink { display: flex; }
+.hero .hthink i { width: 6px; height: 6px; border-radius: 50%; background: #1c1a22; animation: kdot 0.9s ease-in-out infinite; }
+.hero .hthink i:nth-child(2) { animation-delay: 0.15s; } .hero .hthink i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes kdot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
 /* v210: остановился, где нельзя, — искупался (мостик) или сбит с ног (баран, динамит из кустов) */
 .hero .kwrap { transition: transform 0.3s, opacity 0.4s; transform-origin: 50% 85%; }
 .hero.sunk .kwrap { transform: translateY(34%) scale(0.85); opacity: 0; }
@@ -11229,7 +11240,6 @@ function refreshPlan() {
 }
 
 function reset() {
-  patrolIdleStop();
   if (L.arena) return arenaReset();
   showProblems = false;
   // поваленные деревья снова стоят, лесорубы снова рубят
@@ -11241,8 +11251,8 @@ function reset() {
   }
   const moved = hero && (hero.x !== start.x || hero.y !== start.y);
   hero = { ...start };
-  patrolPlace(0);
-  patrolIdleStart();
+  // часовые (v274): если уже гуляют — правка программы их не трогает, только такт расчёта снова 0; иначе — на место и гулять
+  if (patrolIdleTimer && !running) patrolTick = 0; else { patrolPlace(0); if (!running) patrolIdleStart(0); }
   monkPlace(0);
   heroEl.classList.remove("flip", "run", "sunk", "down");
   boardEl.querySelectorAll(".plank.gone, .cell.gone").forEach((e) => e.classList.remove("gone"));
@@ -11423,6 +11433,7 @@ const patrolsOf = () => (L.patrols || []).map((pt) => (pt.seq ||= patrolSeq(pt))
 const patrolAt = (seq, t) => seq[t % seq.length];
 let patrolActs = [], patrolBubs = [], patrolTick = 0;
 function patrolSetup() {
+  clearTimeout(patrolIdleTimer); patrolIdleTimer = 0; patrolIdleT = 0;     // прошлый уровень гулял своими часовыми
   patrolActs = patrolsOf().map((seq, k) => {
     const a = skActor(evStage(), "torch", L.patrols[k].big ? 0.8 : 0.6, 0.62);      // big — крупный, грозный часовой (v254)
     a.at(seq[0].x + 0.5, seq[0].y + 0.9); a.show(true, true); a.play(0, 7, 120);
@@ -11480,32 +11491,56 @@ function patrolPlace(t, ms = 0) {
   });
   patrolTick = t;
 }
-// Часовые до запуска (v273): ходят по своей программе сами, медленнее, чем в бою, — пользователь: «иначе игра смотрится слишком мёртвой».
-// Такт (patrolTick) не трогают: по «Запустить» (и по любой правке программы) часовой сразу встаёт на место, откуда начнёт.
-let patrolIdleTimer = 0;
-function patrolIdleStop() {
-  clearTimeout(patrolIdleTimer); patrolIdleTimer = 0;
-  patrolActs.forEach((a) => { a.el.style.transition = "none"; a.play(0, 7, 120); });
-  patrolBubs.forEach((b) => { b.style.transition = "none"; });
+// Часовые до запуска (v273–274): ходят по своей программе сами — пользователь: «иначе игра смотрится слишком мёртвой».
+// Клики игрока их не трогают (v273 сбрасывал часового на место при каждой правке — «самый убогий способ»). По «Запустить»
+// рыцарь ждёт, пока часовые сами дойдут до мест, откуда начинается расчёт (patrolSync), — и топчется, оглядываясь.
+let patrolIdleTimer = 0, patrolIdleT = 0, patrolBusyTill = 0;
+const IDLE_STEP = 620, IDLE_GAP = 900;
+function patrolStepTo(t, ms) {
+  patrolsOf().forEach((seq, k) => {
+    const a = patrolActs[k], to = patrolAt(seq, t), x = to.x + 0.5, y = to.y + 0.9;
+    if (!a || (a.x === x && a.y === y)) return;
+    patrolBubAt(k, x, y, ms);
+    if (x !== a.x) a.face(x < a.x);
+    a.play(1, 6, ms < 400 ? 80 : 110);
+    a.move(x, y, ms).then(() => { if (a.x === x && a.y === y) a.play(0, 7, 120); });
+  });
+  patrolIdleT = t; patrolBusyTill = performance.now() + ms;
 }
-function patrolIdleStart() {
-  clearTimeout(patrolIdleTimer);
+function patrolIdleStart(from = 0) {
+  clearTimeout(patrolIdleTimer); patrolIdleTimer = 0;
+  patrolIdleT = from;
   if (!patrolActs.length || STILL) return;
-  let t = 0;
   const step = () => {
-    if (running || $("levelview").hidden || !patrolActs.length || !patrolActs[0].el.isConnected) return;
-    t++;
-    patrolsOf().forEach((seq, k) => {
-      const a = patrolActs[k], to = patrolAt(seq, t), x = to.x + 0.5, y = to.y + 0.9;
-      if (!a || (a.x === x && a.y === y)) return;
-      patrolBubAt(k, x, y, 620);
-      if (x !== a.x) a.face(x < a.x);
-      a.play(1, 6, 110);
-      a.move(x, y, 620).then(() => { if (!running && a.x === x && a.y === y) a.play(0, 7, 120); });
-    });
-    patrolIdleTimer = setTimeout(step, 900);
+    if (running || $("levelview").hidden || !patrolActs.length || !patrolActs[0].el.isConnected) { patrolIdleTimer = 0; return; }
+    patrolStepTo(patrolIdleT + 1, IDLE_STEP);
+    patrolIdleTimer = setTimeout(step, IDLE_GAP);
   };
   patrolIdleTimer = setTimeout(step, 1200);
+}
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+async function patrolSync() {
+  clearTimeout(patrolIdleTimer); patrolIdleTimer = 0;
+  const seqs = patrolsOf(); if (!seqs.length) return;
+  const cyc = seqs.reduce((m, q) => m * q.length / gcd(m, q.length), 1), ms = 230 * SLOW / speed;
+  let left = patrolBusyTill - performance.now();
+  if (patrolIdleT % cyc === 0) { if (left > 0) await sleep(left); }
+  else {
+    heroWaiting(true);
+    if (left > 0) await sleep(left);
+    for (let t = patrolIdleT + 1; ; t++) { patrolStepTo(t, ms); await sleep(ms + 60); if (t % cyc === 0) break; }
+    heroWaiting(false);
+  }
+  patrolIdleT = 0; patrolTick = 0;
+}
+// рыцарь выжидает: топчется на месте, оглядывается по сторонам, над головой — облачко «думаю» с точками
+let heroLook = 0;
+function heroWaiting(on) {
+  clearInterval(heroLook);
+  if (!heroEl.querySelector(".hthink")) { const b = document.createElement("div"); b.className = "hthink"; b.innerHTML = "<i></i><i></i><i></i>"; heroEl.appendChild(b); }
+  heroEl.classList.toggle("pwait", on);
+  heroEl.classList.remove("flip");
+  if (on) { let k = 0; heroLook = setInterval(() => heroEl.classList.toggle("flip", ++k % 2 === 1), 760); }
 }
 // Монах, которого подгоняют копьём (v254; расчёт — monkTick в buildPlan). Фигурка — как у часовых: житель сценок на поле уровня.
 let monkAct = null, monkPokes = 0;
@@ -11673,6 +11708,7 @@ async function run() {
   setDisabled(true);
   // длинную карту листали — сначала окно возвращается к рыцарю
   if (camFollow("page")) await sleep(520);
+  if (patrolActs.length) await patrolSync();     // ждём, пока часовые сами дойдут до мест, откуда считали путь
   let walkedTotal = 0;
 
   for (let i = 0; i < p.commands.length; i++) {
@@ -13496,6 +13532,7 @@ async function showChecks(p, before) {
 }
 
 function finish() {
+  if (patrolActs.length) patrolIdleStart(patrolTick);     // после запуска часовые гуляют дальше с того места, где стоят
   running = false;
   $("levelview").classList.remove("runs");
   if (!ghostWon) ghostFails[L.name] = (ghostFails[L.name] || 0) + 1;   // запуск без победы — неудача (победа сама сотрёт счёт)
@@ -15459,7 +15496,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 273;
+const APP_VERSION = 274;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15467,6 +15504,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 274, date: "2026-11-26", text: "Часовые гуляют сами, а рыцарь по «Запустить» выжидает удобный момент", en: "Sentries walk on their own, and after “Run” the knight waits for the right moment" },
   { v: 273, date: "2026-11-26", text: "Часовые ходят по своему пути ещё до «Запустить»", en: "Sentries walk their route even before you tap “Run”" },
   { v: 272, date: "2026-11-26", text: "«Починка»: подсказки теперь ведут по шагам, задание понятнее", en: "“Fix It”: hints now guide you step by step, clearer task" },
   { v: 271, date: "2026-11-25", text: "Небольшие улучшения внутри игры", en: "Small improvements inside the game" },

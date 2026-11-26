@@ -1,13 +1,13 @@
 {
- "version": 273,
+ "version": 274,
  "date": "2026-11-26",
  "notes": [
-  "Часовые ходят по своему пути ещё до «Запустить»"
+  "Часовые гуляют сами, а рыцарь по «Запустить» выжидает удобный момент"
  ],
  "files": {
   "index.html": {
-   "size": 1272155,
-   "hash": "d2c2baf81b5d7147"
+   "size": 1276110,
+   "hash": "c27acf8cc990d057"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4805,
-   "hash": "553a7d47e9f56cfc"
+   "hash": "0eded3f606b66eb5"
   },
   "icon-192.png": {
    "size": 42164,
@@ -211,6 +211,6 @@
   }
  },
  "notes_en": [
-  "Sentries walk their route even before you tap “Run”"
+  "Sentries walk on their own, and after “Run” the knight waits for the right moment"
  ]
 }
