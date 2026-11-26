@@ -1,13 +1,13 @@
 {
- "version": 277,
+ "version": 278,
  "date": "2026-11-26",
  "notes": [
-  "Часовые по-честному: подобрал камень — рыцарь дожидается нужного момента и идёт у часового за спиной, не вплотную. Вплотную часовой замечает всегда. Без камня рыцарь идёт сразу, а часовые ходят как ходили — никто никого не догоняет."
+  "Когда часовой замечает рыцаря, всё происходит живее: рыцарь успевает шагнуть на видное место, поворачивается к часовому и поднимает щит, а часовой сразу бросает свой дозор и бежит к нему."
  ],
  "files": {
   "index.html": {
-   "size": 1300419,
-   "hash": "2f576c3b5496f9e2"
+   "size": 1302772,
+   "hash": "1793f22df32ef592"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4785,
-   "hash": "b4853ecad640c403"
+   "hash": "c8a2983fe9c5aa18"
   },
   "icon-192.png": {
    "size": 42164,
@@ -207,6 +207,6 @@
   }
  },
  "notes_en": [
-  "Fair sentries: once the knight picks up the stone, he waits for the right moment and walks behind the sentry’s back, not right next to him. A sentry always notices the knight in a neighbouring cell. Without the stone the knight goes at once, and the sentries keep walking as they were."
+  "When a sentry spots the knight, it now feels alive: the knight manages to step into view, turns to the sentry and raises his shield, and the sentry drops his watch at once and runs at him."
  ]
 }

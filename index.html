@@ -11762,25 +11762,48 @@ async function patrolThrow(th) {
   a.at(nx + 0.5 + ox * 0.7, ny + 0.9 + oy * 0.7); a.el.style.opacity = 0;
 }
 // Рыцаря заметили, а камня нет: часовой бросается к нему, рыцарь успевает один раз дать сдачи — и падает (v275: сильный часовой не прощает)
+// часовой бросает то, что делал (шёл, оглядывался), и замирает там, где он сейчас на экране
+function patrolHalt(k) {
+  const a = patrolActs[k], el = a.el, cs = getComputedStyle(el), par = el.offsetParent || boardEl;
+  const [l0, t0] = evStage().pos(0, 0), [l1, t1] = evStage().pos(1, 1);
+  const x = (parseFloat(cs.left) / par.clientWidth * 100 - l0) / (l1 - l0), y = (parseFloat(cs.top) / par.clientHeight * 100 - t0) / (t1 - t0);
+  a.gen++; a.q = []; a.busy = false;
+  el.style.transition = "none";
+  if (isFinite(x) && isFinite(y)) a.at(x, y);
+  void el.offsetWidth; el.style.transition = "";
+}
 async function patrolKills(p) {
-  const cr = p.crash, k = cr.by, a = patrolActs[k], k2 = SLOW / speed;
+  const cr = p.crash, k = cr.by, a = patrolActs[k], k2 = SLOW / speed, seq = patrolsOf()[k];
+  // рыцарь успевает шагнуть туда, где его видно (v278). Если часовой сам идёт в эту клетку — только полшага навстречу.
+  const b = patrolAt(seq, cr.pt), busyCell = b.x === cr.at.x && b.y === cr.at.y, f = busyCell || (cr.at.x === hero.x && cr.at.y === hero.y) ? 0.45 : 1;
+  const moved = cr.at.x !== hero.x || cr.at.y !== hero.y;
   patrolPlace(patrolBase + cr.pt, 230 * k2);
-  heroEl.classList.remove("run");
-  await wait(240 * k2);
-  while (a.busy) await sleep(30);
+  if (moved) {
+    heroEl.classList.toggle("flip", cr.at.x < hero.x || (cr.at.x === hero.x && heroEl.classList.contains("flip")));
+    heroEl.classList.add("run");
+    hero = { x: hero.x + (cr.at.x - hero.x) * f, y: hero.y + (cr.at.y - hero.y) * f };
+    placeHero();
+    if (speed < 5) sfx("step");
+  }
+  await wait(130);            // полшага — и его заметили
+  // часовой сразу бросает своё дело: «❗», разворот к рыцарю и бегом к нему
+  patrolHalt(k);
+  patrolView(k, null);
   patrolMark(k, "❗", 1400);
   sfx("roar");
-  await wait(320);
-  // бежит вплотную к рыцарю
-  const sx = Math.sign(a.x - (hero.x + 0.5)), sy = Math.sign(a.y - (hero.y + 0.9));
-  const fx = sx || sy ? sx : -Math.sign(cr.at.x - hero.x) || 1, fy = sx || sy ? sy : 0;
+  const dx = a.x - (hero.x + 0.5), dy = a.y - (hero.y + 0.9);
+  const fx = Math.abs(dx) >= Math.abs(dy) ? Math.sign(dx) || 1 : 0, fy = fx ? 0 : Math.sign(dy);
   const tx = hero.x + 0.5 + fx * 0.62, ty = hero.y + 0.9 + fy * 0.62;
   if (Math.abs(tx - a.x) > 0.02) a.face(tx < a.x);
   a.play(1, 6, 60);
-  await a.move(tx, ty, Math.max(160, (Math.abs(tx - a.x) + Math.abs(ty - a.y)) * 150));
-  patrolBubs[k]?.classList.add("gone");
+  // рыцарь не стоит столбом: останавливается, поворачивается к часовому и поднимает щит
+  heroEl.classList.remove("run");
   if (fx) heroEl.classList.toggle("flip", fx < 0);
-  // рыцарь бьёт — часовой отшатнулся
+  heroEl.classList.add("guard");
+  patrolBubs[k]?.classList.add("gone");
+  await a.move(tx, ty, Math.max(170, (Math.abs(tx - a.x) + Math.abs(ty - a.y)) * 170 * k2));
+  // рыцарь бьёт первым — часовой отшатнулся
+  heroEl.classList.remove("guard");
   heroEl.classList.add("atk");
   sfx("hit");
   a.el.classList.remove("ouch"); void a.el.offsetWidth; a.el.classList.add("ouch");
@@ -15778,7 +15801,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 277;
+const APP_VERSION = 278;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15786,6 +15809,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 278, date: "2026-11-26", text: "Когда часовой замечает рыцаря, всё происходит живее: рыцарь успевает шагнуть на видное место, поворачивается к часовому и поднимает щит, а часовой сразу бросает свой дозор и бежит к нему.", en: "When a sentry spots the knight, it now feels alive: the knight manages to step into view, turns to the sentry and raises his shield, and the sentry drops his watch at once and runs at him." },
   { v: 277, date: "2026-11-26", text: "Часовые по-честному: подобрал камень — рыцарь дожидается нужного момента и идёт у часового за спиной, не вплотную. Вплотную часовой замечает всегда. Без камня рыцарь идёт сразу, а часовые ходят как ходили — никто никого не догоняет.", en: "Fair sentries: once the knight picks up the stone, he waits for the right moment and walks behind the sentry’s back, not right next to him. A sentry always notices the knight in a neighbouring cell. Without the stone the knight goes at once, and the sentries keep walking as they were." },
   { v: 276, date: "2026-11-26", text: "Исправлено: после того как рыцарь подбирал камень, он оказывался в тёмной рамке и стоял мимо клетки.", en: "Fixed: after picking up the stone, the knight got a dark frame and stood off his cell." },
   { v: 275, date: "2026-11-26", text: "Часовые ожили: ходят не спеша, останавливаются и оглядываются, а светлые клетки показывают, куда они смотрят. Заметит рыцаря — бой, и сильного часового не победить. Вместо «ждать» — новая команда «камень»: подбери камушек на старте, и рыцарь сам кинет его, когда его заметят, — часовой уйдёт на звук в кусты. Рыцарь больше не ждёт часовых перед запуском, а гоблин не смеётся.", en: "The sentries came alive: they stroll, stop and look around, and light cells show where they are looking. If one spots the knight, there is a fight, and a strong sentry can’t be beaten. Instead of “wait” there is a new command, “stone”: pick up a pebble at the start, and when the knight is spotted he throws it himself — the sentry goes off into the bushes after the sound. The knight no longer waits for the sentries before a run, and the goblin no longer laughs." },
