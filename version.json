@@ -1,13 +1,13 @@
 {
- "version": 275,
+ "version": 276,
  "date": "2026-11-26",
  "notes": [
-  "Часовые ожили: ходят не спеша, останавливаются и оглядываются, а светлые клетки показывают, куда они смотрят. Заметит рыцаря — бой, и сильного часового не победить. Вместо «ждать» — новая команда «камень»: подбери камушек на старте, и рыцарь сам кинет его, когда его заметят, — часовой уйдёт на звук в кусты. Рыцарь больше не ждёт часовых перед запуском, а гоблин не смеётся."
+  "Исправлено: после того как рыцарь подбирал камень, он оказывался в тёмной рамке и стоял мимо клетки."
  ],
  "files": {
   "index.html": {
-   "size": 1293363,
-   "hash": "be1a03eecc6c6eba"
+   "size": 1293983,
+   "hash": "25819409633e84aa"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4785,
-   "hash": "5f78b6456b189726"
+   "hash": "d74ad2b0e03f1ea5"
   },
   "icon-192.png": {
    "size": 42164,
@@ -207,6 +207,6 @@
   }
  },
  "notes_en": [
-  "The sentries came alive: they stroll, stop and look around, and light cells show where they are looking. If one spots the knight, there is a fight, and a strong sentry can’t be beaten. Instead of “wait” there is a new command, “stone”: pick up a pebble at the start, and when the knight is spotted he throws it himself — the sentry goes off into the bushes after the sound. The knight no longer waits for the sentries before a run, and the goblin no longer laughs."
+  "Fixed: after picking up the stone, the knight got a dark frame and stood off his cell."
  ]
 }

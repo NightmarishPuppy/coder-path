@@ -618,7 +618,7 @@ html.still .route .fight .sw { animation: none; }
 .cell.ns-rams::after { content: ""; position: absolute; inset: 30% 0; pointer-events: none;
   background: radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 0 0 / 14px 9px, radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 7px 4px / 14px 9px; }
 .hero.bump .kwrap { animation: bump 0.35s ease; }
-.hero.pick .kwrap { animation: kpick 0.4s ease; }   /* v275: нагнулся за камнем */
+.hero.stoop .kwrap { animation: kpick 0.4s ease; }   /* v275: нагнулся за камнем */
 @keyframes kpick { 0%, 100% { transform: none; } 45% { transform: translateY(8%) scaleY(0.88); } }
 @keyframes bump {
   0%, 100% { translate: 0 0; }
@@ -628,7 +628,7 @@ html.still .route .fight .sw { animation: none; }
 }
 /* без движения (настройка «Анимация» или просьба системы) */
 html.still .hero { transition: none; }
-html.still .hero.bump .kwrap { animation: none; } html.still .hero.pick .kwrap { animation: none; }
+html.still .hero.bump .kwrap { animation: none; } html.still .hero.stoop .kwrap { animation: none; }
 .loopview {
   position: absolute; top: 6px; right: 6px; z-index: 7;
   display: flex; align-items: center; gap: 2px;
@@ -11660,13 +11660,14 @@ function patrolMark(k, text, ms = 900) {
   const a = patrolActs[k]; if (!a) return;
   const m = document.createElement("div");
   m.className = "pmark"; m.textContent = text;
-  const up = (L.patrols[k].big ? 1.25 : 1.0) / H * 100;
+  const up = (L.patrols[k].big ? 1.7 : 1.4) / H * 100;
   boardEl.appendChild(m); patrolMarks.push(m);
   // идёт следом за часовым: его место берём прямо с экрана (a.x — уже точка, куда он идёт)
   const follow = () => {
     if (!m.isConnected) return;
-    const bw = boardEl.clientWidth || 1, bh = boardEl.clientHeight || 1;
-    m.style.left = a.el.offsetLeft / bw * 100 + "%"; m.style.top = a.el.offsetTop / bh * 100 - up + "%";
+    // где часовой сейчас на экране (в движении): низ его картинки — ноги, середина — по ширине
+    const br = boardEl.getBoundingClientRect(), r = a.el.getBoundingClientRect();
+    if (br.width && r.width) { m.style.left = (r.left + r.width / 2 - br.left) / br.width * 100 + "%"; m.style.top = (r.bottom - br.top) / br.height * 100 - up + "%"; }
     requestAnimationFrame(follow);
   };
   follow();
@@ -12149,7 +12150,7 @@ async function run() {
       const before = s ? cmd.got[s - 1] : (i ? p.commands[i - 1].got.at(-1) : null) || noneGot();
       const now = cmd.got[s];
       if (speed < 5 && !still) sfx("step");
-      if (now.stone === 1 && !before.stone) { sfx("knock"); heroEl.classList.remove("pick"); void heroEl.offsetWidth; heroEl.classList.add("pick"); }
+      if (now.stone === 1 && !before.stone) { sfx("knock"); heroEl.classList.remove("stoop"); void heroEl.offsetWidth; heroEl.classList.add("stoop"); setTimeout(() => heroEl.classList.remove("stoop"), 450); }
       if (now.key && !before.key) sfx("key");
       if (now.coins > before.coins) sfx("coin");
       if (items.length && doorLocked(before) && !doorLocked(now)) setTimeout(() => sfx("unlock"), 180);
@@ -15715,7 +15716,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 275;
+const APP_VERSION = 276;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15723,6 +15724,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 276, date: "2026-11-26", text: "Исправлено: после того как рыцарь подбирал камень, он оказывался в тёмной рамке и стоял мимо клетки.", en: "Fixed: after picking up the stone, the knight got a dark frame and stood off his cell." },
   { v: 275, date: "2026-11-26", text: "Часовые ожили: ходят не спеша, останавливаются и оглядываются, а светлые клетки показывают, куда они смотрят. Заметит рыцаря — бой, и сильного часового не победить. Вместо «ждать» — новая команда «камень»: подбери камушек на старте, и рыцарь сам кинет его, когда его заметят, — часовой уйдёт на звук в кусты. Рыцарь больше не ждёт часовых перед запуском, а гоблин не смеётся.", en: "The sentries came alive: they stroll, stop and look around, and light cells show where they are looking. If one spots the knight, there is a fight, and a strong sentry can’t be beaten. Instead of “wait” there is a new command, “stone”: pick up a pebble at the start, and when the knight is spotted he throws it himself — the sentry goes off into the bushes after the sound. The knight no longer waits for the sentries before a run, and the goblin no longer laughs." },
   { v: 274, date: "2026-11-26", text: "Часовые гуляют сами, а рыцарь по «Запустить» выжидает удобный момент", en: "Sentries walk on their own, and after “Run” the knight waits for the right moment" },
   { v: 273, date: "2026-11-26", text: "Часовые ходят по своему пути ещё до «Запустить»", en: "Sentries walk their route even before you tap “Run”" },
