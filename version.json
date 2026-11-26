@@ -1,13 +1,13 @@
 {
- "version": 276,
+ "version": 277,
  "date": "2026-11-26",
  "notes": [
-  "Исправлено: после того как рыцарь подбирал камень, он оказывался в тёмной рамке и стоял мимо клетки."
+  "Часовые по-честному: подобрал камень — рыцарь дожидается нужного момента и идёт у часового за спиной, не вплотную. Вплотную часовой замечает всегда. Без камня рыцарь идёт сразу, а часовые ходят как ходили — никто никого не догоняет."
  ],
  "files": {
   "index.html": {
-   "size": 1293983,
-   "hash": "25819409633e84aa"
+   "size": 1300419,
+   "hash": "2f576c3b5496f9e2"
   },
   "art.js": {
    "size": 852367,
@@ -27,7 +27,7 @@
   },
   "sw.js": {
    "size": 4785,
-   "hash": "d74ad2b0e03f1ea5"
+   "hash": "b4853ecad640c403"
   },
   "icon-192.png": {
    "size": 42164,
@@ -74,8 +74,8 @@
    "hash": "0f2f87cee2ba1966"
   },
   "isle1.js": {
-   "size": 60494,
-   "hash": "1035425adf8366f1"
+   "size": 60533,
+   "hash": "084b9512a2511619"
   },
   "isle2.js": {
    "size": 59882,
@@ -207,6 +207,6 @@
   }
  },
  "notes_en": [
-  "Fixed: after picking up the stone, the knight got a dark frame and stood off his cell."
+  "Fair sentries: once the knight picks up the stone, he waits for the right moment and walks behind the sentry’s back, not right next to him. A sentry always notices the knight in a neighbouring cell. Without the stone the knight goes at once, and the sentries keep walking as they were."
  ]
 }

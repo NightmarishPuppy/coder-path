@@ -618,6 +618,16 @@ html.still .route .fight .sw { animation: none; }
 .cell.ns-rams::after { content: ""; position: absolute; inset: 30% 0; pointer-events: none;
   background: radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 0 0 / 14px 9px, radial-gradient(circle, #5b46261f 0 2px, transparent 2.5px) 7px 4px / 14px 9px; }
 .hero.bump .kwrap { animation: bump 0.35s ease; }
+.hero.pwait .kwrap { animation: kstomp 0.56s ease-in-out infinite; }
+.hero.pwait.flip .kwrap { animation-name: kstompf; }
+@keyframes kstomp { 0%, 50%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-5%) rotate(-4deg); } 75% { transform: translateY(-5%) rotate(4deg); } }
+@keyframes kstompf { 0%, 50%, 100% { transform: scaleX(-1) translateY(0) rotate(0); } 25% { transform: scaleX(-1) translateY(-5%) rotate(-4deg); } 75% { transform: scaleX(-1) translateY(-5%) rotate(4deg); } }
+.hero .hthink { display: none; position: absolute; left: 50%; bottom: 96%; transform: translateX(-50%); z-index: 4; gap: 3px; padding: 4px 7px; background: #fff; border: 2px solid #1c1a22; border-radius: 12px; }
+.hero .hthink::after { content: ""; position: absolute; left: 30%; bottom: -7px; width: 6px; height: 6px; background: #fff; border: 2px solid #1c1a22; border-radius: 50%; }
+.hero.pwait .hthink { display: flex; }
+.hero .hthink i { width: 6px; height: 6px; border-radius: 50%; background: #1c1a22; animation: kdot 0.9s ease-in-out infinite; }
+.hero .hthink i:nth-child(2) { animation-delay: 0.15s; } .hero .hthink i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes kdot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
 .hero.stoop .kwrap { animation: kpick 0.4s ease; }   /* v275: нагнулся за камнем */
 @keyframes kpick { 0%, 100% { transform: none; } 45% { transform: translateY(8%) scaleY(0.88); } }
 @keyframes bump {
@@ -9924,10 +9934,15 @@ function buildPlan(code) {
   });
   // Уровни с камнем (L.stone, v275): часовой видит на 2 клетки туда, куда идёт (стены закрывают), а когда оглядывается — во все стороны.
   // Кто на следующем такте увидит рыцаря в клетке to (или они шагнут навстречу) — номер часового, иначе -1. Отвлечённые (pGone) уже ушли.
+  // pOff — на сколько тактов часы часовых впереди шагов рыцаря. До запуска часовые гуляют сами, и рыцарь выходит, когда нажали «Запустить»:
+  // часовые в этот миг где-то на своём пути (planOff). Подобрал камень — рыцарь ждёт нужного момента (v277): стоит, пока часовые
+  // не окажутся там же, где были бы при выходе с самого начала их пути. Поэтому программа с камнем всегда идёт одинаково.
   const pGone = new Set();
+  let pOff = L.stone ? planOff : 0;
+  const pCycle = patrolsOf().reduce((l, q) => { let a = l, b = q.length; while (b) [a, b] = [b, a % b]; return l * q.length / a; }, 1);
   const patrolSpots = (from, to) => patrolsOf().findIndex((seq, k) => {
     if (pGone.has(k)) return false;
-    const a = patrolAt(seq, tk), b = patrolAt(seq, tk + 1);
+    const a = patrolAt(seq, tk + pOff), b = patrolAt(seq, tk + pOff + 1);
     return (a.x === to.x && a.y === to.y && b.x === from.x && b.y === from.y) || patrolSees(b, to.x, to.y, wallAt);
   });
   const fallen = new Set();    // клетки, куда упало дерево: теперь это препятствие
@@ -10151,10 +10166,21 @@ function buildPlan(code) {
       if (L.stone) {
         // часовой заметил: камень в руках — рыцарь сам кидает его, часовой уходит на звук (дальше его нет); камня нет — бой, рыцарь падает
         const k = patrolSpots(pos, next);
-        if (k >= 0 && got.stone === 1) { got.stone = 2; pGone.add(k); (c.th ||= [])[s] = { by: k, tick: tk + 1, to: stoneNoise(k, tk + 1) }; }
-        else if (k >= 0) { crash = { cmd: i, step: s, at: next, reason: "spotted", by: k, tick: tk + 1 }; break; }
+        if (k >= 0 && got.stone === 1) { got.stone = 2; pGone.add(k); (c.th ||= [])[s] = { by: k, tick: tk + 1, to: stoneNoise(k, tk + pOff + 1) }; }
+        else if (k >= 0) { crash = { cmd: i, step: s, at: next, reason: "spotted", by: k, tick: tk + 1, pt: tk + pOff + 1 }; break; }
       } else if (patrolMeets(pos, next)) { crash = { cmd: i, step: s, at: next, reason: "patrol", tick: tk + 1 }; break; }
       tk++;
+      (c.pt ||= [])[s] = tk + pOff;       // где часы часовых после этого шага
+      if (name === "takeStone") {
+        // ждёт нужного момента: стоит на месте, часовые идут. Увидели его и тут — камень летит сразу.
+        const ws = [];
+        while ((tk + pOff) % pCycle !== tk % pCycle) {
+          const k = patrolSpots(pos, pos);
+          pOff++;
+          if (k >= 0 && got.stone === 1) { got.stone = 2; pGone.add(k); ws.push({ by: k, tick: tk, to: stoneNoise(k, tk + pOff) }); } else ws.push(null);
+        }
+        if (ws.length) (c.wt ||= [])[s] = ws;
+      }
       pos = next;
       c.cells.push({ ...pos });
       // замах великана: успел отойти — мимо, стоит рядом — удар
@@ -11494,15 +11520,20 @@ function patrolSeq(pt) {
 }
 const patrolsOf = () => (L.patrols || []).map((pt) => (pt.seq ||= patrolSeq(pt)));
 const patrolAt = (seq, t) => seq[t % seq.length];
-// что видит часовой из точки e: свою клетку и SIGHT клеток туда, куда смотрит (оглядывается — во все четыре стороны); стена закрывает
+// что замечает часовой из точки e: свою клетку, четыре соседние и SIGHT клеток туда, куда смотрит (оглядывается — во все четыре стороны); стена закрывает
 const SIGHT = 2;
 function patrolSight(e, wall = isWall) {
   const out = [];
+  // вплотную часовой замечает всегда, с любой стороны: слышит шаги (v277 — иначе рыцарь тёрся о него плечом, а тот «не видел»)
+  for (const d of [{ dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 }]) {
+    const x = e.x + d.dx, y = e.y + d.dy;
+    if (x >= 0 && y >= 0 && x < W && y < H && !wall(x, y)) out.push({ x, y });
+  }
   for (const d of e.look ? [{ dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 }] : [e.f])
     for (let k = 1; k <= SIGHT; k++) {
       const x = e.x + d.dx * k, y = e.y + d.dy * k;
       if (x < 0 || y < 0 || x >= W || y >= H || wall(x, y)) break;
-      out.push({ x, y });
+      if (!out.some((c) => c.x === x && c.y === y)) out.push({ x, y });
     }
   return out;
 }
@@ -11514,6 +11545,17 @@ function stoneNoise(k, t) {
   return (L.stone?.noise || [[e.x, e.y]]).slice().sort((a, b) => Math.abs(a[0] - e.x) + Math.abs(a[1] - e.y) - Math.abs(b[0] - e.x) - Math.abs(b[1] - e.y))[0];
 }
 let patrolActs = [], patrolBubs = [], patrolViews = [], patrolTick = 0;
+let planOff = 0;        // с какого такта своего пути часовые начинают в расчёте (до запуска — 0; «Запустить» ставит, где они сейчас)
+let patrolBase = 0;     // сколько целых кругов часовые уже прошли до запуска: такт на поле = patrolBase + такт из расчёта
+// рыцарь ждёт нужного момента (подобрал камень): топчется на месте, оглядывается, над головой облачко с точками
+let heroLook = 0;
+function heroWaiting(on) {
+  clearInterval(heroLook);
+  if (!heroEl.querySelector(".hthink")) { const b = document.createElement("div"); b.className = "hthink"; b.innerHTML = "<i></i><i></i><i></i>"; heroEl.appendChild(b); }
+  heroEl.classList.toggle("pwait", on);
+  heroEl.classList.remove("flip");
+  if (on) { let k = 0; heroLook = setInterval(() => heroEl.classList.toggle("flip", ++k % 2 === 1), 760); }
+}
 const patrolGone = new Set();      // кого отвлёк камень (ушёл в кусты) — до сброса его нет
 function patrolSetup() {
   clearTimeout(patrolIdleTimer); patrolIdleTimer = 0; patrolIdleT = 0;     // прошлый уровень гулял своими часовыми
@@ -11639,6 +11681,7 @@ function patrolIdleStart(from = 0) {
 }
 // после сброса ушедший в кусты часовой возвращается на своё место
 function patrolRevive() {
+  if (heroEl.classList.contains("pwait")) heroWaiting(false);
   if (!patrolGone.size) return;
   const ks = [...patrolGone];
   patrolGone.clear();
@@ -11721,7 +11764,7 @@ async function patrolThrow(th) {
 // Рыцаря заметили, а камня нет: часовой бросается к нему, рыцарь успевает один раз дать сдачи — и падает (v275: сильный часовой не прощает)
 async function patrolKills(p) {
   const cr = p.crash, k = cr.by, a = patrolActs[k], k2 = SLOW / speed;
-  patrolPlace(cr.tick, 230 * k2);
+  patrolPlace(patrolBase + cr.pt, 230 * k2);
   heroEl.classList.remove("run");
   await wait(240 * k2);
   while (a.busy) await sleep(30);
@@ -11913,6 +11956,15 @@ async function run() {
   logEv("run", { code: oneLine(codeEl.value) });
   winBox.hidden = true;
   reset();
+  // Уровни с камнем: часовые не подстраиваются под запуск — идут дальше оттуда, где они сейчас, и путь считается от этого места (v277)
+  if (L.stone && patrolActs.length) {
+    clearTimeout(patrolIdleTimer); patrolIdleTimer = 0;
+    const cyc = patrolsOf().reduce((l, q) => { let a = l, b = q.length; while (b) [a, b] = [b, a % b]; return l * q.length / a; }, 1);
+    planOff = patrolIdleT % cyc; patrolBase = patrolIdleT - planOff;
+    plan = buildPlan(codeEl.value);
+    planOff = 0;
+    drawRoute(plan); drawTape(plan);
+  } else patrolBase = 0;
   const p = plan;
   if (p.error) { setStatus(p.error, "fail"); return; }
   if (!p.commands.length) { setStatus("Добавь хотя бы одну команду кнопками ниже", "fail"); return; }
@@ -12140,7 +12192,7 @@ async function run() {
 
       const still = cmd.name === "wait" || cmd.name === "takeStone";
       heroEl.classList.toggle("run", !still);   // ждёт или подбирает камень — стоит, а не бежит на месте
-      patrolPlace(cmd.tk + s + 1, 230 * SLOW / speed);          // часовые делают свой шаг вместе с рыцарем
+      patrolPlace(L.stone ? patrolBase + cmd.pt[s] : cmd.tk + s + 1, 230 * SLOW / speed);          // часовые делают свой шаг вместе с рыцарем
       if (cmd.th?.[s]) patrolThrow(cmd.th[s]);                  // заметили — рыцарь кинул камень (не ждём: идёт дальше)
       monkPlace(cmd.tk + s + 1, 230 * SLOW / speed);            // и монах — свой (v254)
       hero = cmd.cells[s];
@@ -12184,6 +12236,16 @@ async function run() {
         heroEl.classList.add("run");
       }
       await wait(240);
+      if (cmd.wt?.[s]) {
+        // камень в руках — рыцарь ждёт нужного момента: часовые идут, он стоит
+        heroWaiting(true);
+        for (let w = 0; w < cmd.wt[s].length; w++) {
+          patrolPlace(patrolBase + cmd.pt[s] + w + 1, 230 * SLOW / speed);
+          if (cmd.wt[s][w]) { patrolThrow(cmd.wt[s][w]); drawItems({ ...now, stone: 2 }); }
+          await wait(240);
+        }
+        heroWaiting(false);
+      }
       drawTape(p, i, s + 1);
 
       if (p.reachedAt && p.reachedAt.cmd === i && p.reachedAt.step === s) {
@@ -15716,7 +15778,7 @@ $("start-game").addEventListener("click", () => {
 <script>
 // ===== Приложение: установка, обновления, синхронизация =====
 // Номер этой версии игры. Меняется вместе с VERSION в sw.js и version в version.json.
-const APP_VERSION = 276;
+const APP_VERSION = 277;
 // Номер, который видит игрок (v253): стадия игры и рядом — номер сборки. APP_VERSION — счётчик выпусков: на нём держатся
 // обновления, тесты и статистика, он растёт с каждым выпуском. APP_STAGE меняется руками на заметных вехах (новый остров и т. п.).
 const APP_STAGE = "0.6 beta";
@@ -15724,6 +15786,7 @@ function verName(n) { return tr("{s} · сборка {n}", { s: APP_STAGE, n });
 // Что нового — для игроков, простыми словами, по-русски и по-английски (показывается в Telegram: строка «Версия» внизу настроек
 // и окошко «Игра обновилась» один раз после обновления, если big: true). Каждый выпуск — новая строка сверху.
 const CHANGES = [
+  { v: 277, date: "2026-11-26", text: "Часовые по-честному: подобрал камень — рыцарь дожидается нужного момента и идёт у часового за спиной, не вплотную. Вплотную часовой замечает всегда. Без камня рыцарь идёт сразу, а часовые ходят как ходили — никто никого не догоняет.", en: "Fair sentries: once the knight picks up the stone, he waits for the right moment and walks behind the sentry’s back, not right next to him. A sentry always notices the knight in a neighbouring cell. Without the stone the knight goes at once, and the sentries keep walking as they were." },
   { v: 276, date: "2026-11-26", text: "Исправлено: после того как рыцарь подбирал камень, он оказывался в тёмной рамке и стоял мимо клетки.", en: "Fixed: after picking up the stone, the knight got a dark frame and stood off his cell." },
   { v: 275, date: "2026-11-26", text: "Часовые ожили: ходят не спеша, останавливаются и оглядываются, а светлые клетки показывают, куда они смотрят. Заметит рыцаря — бой, и сильного часового не победить. Вместо «ждать» — новая команда «камень»: подбери камушек на старте, и рыцарь сам кинет его, когда его заметят, — часовой уйдёт на звук в кусты. Рыцарь больше не ждёт часовых перед запуском, а гоблин не смеётся.", en: "The sentries came alive: they stroll, stop and look around, and light cells show where they are looking. If one spots the knight, there is a fight, and a strong sentry can’t be beaten. Instead of “wait” there is a new command, “stone”: pick up a pebble at the start, and when the knight is spotted he throws it himself — the sentry goes off into the bushes after the sound. The knight no longer waits for the sentries before a run, and the goblin no longer laughs." },
   { v: 274, date: "2026-11-26", text: "Часовые гуляют сами, а рыцарь по «Запустить» выжидает удобный момент", en: "Sentries walk on their own, and after “Run” the knight waits for the right moment" },
